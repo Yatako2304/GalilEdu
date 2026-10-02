@@ -1,8 +1,8 @@
 # Backend de GalilEdu
 
-Base técnica del backend. Por ahora no implementa historias de usuario ni expone rutas funcionales.
+Base técnica del backend. Ya incluye reglas de dominio de Usuarios, pero todavía no expone rutas funcionales ni implementa historias de extremo a extremo.
 
-La organización acordada es un [monolito modular por capas](../docs/arquitectura.md). La primera pieza técnica está en `usuarios/infraestructura/seguridad`: solo permite el chequeo de salud, deniega las demás rutas y deja preparado bcrypt con costo 10. Esto **no** implementa todavía el inicio de sesión.
+La organización acordada es un [monolito modular por capas](../docs/arquitectura.md). En `usuarios/dominio` están las validaciones de RF-12, el formato de RF-15 y el estado de cuenta con varios roles, cambio inicial obligatorio y desactivación lógica. En `usuarios/infraestructura/seguridad` solo se permite el chequeo de salud, se deniegan las demás rutas y se deja preparado bcrypt con costo 10. Esto **no** implementa todavía el registro, la persistencia ni el inicio de sesión.
 
 ## Versiones
 
@@ -22,6 +22,6 @@ No almacenar contraseñas ni cadenas de conexión reales en Git. El esquema toda
 
 ## Pruebas
 
-Ejecutar `./mvnw test` o `.\mvnw.cmd test`. La prueba inicial solo verifica que el contexto de Spring arranca. Usa H2 **únicamente en pruebas** para no requerir una instancia de PostgreSQL durante esta verificación; las futuras pruebas de persistencia deberán ejecutarse contra PostgreSQL 18.
+Ejecutar `./mvnw test` o `.\mvnw.cmd test`. Hay pruebas del dominio de Usuarios, de la configuración HTTP y del arranque de Spring. H2 se usa **únicamente en pruebas** para no requerir una instancia de PostgreSQL durante esta verificación; las futuras pruebas de persistencia deberán ejecutarse contra PostgreSQL 18.
 
 Para empaquetar la aplicación, ejecutar `./mvnw package` o `.\mvnw.cmd package`. El archivo resultante será `target/galiledu.jar`.

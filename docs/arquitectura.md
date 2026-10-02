@@ -23,4 +23,4 @@ Los módulos previstos por la vista de componentes son `usuarios`, `matricula`, 
 
 - El equipo de base de datos puede preparar el esquema PostgreSQL 18 y sus migraciones sin que otros módulos dependan todavía de tablas concretas.
 - Las llamadas entre módulos deberán expresar operaciones del módulo dueño; no se accederá directamente al repositorio de persistencia de otro módulo.
-- La autenticación y la política de varios roles siguen sujetas a las decisiones vigentes del PO. Hasta implementarlas, la API funcional permanece cerrada por defecto; solo el chequeo técnico de salud puede consultarse sin autenticar.
+- El PO validó las decisiones de varios roles por cuenta y contraseña inicial temporal con cambio obligatorio. El dominio de `usuarios` ya representa esas reglas, pero aún falta integrarlo con persistencia, casos de uso y autenticación HTTP. Hasta entonces, la API funcional permanece cerrada por defecto; solo el chequeo técnico de salud puede consultarse sin autenticar.
