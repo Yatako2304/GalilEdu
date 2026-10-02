@@ -1,4 +1,4 @@
-package com.galiledu.usuarios.infraestructura.demo;
+package com.galiledu.usuarios.persistencia.demo;
 
 import java.util.HashMap;
 import java.util.Map;

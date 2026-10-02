@@ -28,7 +28,7 @@ El flujo HTTP es:
 
 ## Integración posterior con PostgreSQL
 
-Los casos de uso dependen de `RepositorioCuentas` y `RepositorioAccesos`, no de tablas. Cuando el equipo entregue el esquema, implementaremos esos puertos en `infraestructura`, conectaremos los casos de uso y la API al perfil real y probaremos la integración contra PostgreSQL 18. No se debe reutilizar el repositorio demo para producción.
+Los casos de uso dependen de `RepositorioCuentas` y `RepositorioAccesos`, no de tablas. Cuando el equipo entregue el esquema, implementaremos esos puertos en `persistencia`, conectaremos los casos de uso y la API al perfil real y probaremos la integración contra PostgreSQL 18. No se debe reutilizar el repositorio demo para producción.
 
 Los valores `DB_URL`, `DB_USER` y `DB_PASSWORD` del [ejemplo de entorno](.env.example) están reservados para esa integración. Spring Boot no carga `.env.example` automáticamente. No almacenar credenciales reales en Git.
 
