@@ -19,6 +19,15 @@ Cada módulo funcional que se implemente tendrá estas capas bajo `com.galiledu.
 
 Los módulos previstos por la vista de componentes son `usuarios`, `matricula`, `pagos`, `horarios`, `academica` y `asistencia`. Configuración institucional se incorporará cuando se aborde su alcance. Las carpetas y clases se crearán al implementar cada historia, evitando componentes vacíos o reglas inventadas.
 
+## Criterios de modelado y encapsulación
+
+- Las cuentas y asignaciones horarias tienen identidad y transiciones: se modelan como clases con campos `private final` y métodos que expresan operaciones del dominio. No se generan setters públicos ni se envían estas clases directamente como respuestas HTTP.
+- Los `record` se reservan para datos de solicitud/respuesta, resultados inmutables y objetos de valor sin identidad. Un componente de `record` genera un campo privado y un método de lectura público; no equivale a un atributo público mutable. Las colecciones se copian defensivamente cuando corresponde.
+- Los casos de uso reciben sus dependencias por constructor e implementan reglas sin conocer PostgreSQL. Las interfaces de repositorio son contratos, no implementaciones de persistencia.
+- El hash de contraseña solo se usa internamente para verificar o guardar credenciales; no se incluye en DTOs HTTP ni en `toString()`. Los adaptadores de persistencia futuros no deben filtrar el modelo de base de datos a la API.
+
+Estos criterios siguen la [especificación de `record` de Java 21](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/lang/Record.html), la [recomendación de inyección por constructor de Spring Boot](https://docs.spring.io/spring-boot/reference/using/spring-beans-and-dependency-injection.html) y la distinción entre [entidades y objetos de valor en DDD](https://learn.microsoft.com/en-us/azure/architecture/microservices/model/tactical-domain-driven-design). La última fuente presenta DDD en microservicios; aquí aplicamos únicamente el criterio de modelado de dominio dentro de un monolito modular.
+
 ## Patrones para implementar los módulos
 
 La **capa de negocio** no será una carpeta adicional: comprende `aplicacion` (casos de uso) y `dominio` (reglas e invariantes). Separarlas evita mezclar una regla como «una cuenta nueva exige cambiar su contraseña» con la coordinación de correo, repositorio y transacciones.

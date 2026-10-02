@@ -3,6 +3,7 @@ package com.galiledu.usuarios.aplicacion;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 
 import com.galiledu.usuarios.aplicacion.puertos.RepositorioAccesos;
 import com.galiledu.usuarios.aplicacion.puertos.ServicioContrasenas;
@@ -16,9 +17,9 @@ public class IniciarSesion {
 	private final String hashFicticio;
 
 	public IniciarSesion(RepositorioAccesos accesos, ServicioContrasenas contrasenas, Clock reloj) {
-		this.accesos = accesos;
-		this.contrasenas = contrasenas;
-		this.reloj = reloj;
+		this.accesos = Objects.requireNonNull(accesos);
+		this.contrasenas = Objects.requireNonNull(contrasenas);
+		this.reloj = Objects.requireNonNull(reloj);
 		this.hashFicticio = contrasenas.codificar("cuenta-inexistente");
 	}
 

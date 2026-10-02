@@ -1,36 +1,58 @@
 package com.galiledu.usuarios.dominio;
 
+import java.util.Objects;
 import java.util.Set;
 
-/** Estado mínimo de la cuenta: permite varios roles y exige el primer cambio de clave. */
-public record CuentaUsuario(
-	DatosPersonales persona,
-	String nombreUsuario,
-	String hashContrasena,
-	Set<Rol> roles,
-	boolean activa,
-	boolean cambioContrasenaObligatorio
-) {
-	public CuentaUsuario {
-		if (persona == null) {
-			throw new IllegalArgumentException("La persona es obligatoria");
-		}
-		if (nombreUsuario == null || nombreUsuario.isBlank()) {
-			throw new IllegalArgumentException("El nombre de usuario es obligatorio");
-		}
-		if (hashContrasena == null || hashContrasena.isBlank()) {
-			throw new IllegalArgumentException("El hash de contraseña es obligatorio");
-		}
+/** Cuenta con identidad y transiciones de estado; no es un DTO ni una entidad JPA. */
+public final class CuentaUsuario {
+	private final DatosPersonales persona;
+	private final String nombreUsuario;
+	private final String hashContrasena;
+	private final Set<Rol> roles;
+	private final boolean activa;
+	private final boolean cambioContrasenaObligatorio;
+
+	public CuentaUsuario(DatosPersonales persona, String nombreUsuario, String hashContrasena,
+		Set<Rol> roles, boolean activa, boolean cambioContrasenaObligatorio) {
+		this.persona = Objects.requireNonNull(persona, "La persona es obligatoria");
+		this.nombreUsuario = obligatorio(nombreUsuario, "El nombre de usuario es obligatorio");
+		this.hashContrasena = obligatorio(hashContrasena, "El hash de contraseña es obligatorio");
 		if (roles == null || roles.isEmpty()) {
 			throw new IllegalArgumentException("La cuenta debe tener al menos un rol");
 		}
-		roles = Set.copyOf(roles);
+		this.roles = Set.copyOf(roles);
+		this.activa = activa;
+		this.cambioContrasenaObligatorio = cambioContrasenaObligatorio;
 	}
 
-	public static CuentaUsuario nueva(
-		DatosPersonales persona, String nombreUsuario, String hashTemporal, Set<Rol> roles
-	) {
+	public static CuentaUsuario nueva(DatosPersonales persona, String nombreUsuario,
+		String hashTemporal, Set<Rol> roles) {
 		return new CuentaUsuario(persona, nombreUsuario, hashTemporal, roles, true, true);
+	}
+
+	public DatosPersonales persona() {
+		return persona;
+	}
+
+	public String nombreUsuario() {
+		return nombreUsuario;
+	}
+
+	/** Solo para los servicios internos de autenticación y el futuro adaptador de datos. */
+	public String hashContrasena() {
+		return hashContrasena;
+	}
+
+	public Set<Rol> roles() {
+		return roles;
+	}
+
+	public boolean activa() {
+		return activa;
+	}
+
+	public boolean cambioContrasenaObligatorio() {
+		return cambioContrasenaObligatorio;
 	}
 
 	public boolean puedeUsarFuncionalidades() {
@@ -60,5 +82,12 @@ public record CuentaUsuario(
 		return "CuentaUsuario[nombreUsuario=" + nombreUsuario + ", roles=" + roles
 			+ ", activa=" + activa + ", cambioContrasenaObligatorio="
 			+ cambioContrasenaObligatorio + "]";
+	}
+
+	private static String obligatorio(String valor, String mensaje) {
+		if (valor == null || valor.isBlank()) {
+			throw new IllegalArgumentException(mensaje);
+		}
+		return valor;
 	}
 }

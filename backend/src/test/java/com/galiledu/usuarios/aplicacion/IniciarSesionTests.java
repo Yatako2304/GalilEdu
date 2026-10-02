@@ -76,6 +76,11 @@ class IniciarSesionTests {
 			.isEqualTo(ResultadoInicioSesion.Estado.CREDENCIALES_INVALIDAS);
 	}
 
+	@Test
+	void estadoDeAccesoNoExponeHashEnRegistros() {
+		assertThat(cuenta(EstadoUsuario.ACTIVO).toString()).doesNotContain("hash:temporal");
+	}
+
 	private static EstadoAcceso cuenta(EstadoUsuario estado) {
 		return new EstadoAcceso("U20260001", "hash:temporal", estado, 0, null, true,
 			Set.of(new Rol("DOCENTE"), new Rol("APODERADO")));
