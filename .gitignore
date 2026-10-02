@@ -1,0 +1,45 @@
+# Java / Spring Boot (Maven o Gradle)
+target/
+build/
+.gradle/
+out/
+*.class
+*.log
+logs/
+
+# React / Node.js
+node_modules/
+dist/
+coverage/
+.vite/
+.next/
+.npm/
+.pnpm-store/
+*.tsbuildinfo
+.eslintcache
+
+# Configuración local y secretos (conservar plantillas de ejemplo)
+.env
+.env.*
+!.env.example
+!.env.*.example
+application-local.properties
+application-local.yml
+application-local.yaml
+application-secrets.properties
+application-secrets.yml
+application-secrets.yaml
+
+# IDE
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+Desktop.ini
+
