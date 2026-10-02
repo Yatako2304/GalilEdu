@@ -10,7 +10,7 @@ Source: `Diagrama de componentes.drawio.html`, page 1 `Componentes`. The drawing
 | Users / `usuarios` | Roles/permissions; person data, profiles and guardian–student links; queryable audit; error register; account creation/changes/roles/deactivation/reactivation/bulk load; local/Google authentication and password recovery/change. |
 | Enrollment / `matricula` | Enrollment windows; section capacity/assignment; document templates/submissions; debt/payment/confirmation/code/late enrollment; guardian notifications. |
 | Payments / `pagos` | Discount catalog; fees, calendar and late charges; obligations/installments/debt; payment requests, results and receipts; external gateway integration without duplicate transactions. |
-| Institutional Configuration / not yet implemented | School structure, school calendar, annual offerings/assignments and curriculum/conversion catalog. Present in design, not current backend scope. |
+| Institutional Configuration / `configuracion` | School structure, school calendar, annual offerings/assignments and curriculum/conversion catalog. Only the initial area/competency catalog slice is currently implemented. |
 
 ## Interpreting connectors
 

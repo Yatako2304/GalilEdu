@@ -1,17 +1,18 @@
 # Module ownership and status
 
-Last reviewed: **2026-10-02**, against backend commit `d52e0fc` on `main`. This is the single project-level board for progress. `partial` means useful code exists but the module's full backlog is not implemented. A PO-approved/complete HU is **not** necessarily coded. Fill in actual owners and branches/PRs when the team assigns work; do not invent them.
+Last reviewed: **2026-10-02**. The previous Users/backend slice is on `main`; the new Institutional Configuration slice is on `develop-luis`. This is the single project-level board for progress. `partial` means useful code exists but the module's full backlog is not implemented. A PO-approved/complete HU is **not** necessarily coded. Fill in actual owners and branches/PRs when the team assigns work; do not invent them.
 
 | Module | Verified backend state | Owner / branch or PR | Current HU or focus | Living report |
 | --- | --- | --- | --- | --- |
-| Users / Security | Partial in `main`: REST login and basic account/person management against PostgreSQL. | To assign | To agree; candidate: administrative search/listing. | [users.md](users.md) |
+| Users / Security | Partial REST login and basic account/person management against PostgreSQL; available on `main`. | To assign | To agree; candidate: administrative search/listing. | [users.md](users.md) |
 | Payments | Initial: JDBC payment-order read and amount comparison. | Unassigned | Agree on a HU and verifiable confirmation contract. | Create `payments.md` when work starts. |
 | Enrollment | Initial: model and period-query port; no complete REST/database flow. | Unassigned | Agree with Payments and database team. Product decision: formalize automatically after confirmed payment; not implemented. | Create `enrollment.md` when work starts. |
 | Timetables | Initial: overlap rules and availability-query port. | Unassigned | Identify block/structure correctly before persistence. | Create `timetables.md` when work starts. |
 | Academics | Initial: grade values and scale checks. | Unassigned | Select a grades HU and agree on authorization/audit. | Create `academics.md` when work starts. |
 | Attendance | Initial: states and a correction use case. | Unassigned | Identify the session/load unambiguously before writes. | Create `attendance.md` when work starts. |
+| Institutional Configuration | Partial HU-52/HU-53 curricular catalog REST/JDBC slice; isolated and rollback-only PostgreSQL tests pass. | Luis / `develop-luis` | Resolve HU-54 course/grade mapping for the next slice. | [institutional-configuration.md](institutional-configuration.md) |
 
-Institutional Configuration appears in design views but has no implemented backend module or assigned HU in this delivery. Do not create a CRUD just because a diagram shows a component.
+Other Institutional Configuration workflows remain pending. Do not create a CRUD just because a diagram shows a component.
 
 ## Documentation rule
 

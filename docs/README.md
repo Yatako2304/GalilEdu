@@ -2,7 +2,7 @@
 
 **Current delivery: backend REST API and PostgreSQL integration only.** The existing frontend is outside this delivery.
 
-> **Repository state (2026-10-02):** the backend slice described here was merged into `main` in commit `d52e0fc`. Other modules remain partial; the PO backlog and database scripts are still supplied separately.
+> **Repository-state note (2026-10-02):** the previous Users/backend slice is on `main`; the Institutional Configuration slice described in its module report is on `develop-luis`. Consult the module board for exact progress.
 
 | Need | Read |
 | --- | --- |
@@ -20,7 +20,8 @@ docs/
 ├── database-compatibility.md
 ├── modules/
 │   ├── README.md             # status, ownership, mandatory report format
-│   └── users.md              # one living report for the active module
+│   ├── users.md              # Users living report
+│   └── institutional-configuration.md  # current Institutional Configuration slice
 └── views/                    # existing diagram notes in English
 ```
 

@@ -46,10 +46,11 @@ backend/src/main/java/com/galiledu/
 ├── matricula/{dominio,aplicacion}/
 ├── academica/{dominio,aplicacion}/
 ├── asistencia/{dominio,aplicacion}/
+├── configuracion/{dominio,aplicacion/puertos,infraestructura/{web,persistencia}}/
 └── infraestructura/web/                 # shared HTTP configuration
 ```
 
-Create packages when a story needs real code, not empty placeholders. The institutional-configuration area appears in the design but does not yet have a complete backend module. Tests mirror production packages under `backend/src/test/java/com/galiledu/`.
+Create packages when a story needs real code, not empty placeholders. Institutional Configuration has only an initial curricular-catalog slice; the full module is not complete. Tests mirror production packages under `backend/src/test/java/com/galiledu/`.
 
 ## Agreed user/security decisions
 

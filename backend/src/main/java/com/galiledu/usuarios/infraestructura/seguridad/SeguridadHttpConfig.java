@@ -29,6 +29,9 @@ public class SeguridadHttpConfig {
 				.requestMatchers(HttpMethod.GET, "/api/auth/me").authenticated()
 				.requestMatchers(HttpMethod.PUT, "/api/auth/password").authenticated()
 				.requestMatchers("/api/usuarios", "/api/personas/**", "/api/estudiantes/**").hasRole("ADMINISTRADOR")
+				.requestMatchers("/api/configuracion/areas-curriculares", "/api/configuracion/areas-curriculares/**",
+					"/api/configuracion/competencias", "/api/configuracion/competencias/**")
+					.hasAnyRole("ADMINISTRADOR", "PERSONAL_ADMINISTRATIVO")
 				.anyRequest().denyAll()
 			)
 			.authenticationProvider(autenticacion)

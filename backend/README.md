@@ -23,6 +23,12 @@ The local database currently uses `jdbc:postgresql://localhost:5433/galiledu_loc
 | `DELETE` | `/api/personas/{id}` | Logical deactivation; administrator. |
 | `POST` | `/api/personas/{id}/reactivacion` | Reactivate inactive account/person without dropping roles; administrator. |
 | `POST` | `/api/estudiantes/{id}/apoderados` | Link another existing guardian; administrator. |
+| `GET`, `POST` | `/api/configuracion/areas-curriculares` | List/create curricular areas; administrator or administrative staff. |
+| `GET`, `PUT`, `DELETE` | `/api/configuracion/areas-curriculares/{id}` | Read/edit/logically disable an area; same roles. |
+| `POST` | `/api/configuracion/areas-curriculares/{id}/reactivacion` | Reactivate an area; same roles. |
+| `GET`, `POST` | `/api/configuracion/competencias` | List/create competencies linked to an area; same roles. |
+| `GET`, `PUT`, `DELETE` | `/api/configuracion/competencias/{id}` | Read/edit/logically disable a competency; same roles. |
+| `POST` | `/api/configuracion/competencias/{id}/reactivacion` | Reactivate a competency; same roles. |
 
 All state-changing requests, **including REST login**, require CSRF. First call `GET /api/auth/csrf`, then send the returned token in its named header using the same session cookie. `POST /api/auth/login` body: `{"nombreUsuario":"...","contrasena":"..."}`. Success returns account ID, username, person ID and roles; invalid credentials return `401`, and a locked account also receives `segundosRestantes`. HTTP Basic remains available for REST clients. Use TLS outside local development; never send credentials over public HTTP.
 
