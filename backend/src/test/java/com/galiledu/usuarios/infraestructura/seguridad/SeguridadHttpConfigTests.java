@@ -7,6 +7,8 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.galiledu.usuarios.aplicacion.puertos.ServicioContrasenas;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -20,6 +22,9 @@ class SeguridadHttpConfigTests {
 
 	@Autowired
 	private PasswordEncoder codificador;
+
+	@Autowired
+	private ServicioContrasenas servicioContrasenas;
 
 	@Test
 	void saludEsPublica() throws Exception {
@@ -37,5 +42,12 @@ class SeguridadHttpConfigTests {
 		assertThat(hash).matches("^\\$2[aby]\\$10\\$.*");
 		assertThat(codificador.matches("clave-de-prueba", hash)).isTrue();
 		assertThat(codificador.matches("incorrecta", hash)).isFalse();
+	}
+
+	@Test
+	void adaptadorDeContrasenasImplementaElPuertoDeAplicacion() {
+		String hash = servicioContrasenas.codificar("clave-de-prueba");
+		assertThat(servicioContrasenas.coincide("clave-de-prueba", hash)).isTrue();
+		assertThat(servicioContrasenas.coincide("incorrecta", hash)).isFalse();
 	}
 }

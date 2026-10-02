@@ -34,7 +34,7 @@ La **capa de negocio** no será una carpeta adicional: comprende `aplicacion` (c
 
 Para persistencia elegimos **Repository como variante de DAO**, no dos capas duplicadas de `DAO` y `Repository`. La interfaz de Spring Data JPA y las entidades JPA permanecerán dentro de `infraestructura`; ni el controlador ni otro módulo accederán directamente a ellas. Los puertos y adaptadores se crearán al implementar el primer caso de uso que los necesite, sin asumir todavía nombres de tablas o columnas.
 
-Flujo orientativo, **no implementado aún**: `Controller → Caso de uso → Dominio`; el caso de uso invoca un puerto `Repository`, cuya implementación JPA accede a PostgreSQL.
+Flujo orientativo: `Controller → Caso de uso → Dominio`; el caso de uso invoca un puerto `Repository`, cuya implementación JPA accede a PostgreSQL. Para el cambio inicial de contraseña ya existe el caso de uso `CambiarContrasenaInicial`, el puerto `RepositorioCuentas` y un adaptador bcrypt del puerto `ServicioContrasenas`. El repositorio JPA y el controlador aún no existen porque faltan el esquema de datos y la autenticación HTTP.
 
 ## Límites de trabajo paralelo
 
