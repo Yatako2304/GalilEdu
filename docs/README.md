@@ -2,7 +2,7 @@
 
 **Current delivery: backend REST API and PostgreSQL integration only.** The existing frontend is outside this delivery.
 
-> **Repository-state warning (2026-10-02):** the implementation status below describes the current local working tree on `feat/arquitectura-seguridad-base`. Much of that backend work is still uncommitted and is **not present in `main`**. This documentation is a handoff/plan, not a claim that cloning `main` provides the listed REST features. Update the module reports when the code is merged.
+> **Repository state (2026-10-02):** the backend slice described here was merged into `main` in commit `d52e0fc`. Other modules remain partial; the PO backlog and database scripts are still supplied separately.
 
 | Need | Read |
 | --- | --- |

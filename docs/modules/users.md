@@ -1,6 +1,6 @@
 # Users / Security — living module report
 
-This document tracks **local backend REST implementation**, not PO validation of requirements or code already merged into `main`. The features below were checked in the local working tree of `feat/arquitectura-seguridad-base` and are **not yet available from `main`**. The backlog and database scripts live outside Git at `../backlog/` and `../scripts/` relative to the repository root. The current delivery excludes frontend work.
+This document tracks **backend REST implementation in `main`** as of commit `d52e0fc`, not PO validation of every requirement. The backlog and database scripts live outside Git at `../backlog/` and `../scripts/` relative to the repository root. The current delivery excludes frontend work.
 
 ## Owner and scope
 

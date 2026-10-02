@@ -1,10 +1,10 @@
 # Module ownership and status
 
-Last reviewed: **2026-10-02**, based on the local working tree of `feat/arquitectura-seguridad-base`. The listed backend work has **not yet been merged into `main`**; some is uncommitted locally. This is the single project-level board for progress, not a promise that a fresh clone of `main` runs the features. `partial` means useful local code exists but the module's full backlog is not implemented. A PO-approved/complete HU is **not** necessarily coded. Fill in actual owners and branches/PRs when the team assigns work; do not invent them.
+Last reviewed: **2026-10-02**, against backend commit `d52e0fc` on `main`. This is the single project-level board for progress. `partial` means useful code exists but the module's full backlog is not implemented. A PO-approved/complete HU is **not** necessarily coded. Fill in actual owners and branches/PRs when the team assigns work; do not invent them.
 
 | Module | Verified backend state | Owner / branch or PR | Current HU or focus | Living report |
 | --- | --- | --- | --- | --- |
-| Users / Security | Local partial work: REST login and basic account/person management against PostgreSQL; **not in `main`**. | To assign | To agree; candidate: administrative search/listing. | [users.md](users.md) |
+| Users / Security | Partial in `main`: REST login and basic account/person management against PostgreSQL. | To assign | To agree; candidate: administrative search/listing. | [users.md](users.md) |
 | Payments | Initial: JDBC payment-order read and amount comparison. | Unassigned | Agree on a HU and verifiable confirmation contract. | Create `payments.md` when work starts. |
 | Enrollment | Initial: model and period-query port; no complete REST/database flow. | Unassigned | Agree with Payments and database team. Product decision: formalize automatically after confirmed payment; not implemented. | Create `enrollment.md` when work starts. |
 | Timetables | Initial: overlap rules and availability-query port. | Unassigned | Identify block/structure correctly before persistence. | Create `timetables.md` when work starts. |

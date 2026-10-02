@@ -1,6 +1,6 @@
 # GalilEdu backend architecture
 
-Last checked: **2026-10-02** against the local working tree. This document records agreed technical decisions, not completion of every user story or availability of local changes in `main`. The [module board](modules/README.md) is the single source for implementation status; the [diagram notes](views/README.md) describe the design views.
+Last checked: **2026-10-02** against backend commit `d52e0fc` on `main`. This document records agreed technical decisions, not completion of every user story. The [module board](modules/README.md) is the single source for implementation status; the [diagram notes](views/README.md) describe the design views.
 
 ## Delivery scope and sources of truth
 
