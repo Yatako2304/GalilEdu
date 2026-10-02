@@ -6,7 +6,8 @@ import java.util.regex.Pattern;
 /** Datos obligatorios y formatos definidos por RF-12. */
 public record DatosPersonales(
 	String nombres,
-	String apellidos,
+	String primerApellido,
+	String segundoApellido,
 	TipoDocumento tipoDocumento,
 	String numeroDocumento,
 	String correoElectronico,
@@ -19,14 +20,16 @@ public record DatosPersonales(
 
 	public DatosPersonales {
 		nombres = textoObligatorio(nombres, "nombres");
-		apellidos = textoObligatorio(apellidos, "apellidos");
+		primerApellido = textoObligatorio(primerApellido, "primerApellido");
+		segundoApellido = textoObligatorio(segundoApellido, "segundoApellido");
 		tipoDocumento = Objects.requireNonNull(tipoDocumento, "tipoDocumento es obligatorio");
 		numeroDocumento = textoObligatorio(numeroDocumento, "numeroDocumento");
 		correoElectronico = textoObligatorio(correoElectronico, "correoElectronico");
 		telefono = textoObligatorio(telefono, "telefono");
 
 		if (nombres.codePoints().anyMatch(Character::isDigit)
-			|| apellidos.codePoints().anyMatch(Character::isDigit)) {
+			|| primerApellido.codePoints().anyMatch(Character::isDigit)
+			|| segundoApellido.codePoints().anyMatch(Character::isDigit)) {
 			throw new IllegalArgumentException("Los nombres y apellidos no pueden contener números");
 		}
 		Pattern formatoDocumento = tipoDocumento == TipoDocumento.DNI ? DNI : CARNE_EXTRANJERIA;

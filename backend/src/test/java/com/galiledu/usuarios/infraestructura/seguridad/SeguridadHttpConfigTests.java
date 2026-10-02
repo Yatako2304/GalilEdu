@@ -33,7 +33,7 @@ class SeguridadHttpConfigTests {
 
 	@Test
 	void otrasRutasEstanCerradas() throws Exception {
-		mvc.perform(get("/api/usuarios")).andExpect(status().isForbidden());
+		mvc.perform(get("/api/usuarios")).andExpect(status().isUnauthorized());
 	}
 
 	@Test

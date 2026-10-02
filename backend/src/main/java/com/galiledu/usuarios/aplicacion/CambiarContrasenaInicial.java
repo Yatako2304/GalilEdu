@@ -7,7 +7,7 @@ import com.galiledu.usuarios.aplicacion.puertos.ServicioContrasenas;
 import com.galiledu.usuarios.dominio.CuentaUsuario;
 
 /** Caso de uso del primer cambio obligatorio, acordado para la contraseña temporal. */
-public final class CambiarContrasenaInicial {
+public class CambiarContrasenaInicial {
 	private final RepositorioCuentas cuentas;
 	private final ServicioContrasenas contrasenas;
 

@@ -8,6 +8,6 @@ La decisión técnica de organización está en [Arquitectura](docs/arquitectura
 
 - Backend base en Spring Boot 4.1.1 y Java 21.
 - PostgreSQL 18 definido como base de datos objetivo.
-- Gestión de Usuarios ya tiene reglas de dominio probadas; aún faltan sus casos de uso, persistencia y API para completar las historias de extremo a extremo.
+- Gestión de Usuarios tiene un primer flujo de login y cambio de contraseña ejecutable en el perfil `demo`, sin BD. El acceso a datos definitivo se integrará cuando el equipo entregue el esquema PostgreSQL.
 
 La elección de IDE es libre: IntelliJ IDEA y VS Code usan el mismo código y el mismo Maven Wrapper del proyecto.

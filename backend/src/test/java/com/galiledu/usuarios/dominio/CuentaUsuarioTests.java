@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class CuentaUsuarioTests {
 	private static DatosPersonales persona() {
-		return new DatosPersonales("María", "López", TipoDocumento.DNI,
+		return new DatosPersonales("María", "López", "Quispe", TipoDocumento.DNI,
 			"12345678", "maria@example.com", "987654321");
 	}
 

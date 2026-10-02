@@ -24,7 +24,7 @@ class CambiarContrasenaInicialTests {
 		new CambiarContrasenaInicial(cuentas, contrasenas);
 
 	private static CuentaUsuario cuentaNueva() {
-		DatosPersonales persona = new DatosPersonales("María", "López", TipoDocumento.DNI,
+		DatosPersonales persona = new DatosPersonales("María", "López", "Quispe", TipoDocumento.DNI,
 			"12345678", "maria@example.com", "987654321");
 		return CuentaUsuario.nueva(persona, "U20260001", "hash:temporal",
 			Set.of(new Rol("DOCENTE"), new Rol("APODERADO")));

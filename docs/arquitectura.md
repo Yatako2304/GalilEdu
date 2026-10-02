@@ -28,16 +28,16 @@ La **capa de negocio** no será una carpeta adicional: comprende `aplicacion` (c
 | Controller / DTO | `api` | Recibir solicitudes y devolver respuestas; no guardar datos ni decidir reglas del negocio. |
 | Application Service / Use Case | `aplicacion` | Ejecutar una historia, coordinar el dominio y las dependencias, y definir la transacción. |
 | Entidades y Value Objects | `dominio` | Mantener estados y validaciones propios del negocio sin depender de Spring o JPA. |
-| Repository (DAO) | Puerto en `aplicacion`, implementación en `infraestructura` | Consultar y guardar agregados. La implementación puede usar Spring Data JPA cuando el esquema PostgreSQL esté listo. |
+| Repository (DAO) | Puerto en `aplicacion`, implementación en `infraestructura` | Consultar y guardar agregados. El adaptador demo usa memoria; el definitivo se ajustará al esquema PostgreSQL del equipo de BD. |
 | Adapter | `infraestructura` | Conectar correo, pasarela de pagos, S3, SQS y otros servicios sin acoplar el dominio a sus SDK. |
 | Inyección de dependencias | Composición de Spring | Entregar al caso de uso las implementaciones de sus puertos. |
 
-Para persistencia elegimos **Repository como variante de DAO**, no dos capas duplicadas de `DAO` y `Repository`. La interfaz de Spring Data JPA y las entidades JPA permanecerán dentro de `infraestructura`; ni el controlador ni otro módulo accederán directamente a ellas. Los puertos y adaptadores se crearán al implementar el primer caso de uso que los necesite, sin asumir todavía nombres de tablas o columnas.
+Para persistencia elegimos **Repository como variante de DAO**, no dos capas duplicadas de `DAO` y `Repository`. Cuando exista el esquema aprobado, la implementación JPA y sus entidades permanecerán dentro de `infraestructura`; ni el controlador ni otro módulo accederán directamente a ellas. No se definen aquí tablas ni columnas.
 
-Flujo orientativo: `Controller → Caso de uso → Dominio`; el caso de uso invoca un puerto `Repository`, cuya implementación JPA accede a PostgreSQL. Para el cambio inicial de contraseña ya existe el caso de uso `CambiarContrasenaInicial`, el puerto `RepositorioCuentas` y un adaptador bcrypt del puerto `ServicioContrasenas`. El repositorio JPA y el controlador aún no existen porque faltan el esquema de datos y la autenticación HTTP.
+El primer flujo está implementado como `AutenticacionController → IniciarSesion / CambiarContrasenaInicial → Dominio`, con puertos `RepositorioAccesos`, `RepositorioCuentas` y `ServicioContrasenas`. El perfil `demo` conecta esos puertos a memoria y bcrypt para probar HTTP sin BD. Fuera de ese perfil, la API funcional permanece cerrada hasta que se integre el acceso a PostgreSQL.
 
 ## Límites de trabajo paralelo
 
-- El equipo de base de datos puede preparar el esquema PostgreSQL 18 y sus migraciones sin que otros módulos dependan todavía de tablas concretas.
+- El equipo de base de datos prepara el esquema PostgreSQL 18. Esta rama no contiene SQL, migraciones ni entidades JPA; el acceso a datos se adaptará a su entrega.
 - Las llamadas entre módulos deberán expresar operaciones del módulo dueño; no se accederá directamente al repositorio de persistencia de otro módulo.
-- El PO validó las decisiones de varios roles por cuenta y contraseña inicial temporal con cambio obligatorio. El dominio de `usuarios` ya representa esas reglas, pero aún falta integrarlo con persistencia, casos de uso y autenticación HTTP. Hasta entonces, la API funcional permanece cerrada por defecto; solo el chequeo técnico de salud puede consultarse sin autenticar.
+- El PO validó varios roles por cuenta y contraseña inicial temporal con cambio obligatorio. El flujo de autenticación ya se puede probar en `demo`; faltan el acceso a datos definitivo, el envío real de credenciales y las demás historias de Usuarios. En el perfil normal, solo el chequeo técnico de salud es público.

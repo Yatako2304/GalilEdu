@@ -7,7 +7,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class DatosPersonalesTests {
 	private static DatosPersonales crear(TipoDocumento tipo, String documento) {
-		return new DatosPersonales("María", "López", tipo, documento, "maria@example.com", "987654321");
+		return new DatosPersonales("María", "López", "Quispe", tipo, documento, "maria@example.com", "987654321");
 	}
 
 	@Test
@@ -29,20 +29,20 @@ class DatosPersonalesTests {
 
 	@Test
 	void rechazaNombresNumericosYCamposObligatoriosVacios() {
-		assertThatThrownBy(() -> new DatosPersonales("María2", "López", TipoDocumento.DNI,
+		assertThatThrownBy(() -> new DatosPersonales("María2", "López", "Quispe", TipoDocumento.DNI,
 			"12345678", "maria@example.com", "987654321"))
 			.isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> new DatosPersonales("  ", "López", TipoDocumento.DNI,
+		assertThatThrownBy(() -> new DatosPersonales("  ", "López", "Quispe", TipoDocumento.DNI,
 			"12345678", "maria@example.com", "987654321"))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
 
 	@Test
 	void rechazaCorreoYTelefonoInvalidos() {
-		assertThatThrownBy(() -> new DatosPersonales("María", "López", TipoDocumento.DNI,
+		assertThatThrownBy(() -> new DatosPersonales("María", "López", "Quispe", TipoDocumento.DNI,
 			"12345678", "correo-invalido", "987654321"))
 			.isInstanceOf(IllegalArgumentException.class);
-		assertThatThrownBy(() -> new DatosPersonales("María", "López", TipoDocumento.DNI,
+		assertThatThrownBy(() -> new DatosPersonales("María", "López", "Quispe", TipoDocumento.DNI,
 			"12345678", "maria@example.com", "98765432"))
 			.isInstanceOf(IllegalArgumentException.class);
 	}
