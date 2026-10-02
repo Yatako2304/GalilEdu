@@ -2,6 +2,8 @@
 
 Base técnica del backend. Por ahora no implementa historias de usuario ni expone rutas funcionales.
 
+La organización acordada es un [monolito modular por capas](../docs/arquitectura.md). La primera pieza técnica está en `usuarios/infraestructura/seguridad`: solo permite el chequeo de salud, deniega las demás rutas y deja preparado bcrypt con costo 10. Esto **no** implementa todavía el inicio de sesión.
+
 ## Versiones
 
 - Java 21 LTS.
