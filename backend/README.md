@@ -4,6 +4,8 @@ Backend en Java 21 y Spring Boot 4.1.1, organizado como [monolito modular por ca
 
 El primer corte de Gestión de Usuarios incluye dominio, puertos Repository/DAO, casos de uso para iniciar sesión y cambiar la contraseña temporal, y una API HTTP. Para poder ejecutarlos antes de recibir el esquema, el perfil `demo` usa un repositorio **volátil en memoria**. Se pierde toda la información al reiniciar y **no debe desplegarse en producción**.
 
+Horarios empieza por la validación pura de cruces de docente y aula entre secciones para un mismo año, día y bloque (RF-117 y RF-118). Todavía no registra asignaciones ni ofrece una API de Horarios: faltan sus casos de uso y el adaptador de datos.
+
 ## Ejecutar el flujo demo sin base de datos
 
 Instala JDK 21 y, desde esta carpeta, configura `DEMO_ADMIN_TEMP_PASSWORD` como variable de entorno del proceso o de la configuración de ejecución del IDE. Debe ser una contraseña de prueba; no la guardes en Git. Luego ejecuta:

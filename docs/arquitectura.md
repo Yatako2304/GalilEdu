@@ -36,6 +36,8 @@ Para persistencia elegimos **Repository como variante de DAO**, no dos capas dup
 
 El primer flujo está implementado como `AutenticacionController → IniciarSesion / CambiarContrasenaInicial → Dominio`, con puertos `RepositorioAccesos`, `RepositorioCuentas` y `ServicioContrasenas`. El perfil `demo` conecta esos puertos a memoria y bcrypt para probar HTTP sin BD. Fuera de ese perfil, la API funcional permanece cerrada hasta que se integre el acceso a PostgreSQL.
 
+En `horarios/dominio` comenzó la validación de cruces de docente y aula de RF-117/RF-118, sin API ni acceso a datos todavía. La validación recibe asignaciones existentes; la operación transaccional de consultar, validar y guardar se incorporará al desarrollar la historia completa.
+
 ## Límites de trabajo paralelo
 
 - El equipo de base de datos prepara el esquema PostgreSQL 18. Esta rama no contiene SQL, migraciones ni entidades JPA; el acceso a datos se adaptará a su entrega.
