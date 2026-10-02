@@ -2,7 +2,9 @@
 
 ## Estilo
 
-GalilEdu tendrá un frontend React y **un único backend Spring Boot desplegable** (`galiledu.jar`). El backend se organizará como **monolito modular por capas**. Un módulo funcional no es un microservicio ni requiere su propio servidor o base de datos.
+GalilEdu tendrá un frontend React y **un único backend Spring Boot desplegable** (`galiledu.jar`). Usaremos **Spring MVC para la interfaz HTTP** y organizaremos el backend como **monolito modular por capas**. Son decisiones compatibles: MVC describe la interacción web; los módulos y capas ordenan el código interno. Un módulo funcional no es un microservicio ni requiere su propio servidor o base de datos.
+
+En este proyecto la **vista** es la aplicación React; el **controlador** es un `@RestController` de Spring MVC que recibe HTTP y devuelve JSON; el **modelo** comprende los datos y reglas del dominio que el caso de uso emplea y traduce a DTOs de respuesta. No usaremos plantillas HTML renderizadas por Spring. `Service` y `Repository` del esquema clásico apoyan al modelo y al controlador, pero no son letras adicionales de «MVC». [Spring MVC documenta sus controladores anotados, incluidos `@RestController`](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller.html).
 
 La vista de despliegue sitúa Nginx delante del backend y PostgreSQL en RDS. S3, SQS y los servicios externos se integrarán desde el backend cuando las historias correspondientes se implementen. Esta decisión técnica no agrega funcionalidades al backlog validado por el PO.
 

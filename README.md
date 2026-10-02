@@ -2,7 +2,7 @@
 
 Sistema de gestión escolar. El desarrollo comienza por el [backend](backend/README.md).
 
-La decisión técnica de organización está en [Arquitectura](docs/arquitectura.md): monolito modular por capas.
+La decisión técnica de organización está en [Arquitectura](docs/arquitectura.md): React como vista, Spring MVC para la API y backend monolítico modular por capas.
 
 ## Estado actual
 
