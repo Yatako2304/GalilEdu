@@ -5,31 +5,35 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
-/** RF-117 y RF-118: cruces de docente y aula entre secciones del mismo bloque. */
+/** RF-117 y RF-118: cruces de sección, docente y aula en el mismo bloque, día y periodo. */
 public final class ValidadorCrucesHorario {
-	public List<CruceHorario> detectar(AsignacionHorario propuesta,
-		Collection<AsignacionHorario> asignacionesVigentes) {
+	public List<CruceHorario> detectar(OcupacionHoraria propuesta,
+		Collection<OcupacionHoraria> vigentes) {
 		Objects.requireNonNull(propuesta, "La propuesta es obligatoria");
-		Objects.requireNonNull(asignacionesVigentes, "Las asignaciones vigentes son obligatorias");
+		Objects.requireNonNull(vigentes, "Las ocupaciones vigentes son obligatorias");
 		List<CruceHorario> cruces = new ArrayList<>();
-		for (AsignacionHorario vigente : asignacionesVigentes) {
-			Objects.requireNonNull(vigente, "Una asignación vigente no puede ser nula");
-			if (propuesta.identificador().equals(vigente.identificador())
-				|| propuesta.anioEscolar() != vigente.anioEscolar()
-				|| propuesta.dia() != vigente.dia()
-				|| propuesta.bloque() != vigente.bloque()
-				|| propuesta.seccion().equals(vigente.seccion())) {
+		for (OcupacionHoraria vigente : vigentes) {
+			Objects.requireNonNull(vigente, "Una ocupación vigente no puede ser nula");
+			if (propuesta.asignacionId().equals(vigente.asignacionId())
+				|| !propuesta.coincideEnTiempo(vigente)) {
 				continue;
 			}
-			if (propuesta.docente().equals(vigente.docente())) {
-				cruces.add(new CruceHorario(TipoCruceHorario.DOCENTE,
-					vigente.seccion(), vigente.curso()));
+			if (propuesta.ocupaLaMismaSeccionQue(vigente)) {
+				cruces.add(cruce(TipoCruceHorario.SECCION, vigente));
+				continue;
 			}
-			if (propuesta.aula().equals(vigente.aula())) {
-				cruces.add(new CruceHorario(TipoCruceHorario.AULA,
-					vigente.seccion(), vigente.curso()));
+			if (propuesta.docenteId().equals(vigente.docenteId())) {
+				cruces.add(cruce(TipoCruceHorario.DOCENTE, vigente));
+			}
+			if (propuesta.espacioFisicoId() != null
+				&& propuesta.espacioFisicoId().equals(vigente.espacioFisicoId())) {
+				cruces.add(cruce(TipoCruceHorario.AULA, vigente));
 			}
 		}
 		return List.copyOf(cruces);
+	}
+
+	private static CruceHorario cruce(TipoCruceHorario tipo, OcupacionHoraria vigente) {
+		return new CruceHorario(tipo, vigente.asignacionId(), vigente.seccion(), vigente.curso());
 	}
 }

@@ -3,43 +3,43 @@ package com.galiledu.horarios.aplicacion;
 import java.util.List;
 import java.util.Objects;
 
-import com.galiledu.horarios.aplicacion.puertos.ConsultaAsignacionesHorario;
-import com.galiledu.horarios.dominio.AsignacionHorario;
+import com.galiledu.horarios.aplicacion.puertos.ConsultaOcupacionesHorario;
 import com.galiledu.horarios.dominio.CruceHorario;
+import com.galiledu.horarios.dominio.OcupacionHoraria;
+import com.galiledu.horarios.dominio.TipoCruceHorario;
 import com.galiledu.horarios.dominio.ValidadorCrucesHorario;
 
-/** Verifica un bloque antes de registrarlo o modificarlo; no guarda la asignación. */
+/** Verifica una ocupación antes de registrarla o modificarla; no guarda nada. */
 public final class VerificarDisponibilidadHorario {
-	private final ConsultaAsignacionesHorario asignaciones;
+	private final ConsultaOcupacionesHorario ocupaciones;
 	private final ValidadorCrucesHorario validador;
 
-	public VerificarDisponibilidadHorario(ConsultaAsignacionesHorario asignaciones,
+	public VerificarDisponibilidadHorario(ConsultaOcupacionesHorario ocupaciones,
 		ValidadorCrucesHorario validador) {
-		this.asignaciones = Objects.requireNonNull(asignaciones);
+		this.ocupaciones = Objects.requireNonNull(ocupaciones);
 		this.validador = Objects.requireNonNull(validador);
 	}
 
-	public Resultado ejecutar(AsignacionHorario propuesta) {
+	public Resultado ejecutar(OcupacionHoraria propuesta) {
 		Objects.requireNonNull(propuesta, "La propuesta es obligatoria");
-		List<AsignacionHorario> vigentes = Objects.requireNonNull(asignaciones.buscarEnBloque(
-			propuesta.anioEscolar(), propuesta.dia(), propuesta.bloque()),
-			"La consulta no puede devolver null");
-		boolean seccionOcupada = vigentes.stream().anyMatch(vigente ->
-			!vigente.identificador().equals(propuesta.identificador())
-				&& vigente.anioEscolar() == propuesta.anioEscolar()
-				&& vigente.dia() == propuesta.dia()
-				&& vigente.bloque() == propuesta.bloque()
-				&& vigente.seccion().equals(propuesta.seccion()));
-		return new Resultado(seccionOcupada, validador.detectar(propuesta, vigentes));
+		List<OcupacionHoraria> vigentes = Objects.requireNonNull(ocupaciones.buscarOcupaciones(
+			propuesta.horarioSeccionId(), propuesta.bloqueHorarioId(), propuesta.dia(),
+			propuesta.periodos()), "La consulta no puede devolver null");
+		return new Resultado(validador.detectar(propuesta, vigentes));
 	}
 
-	public record Resultado(boolean seccionOcupada, List<CruceHorario> cruces) {
+	public record Resultado(List<CruceHorario> cruces) {
 		public Resultado {
 			cruces = List.copyOf(cruces);
 		}
 
 		public boolean disponible() {
-			return !seccionOcupada && cruces.isEmpty();
+			return cruces.isEmpty();
+		}
+
+		/** La propia sección ya tiene algo en ese bloque; distinto de un cruce externo. */
+		public boolean seccionOcupada() {
+			return cruces.stream().anyMatch(cruce -> cruce.tipo() == TipoCruceHorario.SECCION);
 		}
 	}
 }
