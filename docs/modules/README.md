@@ -8,7 +8,7 @@ Last reviewed: **2026-10-02**. The verified Users/backend, Institutional Configu
 | Payments | Partial HU-34 tariff registration/consultation with pension schedule and separate enrollment-fee due date, plus earlier read-only order amount comparison; isolated and rollback-only PostgreSQL tests pass. | Luis / `develop-luis` | Resolve safe tariff edits, school-year creation and Enrollment contract; gateway payments remain unimplemented. | [payments.md](payments.md) |
 | Enrollment | Initial: model and period-query port; no complete REST/database flow. | Unassigned | Agree with Payments and database team. Product decision: formalize automatically after confirmed payment; not implemented. | Create `enrollment.md` when work starts. |
 | Timetables | Initial: overlap rules and availability-query port. | Unassigned | Identify block/structure correctly before persistence. | Create `timetables.md` when work starts. |
-| Academics | Initial: grade values and scale checks. | Unassigned | Select a grades HU and agree on authorization/audit. | Create `academics.md` when work starts. |
+| Academics | Partial on `main`: domain, use cases and JDBC persistence for items, grades with audit, consolidation and queries; no REST. | To assign | Next: REST adapter and route authorization. | [academics.md](academics.md) |
 | Attendance | Initial: states and a correction use case. | Unassigned | Identify the session/load unambiguously before writes. | Create `attendance.md` when work starts. |
 | Institutional Configuration | Partial HU-52/HU-53 curricular catalog REST/JDBC slice; isolated and rollback-only PostgreSQL tests pass. | Luis / `develop-luis` | Resolve HU-54 course/grade mapping for the next slice. | [institutional-configuration.md](institutional-configuration.md) |
 

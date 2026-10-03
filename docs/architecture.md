@@ -44,7 +44,7 @@ backend/src/main/java/com/galiledu/
 ├── pagos/{dominio,aplicacion/puertos,infraestructura/{web,persistencia}}/
 ├── horarios/{dominio,aplicacion}/
 ├── matricula/{dominio,aplicacion}/
-├── academica/{dominio,aplicacion}/
+├── academica/{dominio,aplicacion/puertos,infraestructura/persistencia}/
 ├── asistencia/{dominio,aplicacion}/
 ├── configuracion/{dominio,aplicacion/puertos,infraestructura/{web,persistencia}}/
 └── infraestructura/web/                 # shared HTTP configuration
