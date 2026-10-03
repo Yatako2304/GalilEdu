@@ -22,7 +22,8 @@ docs/
 │   ├── README.md             # status, ownership, mandatory report format
 │   ├── users.md              # Users living report
 │   ├── institutional-configuration.md  # Institutional Configuration slice
-│   └── payments.md           # Payments slice and cross-module contracts
+│   ├── payments.md           # Payments slice and cross-module contracts
+│   └── enrollment.md         # Enrollment MVP and blockers
 └── views/                    # existing diagram notes in English
 ```
 

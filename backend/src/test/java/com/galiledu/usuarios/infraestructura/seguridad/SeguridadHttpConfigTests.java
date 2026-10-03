@@ -17,6 +17,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.galiledu.configuracion.aplicacion.GestionCatalogoCurricular;
 import com.galiledu.configuracion.aplicacion.puertos.RepositorioCatalogoCurricular;
+import com.galiledu.matricula.aplicacion.GestionPeriodosMatricula;
+import com.galiledu.matricula.aplicacion.GestionReservasMatricula;
+import com.galiledu.matricula.aplicacion.puertos.RepositorioReservasMatricula;
 import com.galiledu.pagos.aplicacion.GestionTarifarios;
 import com.galiledu.pagos.aplicacion.puertos.RepositorioTarifarios;
 import com.galiledu.usuarios.aplicacion.puertos.ServicioContrasenas;
@@ -51,6 +54,12 @@ class SeguridadHttpConfigTests {
 
 	@MockitoBean
 	private GestionTarifarios gestionTarifarios;
+
+	@MockitoBean
+	private GestionPeriodosMatricula gestionPeriodosMatricula;
+
+	@MockitoBean
+	private GestionReservasMatricula gestionReservasMatricula;
 
 	@Test
 	void saludEsPublica() throws Exception {
@@ -115,6 +124,26 @@ class SeguridadHttpConfigTests {
 		mvc.perform(get(ruta).with(user("administrativo").roles("PERSONAL_ADMINISTRATIVO")))
 			.andExpect(status().isOk());
 		mvc.perform(post("/api/pagos/tarifarios")
+			.with(user("administrativo").roles("PERSONAL_ADMINISTRATIVO")))
+			.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void matriculaAdministrativaNoExponeDatosAlApoderadoNiAceptaEscrituraSinCsrf() throws Exception {
+		UUID reservaId = UUID.randomUUID();
+		when(gestionReservasMatricula.consultar(reservaId)).thenReturn(new RepositorioReservasMatricula.Reserva(
+			reservaId, UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(),
+			"SECCION_RESERVADA", "REGULAR", LocalDate.of(2027, 1, 10)));
+		String ruta = "/api/matriculas/reservas/" + reservaId;
+		mvc.perform(get(ruta)).andExpect(status().isUnauthorized());
+		mvc.perform(get(ruta).with(user("apoderado").roles("APODERADO")))
+			.andExpect(status().isForbidden());
+		mvc.perform(get(ruta).with(user("administrativo").roles("PERSONAL_ADMINISTRATIVO")))
+			.andExpect(status().isOk());
+		mvc.perform(post("/api/matriculas/reservas")
+			.with(user("administrativo").roles("PERSONAL_ADMINISTRATIVO")))
+			.andExpect(status().isForbidden());
+		mvc.perform(put("/api/matriculas/periodos/" + UUID.randomUUID())
 			.with(user("administrativo").roles("PERSONAL_ADMINISTRATIVO")))
 			.andExpect(status().isForbidden());
 	}

@@ -2,15 +2,14 @@ package com.galiledu.matricula.dominio;
 
 import java.time.LocalDate;
 import java.util.Objects;
+import java.util.UUID;
 
 /** Rango regular de matrícula de un año escolar (HU-23, RF-51). */
-public record PeriodoMatricula(int anioEscolar, LocalDate inicio, LocalDate fin) {
+public record PeriodoMatricula(UUID anioEscolarId, LocalDate inicio, LocalDate fin) {
 	public PeriodoMatricula {
-		if (anioEscolar < 1) {
-			throw new IllegalArgumentException("El año escolar debe ser positivo");
+		if (anioEscolarId == null || inicio == null || fin == null) {
+			throw new IllegalArgumentException("El año escolar y las fechas de matrícula son obligatorios");
 		}
-		Objects.requireNonNull(inicio, "La fecha de inicio es obligatoria");
-		Objects.requireNonNull(fin, "La fecha de fin es obligatoria");
 		if (inicio.isAfter(fin)) {
 			throw new IllegalArgumentException("El periodo termina antes de comenzar");
 		}

@@ -43,7 +43,7 @@ backend/src/main/java/com/galiledu/
 ├── usuarios/{dominio,aplicacion/puertos,infraestructura/{web,persistencia,seguridad}}/
 ├── pagos/{dominio,aplicacion/puertos,infraestructura/{web,persistencia}}/
 ├── horarios/{dominio,aplicacion}/
-├── matricula/{dominio,aplicacion}/
+├── matricula/{dominio,aplicacion/puertos,infraestructura/{web,persistencia}}/
 ├── academica/{dominio,aplicacion/puertos,infraestructura/persistencia}/
 ├── asistencia/{dominio,aplicacion}/
 ├── configuracion/{dominio,aplicacion/puertos,infraestructura/{web,persistencia}}/
