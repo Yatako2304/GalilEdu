@@ -21,7 +21,7 @@ The following names intentionally preserve the original Spanish diagram labels, 
 | --- | --- |
 | `Persona` | `id`, `tipoDocumento`, `numeroDocumento`, `nombres`, `primerApellido`, `segundoApellido`, `correo`, `telefono`. Current request DTO uses `correoElectronico`; adapter maps it. |
 | `Usuario` | `id`, `username`, `passwordHash`, `estado`, `intentosFallidos`, `bloqueadoHasta`. Email belongs to Person, not Account. |
-| `Estudiante` | `id`, `direccion`, `contactoEmergencia`, `informacionMedica`; not all are implemented now. |
+| `Estudiante` | `id`, `direccion`, `contactoEmergencia`, `informacionMedica`; no grade field or direct `Estudiante`–`Grado` link is shown on page 9. In an enrollment, grade is reached through its `Seccion`. |
 | `Matrícula` | `id`, `estudiante`, `codigoMatricula`, `fechaRegistro`, `fechaConfirmacion`, `tipo`, `estado`, `motivoExcepcion`. |
 | `OrdenPago` / `Pago` | Order has code, total, state and gateway transaction ID. Payment has receipt number, principal/surcharge/total, date, state and observation. An order is **not** a confirmed payment. |
 | `AsignacionHoraria` / `CargaAcademica` | Assignment has ID, session type and day; load has ID, section ID, teacher ID and active flag. Relations supply further context. |

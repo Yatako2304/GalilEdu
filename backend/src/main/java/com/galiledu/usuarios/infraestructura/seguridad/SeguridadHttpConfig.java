@@ -34,6 +34,9 @@ public class SeguridadHttpConfig {
 					.hasAnyRole("ADMINISTRADOR", "PERSONAL_ADMINISTRATIVO")
 				.requestMatchers("/api/pagos/tarifarios", "/api/pagos/tarifarios/**")
 					.hasAnyRole("ADMINISTRADOR", "PERSONAL_ADMINISTRATIVO")
+				.requestMatchers("/api/matriculas/periodos/**", "/api/matriculas/reservas",
+					"/api/matriculas/reservas/**")
+					.hasAnyRole("ADMINISTRADOR", "PERSONAL_ADMINISTRATIVO")
 				.anyRequest().denyAll()
 			)
 			.authenticationProvider(autenticacion)
