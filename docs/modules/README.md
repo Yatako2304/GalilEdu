@@ -1,11 +1,11 @@
 # Module ownership and status
 
-Last reviewed: **2026-10-02**. The previous Users/backend slice is on `main`; the new Institutional Configuration slice is on `develop-luis`. This is the single project-level board for progress. `partial` means useful code exists but the module's full backlog is not implemented. A PO-approved/complete HU is **not** necessarily coded. Fill in actual owners and branches/PRs when the team assigns work; do not invent them.
+Last reviewed: **2026-10-02**. The verified Users/backend, Institutional Configuration and initial Payments slices are published on `main`; `develop-luis` remains Luis's working branch. This is the single project-level board for progress. `partial` means useful code exists but the module's full backlog is not implemented. A PO-approved/complete HU is **not** necessarily coded. Fill in actual owners and branches/PRs when the team assigns work; do not invent them.
 
 | Module | Verified backend state | Owner / branch or PR | Current HU or focus | Living report |
 | --- | --- | --- | --- | --- |
 | Users / Security | Partial REST login and basic account/person management against PostgreSQL; available on `main`. | To assign | To agree; candidate: administrative search/listing. | [users.md](users.md) |
-| Payments | Initial: JDBC payment-order read and amount comparison. | Unassigned | Agree on a HU and verifiable confirmation contract. | Create `payments.md` when work starts. |
+| Payments | Partial HU-34 tariff registration/consultation with pension schedule and separate enrollment-fee due date, plus earlier read-only order amount comparison; isolated and rollback-only PostgreSQL tests pass. | Luis / `develop-luis` | Resolve safe tariff edits, school-year creation and Enrollment contract; gateway payments remain unimplemented. | [payments.md](payments.md) |
 | Enrollment | Initial: model and period-query port; no complete REST/database flow. | Unassigned | Agree with Payments and database team. Product decision: formalize automatically after confirmed payment; not implemented. | Create `enrollment.md` when work starts. |
 | Timetables | Initial: overlap rules and availability-query port. | Unassigned | Identify block/structure correctly before persistence. | Create `timetables.md` when work starts. |
 | Academics | Initial: grade values and scale checks. | Unassigned | Select a grades HU and agree on authorization/audit. | Create `academics.md` when work starts. |

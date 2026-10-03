@@ -41,7 +41,7 @@ This is a pragmatic implementation: `GestionUsuarios` uses Spring `@Service` and
 ```text
 backend/src/main/java/com/galiledu/
 ├── usuarios/{dominio,aplicacion/puertos,infraestructura/{web,persistencia,seguridad}}/
-├── pagos/{dominio,aplicacion,infraestructura/persistencia}/
+├── pagos/{dominio,aplicacion/puertos,infraestructura/{web,persistencia}}/
 ├── horarios/{dominio,aplicacion}/
 ├── matricula/{dominio,aplicacion}/
 ├── academica/{dominio,aplicacion}/

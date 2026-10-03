@@ -2,7 +2,7 @@
 
 **Current delivery: backend REST API and PostgreSQL integration only.** The existing frontend is outside this delivery.
 
-> **Repository-state note (2026-10-02):** the previous Users/backend slice is on `main`; the Institutional Configuration slice described in its module report is on `develop-luis`. Consult the module board for exact progress.
+> **Repository-state note (2026-10-02):** the verified Users/backend, Institutional Configuration and initial Payments slices are published on `main`. `develop-luis` remains Luis's working branch. Consult the module board for exact progress.
 
 | Need | Read |
 | --- | --- |
@@ -21,7 +21,8 @@ docs/
 ├── modules/
 │   ├── README.md             # status, ownership, mandatory report format
 │   ├── users.md              # Users living report
-│   └── institutional-configuration.md  # current Institutional Configuration slice
+│   ├── institutional-configuration.md  # Institutional Configuration slice
+│   └── payments.md           # Payments slice and cross-module contracts
 └── views/                    # existing diagram notes in English
 ```
 

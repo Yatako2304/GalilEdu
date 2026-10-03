@@ -1,5 +1,8 @@
 package com.galiledu.usuarios.infraestructura.seguridad;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
@@ -14,6 +17,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import com.galiledu.configuracion.aplicacion.GestionCatalogoCurricular;
 import com.galiledu.configuracion.aplicacion.puertos.RepositorioCatalogoCurricular;
+import com.galiledu.pagos.aplicacion.GestionTarifarios;
+import com.galiledu.pagos.aplicacion.puertos.RepositorioTarifarios;
 import com.galiledu.usuarios.aplicacion.puertos.ServicioContrasenas;
 import com.galiledu.usuarios.infraestructura.web.CredencialesController;
 
@@ -43,6 +48,9 @@ class SeguridadHttpConfigTests {
 
 	@MockitoBean
 	private GestionCatalogoCurricular gestionCatalogo;
+
+	@MockitoBean
+	private GestionTarifarios gestionTarifarios;
 
 	@Test
 	void saludEsPublica() throws Exception {
@@ -91,6 +99,24 @@ class SeguridadHttpConfigTests {
 			.andExpect(status().isCreated())
 			.andExpect(jsonPath("$.id").value(id.toString()))
 			.andExpect(jsonPath("$.activo").value(true));
+	}
+
+	@Test
+	void tarifariosSoloPermitenAccesoAdministrativoYExigenCsrf() throws Exception {
+		UUID anioId = UUID.randomUUID();
+		String ruta = "/api/pagos/tarifarios/" + anioId;
+		when(gestionTarifarios.consultar(anioId)).thenReturn(new RepositorioTarifarios.Tarifario(
+			UUID.randomUUID(), anioId, "VIGENTE", BigDecimal.ONE, BigDecimal.ONE,
+			1, LocalDate.of(2027, 2, 10), List.of(LocalDate.of(2027, 4, 10)),
+			5, BigDecimal.ONE, BigDecimal.TEN));
+		mvc.perform(get(ruta)).andExpect(status().isUnauthorized());
+		mvc.perform(get(ruta).with(user("apoderado").roles("APODERADO")))
+			.andExpect(status().isForbidden());
+		mvc.perform(get(ruta).with(user("administrativo").roles("PERSONAL_ADMINISTRATIVO")))
+			.andExpect(status().isOk());
+		mvc.perform(post("/api/pagos/tarifarios")
+			.with(user("administrativo").roles("PERSONAL_ADMINISTRATIVO")))
+			.andExpect(status().isForbidden());
 	}
 
 	@Test
