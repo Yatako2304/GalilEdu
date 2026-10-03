@@ -29,6 +29,25 @@ HTTP request → controller + DTO → use case → domain rule
 
 Paths in the table are relative to `GalilEdu/`. Reuse the separation of responsibilities, **not** the Users business rules or a copy of its controller for each role.
 
+## Coding standard
+
+Apply these conventions to **new and changed backend code**. They describe the existing modular, hexagonal Spring Boot structure; do not rename whole modules merely to conform. A deliberate exception belongs in the affected module report.
+
+| Topic | Required convention |
+| --- | --- |
+| Language and naming | Keep Java identifiers descriptive and consistent with the owning module's established vocabulary. Packages are lowercase; classes/interfaces/records use `PascalCase`, methods and fields `camelCase`, constants `UPPER_SNAKE_CASE`. Keep REST JSON field names and SQL column names stable; map them explicitly instead of leaking database names into the domain. |
+| Package ownership | New behavior goes under `com.galiledu.<modulo>/{dominio,aplicacion,infraestructura}`. `aplicacion/puertos` holds interfaces; `infraestructura/web` holds controllers and request/response DTOs; `infraestructura/persistencia` holds JDBC adapters. Shared HTTP plumbing alone belongs under top-level `infraestructura/web`. |
+| Encapsulation | Domain state is private and constructed in a valid state. Prefer immutable values/records for small value objects and DTOs. Expose behavior or read-only accessors, not public mutable fields or setters that bypass invariants. Avoid static mutable state and hardcoded production/demo data. |
+| Dependency direction | `dominio` depends on neither Spring nor persistence/web packages. `aplicacion` depends on domain and capability-oriented ports, not JDBC or controllers. Adapters implement ports and translate HTTP/SQL shapes at the boundary. Cross-module use cases call a provider's contract; they do not import another module's adapter. |
+| Spring wiring | Use constructor injection; no field injection. Put `@Service` on application implementations and `@Repository`/`@Component` on adapters as appropriate. Controllers orchestrate HTTP only; business decisions belong in the use case/domain. Do not introduce an interface for every class: add a port when a boundary needs an interchangeable capability. |
+| REST and errors | One endpoint/use case per capability, not per role. Use explicit request/response DTOs and validation; never return entities, password hashes, raw exceptions or SQL errors. Use consistent status codes and the shared error mapping. Document actor and authorization for each new route, with denied-access tests. |
+| Persistence | Use the team-owned PostgreSQL schema, explicit column lists and bound JDBC parameters. Keep SQL and row mapping in adapters. Use UUIDs and database types according to the actual scripts; do not enable automatic schema creation. Never commit credentials or local `.env` values. |
+| Transactions | Place `@Transactional` at the application operation that must succeed or fail as a whole; avoid splitting one business action across independently committed calls. For competing writes, specify locking/uniqueness and test the conflict path. For retries or external callbacks, define an idempotency key before enabling writes. |
+| Tests | Mirror the production package under `src/test/java`; name test classes after the subject and scenarios after behavior. Cover success, invalid input, unauthorized access and failure/rollback. Keep PostgreSQL integration fixtures isolated and rollback-only where possible; never rely on data from a contributor's normal database. Report the exact command and skipped tests. |
+| Change size | Keep a change centered on one HU/RF or coherent technical prerequisite. Avoid unrelated rewrites, duplicate role-specific flows, speculative abstractions and new Markdown files when the existing module report or this guide fits. |
+
+Code review should enforce the boundary and observable behavior, not whitespace preferences. Follow the formatting already present in the edited file; if the team later adopts a formatter, configure it once for the whole backend and record that change here.
+
 ## Implementing an HU/RF
 
 1. In the module's single `docs/modules/<module>.md` report, identify HU/RF, actor, accepted input/result, errors, affected tables and unresolved decisions.

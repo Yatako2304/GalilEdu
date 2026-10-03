@@ -1,15 +1,15 @@
 # Module ownership and status
 
-Last reviewed: **2026-10-02**. The verified Users/backend, Institutional Configuration and initial Payments slices are published on `main`; `develop-luis` remains Luis's working branch. This is the single project-level board for progress. `partial` means useful code exists but the module's full backlog is not implemented. A PO-approved/complete HU is **not** necessarily coded. Fill in actual owners and branches/PRs when the team assigns work; do not invent them.
+Last reviewed: **2026-10-02**. The partial Users, Institutional Configuration, Payments, Enrollment, Academics, Timetables and Attendance slices are on `main`; `develop-luis` remains Luis's working branch. This is the single project-level board for progress. `partial` means useful code exists but the module's full backlog is not implemented. A PO-approved/complete HU is **not** necessarily coded. Fill in actual owners and branches/PRs when the team assigns work; do not invent them.
 
 | Module | Verified backend state | Owner / branch or PR | Current HU or focus | Living report |
 | --- | --- | --- | --- | --- |
 | Users / Security | Partial REST login and basic account/person management against PostgreSQL; available on `main`. | To assign | To agree; candidate: administrative search/listing. | [users.md](users.md) |
 | Payments | Partial HU-34 tariff registration/consultation with pension schedule and separate enrollment-fee due date, plus earlier read-only order amount comparison; isolated and rollback-only PostgreSQL tests pass. | Luis / `develop-luis` | Resolve safe tariff edits, school-year creation and Enrollment contract; gateway payments remain unimplemented. | [payments.md](payments.md) |
 | Enrollment | Partial HU-23 period REST (migration prepared, not applied) and HU-24 administrative section reservation (PostgreSQL-tested); no paid enrollment flow. | Luis / `develop-luis` | Database-team review/application of migration `008`; guardian, debt and verified-payment contracts still pending. | [enrollment.md](enrollment.md) |
-| Timetables | Initial: overlap rules and availability-query port. | Unassigned | Identify block/structure correctly before persistence. | Create `timetables.md` when work starts. |
+| Timetables | Partial domain, use cases, JDBC adapters and tests on `main`; verify REST exposure separately. | To assign | Continue module report and verify end-to-end route/authorization before calling a HU complete. | Create `timetables.md` with the next module change. |
 | Academics | Partial on `main`: domain, use cases and JDBC persistence for items, grades with audit, consolidation and queries; no REST. | To assign | Next: REST adapter and route authorization. | [academics.md](academics.md) |
-| Attendance | Initial: states and a correction use case. | Unassigned | Identify the session/load unambiguously before writes. | Create `attendance.md` when work starts. |
+| Attendance | Partial REST CRUD and JDBC adapter on `main`; full HU coverage is unverified here. | To assign | Reconcile session/load identity and authorization with the backlog. | Create `attendance.md` with the next module change. |
 | Institutional Configuration | Partial HU-52/HU-53 curricular catalog REST/JDBC slice; isolated and rollback-only PostgreSQL tests pass. | Luis / `develop-luis` | Resolve HU-54 course/grade mapping for the next slice. | [institutional-configuration.md](institutional-configuration.md) |
 
 Other Institutional Configuration workflows remain pending. Do not create a CRUD just because a diagram shows a component.
