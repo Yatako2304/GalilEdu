@@ -25,6 +25,9 @@ const mensajeDeError = (error: unknown) => {
   return 'El usuario o contraseña son incorrectos.';
 };
 
+// El enlace de Figma se oculta hasta implementar HU-4 (el backend aún no tiene el endpoint de recuperación).
+const RECUPERAR_CONTRASENA_DISPONIBLE = false;
+
 // Figma > 🌟 Autenticación > Iniciar sesión (HU-1)
 export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const login = useLogin({
@@ -84,14 +87,16 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
                   </button>
                 }
               />
-              <div className="flex justify-end">
-                <Link
-                  to={paths.auth.recuperarContrasena.getHref()}
-                  className="text-body-4 text-content-accent-secondary"
-                >
-                  ¿Olvidaste tu contraseña?
-                </Link>
-              </div>
+              {RECUPERAR_CONTRASENA_DISPONIBLE && (
+                <div className="flex justify-end">
+                  <Link
+                    to={paths.auth.recuperarContrasena.getHref()}
+                    className="text-body-4 text-content-accent-secondary"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
+              )}
             </div>
             <Button
               isLoading={login.isPending}

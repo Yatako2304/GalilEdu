@@ -57,6 +57,6 @@ Ver la tabla completa en [backend/README.md](../../backend/README.md#api-prefijo
 ## Pendientes
 
 - [ ] Configurar SMTP real para el envío de credenciales.
-- [ ] HU-4/HU-5 contraseña, HU-3 Google.
+- [ ] HU-4/HU-5 contraseña, HU-3 Google. El enlace "¿Olvidaste tu contraseña?" del login está oculto (`RECUPERAR_CONTRASENA_DISPONIBLE` en `login-form.tsx`) hasta implementar HU-4: actívalo junto con el endpoint.
 - [x] Cortar la sesión al desactivar o eliminar: cada petición verifica que la cuenta siga activa (`compartido/seguridad/VerificadorSesion`).
 - [ ] Si se cambian los roles de un usuario conectado, su menú se actualiza recién al volver a iniciar sesión.
