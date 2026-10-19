@@ -3,6 +3,7 @@ package com.galiledu.compartido.seguridad;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -16,9 +17,15 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
@@ -85,8 +92,16 @@ public class SeguridadConfig {
 	}
 
 	@Bean
-	JwtDecoder decodificadorJwt(SecretKey clave) {
-		return NimbusJwtDecoder.withSecretKey(clave).macAlgorithm(MacAlgorithm.HS256).build();
+	JwtDecoder decodificadorJwt(SecretKey clave, VerificadorSesion verificador) {
+		NimbusJwtDecoder decodificador = NimbusJwtDecoder.withSecretKey(clave).macAlgorithm(MacAlgorithm.HS256).build();
+		// Además de la firma y la expiración, la cuenta debe seguir activa: desactivar o eliminar corta la sesión ya.
+		OAuth2TokenValidator<Jwt> cuentaVigente = jwt -> verificador.sesionVigente(UUID.fromString(jwt.getSubject()))
+				? OAuth2TokenValidatorResult.success()
+				: OAuth2TokenValidatorResult
+						.failure(new OAuth2Error("invalid_token", "La sesión ya no es válida", null));
+		decodificador
+				.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefault(), cuentaVigente));
+		return decodificador;
 	}
 
 	@Bean
