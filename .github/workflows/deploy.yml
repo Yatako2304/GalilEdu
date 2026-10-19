@@ -1,0 +1,64 @@
+# Despliegue continuo: cuando el CI pasa en main (es decir, después de cada merge), entra por SSH
+# al servidor (AWS EC2) y ejecuta deploy/actualizar.sh. También se puede lanzar a mano desde
+# GitHub → Actions → Despliegue → Run workflow.
+#
+# Secretos necesarios (Settings → Secrets and variables → Actions):
+#   SERVIDOR_HOST       IP o dominio del servidor (la Elastic IP del EC2)
+#   SERVIDOR_USUARIO    usuario SSH (en Ubuntu de EC2: ubuntu)
+#   SERVIDOR_CLAVE_SSH  contenido completo de la clave privada (.pem)
+# Mientras no estén configurados, el job termina sin error y solo avisa.
+# Guía: docs/guias/despliegue.md
+name: Despliegue
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+# Nunca dos despliegues a la vez; si llega uno nuevo, espera al anterior.
+concurrency:
+  group: despliegue
+  cancel-in-progress: false
+
+jobs:
+  desplegar:
+    name: Desplegar en el servidor
+    # Solo si el CI de un push a main salió bien (o si se lanzó a mano).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Revisar configuración
+        id: config
+        env:
+          HOST: ${{ secrets.SERVIDOR_HOST }}
+        run: |
+          if [ -z "$HOST" ]; then
+            echo "configurado=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Despliegue omitido: falta configurar los secretos SERVIDOR_* (ver docs/guias/despliegue.md)."
+          else
+            echo "configurado=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Actualizar el servidor por SSH
+        if: steps.config.outputs.configurado == 'true'
+        env:
+          HOST: ${{ secrets.SERVIDOR_HOST }}
+          USUARIO: ${{ secrets.SERVIDOR_USUARIO || 'ubuntu' }}
+          CLAVE: ${{ secrets.SERVIDOR_CLAVE_SSH }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$CLAVE" > ~/.ssh/servidor
+          chmod 600 ~/.ssh/servidor
+          if ! ssh -i ~/.ssh/servidor -o StrictHostKeyChecking=accept-new -o ConnectTimeout=20 \
+              "$USUARIO@$HOST" 'bash /opt/galiledu/deploy/actualizar.sh'; then
+            echo "::error::No se pudo desplegar. Si usas AWS Academy Learner Lab, verifica que el lab esté iniciado (el EC2 se apaga al terminar la sesión) y vuelve a lanzar este workflow."
+            exit 1
+          fi
+
+      - name: Resumen
+        if: steps.config.outputs.configurado == 'true'
+        run: echo "### ✅ GalilEdu desplegado (versión ${GITHUB_SHA::7})" >> "$GITHUB_STEP_SUMMARY"
