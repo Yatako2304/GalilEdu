@@ -1,12 +1,16 @@
 package com.galiledu.estudiantes;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockMultipartFile;
 
 import com.galiledu.PruebaIntegracion;
 import com.jayway.jsonpath.JsonPath;
@@ -104,5 +108,60 @@ class InscripcionIT extends PruebaIntegracion {
 	@Test
 	void elDocenteNoPuedeInscribir() throws Exception {
 		mvc.perform(conToken(get("/estudiantes"), token(DOCENTE))).andExpect(status().isForbidden());
+	}
+
+	private static final String APODERADO_NUEVO = """
+			{"noRegistra":false,"persona":{"tipoDocumento":"DNI","numeroDocumento":"45678912","apellidoPaterno":"Fernández",
+			"nombres":"Lucía","celular":"999888777","correo":"lucia.fernandez@gmail.com"},"relacion":"Amiga de la familia"}""";
+	private static final byte[] PDF = "%PDF-1.4 carta poder".getBytes();
+
+	private String inscribirConApoderado() throws Exception {
+		String r = mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
+				inscripcion(NO_REGISTRA, NO_REGISTRA, APODERADO_NUEVO, "APODERADO")))
+				.andExpect(status().isCreated())
+				.andReturn().getResponse().getContentAsString();
+		return JsonPath.read(r, "$.id");
+	}
+
+	private org.springframework.test.web.servlet.ResultActions subir(String estudianteId, String nombre, String mime,
+			byte[] contenido) throws Exception {
+		return mvc.perform(conToken(multipart("/estudiantes/" + estudianteId + "/apoderado/documento")
+				.file(new MockMultipartFile("archivo", nombre, mime, contenido))
+				.param("tipo", "Carta poder notarial"), personal));
+	}
+
+	@Test
+	void subeYDescargaElDocumentoDelApoderado() throws Exception {
+		String id = inscribirConApoderado();
+
+		subir(id, "carta_poder.pdf", "application/pdf", PDF)
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.tipo").value("Carta poder notarial"))
+				.andExpect(jsonPath("$.nombreArchivo").value("carta_poder.pdf"));
+
+		mvc.perform(conToken(get("/estudiantes/" + id), personal))
+				.andExpect(jsonPath("$.familia[?(@.parentesco == 'APODERADO')].acreditacion.nombreArchivo")
+						.value("carta_poder.pdf"));
+
+		mvc.perform(conToken(get("/estudiantes/" + id + "/apoderado/documento"), personal))
+				.andExpect(status().isOk())
+				.andExpect(header().string("Content-Type", "application/pdf"))
+				.andExpect(content().bytes(PDF));
+	}
+
+	@Test
+	void rechazaArchivosQueNoSonPdfNiImagen() throws Exception {
+		String id = inscribirConApoderado();
+		subir(id, "virus.exe", "application/octet-stream", PDF)
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("El documento debe ser PDF, JPG o PNG"));
+	}
+
+	@Test
+	void sinApoderadoNoSePuedeSubirDocumento() throws Exception {
+		String r = mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
+				inscripcion(PADRE_EXISTENTE, MADRE_NUEVA, "null", "PADRE")))
+				.andReturn().getResponse().getContentAsString();
+		subir(JsonPath.read(r, "$.id"), "carta.pdf", "application/pdf", PDF).andExpect(status().isBadRequest());
 	}
 }

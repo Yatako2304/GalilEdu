@@ -36,10 +36,11 @@ En Notion, HU-7 está en "Seguridad" como "registro de estudiante con apoderado"
 | `estudiantes.vinculo_familiar` | Paso 3 y 5: padre/madre/apoderado, vive con él, tutela, **responsable de matrícula**. Permite detectar hermanos. |
 | `estudiantes.contacto_emergencia` | Paso 4 (mínimo 2). |
 | `estudiantes.autorizado_recojo` | Paso 4. |
+| `estudiantes.documento_vinculo` | Documento que acredita al apoderado (archivo en la BD). Migración `V3__estudiantes_documento_apoderado.sql`. |
 
 ## API
 
-Ver [backend/README.md](../../backend/README.md#api-prefijo-api): `/estudiantes`, `/estudiantes/{id}`, `/estudiantes/personas?documento=`, `/estudiantes/inscripciones`.
+Ver [backend/README.md](../../backend/README.md#api-prefijo-api): `/estudiantes`, `/estudiantes/{id}`, `/estudiantes/personas?documento=`, `/estudiantes/inscripciones`, `/estudiantes/{id}/apoderado/documento`.
 
 ## Código
 
@@ -51,4 +52,4 @@ Ver [backend/README.md](../../backend/README.md#api-prefijo-api): `/estudiantes`
 
 - [ ] Prueba manual de los 5 pasos desde la pantalla.
 - [ ] "Editar datos" e "Iniciar matrícula" desde la ficha (dependen de Matrícula).
-- [ ] Subir el documento que acredita al apoderado (carta poder): hoy no se guarda.
+- [x] Documento que acredita al apoderado (carta poder, resolución de tutela…): se adjunta en el paso 3 y se ve o reemplaza desde la ficha. PDF, JPG o PNG de hasta 5 MB.

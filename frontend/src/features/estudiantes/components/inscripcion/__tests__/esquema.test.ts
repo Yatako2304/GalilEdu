@@ -5,6 +5,7 @@ import {
   inscripcionSchema,
   inscripcionVacia,
   registra,
+  validarDocumento,
 } from '../esquema';
 
 /** Inscripción válida: estudiante, padre ya registrado y madre nueva. */
@@ -129,5 +130,36 @@ describe('aSolicitud (formulario → contrato del backend)', () => {
       motivo: 'Fallecido(a)',
       observacion: null,
     });
+  });
+});
+
+describe('documento del apoderado', () => {
+  const archivo = (tipo: string, bytes: number) =>
+    new File([new Uint8Array(bytes)], 'carta.pdf', { type: tipo });
+
+  test('acepta PDF, JPG o PNG de hasta 5 MB', () => {
+    expect(validarDocumento(archivo('application/pdf', 1024))).toBeNull();
+    expect(validarDocumento(archivo('image/png', 1024))).toBeNull();
+  });
+
+  test('rechaza otros formatos y archivos de más de 5 MB', () => {
+    expect(validarDocumento(archivo('application/zip', 10))).toBe(
+      'El documento debe ser PDF, JPG o PNG',
+    );
+    expect(
+      validarDocumento(archivo('application/pdf', 5 * 1024 * 1024 + 1)),
+    ).toBe('El documento no puede pesar más de 5 MB');
+  });
+
+  test('si la relación es "Otro", se envía el texto de "Especificar"', () => {
+    const f = valida();
+    f.incluirApoderado = true;
+    f.apoderado = {
+      ...f.apoderado,
+      personaId: 'id-apoderado',
+      relacion: 'Otro',
+      relacionDetalle: 'Vecina',
+    };
+    expect(aSolicitud(f).apoderado).toMatchObject({ relacion: 'Vecina' });
   });
 });

@@ -20,8 +20,11 @@ const NuevaInscripcionRoute = () => {
           const aviso = r.cuentaNueva
             ? `${r.estudiante} se vinculó a ${r.responsable} (responsable). Se creó su usuario ${r.usuarioResponsable} y se enviaron las credenciales a su correo.`
             : `${r.estudiante} se vinculó a la cuenta de ${r.responsable} (responsable, usuario ${r.usuarioResponsable}).`;
+          const avisoCompleto = r.documentoFallido
+            ? `${aviso} No se pudo subir el documento del apoderado: vuelve a intentarlo desde esta ficha.`
+            : aviso;
           navigate(paths.app.administrativo.fichaEstudiante.getHref(r.id), {
-            state: { aviso },
+            state: { aviso: avisoCompleto },
           });
         }}
       />

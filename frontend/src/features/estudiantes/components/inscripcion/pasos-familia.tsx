@@ -1,4 +1,11 @@
-import { CircleAlert, Plus, Search, Trash2 } from 'lucide-react';
+import {
+  CircleAlert,
+  FileText,
+  Paperclip,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react';
 import * as React from 'react';
 import { useFieldArray, UseFormReturn } from 'react-hook-form';
 
@@ -13,7 +20,12 @@ import { TIPOS_DOCUMENTO } from '@/config/catalogos';
 import { buscarPersonaPorDocumento } from '../../api/estudiantes';
 
 import { Casilla, Grilla, SeccionPaso, Subtitulo } from './campos';
-import { InscripcionForm, registra } from './esquema';
+import {
+  InscripcionForm,
+  TIPOS_DOCUMENTO_APODERADO,
+  registra,
+  validarDocumento,
+} from './esquema';
 
 type PasoProps = { form: UseFormReturn<InscripcionForm> };
 type Clave = 'padre' | 'madre' | 'apoderado';
@@ -172,16 +184,7 @@ const TarjetaFamiliar = ({
             sinDocumento
           />
 
-          {clave === 'apoderado' && (
-            <Grilla columnas={2}>
-              <Select
-                label="Relación con el estudiante"
-                options={RELACIONES}
-                placeholder="Selecciona"
-                registration={register('apoderado.relacion')}
-              />
-            </Grilla>
-          )}
+          {clave === 'apoderado' && <RelacionYDocumento form={form} />}
 
           <div className="flex flex-wrap gap-6">
             <Casilla
@@ -196,6 +199,101 @@ const TarjetaFamiliar = ({
         </>
       )}
     </Card>
+  );
+};
+
+// Figma > Card "Apoderado" > RELACIÓN CON EL ESTUDIANTE: relación, "Especificar" y documento que lo acredita.
+const RelacionYDocumento = ({ form }: PasoProps) => {
+  const { register, watch, setValue } = form;
+  const [relacion, documento] = watch([
+    'apoderado.relacion',
+    'documentoApoderado',
+  ]);
+  const [error, setError] = React.useState<string | null>(null);
+  const entrada = React.useRef<HTMLInputElement>(null);
+
+  const elegir = (archivo: File | undefined) => {
+    if (!archivo) return;
+    const problema = validarDocumento(archivo);
+    setError(problema);
+    if (!problema) setValue('documentoApoderado.archivo', archivo);
+  };
+
+  return (
+    <section className="flex flex-col gap-4 border-t border-stroke-tertiary pt-5">
+      <Subtitulo>Relación con el estudiante</Subtitulo>
+      <Grilla>
+        <Select
+          label="Relación"
+          options={RELACIONES}
+          placeholder="Selecciona"
+          registration={register('apoderado.relacion')}
+        />
+        <Input
+          label="Especificar (si elige “Otro”)"
+          disabled={relacion !== 'Otro'}
+          registration={register('apoderado.relacionDetalle')}
+        />
+        <Select
+          label="Documento que lo acredita"
+          options={TIPOS_DOCUMENTO_APODERADO.map((v) => ({
+            label: v,
+            value: v,
+          }))}
+          placeholder="Selecciona"
+          registration={register('documentoApoderado.tipo')}
+        />
+      </Grilla>
+
+      <input
+        ref={entrada}
+        type="file"
+        accept="application/pdf,image/jpeg,image/png"
+        className="sr-only"
+        aria-label="Archivo del documento"
+        onChange={(e) => {
+          elegir(e.target.files?.[0]);
+          e.target.value = '';
+        }}
+      />
+      {documento.archivo ? (
+        <div className="flex items-center gap-3 rounded-[12px] bg-surface-secondary px-4 py-3">
+          <FileText
+            className="size-6 shrink-0 text-content-error"
+            aria-hidden="true"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-body-3 text-content-primary">
+              {documento.archivo.name}
+            </p>
+            <p className="text-body-4 text-content-tertiary">
+              {(documento.archivo.size / 1024).toFixed(0)} KB · se subirá al
+              registrar la inscripción
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            icon={<Trash2 className="size-4" />}
+            onClick={() => setValue('documentoApoderado.archivo', null)}
+          >
+            Quitar
+          </Button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="primary-light"
+          className="self-start"
+          icon={<Paperclip className="size-4" />}
+          onClick={() => entrada.current?.click()}
+        >
+          Adjuntar documento (PDF, JPG o PNG · máx. 5 MB)
+        </Button>
+      )}
+      {error && <p className="text-body-4 text-content-error">{error}</p>}
+    </section>
   );
 };
 

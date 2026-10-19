@@ -8,7 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.jayway.jsonpath.JsonPath;
@@ -49,7 +49,7 @@ public abstract class PruebaIntegracion {
 	}
 
 	/** Agrega el token y el cuerpo JSON a una petición. */
-	protected static MockHttpServletRequestBuilder conToken(MockHttpServletRequestBuilder peticion, String token,
+	protected static <B extends AbstractMockHttpServletRequestBuilder<B>> B conToken(B peticion, String token,
 			String json) {
 		peticion.header("Authorization", "Bearer " + token);
 		if (json != null) {
@@ -58,7 +58,7 @@ public abstract class PruebaIntegracion {
 		return peticion;
 	}
 
-	protected static MockHttpServletRequestBuilder conToken(MockHttpServletRequestBuilder peticion, String token) {
+	protected static <B extends AbstractMockHttpServletRequestBuilder<B>> B conToken(B peticion, String token) {
 		return conToken(peticion, token, null);
 	}
 }
