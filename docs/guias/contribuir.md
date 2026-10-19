@@ -23,6 +23,17 @@ Formato: `tipo(alcance): qué cambió`, en español e imperativo.
 | `refactor` | Cambia código sin cambiar comportamiento |
 | `chore` | Configuración, dependencias, CI |
 
+## Antes de cada commit (automático)
+
+Al ejecutar `npm install` en `frontend/` se instala un hook de Git (`frontend/.husky/pre-commit`) que corre solo en cada `git commit`:
+
+- **Frontend:** ESLint + Prettier corrigen los archivos `.ts/.tsx` que vas a commitear y se revisan los tipos ([`.lintstagedrc.cjs`](../../frontend/.lintstagedrc.cjs)).
+- **Backend:** Spotless formatea los `.java` que vas a commitear y los vuelve a agregar.
+
+Si el hook encuentra un error que no puede corregir solo, el commit se cancela y te muestra qué arreglar. En una emergencia puedes saltarlo con `git commit --no-verify`, pero el CI igual lo revisará.
+
+Para formatear a mano: `.\mvnw.cmd spotless:apply` en `backend/` y `npx eslint src --fix` en `frontend/`.
+
 ## Pull request
 
 1. Antes de abrirlo, corre las pruebas en tu PC (ver [pruebas.md](pruebas.md)):

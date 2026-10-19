@@ -1,6 +1,6 @@
 # Convenciones de código
 
-Cómo nombrar las cosas en BD, backend y frontend. Si una regla no está aquí, copia lo que ya hacen `usuarios` y `estudiantes`. Lo que la máquina puede revisar (formato, nombres de archivos del frontend) lo revisan ESLint, Prettier y `.editorconfig`; esta guía cubre lo demás.
+Cómo nombrar las cosas en BD, backend y frontend. Si una regla no está aquí, copia lo que ya hacen `usuarios` y `estudiantes`. El **formato** no se discute: lo aplican herramientas (Prettier en el frontend, Spotless en el backend, `.editorconfig` en el editor) en cada commit y en el CI. Esta guía cubre lo que una herramienta no puede decidir: los nombres.
 
 ## Reglas generales
 

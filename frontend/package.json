@@ -9,7 +9,7 @@
     "preview": "vite preview",
     "test": "vitest",
     "test-e2e": "playwright test",
-    "prepare": "husky",
+    "prepare": "cd .. && husky frontend/.husky",
     "lint": "eslint src --ignore-path .gitignore",
     "check-types": "tsc --project tsconfig.json --pretty --noEmit",
     "generate": "plop",
@@ -108,11 +108,5 @@
   },
   "msw": {
     "workerDirectory": "public"
-  },
-  "lint-staged": {
-    "*.+(ts|tsx)": [
-      "npm run lint",
-      "bash -c 'npm run check-types'"
-    ]
   }
 }
