@@ -1,19 +1,21 @@
 # Prueba de humo del despliegue: construye las imágenes, levanta los 3 contenedores con
 # docker-compose.yml (igual que en el servidor) y verifica que la app responda e inicie sesión.
-# Corre cuando cambia algo del despliegue y en cada push a main.
+# Corre cuando cambia algo del despliegue (en cualquier rama o PR); también a mano desde Actions.
 name: Docker
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    paths:
+    paths: &archivos-despliegue
       - '**/Dockerfile'
       - '**/.dockerignore'
       - 'docker-compose.yml'
       - 'frontend/nginx.conf'
       - 'deploy/**'
+      - 'backend/pom.xml'
+      - 'frontend/package.json'
       - '.github/workflows/docker.yml'
+  pull_request:
+    paths: *archivos-despliegue
   workflow_dispatch:
 
 jobs:
