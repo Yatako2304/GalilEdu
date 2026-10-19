@@ -18,6 +18,7 @@ const AdminInicioRoute = () => {
         hrefUsuarios={usuarios}
         hrefNuevoUsuario={`${usuarios}?nuevo=1`}
         hrefInactivos={`${usuarios}?estado=INACTIVO`}
+        hrefCargaMasiva={`${usuarios}?carga=1`}
       />
     </ContentLayout>
   );

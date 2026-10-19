@@ -71,6 +71,17 @@ public final class Dtos {
 	public record UsuarioCreado(UUID id, String username, String correo, EstadoUsuario estado) {
 	}
 
+	// ---------- Carga masiva (HU-8) ----------
+
+	/** Error de una fila del archivo. La fila es la de Excel (el encabezado es la fila 1). */
+	public record ErrorFila(int fila, String mensaje) {
+	}
+
+	/** Resultado de validar (paso 2) o cargar (paso 3) el archivo. En la validación, creados es 0. */
+	public record ResultadoCargaMasiva(String nombreArchivo, int total, int validos, int creados,
+			List<ErrorFila> errores) {
+	}
+
 	public record RolCatalogo(Rol codigo, String nombre) {
 	}
 

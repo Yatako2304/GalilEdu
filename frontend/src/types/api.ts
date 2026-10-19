@@ -108,6 +108,18 @@ export type UsuarioCreado = {
 
 export type RolCatalogo = { codigo: ROLES; nombre: string };
 
+// Carga masiva (HU-8). La fila es la de Excel (el encabezado es la fila 1).
+export type ErrorFila = { fila: number; mensaje: string };
+
+export type ResultadoCargaMasiva = {
+  nombreArchivo: string;
+  total: number;
+  validos: number;
+  /** 0 en la validación (paso 2); usuarios creados en la carga (paso 3). */
+  creados: number;
+  errores: ErrorFila[];
+};
+
 export type ResumenUsuarios = {
   total: number;
   activos: number;

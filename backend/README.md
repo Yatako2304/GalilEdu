@@ -50,6 +50,9 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/usuarios` | Administrador | Alta; devuelve usuario generado (la contraseña va por correo) |
 | POST | `/usuarios/{id}/desactivar` · `/reactivar` | Administrador | HU-12 |
 | DELETE | `/usuarios/{id}` | Administrador | Borrado lógico |
+| GET | `/usuarios/carga-masiva/plantilla` | Administrador | Plantilla `.xlsx` de la carga masiva (HU-8) |
+| POST | `/usuarios/carga-masiva/validacion` | Administrador | Revisa el archivo (multipart `archivo`: .xlsx/.xls/.csv ≤ 10 MB) y devuelve errores por fila, sin crear nada |
+| POST | `/usuarios/carga-masiva` | Administrador | Crea los usuarios de las filas válidas y devuelve el resumen |
 | GET | `/estudiantes?q=&estado=&page=` | Admin, Personal adm. | Lista de estudiantes |
 | GET | `/estudiantes/{id}` | Admin, Personal adm. | Ficha (datos, ficha médica, familia, contactos, hermanos) |
 | GET | `/estudiantes/personas?documento=` | Admin, Personal adm. | Busca padre/madre/apoderado ya registrado (404 = persona nueva) |
