@@ -22,6 +22,7 @@ Toda la documentación del proyecto vive aquí, **en español** y en Markdown. E
 - [Cómo contribuir](guias/contribuir.md): ramas, commits, pull requests, CI y revisión.
 - [Cómo crear un módulo](guias/nuevo-modulo.md): BD → backend → frontend → pruebas → documentación, paso a paso.
 - [Pruebas](guias/pruebas.md): qué se prueba, cómo correrlas y cómo escribir las tuyas.
+- [Convenciones de código](guias/convenciones.md): cómo nombrar tablas, clases, endpoints, componentes y variables.
 
 ## Reglas de escritura
 

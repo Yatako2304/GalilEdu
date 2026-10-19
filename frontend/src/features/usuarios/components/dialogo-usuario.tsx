@@ -49,7 +49,7 @@ export type ModoDialogo =
 
 type DialogoUsuarioProps = {
   estado: ModoDialogo | null;
-  onClose: () => void;
+  onCerrar: () => void;
   onCreado: (u: UsuarioCreado) => void;
 };
 
@@ -59,7 +59,7 @@ const nombreCorto = (u: UsuarioDetalle) =>
 // Figma > Administrador > Usuarios > modales "Nuevo Usuario" y "Editar usuario" (HU-6, HU-9).
 export const DialogoUsuario = ({
   estado,
-  onClose,
+  onCerrar,
   onCreado,
 }: DialogoUsuarioProps) => {
   const id = estado && estado.modo !== 'crear' ? estado.id : null;
@@ -67,7 +67,7 @@ export const DialogoUsuario = ({
   const cargando = !!id && detalle.isLoading;
 
   return (
-    <Dialog open={!!estado} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!estado} onOpenChange={(open) => !open && onCerrar()}>
       <DialogContent className="flex max-h-[92vh] max-w-[800px] flex-col gap-0 overflow-hidden rounded-[12px] border-stroke-tertiary bg-white p-0">
         {estado &&
           (cargando ? (
@@ -80,7 +80,7 @@ export const DialogoUsuario = ({
               key={id ?? 'nuevo'}
               modo={estado.modo}
               usuario={detalle.data}
-              onClose={onClose}
+              onCerrar={onCerrar}
               onCreado={onCreado}
             />
           ))}
@@ -92,12 +92,12 @@ export const DialogoUsuario = ({
 const FormularioUsuario = ({
   modo,
   usuario,
-  onClose,
+  onCerrar,
   onCreado,
 }: {
   modo: ModoDialogo['modo'];
   usuario?: UsuarioDetalle;
-  onClose: () => void;
+  onCerrar: () => void;
   onCreado: (u: UsuarioCreado) => void;
 }) => {
   const soloLectura = modo === 'ver';
@@ -116,12 +116,12 @@ const FormularioUsuario = ({
   const rolesElegidos = form.watch('roles');
 
   const crear = useCrearUsuario((u) => {
-    onClose();
+    onCerrar();
     onCreado(u);
   });
   const actualizar = useActualizarUsuario(() => {
     setConfirmar(null);
-    onClose();
+    onCerrar();
   });
   const cambiarEstado = useCambiarEstadoUsuario(() => setConfirmar(null));
 
@@ -257,7 +257,7 @@ const FormularioUsuario = ({
           )}
         </div>
         <div className="flex gap-3">
-          <Button variant="primary-light" onClick={onClose}>
+          <Button variant="primary-light" onClick={onCerrar}>
             {soloLectura ? 'Cerrar' : 'Cancelar'}
           </Button>
           {!soloLectura && (

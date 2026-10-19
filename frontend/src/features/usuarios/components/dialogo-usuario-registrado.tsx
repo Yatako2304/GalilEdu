@@ -13,12 +13,12 @@ import { UsuarioCreado } from '@/types/api';
 // Figma > Usuarios > modal "Usuario registrado" (después de HU-6).
 export const DialogoUsuarioRegistrado = ({
   usuario,
-  onClose,
+  onCerrar,
 }: {
   usuario: UsuarioCreado | null;
-  onClose: () => void;
+  onCerrar: () => void;
 }) => (
-  <Dialog open={!!usuario} onOpenChange={(open) => !open && onClose()}>
+  <Dialog open={!!usuario} onOpenChange={(open) => !open && onCerrar()}>
     <DialogContent className="max-w-[800px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
       {usuario && (
         <>
@@ -77,7 +77,7 @@ export const DialogoUsuarioRegistrado = ({
             </div>
           </div>
           <div className="border-t border-stroke-tertiary px-8 py-5">
-            <Button className="w-full" onClick={onClose}>
+            <Button className="w-full" onClick={onCerrar}>
               Continuar
             </Button>
           </div>

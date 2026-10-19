@@ -1,6 +1,6 @@
 # Cómo crear un módulo
 
-Ejemplo: la pareja de **Matrícula** empieza HU-23. Copia siempre el patrón de los módulos que ya funcionan: `usuarios` (CRUD con modales) y `estudiantes` (formulario por pasos).
+Ejemplo: la pareja de **Matrícula** empieza HU-23. Copia siempre el patrón de los módulos que ya funcionan: `usuarios` (CRUD con modales) y `estudiantes` (formulario por pasos). Los nombres siguen [convenciones.md](convenciones.md).
 
 ## 0. Antes de programar
 

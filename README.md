@@ -58,6 +58,7 @@ Están en `backend/src/main/resources/db/datos-prueba/R__datos_prueba.sql`. Para
 | Empezar mi módulo (BD → backend → frontend) | [`docs/guias/nuevo-modulo.md`](docs/guias/nuevo-modulo.md) |
 | Saber cómo subir cambios (ramas, commits, PR, CI) | [`docs/guias/contribuir.md`](docs/guias/contribuir.md) |
 | Escribir y correr pruebas | [`docs/guias/pruebas.md`](docs/guias/pruebas.md) |
+| Saber cómo nombrar tablas, clases, endpoints y variables | [`docs/guias/convenciones.md`](docs/guias/convenciones.md) |
 | Entender por qué algo se hizo así | [`docs/decisiones/`](docs/decisiones/) |
 | Configuración y endpoints del backend | [`backend/README.md`](backend/README.md) |
 | Estructura y design system del frontend | [`frontend/README.md`](frontend/README.md) |

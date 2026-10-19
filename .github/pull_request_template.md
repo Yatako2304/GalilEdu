@@ -14,6 +14,7 @@
 ## Checklist
 
 - [ ] Sigue las pantallas de Figma (textos, campos, mensajes).
+- [ ] Los nombres siguen `docs/guias/convenciones.md` (español, sin tildes en el código, mismo nombre en BD/Java/TS).
 - [ ] Pruebas nuevas para lo que agregué, y **todas** las pruebas pasan en mi PC (`mvnw verify`, `npm run lint && npm run check-types && npm test`).
 - [ ] Si cambia la BD: migración **nueva** `V{n}__...sql` (no edité una existente).
 - [ ] Actualicé la ficha del módulo en `docs/modulos/` (y el índice si cambió el estado).

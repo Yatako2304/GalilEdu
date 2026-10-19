@@ -55,10 +55,10 @@ const AdminUsuariosRoute = () => {
         onAbrir={setDialogo}
         estadoInicial={(searchParams.get('estado') as EstadoUsuario) ?? ''}
       />
-      <DialogoUsuario estado={dialogo} onClose={cerrar} onCreado={setCreado} />
+      <DialogoUsuario estado={dialogo} onCerrar={cerrar} onCreado={setCreado} />
       <DialogoUsuarioRegistrado
         usuario={creado}
-        onClose={() => setCreado(null)}
+        onCerrar={() => setCreado(null)}
       />
     </ContentLayout>
   );
