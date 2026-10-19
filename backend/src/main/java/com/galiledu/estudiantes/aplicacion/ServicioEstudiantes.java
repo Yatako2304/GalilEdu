@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+import jakarta.persistence.criteria.Predicate;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -39,8 +41,6 @@ import com.galiledu.personas.dominio.Persona;
 import com.galiledu.usuarios.aplicacion.ServicioUsuarios;
 import com.galiledu.usuarios.dominio.Rol;
 
-import jakarta.persistence.criteria.Predicate;
-
 /** HU-7: inscripción del estudiante con sus padres o apoderado, y consultas del listado/ficha. */
 @Service
 public class ServicioEstudiantes {
@@ -48,7 +48,8 @@ public class ServicioEstudiantes {
 	private final ServicioPersonas personas;
 	private final ServicioUsuarios usuarios;
 
-	public ServicioEstudiantes(EstudianteRepositorio estudiantes, ServicioPersonas personas, ServicioUsuarios usuarios) {
+	public ServicioEstudiantes(EstudianteRepositorio estudiantes, ServicioPersonas personas,
+			ServicioUsuarios usuarios) {
 		this.estudiantes = estudiantes;
 		this.personas = personas;
 		this.usuarios = usuarios;
@@ -68,9 +69,11 @@ public class ServicioEstudiantes {
 		DatosEstudiante d = s.estudiante();
 		Persona personaEstudiante = personas.crear(d.persona());
 		Estudiante estudiante = new Estudiante(personaEstudiante);
-		estudiante.lugarNacimiento(d.paisNacimiento(), d.departamentoNacimiento(), d.provinciaNacimiento(), d.distritoNacimiento());
-		estudiante.datosSocioculturales(d.referenciaDomicilio(), d.tieneInternet(), d.lenguaMaterna(), d.segundaLengua(),
-			d.autoidentificacionEtnica(), Boolean.TRUE.equals(d.tieneDiscapacidad()), d.discapacidadDetalle());
+		estudiante.lugarNacimiento(d.paisNacimiento(), d.departamentoNacimiento(), d.provinciaNacimiento(),
+				d.distritoNacimiento());
+		estudiante.datosSocioculturales(d.referenciaDomicilio(), d.tieneInternet(), d.lenguaMaterna(),
+				d.segundaLengua(),
+				d.autoidentificacionEtnica(), Boolean.TRUE.equals(d.tieneDiscapacidad()), d.discapacidadDetalle());
 		estudiante.procedencia(d.colegioProcedencia(), d.gestionProcedencia());
 		estudiante.datosAcademicos(d.anioAcademico().shortValue(), d.nivel(), d.grado(), d.formaIngreso());
 		estudiante.setModoSalida(s.modoSalida());
@@ -98,13 +101,14 @@ public class ServicioEstudiantes {
 			estudiante.agregarVinculo(vinculo);
 		}
 		if (responsable == null || responsable.getPersona() == null) {
-			throw ExcepcionNegocio.invalido("El responsable de matrícula debe ser el padre, la madre o el apoderado registrado");
+			throw ExcepcionNegocio
+					.invalido("El responsable de matrícula debe ser el padre, la madre o el apoderado registrado");
 		}
 
 		short orden = 1;
 		for (DatosContacto c : s.contactos()) {
 			estudiante.agregarContacto(new ContactoEmergencia(c.nombreCompleto().strip(), c.parentesco().strip(),
-				vacio(c.telefonoFijo()), vacio(c.celular()), orden++));
+					vacio(c.telefonoFijo()), vacio(c.celular()), orden++));
 		}
 		if (s.autorizados() != null) {
 			for (DatosAutorizado a : s.autorizados()) {
@@ -120,7 +124,7 @@ public class ServicioEstudiantes {
 		var cuenta = usuarios.asegurarRol(personaResponsable, Rol.APODERADO);
 
 		return new InscripcionRegistrada(estudiante.getId(), personaEstudiante.nombreCompleto(),
-			personaResponsable.nombreCompleto(), cuenta.getNombreUsuario(), cuentaNueva);
+				personaResponsable.nombreCompleto(), cuenta.getNombreUsuario(), cuentaNueva);
 	}
 
 	@Transactional(readOnly = true)
@@ -132,9 +136,9 @@ public class ServicioEstudiantes {
 				var p = raiz.join("persona");
 				String patron = "%" + texto.strip().toLowerCase() + "%";
 				var nombre = cb.lower(cb.concat(cb.concat(cb.concat(p.get("nombres"), " "),
-					cb.concat(p.get("apellidoPaterno"), " ")), cb.coalesce(p.<String>get("apellidoMaterno"), "")));
+						cb.concat(p.get("apellidoPaterno"), " ")), cb.coalesce(p.<String>get("apellidoMaterno"), "")));
 				condiciones.add(cb.or(cb.like(nombre, patron), cb.like(p.get("numeroDocumento"), patron),
-					cb.like(cb.lower(cb.coalesce(p.<String>get("correo"), "")), patron)));
+						cb.like(cb.lower(cb.coalesce(p.<String>get("correo"), "")), patron)));
 			}
 			if (estado != null) {
 				condiciones.add(cb.equal(raiz.get("estado"), estado));
@@ -142,60 +146,69 @@ public class ServicioEstudiantes {
 			return cb.and(condiciones.toArray(Predicate[]::new));
 		};
 		var orden = Sort.by("creadoEn").descending();
-		var resultado = estudiantes.findAll(filtro, PageRequest.of(Math.max(0, pagina - 1), Math.clamp(tamano, 1, 100), orden));
+		var resultado = estudiantes.findAll(filtro,
+				PageRequest.of(Math.max(0, pagina - 1), Math.clamp(tamano, 1, 100), orden));
 		return Pagina.de(resultado, ServicioEstudiantes::resumen);
 	}
 
 	@Transactional(readOnly = true)
 	public FichaEstudiante ficha(UUID id) {
 		Estudiante e = estudiantes.findById(id)
-			.filter(x -> !x.isEliminado())
-			.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El estudiante no existe"));
+				.filter(x -> !x.isEliminado())
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El estudiante no existe"));
 		var familia = e.getVinculos().stream().map(v -> {
 			Persona p = v.getPersona();
 			return new Familiar(p == null ? null : p.getId(), v.getParentesco(),
-				p == null ? null : p.nombreCompleto(), p == null ? null : documento(p), p == null ? null : p.getCelular(),
-				v.getRelacion(), v.isViveConEstudiante(), v.isEsResponsableMatricula(), v.getMotivoNoRegistra());
+					p == null ? null : p.nombreCompleto(), p == null ? null : documento(p),
+					p == null ? null : p.getCelular(),
+					v.getRelacion(), v.isViveConEstudiante(), v.isEsResponsableMatricula(), v.getMotivoNoRegistra());
 		}).toList();
 		// Hermanos: otros estudiantes vinculados a los mismos padres/apoderado.
 		var hermanos = e.getVinculos().stream()
-			.map(VinculoFamiliar::getPersona).filter(Objects::nonNull)
-			.flatMap(p -> estudiantes.vinculadosA(p.getId()).stream())
-			.filter(h -> !h.getId().equals(e.getId()))
-			.distinct()
-			.map(ServicioEstudiantes::resumen)
-			.toList();
+				.map(VinculoFamiliar::getPersona).filter(Objects::nonNull)
+				.flatMap(p -> estudiantes.vinculadosA(p.getId()).stream())
+				.filter(h -> !h.getId().equals(e.getId()))
+				.distinct()
+				.map(ServicioEstudiantes::resumen)
+				.toList();
 		var datos = new DatosEstudiante(null, e.getPaisNacimiento(), e.getDepartamentoNacimiento(),
-			e.getProvinciaNacimiento(), e.getDistritoNacimiento(), e.getReferenciaDomicilio(), e.getTieneInternet(),
-			e.getLenguaMaterna(), e.getSegundaLengua(), e.getAutoidentificacionEtnica(), e.isTieneDiscapacidad(),
-			e.getDiscapacidadDetalle(), e.getColegioProcedencia(), e.getGestionProcedencia(), (int) e.getAnioAcademico(),
-			e.getNivel(), e.getGrado(), e.getFormaIngreso());
+				e.getProvinciaNacimiento(), e.getDistritoNacimiento(), e.getReferenciaDomicilio(), e.getTieneInternet(),
+				e.getLenguaMaterna(), e.getSegundaLengua(), e.getAutoidentificacionEtnica(), e.isTieneDiscapacidad(),
+				e.getDiscapacidadDetalle(), e.getColegioProcedencia(), e.getGestionProcedencia(),
+				(int) e.getAnioAcademico(),
+				e.getNivel(), e.getGrado(), e.getFormaIngreso());
 		FichaMedica f = e.getFichaMedica();
-		var ficha = f == null ? null : new DatosFichaMedica(f.getTipoSangre(), f.getPesoKg(), f.getEstaturaM(),
-			f.getTipoSeguro(), f.isTieneAlergias(), f.getAlergiasAlimentarias(), f.getAlergiasMedicamentosas(),
-			f.getFiebreMaxima(), f.isHaConvulsionado(), f.isTieneEnfermedad(), f.getEnfermedadDetalle(),
-			f.isTomaMedicamento(), f.getMedicamentoDetalle(), f.getObservaciones());
+		var ficha = f == null
+				? null
+				: new DatosFichaMedica(f.getTipoSangre(), f.getPesoKg(), f.getEstaturaM(),
+						f.getTipoSeguro(), f.isTieneAlergias(), f.getAlergiasAlimentarias(),
+						f.getAlergiasMedicamentosas(),
+						f.getFiebreMaxima(), f.isHaConvulsionado(), f.isTieneEnfermedad(), f.getEnfermedadDetalle(),
+						f.isTomaMedicamento(), f.getMedicamentoDetalle(), f.getObservaciones());
 		var contactos = e.getContactos().stream()
-			.map(c -> new DatosContacto(c.getNombreCompleto(), c.getParentesco(), c.getTelefonoFijo(), c.getCelular()))
-			.toList();
+				.map(c -> new DatosContacto(c.getNombreCompleto(), c.getParentesco(), c.getTelefonoFijo(),
+						c.getCelular()))
+				.toList();
 		var autorizados = e.getAutorizados().stream()
-			.map(a -> new DatosAutorizado(a.getNombreCompleto(), a.getRelacion()))
-			.toList();
+				.map(a -> new DatosAutorizado(a.getNombreCompleto(), a.getRelacion()))
+				.toList();
 		return new FichaEstudiante(e.getId(), e.getEstado(), e.gradoDescriptivo(), e.getAnioAcademico(),
-			DatosPersona.de(e.getPersona()), datos, ficha, familia, contactos, e.getModoSalida(), autorizados, hermanos);
+				DatosPersona.de(e.getPersona()), datos, ficha, familia, contactos, e.getModoSalida(), autorizados,
+				hermanos);
 	}
 
 	/** "Busca por documento: si ya está registrado (por ejemplo, por un hermano), solo se vincula." */
 	@Transactional(readOnly = true)
 	public PersonaEncontrada buscarPersona(String numeroDocumento) {
 		Persona p = personas.buscarPorDocumento(numeroDocumento)
-			.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No está registrada en GalilEdu. Completa sus datos."));
+				.orElseThrow(
+						() -> ExcepcionNegocio.noEncontrado("No está registrada en GalilEdu. Completa sus datos."));
 		if (estudiantes.existsByPersonaId(p.getId())) {
 			throw ExcepcionNegocio.conflicto("El documento corresponde a un estudiante, no a un familiar");
 		}
 		var aCargo = estudiantes.vinculadosA(p.getId()).stream()
-			.map(e -> e.getPersona().nombreCompleto() + " (" + e.gradoDescriptivo() + ")")
-			.toList();
+				.map(e -> e.getPersona().nombreCompleto() + " (" + e.gradoDescriptivo() + ")")
+				.toList();
 		return new PersonaEncontrada(p.getId(), DatosPersona.de(p), usuarios.tieneCuenta(p.getId()), aCargo);
 	}
 
@@ -211,7 +224,7 @@ public class ServicioEstudiantes {
 		}
 		Persona persona = d.personaId() != null ? personas.obtener(d.personaId()) : personas.crear(d.persona());
 		return VinculoFamiliar.conPersona(parentesco, persona, vacio(d.relacion()),
-			Boolean.TRUE.equals(d.viveConEstudiante()), Boolean.TRUE.equals(d.tienePatriaPotestad()));
+				Boolean.TRUE.equals(d.viveConEstudiante()), Boolean.TRUE.equals(d.tienePatriaPotestad()));
 	}
 
 	private static void exigirMotivo(DatosFamiliar d, String mensaje) {
@@ -234,25 +247,27 @@ public class ServicioEstudiantes {
 
 	private static FichaMedica fichaMedica(DatosFichaMedica f) {
 		return new FichaMedica(vacio(f.tipoSangre()), f.pesoKg(), f.estaturaM(), vacio(f.tipoSeguro()),
-			Boolean.TRUE.equals(f.tieneAlergias()), vacio(f.alergiasAlimentarias()), vacio(f.alergiasMedicamentosas()),
-			vacio(f.fiebreMaxima()), Boolean.TRUE.equals(f.haConvulsionado()), Boolean.TRUE.equals(f.tieneEnfermedad()),
-			vacio(f.enfermedadDetalle()), Boolean.TRUE.equals(f.tomaMedicamento()), vacio(f.medicamentoDetalle()),
-			vacio(f.observaciones()));
+				Boolean.TRUE.equals(f.tieneAlergias()), vacio(f.alergiasAlimentarias()),
+				vacio(f.alergiasMedicamentosas()),
+				vacio(f.fiebreMaxima()), Boolean.TRUE.equals(f.haConvulsionado()),
+				Boolean.TRUE.equals(f.tieneEnfermedad()),
+				vacio(f.enfermedadDetalle()), Boolean.TRUE.equals(f.tomaMedicamento()), vacio(f.medicamentoDetalle()),
+				vacio(f.observaciones()));
 	}
 
 	static EstudianteResumen resumen(Estudiante e) {
 		String responsable = e.getVinculos().stream()
-			.filter(VinculoFamiliar::isEsResponsableMatricula)
-			.map(VinculoFamiliar::getPersona).filter(Objects::nonNull)
-			.map(Persona::nombreCorto)
-			.findFirst().orElse("—");
+				.filter(VinculoFamiliar::isEsResponsableMatricula)
+				.map(VinculoFamiliar::getPersona).filter(Objects::nonNull)
+				.map(Persona::nombreCorto)
+				.findFirst().orElse("—");
 		return new EstudianteResumen(e.getId(), e.getPersona().nombreCompleto(), documento(e.getPersona()),
-			e.gradoDescriptivo(), e.getAnioAcademico(), e.getEstado(), responsable);
+				e.gradoDescriptivo(), e.getAnioAcademico(), e.getEstado(), responsable);
 	}
 
 	private static String documento(Persona p) {
 		return (p.getTipoDocumento() == com.galiledu.personas.dominio.TipoDocumento.DNI ? "DNI " : "CE ")
-			+ p.getNumeroDocumento();
+				+ p.getNumeroDocumento();
 	}
 
 	private static String vacio(String v) {

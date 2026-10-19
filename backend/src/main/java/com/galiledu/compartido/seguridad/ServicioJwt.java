@@ -28,13 +28,13 @@ public class ServicioJwt {
 	public String emitir(UUID usuarioId, String nombreUsuario, Collection<String> roles) {
 		Instant ahora = Instant.now();
 		JwtClaimsSet claims = JwtClaimsSet.builder()
-			.issuer("galiledu")
-			.issuedAt(ahora)
-			.expiresAt(ahora.plus(duracion))
-			.subject(usuarioId.toString())
-			.claim("username", nombreUsuario)
-			.claim("roles", roles)
-			.build();
+				.issuer("galiledu")
+				.issuedAt(ahora)
+				.expiresAt(ahora.plus(duracion))
+				.subject(usuarioId.toString())
+				.claim("username", nombreUsuario)
+				.claim("roles", roles)
+				.build();
 		JwsHeader cabecera = JwsHeader.with(MacAlgorithm.HS256).build();
 		return codificador.encode(JwtEncoderParameters.from(cabecera, claims)).getTokenValue();
 	}

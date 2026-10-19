@@ -15,8 +15,8 @@ public interface EstudianteRepositorio extends JpaRepository<Estudiante, UUID>, 
 
 	/** Estudiantes vinculados a una persona (padre, madre o apoderado): sirve para detectar hermanos. */
 	@Query("""
-		select distinct v.estudiante from VinculoFamiliar v
-		where v.persona.id = :personaId and v.estudiante.eliminado = false
-		""")
+			select distinct v.estudiante from VinculoFamiliar v
+			where v.persona.id = :personaId and v.estudiante.eliminado = false
+			""")
 	List<Estudiante> vinculadosA(@Param("personaId") UUID personaId);
 }

@@ -53,27 +53,28 @@ public class ServicioPersonas {
 	private void validarFormato(DatosPersona datos) {
 		String numero = datos.numeroDocumento().strip();
 		boolean valido = datos.tipoDocumento() == TipoDocumento.DNI
-			? DNI.matcher(numero).matches()
-			: CARNET.matcher(numero).matches();
+				? DNI.matcher(numero).matches()
+				: CARNET.matcher(numero).matches();
 		if (!valido) {
 			throw ExcepcionNegocio.invalido(datos.tipoDocumento() == TipoDocumento.DNI
-				? "El DNI debe tener 8 dígitos"
-				: "El carné de extranjería debe tener hasta 12 caracteres alfanuméricos");
+					? "El DNI debe tener 8 dígitos"
+					: "El carné de extranjería debe tener hasta 12 caracteres alfanuméricos");
 		}
 	}
 
 	private void validarDuplicados(DatosPersona datos, UUID idActual) {
 		personas.findByNumeroDocumento(datos.numeroDocumento().strip().toUpperCase())
-			.filter(p -> !p.getId().equals(idActual))
-			.ifPresent(p -> {
-				throw ExcepcionNegocio.conflicto("Ya existe una persona registrada con el documento " + p.getNumeroDocumento());
-			});
-		if (datos.correo() != null && !datos.correo().isBlank()) {
-			personas.buscarPorCorreo(datos.correo().strip())
 				.filter(p -> !p.getId().equals(idActual))
 				.ifPresent(p -> {
-					throw ExcepcionNegocio.conflicto("El correo " + p.getCorreo() + " ya está registrado");
+					throw ExcepcionNegocio
+							.conflicto("Ya existe una persona registrada con el documento " + p.getNumeroDocumento());
 				});
+		if (datos.correo() != null && !datos.correo().isBlank()) {
+			personas.buscarPorCorreo(datos.correo().strip())
+					.filter(p -> !p.getId().equals(idActual))
+					.ifPresent(p -> {
+						throw ExcepcionNegocio.conflicto("El correo " + p.getCorreo() + " ya está registrado");
+					});
 		}
 	}
 }

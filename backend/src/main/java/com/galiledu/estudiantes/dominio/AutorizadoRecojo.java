@@ -24,8 +24,10 @@ public class AutorizadoRecojo {
 	@JoinColumn(name = "estudiante_id", nullable = false)
 	private Estudiante estudiante;
 
-	@Column(name = "nombre_completo", nullable = false) private String nombreCompleto;
-	@Column(nullable = false) private String relacion;
+	@Column(name = "nombre_completo", nullable = false)
+	private String nombreCompleto;
+	@Column(nullable = false)
+	private String relacion;
 
 	protected AutorizadoRecojo() {
 	}
@@ -39,6 +41,10 @@ public class AutorizadoRecojo {
 		this.estudiante = estudiante;
 	}
 
-	public String getNombreCompleto() { return nombreCompleto; }
-	public String getRelacion() { return relacion; }
+	public String getNombreCompleto() {
+		return nombreCompleto;
+	}
+	public String getRelacion() {
+		return relacion;
+	}
 }

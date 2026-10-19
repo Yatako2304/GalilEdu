@@ -47,12 +47,14 @@ public class ManejadorErrores {
 
 	@ExceptionHandler(AccessDeniedException.class)
 	ResponseEntity<ErrorApi> accesoDenegado(AccessDeniedException e) {
-		return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorApi.de("No tienes permiso para realizar esta acción"));
+		return ResponseEntity.status(HttpStatus.FORBIDDEN)
+				.body(ErrorApi.de("No tienes permiso para realizar esta acción"));
 	}
 
 	@ExceptionHandler(Exception.class)
 	ResponseEntity<ErrorApi> inesperado(Exception e) {
 		log.error("Error no controlado", e);
-		return ResponseEntity.internalServerError().body(ErrorApi.de("Ocurrió un error inesperado. Inténtalo nuevamente."));
+		return ResponseEntity.internalServerError()
+				.body(ErrorApi.de("Ocurrió un error inesperado. Inténtalo nuevamente."));
 	}
 }

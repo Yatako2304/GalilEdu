@@ -2,6 +2,8 @@ package com.galiledu.usuarios.web;
 
 import java.util.Map;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,8 +17,6 @@ import com.galiledu.usuarios.aplicacion.Dtos.RespuestaLogin;
 import com.galiledu.usuarios.aplicacion.Dtos.SolicitudLogin;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioSesion;
 import com.galiledu.usuarios.aplicacion.ServicioAutenticacion;
-
-import jakarta.validation.Valid;
 
 /** HU-1. Contrato usado por frontend/src/lib/auth.tsx. */
 @RestController

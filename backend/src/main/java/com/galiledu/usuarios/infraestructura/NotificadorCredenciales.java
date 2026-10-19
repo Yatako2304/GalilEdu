@@ -22,8 +22,8 @@ public class NotificadorCredenciales {
 	private final String servidor;
 
 	public NotificadorCredenciales(ObjectProvider<JavaMailSender> correo,
-		@Value("${galiledu.correo.remitente}") String remitente,
-		@Value("${spring.mail.host:}") String servidor) {
+			@Value("${galiledu.correo.remitente}") String remitente,
+			@Value("${spring.mail.host:}") String servidor) {
 		this.correo = correo;
 		this.remitente = remitente;
 		this.servidor = servidor;
@@ -33,7 +33,7 @@ public class NotificadorCredenciales {
 		JavaMailSender emisor = correo.getIfAvailable();
 		if (servidor.isBlank() || emisor == null) {
 			log.warn("SMTP no configurado. Credenciales de {} <{}>: usuario={} contraseña={}",
-				nombre, destinatario, usuario, contrasena);
+					nombre, destinatario, usuario, contrasena);
 			return;
 		}
 		SimpleMailMessage mensaje = new SimpleMailMessage();
@@ -41,14 +41,14 @@ public class NotificadorCredenciales {
 		mensaje.setTo(destinatario);
 		mensaje.setSubject("Tus credenciales de acceso a GalilEdu");
 		mensaje.setText("""
-			Hola %s:
+				Hola %s:
 
-			Se creó tu cuenta en GalilEdu.
-			Usuario: %s
-			Contraseña: %s
+				Se creó tu cuenta en GalilEdu.
+				Usuario: %s
+				Contraseña: %s
 
-			Puedes cambiar tu contraseña cuando quieras desde tu perfil.
-			""".formatted(nombre, usuario, contrasena));
+				Puedes cambiar tu contraseña cuando quieras desde tu perfil.
+				""".formatted(nombre, usuario, contrasena));
 		try {
 			emisor.send(mensaje);
 		} catch (RuntimeException e) {

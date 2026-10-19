@@ -57,7 +57,7 @@ public class ServicioAutenticacion {
 		}
 		if (!usuario.puedeIniciarSesion()) {
 			throw new ExcepcionNegocio(HttpStatus.UNAUTHORIZED,
-				"Tu cuenta está desactivada. Comunícate con el administrador del colegio.");
+					"Tu cuenta está desactivada. Comunícate con el administrador del colegio.");
 		}
 		usuario.registrarAcceso(ahora);
 		var roles = usuario.getRoles().stream().map(Enum::name).toList();
@@ -68,15 +68,15 @@ public class ServicioAutenticacion {
 	@Transactional(readOnly = true)
 	public UsuarioSesion usuarioActual(UUID id) {
 		return usuarios.findById(id)
-			.filter(Usuario::puedeIniciarSesion)
-			.map(UsuarioSesion::de)
-			.orElseThrow(() -> new ExcepcionNegocio(HttpStatus.UNAUTHORIZED, "La sesión ya no es válida"));
+				.filter(Usuario::puedeIniciarSesion)
+				.map(UsuarioSesion::de)
+				.orElseThrow(() -> new ExcepcionNegocio(HttpStatus.UNAUTHORIZED, "La sesión ya no es válida"));
 	}
 
 	private static ExcepcionNegocio bloqueada(Duration restante) {
 		long minutos = Math.max(1, (restante.toSeconds() + 59) / 60);
 		return new ExcepcionNegocio(HttpStatus.LOCKED,
-			"Cuenta bloqueada por varios intentos fallidos. Inténtalo de nuevo en " + minutos
-				+ (minutos == 1 ? " minuto." : " minutos."));
+				"Cuenta bloqueada por varios intentos fallidos. Inténtalo de nuevo en " + minutos
+						+ (minutos == 1 ? " minuto." : " minutos."));
 	}
 }

@@ -3,7 +3,6 @@ package com.galiledu.compartido.seguridad;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
-
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -49,14 +48,14 @@ public class SeguridadConfig {
 		convertidor.setJwtGrantedAuthoritiesConverter(roles);
 
 		http
-			.csrf(csrf -> csrf.disable())
-			.cors(Customizer.withDefaults())
-			.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-			.authorizeHttpRequests(a -> a
-				.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-				.requestMatchers("/auth/login", "/auth/logout", "/actuator/health", "/error").permitAll()
-				.anyRequest().authenticated())
-			.oauth2ResourceServer(o -> o.jwt(jwt -> jwt.jwtAuthenticationConverter(convertidor)));
+				.csrf(csrf -> csrf.disable())
+				.cors(Customizer.withDefaults())
+				.sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+				.authorizeHttpRequests(a -> a
+						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+						.requestMatchers("/auth/login", "/auth/logout", "/actuator/health", "/error").permitAll()
+						.anyRequest().authenticated())
+				.oauth2ResourceServer(o -> o.jwt(jwt -> jwt.jwtAuthenticationConverter(convertidor)));
 		return http.build();
 	}
 

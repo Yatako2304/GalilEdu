@@ -109,6 +109,36 @@
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
 			</plugin>
+			<!-- Formato de Java. "mvnw spotless:apply" formatea; "mvnw verify" (y el CI) falla si algo no está formateado. -->
+			<plugin>
+				<groupId>com.diffplug.spotless</groupId>
+				<artifactId>spotless-maven-plugin</artifactId>
+				<version>2.44.4</version>
+				<configuration>
+					<java>
+						<includes>
+							<include>src/**/*.java</include>
+						</includes>
+						<!-- Formateador de Eclipse (tabulaciones, 120 columnas); ajustes en formato-java.prefs. -->
+						<eclipse>
+							<file>${project.basedir}/formato-java.prefs</file>
+						</eclipse>
+						<importOrder>
+							<order>java|javax,jakarta,org,com,</order>
+						</importOrder>
+						<removeUnusedImports/>
+						<trimTrailingWhitespace/>
+						<endWithNewline/>
+					</java>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>check</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
 			<!-- Pruebas de integración (*IT.java, necesitan PostgreSQL): se ejecutan con "mvnw verify". -->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>

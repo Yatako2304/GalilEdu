@@ -18,8 +18,8 @@ public class CorrelativoUsuarios {
 				ON CONFLICT (anio) DO UPDATE SET ultimo = seguridad.correlativo_usuario.ultimo + 1
 				RETURNING ultimo
 				""")
-			.param("anio", anio)
-			.query(Integer.class)
-			.single();
+				.param("anio", anio)
+				.query(Integer.class)
+				.single();
 	}
 }

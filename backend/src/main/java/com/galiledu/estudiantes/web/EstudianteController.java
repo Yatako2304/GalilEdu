@@ -2,6 +2,8 @@ package com.galiledu.estudiantes.web;
 
 import java.util.UUID;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,8 +24,6 @@ import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.SolicitudInscripcion;
 import com.galiledu.estudiantes.aplicacion.ServicioEstudiantes;
 import com.galiledu.estudiantes.dominio.EstadoEstudiante;
 
-import jakarta.validation.Valid;
-
 /** Figma > Estudiantes (listado, inscripción en 5 pasos y ficha). HU-7. */
 @RestController
 @RequestMapping("/estudiantes")
@@ -37,10 +37,10 @@ public class EstudianteController {
 
 	@GetMapping
 	public Pagina<EstudianteResumen> listar(
-		@RequestParam(name = "q", required = false) String texto,
-		@RequestParam(required = false) EstadoEstudiante estado,
-		@RequestParam(defaultValue = "1") int page,
-		@RequestParam(defaultValue = "8") int size) {
+			@RequestParam(name = "q", required = false) String texto,
+			@RequestParam(required = false) EstadoEstudiante estado,
+			@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "8") int size) {
 		return servicio.listar(texto, estado, page, size);
 	}
 

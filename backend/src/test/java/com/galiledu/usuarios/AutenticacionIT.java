@@ -16,18 +16,18 @@ class AutenticacionIT extends PruebaIntegracion {
 
 	private ResultActions login(String usuario, String contrasena) throws Exception {
 		return mvc.perform(post("/auth/login")
-			.contentType(MediaType.APPLICATION_JSON)
-			.content("""
-				{"username":"%s","password":"%s"}""".formatted(usuario, contrasena)));
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+						{"username":"%s","password":"%s"}""".formatted(usuario, contrasena)));
 	}
 
 	@Test
 	void loginCorrectoDevuelveTokenYRoles() throws Exception {
 		login(ADMIN, CONTRASENA)
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.jwt").isNotEmpty())
-			.andExpect(jsonPath("$.user.username").value(ADMIN))
-			.andExpect(jsonPath("$.user.roles[0]").value("ADMINISTRADOR"));
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.jwt").isNotEmpty())
+				.andExpect(jsonPath("$.user.username").value(ADMIN))
+				.andExpect(jsonPath("$.user.roles[0]").value("ADMINISTRADOR"));
 	}
 
 	@Test
@@ -38,22 +38,22 @@ class AutenticacionIT extends PruebaIntegracion {
 	@Test
 	void contrasenaIncorrectaDa401ConMensajeDeFigma() throws Exception {
 		login(ADMIN, "incorrecta")
-			.andExpect(status().isUnauthorized())
-			.andExpect(jsonPath("$.message").value("El usuario o contraseña son incorrectos."));
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.message").value("El usuario o contraseña son incorrectos."));
 	}
 
 	@Test
 	void usuarioInexistenteDaElMismoMensaje() throws Exception {
 		login("U20999999", CONTRASENA)
-			.andExpect(status().isUnauthorized())
-			.andExpect(jsonPath("$.message").value("El usuario o contraseña son incorrectos."));
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.message").value("El usuario o contraseña son incorrectos."));
 	}
 
 	@Test
 	void cuentaInactivaNoPuedeEntrar() throws Exception {
 		login("U20260007", CONTRASENA)
-			.andExpect(status().isUnauthorized())
-			.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("desactivada")));
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("desactivada")));
 	}
 
 	@Test
@@ -64,8 +64,8 @@ class AutenticacionIT extends PruebaIntegracion {
 		login("U20260005", "mal").andExpect(status().isLocked());
 		// Bloqueada aunque ahora la contraseña sea correcta.
 		login("U20260005", CONTRASENA)
-			.andExpect(status().isLocked())
-			.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("15 minutos")));
+				.andExpect(status().isLocked())
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("15 minutos")));
 	}
 
 	@Test
@@ -81,8 +81,8 @@ class AutenticacionIT extends PruebaIntegracion {
 	@Test
 	void meConTokenDevuelveElUsuario() throws Exception {
 		mvc.perform(conToken(get("/auth/me"), token(DOCENTE)))
-			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.data.username").value(DOCENTE))
-			.andExpect(jsonPath("$.data.roles.length()").value(2));
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.username").value(DOCENTE))
+				.andExpect(jsonPath("$.data.roles.length()").value(2));
 	}
 }

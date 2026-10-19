@@ -23,8 +23,8 @@ import com.jayway.jsonpath.JsonPath;
  * </ul>
  */
 @SpringBootTest(properties = {
-	"spring.datasource.url=${TEST_DB_URL:jdbc:postgresql://localhost:5433/galiledu_test}",
-	"spring.mail.host=",
+		"spring.datasource.url=${TEST_DB_URL:jdbc:postgresql://localhost:5433/galiledu_test}",
+		"spring.mail.host=",
 })
 @AutoConfigureMockMvc
 @Transactional
@@ -42,14 +42,15 @@ public abstract class PruebaIntegracion {
 		String respuesta = mvc.perform(post("/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-					{"username":"%s","password":"%s"}""".formatted(usuario, CONTRASENA)))
-			.andExpect(status().isOk())
-			.andReturn().getResponse().getContentAsString();
+						{"username":"%s","password":"%s"}""".formatted(usuario, CONTRASENA)))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
 		return JsonPath.read(respuesta, "$.jwt");
 	}
 
 	/** Agrega el token y el cuerpo JSON a una petición. */
-	protected static MockHttpServletRequestBuilder conToken(MockHttpServletRequestBuilder peticion, String token, String json) {
+	protected static MockHttpServletRequestBuilder conToken(MockHttpServletRequestBuilder peticion, String token,
+			String json) {
 		peticion.header("Authorization", "Bearer " + token);
 		if (json != null) {
 			peticion.contentType(MediaType.APPLICATION_JSON).content(json);

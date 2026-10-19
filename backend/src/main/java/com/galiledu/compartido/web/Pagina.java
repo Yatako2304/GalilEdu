@@ -12,7 +12,8 @@ public record Pagina<T>(List<T> data, Meta meta) {
 
 	public static <E, T> Pagina<T> de(Page<E> pagina, Function<E, T> mapeo) {
 		return new Pagina<>(
-			pagina.getContent().stream().map(mapeo).toList(),
-			new Meta(pagina.getNumber() + 1, pagina.getSize(), pagina.getTotalElements(), Math.max(1, pagina.getTotalPages())));
+				pagina.getContent().stream().map(mapeo).toList(),
+				new Meta(pagina.getNumber() + 1, pagina.getSize(), pagina.getTotalElements(),
+						Math.max(1, pagina.getTotalPages())));
 	}
 }

@@ -24,16 +24,21 @@ public class ContactoEmergencia {
 	@JoinColumn(name = "estudiante_id", nullable = false)
 	private Estudiante estudiante;
 
-	@Column(name = "nombre_completo", nullable = false) private String nombreCompleto;
-	@Column(nullable = false) private String parentesco;
-	@Column(name = "telefono_fijo") private String telefonoFijo;
+	@Column(name = "nombre_completo", nullable = false)
+	private String nombreCompleto;
+	@Column(nullable = false)
+	private String parentesco;
+	@Column(name = "telefono_fijo")
+	private String telefonoFijo;
 	private String celular;
-	@Column(nullable = false) private short orden;
+	@Column(nullable = false)
+	private short orden;
 
 	protected ContactoEmergencia() {
 	}
 
-	public ContactoEmergencia(String nombreCompleto, String parentesco, String telefonoFijo, String celular, short orden) {
+	public ContactoEmergencia(String nombreCompleto, String parentesco, String telefonoFijo, String celular,
+			short orden) {
 		this.nombreCompleto = nombreCompleto;
 		this.parentesco = parentesco;
 		this.telefonoFijo = telefonoFijo;
@@ -45,8 +50,16 @@ public class ContactoEmergencia {
 		this.estudiante = estudiante;
 	}
 
-	public String getNombreCompleto() { return nombreCompleto; }
-	public String getParentesco() { return parentesco; }
-	public String getTelefonoFijo() { return telefonoFijo; }
-	public String getCelular() { return celular; }
+	public String getNombreCompleto() {
+		return nombreCompleto;
+	}
+	public String getParentesco() {
+		return parentesco;
+	}
+	public String getTelefonoFijo() {
+		return telefonoFijo;
+	}
+	public String getCelular() {
+		return celular;
+	}
 }

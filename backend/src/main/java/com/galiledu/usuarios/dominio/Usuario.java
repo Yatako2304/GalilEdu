@@ -6,8 +6,6 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
 
-import com.galiledu.personas.dominio.Persona;
-
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
 import jakarta.persistence.ElementCollection;
@@ -23,6 +21,8 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+
+import com.galiledu.personas.dominio.Persona;
 
 /** Cuenta de acceso de una persona (tabla seguridad.usuario, V1). */
 @Entity
@@ -140,14 +140,34 @@ public class Usuario {
 		roles.addAll(nuevos);
 	}
 
-	public UUID getId() { return id; }
-	public Persona getPersona() { return persona; }
-	public String getNombreUsuario() { return nombreUsuario; }
-	public String getContrasenaHash() { return contrasenaHash; }
-	public EstadoUsuario getEstado() { return estado; }
-	public boolean isEliminado() { return eliminado; }
-	public Instant getBloqueadoHasta() { return bloqueadoHasta; }
-	public Instant getUltimoAcceso() { return ultimoAcceso; }
-	public Instant getCreadoEn() { return creadoEn; }
-	public Set<Rol> getRoles() { return roles; }
+	public UUID getId() {
+		return id;
+	}
+	public Persona getPersona() {
+		return persona;
+	}
+	public String getNombreUsuario() {
+		return nombreUsuario;
+	}
+	public String getContrasenaHash() {
+		return contrasenaHash;
+	}
+	public EstadoUsuario getEstado() {
+		return estado;
+	}
+	public boolean isEliminado() {
+		return eliminado;
+	}
+	public Instant getBloqueadoHasta() {
+		return bloqueadoHasta;
+	}
+	public Instant getUltimoAcceso() {
+		return ultimoAcceso;
+	}
+	public Instant getCreadoEn() {
+		return creadoEn;
+	}
+	public Set<Rol> getRoles() {
+		return roles;
+	}
 }

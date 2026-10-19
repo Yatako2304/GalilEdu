@@ -2,8 +2,6 @@ package com.galiledu.estudiantes.dominio;
 
 import java.util.UUID;
 
-import com.galiledu.personas.dominio.Persona;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -15,6 +13,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+
+import com.galiledu.personas.dominio.Persona;
 
 /**
  * Paso 3: padre, madre o apoderado del estudiante (tabla estudiantes.vinculo_familiar).
@@ -35,19 +35,25 @@ public class VinculoFamiliar {
 	@JoinColumn(name = "persona_id")
 	private Persona persona;
 
-	@Enumerated(EnumType.STRING) @Column(nullable = false) private Parentesco parentesco;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false)
+	private Parentesco parentesco;
 	private String relacion;
-	@Column(name = "vive_con_estudiante", nullable = false) private boolean viveConEstudiante;
-	@Column(name = "tiene_patria_potestad", nullable = false) private boolean tienePatriaPotestad;
-	@Column(name = "es_responsable_matricula", nullable = false) private boolean esResponsableMatricula;
-	@Column(name = "motivo_no_registra") private String motivoNoRegistra;
+	@Column(name = "vive_con_estudiante", nullable = false)
+	private boolean viveConEstudiante;
+	@Column(name = "tiene_patria_potestad", nullable = false)
+	private boolean tienePatriaPotestad;
+	@Column(name = "es_responsable_matricula", nullable = false)
+	private boolean esResponsableMatricula;
+	@Column(name = "motivo_no_registra")
+	private String motivoNoRegistra;
 	private String observacion;
 
 	protected VinculoFamiliar() {
 	}
 
 	public static VinculoFamiliar conPersona(Parentesco parentesco, Persona persona, String relacion,
-		boolean viveConEstudiante, boolean tienePatriaPotestad) {
+			boolean viveConEstudiante, boolean tienePatriaPotestad) {
 		VinculoFamiliar v = new VinculoFamiliar();
 		v.parentesco = parentesco;
 		v.persona = persona;
@@ -73,14 +79,34 @@ public class VinculoFamiliar {
 		this.esResponsableMatricula = true;
 	}
 
-	public UUID getId() { return id; }
-	public Estudiante getEstudiante() { return estudiante; }
-	public Persona getPersona() { return persona; }
-	public Parentesco getParentesco() { return parentesco; }
-	public String getRelacion() { return relacion; }
-	public boolean isViveConEstudiante() { return viveConEstudiante; }
-	public boolean isTienePatriaPotestad() { return tienePatriaPotestad; }
-	public boolean isEsResponsableMatricula() { return esResponsableMatricula; }
-	public String getMotivoNoRegistra() { return motivoNoRegistra; }
-	public String getObservacion() { return observacion; }
+	public UUID getId() {
+		return id;
+	}
+	public Estudiante getEstudiante() {
+		return estudiante;
+	}
+	public Persona getPersona() {
+		return persona;
+	}
+	public Parentesco getParentesco() {
+		return parentesco;
+	}
+	public String getRelacion() {
+		return relacion;
+	}
+	public boolean isViveConEstudiante() {
+		return viveConEstudiante;
+	}
+	public boolean isTienePatriaPotestad() {
+		return tienePatriaPotestad;
+	}
+	public boolean isEsResponsableMatricula() {
+		return esResponsableMatricula;
+	}
+	public String getMotivoNoRegistra() {
+		return motivoNoRegistra;
+	}
+	public String getObservacion() {
+		return observacion;
+	}
 }

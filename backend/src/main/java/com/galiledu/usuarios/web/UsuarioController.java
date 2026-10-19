@@ -4,6 +4,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -30,8 +32,6 @@ import com.galiledu.usuarios.aplicacion.ServicioUsuarios;
 import com.galiledu.usuarios.dominio.EstadoUsuario;
 import com.galiledu.usuarios.dominio.Rol;
 
-import jakarta.validation.Valid;
-
 /** Figma > Administrador > Usuarios (HU-6, HU-9, HU-12). Solo el administrador. */
 @RestController
 @RequestMapping("/usuarios")
@@ -46,11 +46,11 @@ public class UsuarioController {
 	/** GET /api/usuarios?q=&rol=&estado=&page=1&size=8 */
 	@GetMapping
 	public Pagina<UsuarioResumen> listar(
-		@RequestParam(name = "q", required = false) String texto,
-		@RequestParam(required = false) Rol rol,
-		@RequestParam(required = false) EstadoUsuario estado,
-		@RequestParam(defaultValue = "1") int page,
-		@RequestParam(defaultValue = "8") int size) {
+			@RequestParam(name = "q", required = false) String texto,
+			@RequestParam(required = false) Rol rol,
+			@RequestParam(required = false) EstadoUsuario estado,
+			@RequestParam(defaultValue = "1") int page,
+			@RequestParam(defaultValue = "8") int size) {
 		return servicio.listar(texto, rol, estado, page, size);
 	}
 
@@ -63,9 +63,9 @@ public class UsuarioController {
 	@GetMapping("/roles")
 	public List<RolCatalogo> roles() {
 		return Arrays.stream(Rol.values())
-			.filter(r -> r != Rol.ESTUDIANTE)
-			.map(r -> new RolCatalogo(r, r.nombre()))
-			.toList();
+				.filter(r -> r != Rol.ESTUDIANTE)
+				.map(r -> new RolCatalogo(r, r.nombre()))
+				.toList();
 	}
 
 	@GetMapping("/{id}")

@@ -10,6 +10,10 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 
+import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.Predicate;
+
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -36,10 +40,6 @@ import com.galiledu.usuarios.infraestructura.CorrelativoUsuarios;
 import com.galiledu.usuarios.infraestructura.NotificadorCredenciales;
 import com.galiledu.usuarios.infraestructura.UsuarioRepositorio;
 
-import jakarta.persistence.criteria.Expression;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.Predicate;
-
 /** Gestión de cuentas por el administrador: HU-6 (registro), HU-9 (edición), HU-12 (desactivación). */
 @Service
 public class ServicioUsuarios {
@@ -52,7 +52,7 @@ public class ServicioUsuarios {
 	private final NotificadorCredenciales notificador;
 
 	public ServicioUsuarios(UsuarioRepositorio usuarios, ServicioPersonas personas, CorrelativoUsuarios correlativo,
-		PasswordEncoder contrasenas, NotificadorCredenciales notificador) {
+			PasswordEncoder contrasenas, NotificadorCredenciales notificador) {
 		this.usuarios = usuarios;
 		this.personas = personas;
 		this.correlativo = correlativo;
@@ -68,12 +68,13 @@ public class ServicioUsuarios {
 			if (texto != null && !texto.isBlank()) {
 				var persona = raiz.join("persona");
 				Expression<String> nombre = cb.lower(cb.concat(cb.concat(cb.concat(persona.get("nombres"), " "),
-					cb.concat(persona.get("apellidoPaterno"), " ")), cb.coalesce(persona.<String>get("apellidoMaterno"), "")));
+						cb.concat(persona.get("apellidoPaterno"), " ")),
+						cb.coalesce(persona.<String>get("apellidoMaterno"), "")));
 				String patron = "%" + texto.strip().toLowerCase() + "%";
 				condiciones.add(cb.or(
-					cb.like(nombre, patron),
-					cb.like(cb.lower(cb.coalesce(persona.<String>get("correo"), "")), patron),
-					cb.like(cb.lower(raiz.get("nombreUsuario")), patron)));
+						cb.like(nombre, patron),
+						cb.like(cb.lower(cb.coalesce(persona.<String>get("correo"), "")), patron),
+						cb.like(cb.lower(raiz.get("nombreUsuario")), patron)));
 			}
 			if (rol != null) {
 				Join<Usuario, Rol> roles = raiz.join("roles");
@@ -86,7 +87,8 @@ public class ServicioUsuarios {
 			return cb.and(condiciones.toArray(Predicate[]::new));
 		};
 		var orden = Sort.by("creadoEn").ascending().and(Sort.by("nombreUsuario"));
-		var resultado = usuarios.findAll(filtro, PageRequest.of(Math.max(0, pagina - 1), Math.clamp(tamano, 1, 100), orden));
+		var resultado = usuarios.findAll(filtro,
+				PageRequest.of(Math.max(0, pagina - 1), Math.clamp(tamano, 1, 100), orden));
 		return Pagina.de(resultado, UsuarioResumen::de);
 	}
 
@@ -128,11 +130,11 @@ public class ServicioUsuarios {
 	@Transactional
 	public Usuario asegurarRol(Persona persona, Rol rol) {
 		return usuarios.findByPersonaId(persona.getId())
-			.map(u -> {
-				u.agregarRol(rol);
-				return u;
-			})
-			.orElseGet(() -> crearCuenta(persona, EnumSet.of(rol)));
+				.map(u -> {
+					u.agregarRol(rol);
+					return u;
+				})
+				.orElseGet(() -> crearCuenta(persona, EnumSet.of(rol)));
 	}
 
 	@Transactional(readOnly = true)
@@ -178,31 +180,32 @@ public class ServicioUsuarios {
 		List<Usuario> todos = usuarios.findAll().stream().filter(u -> !u.isEliminado()).toList();
 		long activos = todos.stream().filter(u -> u.getEstado() == EstadoUsuario.ACTIVO).count();
 		AccesoReciente ultimo = todos.stream()
-			.filter(u -> u.getUltimoAcceso() != null)
-			.max(Comparator.comparing(Usuario::getUltimoAcceso))
-			.map(u -> new AccesoReciente(u.getPersona().nombreCorto(), u.getUltimoAcceso()))
-			.orElse(null);
+				.filter(u -> u.getUltimoAcceso() != null)
+				.max(Comparator.comparing(Usuario::getUltimoAcceso))
+				.map(u -> new AccesoReciente(u.getPersona().nombreCorto(), u.getUltimoAcceso()))
+				.orElse(null);
 		List<UsuariosPorRol> porRol = new ArrayList<>();
 		for (Rol rol : Rol.values()) {
 			List<String> nombres = todos.stream()
-				.filter(u -> u.getRoles().contains(rol))
-				.map(u -> u.getPersona().nombreCorto() + (u.getEstado() == EstadoUsuario.INACTIVO ? " (inactivo)" : ""))
-				.toList();
+					.filter(u -> u.getRoles().contains(rol))
+					.map(u -> u.getPersona().nombreCorto()
+							+ (u.getEstado() == EstadoUsuario.INACTIVO ? " (inactivo)" : ""))
+					.toList();
 			if (!nombres.isEmpty()) {
 				porRol.add(new UsuariosPorRol(rol, rol.nombre(), nombres.size(), nombres));
 			}
 		}
 		List<UsuarioResumen> inactivos = todos.stream()
-			.filter(u -> u.getEstado() == EstadoUsuario.INACTIVO)
-			.map(UsuarioResumen::de)
-			.toList();
+				.filter(u -> u.getEstado() == EstadoUsuario.INACTIVO)
+				.map(UsuarioResumen::de)
+				.toList();
 		return new ResumenUsuarios(todos.size(), activos, todos.size() - activos, ultimo, porRol, inactivos);
 	}
 
 	private Usuario obtener(UUID id) {
 		return usuarios.findById(id)
-			.filter(u -> !u.isEliminado())
-			.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El usuario no existe"));
+				.filter(u -> !u.isEliminado())
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El usuario no existe"));
 	}
 
 	private static void exigirContacto(SolicitudUsuario solicitud) {
