@@ -85,7 +85,7 @@ public class ServicioUsuarios {
 			}
 			return cb.and(condiciones.toArray(Predicate[]::new));
 		};
-		var orden = Sort.by("creadoEn").ascending();
+		var orden = Sort.by("creadoEn").ascending().and(Sort.by("nombreUsuario"));
 		var resultado = usuarios.findAll(filtro, PageRequest.of(Math.max(0, pagina - 1), Math.clamp(tamano, 1, 100), orden));
 		return Pagina.de(resultado, UsuarioResumen::de);
 	}

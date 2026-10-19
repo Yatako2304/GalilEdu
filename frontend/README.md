@@ -16,23 +16,10 @@ cp .env.example .env     # en Windows: copy .env.example .env
 npm run dev              # http://localhost:3000
 ```
 
-Con `VITE_APP_ENABLE_API_MOCKING=true` (valor por defecto) **no necesitas backend**: [MSW](https://mswjs.io) intercepta las llamadas y responde con datos simulados.
+Necesitas el **backend corriendo** (ver el [README principal](../README.md)): login, usuarios y estudiantes usan la API real en `VITE_APP_API_URL`.
+Con `VITE_APP_ENABLE_API_MOCKING=true`, [MSW](https://mswjs.io) solo simula los módulos que **aún no tienen backend** (hoy: horarios). Cuando tu módulo tenga endpoints reales, quita sus handlers de `browserHandlers` en `src/testing/mocks/handlers/index.ts`.
 
-### Usuarios de prueba (solo con el backend simulado)
-
-Todos usan la contraseña `galiledu123` (definida en `src/testing/mocks/seed.ts`).
-
-| Usuario          | Rol(es)                 |
-| ---------------- | ----------------------- |
-| `admin`          | Administrador           |
-| `administrativo` | Personal Administrativo |
-| `coordinador`    | Coordinador             |
-| `docente`        | Docente                 |
-| `tutor`          | Tutor + Docente (prueba el selector de rol) |
-| `apoderado`      | Apoderado               |
-| `estudiante`     | Estudiante              |
-
-> Los datos simulados se guardan en el `localStorage` del navegador (`msw-db`). Para reiniciarlos, bórralo desde DevTools.
+Usuarios de prueba: ver la tabla del [README principal](../README.md#4-entrar) (contraseña `Galiledu2026`). Los tests (`npm test`) siguen usando MSW para todo, incluido el login.
 
 ### Scripts
 
@@ -49,21 +36,12 @@ Todos usan la contraseña `galiledu123` (definida en `src/testing/mocks/seed.ts`
 
 ---
 
-## 2. Conectar con el backend real
+## 2. Conexión con el backend
 
-1. En `.env`:
-   ```
-   VITE_APP_API_URL=http://localhost:8080/api   # URL de tu API
-   VITE_APP_ENABLE_API_MOCKING=false
-   ```
-2. El backend debe respetar los contratos que hoy simulan los handlers de `src/testing/mocks/handlers/` (cada archivo documenta sus endpoints arriba). Los tipos de los DTO están en `src/types/api.ts`.
-3. **Autenticación** (`src/lib/auth.tsx` y `src/lib/api-client.ts`):
-   - `POST /auth/login` `{ username, password }` → `{ jwt, user }`
-   - `GET /auth/me` → `{ data: User | null }`
-   - `POST /auth/logout`
-   - Si la respuesta trae `jwt`, se guarda y se envía como `Authorization: Bearer <jwt>`. También se envían cookies (`withCredentials`), así que funciona con sesión por cookie o por token.
-   - `user.roles` es un arreglo con valores de `ROLES` (`src/config/roles.ts`).
-4. Habilita CORS en el backend para `http://localhost:3000` con `credentials: true`.
+- Contratos: los tipos de los DTO están en `src/types/api.ts` y deben coincidir con los DTO Java (`backend/src/main/java/com/galiledu/*/aplicacion/`). La lista de endpoints está en [backend/README.md](../backend/README.md#api-prefijo-api).
+- **Autenticación JWT** (`src/lib/auth.tsx`, `src/lib/api-client.ts`): `POST /auth/login` → `{ jwt, user }`; el token se guarda en `localStorage` y se envía como `Authorization: Bearer <jwt>`. `GET /auth/me` → `{ data: user }`.
+- Errores: el backend responde `{ message }` en español y el cliente lo muestra como notificación (salvo en el login, que lo muestra bajo el formulario).
+- Listas paginadas: `{ data, meta: { page, size, total, totalPages } }` → usa `PaginationBar` de `src/components/ui/table`.
 
 ---
 
@@ -131,11 +109,11 @@ Cada ruta pendiente muestra un placeholder con sus HU y un enlace al frame de Fi
 
 | Feature (`src/features/…`) | Usado por                          | HU (Figma)                          | Estado |
 | -------------------------- | ---------------------------------- | ----------------------------------- | ------ |
-| `auth`                     | Todos                              | Login, restablecer/cambiar contraseña | Login ✅ · Recuperar (paso 1) ✅ · Cambiar contraseña ⏳ |
+| `auth`                     | Todos                              | Login, restablecer/cambiar contraseña | Login ✅ (backend real) · Recuperar ⏳ · Cambiar contraseña ⏳ |
 | `horarios`                 | Estudiante, Apoderado              | HU-50, HU-51                        | ✅ |
 | `horarios`                 | Coordinador, Docente, Tutor        | HU-44, 45, 46, 47, 49               | ⏳ (reutilizar `BloqueHorario` y `MatrizHoraria`) |
-| `usuarios`                 | Administrador                      | HU-6, 7, 8                          | ⏳ |
-| `estudiantes`              | Administrador                      | Inscripción (5 pasos), ficha        | ⏳ |
+| `usuarios`                 | Administrador                      | HU-6, 9, 12 (+ Inicio admin)        | ✅ backend real · Carga masiva (HU-8) ⏳ |
+| `estudiantes`              | Personal Adm.                      | HU-7: inscripción (5 pasos), ficha  | ✅ backend real |
 | `matricula`                | Personal Adm., Apoderado           | HU-21 a 32, 71, 72                  | ⏳ |
 | `pensiones`                | Personal Adm., Apoderado           | HU-34 a 42                          | ⏳ |
 | `anio-escolar`             | Personal Adm.                      | HU-44, 74, 75                       | ⏳ |

@@ -1,3 +1,5 @@
+> **Aviso (2026-10-19):** esta carpeta describe el backend y la BD **anteriores**. Se rehicieron desde cero en la rama `feat/integracion`; la guía vigente está en el [README principal](../README.md) y en [backend/README.md](../backend/README.md). Se conserva solo como referencia de reglas de negocio.
+
 # GalilEdu documentation
 
 **Current delivery: backend REST API and PostgreSQL integration only.** The existing frontend is outside this delivery.

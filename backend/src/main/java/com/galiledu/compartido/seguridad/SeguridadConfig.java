@@ -61,7 +61,7 @@ public class SeguridadConfig {
 	}
 
 	@Bean
-	CorsConfigurationSource origenesPermitidos(@Value("${galiledu.cors.origenes}") String origenes) {
+	CorsConfigurationSource corsConfigurationSource(@Value("${galiledu.cors.origenes}") String origenes) {
 		CorsConfiguration cors = new CorsConfiguration();
 		cors.setAllowedOrigins(Arrays.stream(origenes.split(",")).map(String::strip).toList());
 		cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
