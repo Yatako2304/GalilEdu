@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ---- Semantics (Figma > Semantics) ---- */
+    --bg-primary: #ffffff;
+    --bg-secondary: #f8fafc;
+    --bg-tertiary: #f1f5f9;
+    --bg-quartiary: #e2e8f0;
+    --bg-disabled: #e2e8f0;
+    --bg-accent-light: #ecf1fd;
+    --bg-accent-primary-solid: #0b2545;
+    --bg-accent-secondary-solid: #1f6feb;
+    --bg-error-light: #fef2f2;
+    --bg-error-solid: #ef4444;
+    --bg-success-light: #cefcd2;
+    --bg-success-solid: #379043;
+    --bg-warning-light: #fffbeb;
+    --bg-warning-solid: #d97706;
+    --bg-info-primary-light: #defdff;
+    --bg-info-primary-solid: #0f5b5e;
+
+    --text-primary: #0f172a;
+    --text-secondary: #1e293b;
+    --text-tertiary: #334155;
+    --text-quartiary: #475569;
+    --text-placeholder: #64748b;
+    --text-disabled: #475569;
+    --text-accent-primary: #1d4980;
+    --text-accent-secondary: #1f6feb;
+    --text-error-primary: #dc2626;
+    --text-success-primary: #2c7736;
+    --text-warning-primary: #d97706;
+    --text-info-primary: #0f5b5e;
+
+    --stroke-primary: #94a3b8;
+    --stroke-secondary: #cbd5e1;
+    --stroke-tertiary: #f1f5f9;
+    --stroke-accent-primary: #1d4980;
+    --stroke-accent-focus-alt: #275da1;
+    --stroke-error-primary: #dc2626;
+    --stroke-error-secondary: #fecaca;
+    --stroke-success-primary: #379043;
+    --stroke-warning-primary: #f59e0b;
+
+    /* ---- Alias shadcn (componentes base de bulletproof-react) ---- */
+    --background: 210 40% 98%; /* slate-50 */
+    --foreground: 222 47% 11%; /* slate-900 */
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 213 72% 16%; /* deep-blue-900 #0b2545 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 216 84% 52%; /* vibrant-blue-500 #1f6feb */
+    --secondary-foreground: 0 0% 100%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 225 79% 96%; /* deep-blue-50 */
+    --accent-foreground: 213 63% 31%; /* deep-blue-700 */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 213 27% 84%; /* slate-300 */
+    --input: 215 20% 65%; /* slate-400 */
+    --ring: 213 61% 39%; /* deep-blue-600 */
+
+    --radius: 12px;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+}

@@ -1,0 +1,19 @@
+# Hook que corre antes de cada commit (lo instala "npm install" en frontend/).
+# Formatea y revisa solo lo que vas a commitear, para que el CI no falle por detalles.
+# Si necesitas saltarlo en una emergencia: git commit --no-verify (el CI igual lo revisará).
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+
+# Frontend: ESLint + Prettier sobre los archivos staged y revisión de tipos.
+if echo "$staged" | grep -q '^frontend/'; then
+  echo "▶ Frontend: lint y tipos…"
+  (cd frontend && npx --no-install lint-staged) || exit 1
+fi
+
+# Backend: formatea los .java con Spotless y vuelve a agregarlos al commit.
+java_staged=$(echo "$staged" | grep '^backend/.*\.java$' || true)
+if [ -n "$java_staged" ]; then
+  echo "▶ Backend: formato de Java (Spotless)…"
+  (cd backend && sh mvnw -q spotless:apply) || exit 1
+  echo "$java_staged" | xargs git add
+fi

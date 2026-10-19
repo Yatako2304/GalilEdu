@@ -1,0 +1,9 @@
+# Ajustes del formateador de Eclipse que usa Spotless (ver pom.xml). El resto queda con los valores por defecto
+# de Eclipse: tabulaciones y líneas de hasta 120 columnas.
+# Respeta los saltos de línea que pone la persona (cadenas .andExpect(...), streams, builders).
+org.eclipse.jdt.core.formatter.join_wrapped_lines=false
+# Comentarios y Javadoc también hasta 120 columnas, sin reacomodar el texto que ya está bien.
+org.eclipse.jdt.core.formatter.comment.line_length=120
+org.eclipse.jdt.core.formatter.comment.format_line_comments=false
+org.eclipse.jdt.core.formatter.join_lines_in_comments=false
+org.eclipse.jdt.core.formatter.lineSplit=120

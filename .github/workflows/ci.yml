@@ -1,0 +1,76 @@
+# Integración continua de GalilEdu.
+# Corre en cada push y en cada pull request hacia main. Si una prueba falla, el PR no se puede
+# integrar (configura la regla de protección de main: ver README principal, sección "Pruebas y CI").
+name: CI
+
+on:
+  push:
+    branches: [main, 'feat/**', 'fix/**']
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: galiledu_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DB_URL: jdbc:postgresql://localhost:5432/galiledu_test
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Pruebas unitarias y de integración (mvnw verify)
+        run: sh mvnw -B verify
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    env:
+      VITE_APP_API_URL: http://localhost:8080/api
+      VITE_APP_ENABLE_API_MOCKING: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Lint (incluye reglas de arquitectura)
+        run: npm run lint
+      - name: Tipos
+        run: npm run check-types
+      - name: Pruebas (Vitest)
+        run: npx vitest run
+      - name: Build
+        run: npm run build
