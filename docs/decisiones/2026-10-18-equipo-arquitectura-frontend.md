@@ -1,4 +1,4 @@
-# Arquitectura base del frontend
+# Arquitectura base del frontend (bulletproof-react, rutas por rol, MSW)
 
 - **Autor:** equipo (entrada inicial)
 - **Fecha:** 2026-10-18
@@ -11,12 +11,12 @@ Se dejó listo el esqueleto del frontend: rutas por rol, login, layout con menú
 
 ## Archivos principales
 
-- `src/app/router.tsx`: árbol de rutas y `RoleGuard`.
-- `src/config/roles.ts`, `src/config/paths.ts`, `src/config/navigation.ts`: roles, rutas y menú.
-- `src/lib/api-client.ts`, `src/lib/auth.tsx`: axios y autenticación.
-- `src/components/ui/`: design system.
-- `src/features/horarios/`: módulo de referencia.
-- `src/testing/mocks/`: backend simulado (MSW).
+- `frontend/src/app/router.tsx`: árbol de rutas y `RoleGuard`.
+- `frontend/src/config/roles.ts`, `frontend/src/config/paths.ts`, `frontend/src/config/navigation.ts`: roles, rutas y menú.
+- `frontend/src/lib/api-client.ts`, `frontend/src/lib/auth.tsx`: axios y autenticación.
+- `frontend/src/components/ui/`: design system.
+- `frontend/src/features/horarios/`: módulo de referencia.
+- `frontend/src/testing/mocks/`: backend simulado (MSW).
 
 ## Decisiones y por qué
 
@@ -27,8 +27,8 @@ Se dejó listo el esqueleto del frontend: rutas por rol, login, layout con menú
 - **Decisión:** **TanStack React Query** para los datos del servidor y **Zustand** solo para estado global de la UI (ej. notificaciones).
   **Por qué:** React Query ya resuelve caché, carga, errores y recarga de datos; no hace falta guardar datos del backend en un store propio.
 - **Decisión:** **MSW** como backend simulado (`VITE_APP_ENABLE_API_MOCKING=true`).
-  **Por qué:** permite avanzar el frontend sin esperar al backend. Los handlers en `src/testing/mocks/handlers/` sirven además como **contrato** de los endpoints que el backend debe respetar.
-- **Decisión:** formularios con **react-hook-form + zod**; variables de entorno también validadas con zod (`src/config/env.ts`).
+  **Por qué:** permite avanzar el frontend sin esperar al backend. Los handlers en `frontend/src/testing/mocks/handlers/` sirven además como **contrato** de los endpoints que el backend debe respetar.
+- **Decisión:** formularios con **react-hook-form + zod**; variables de entorno también validadas con zod (`frontend/src/config/env.ts`).
   **Por qué:** validación tipada con un solo esquema que sirve para TypeScript y para la validación en tiempo de ejecución.
 - **Decisión:** estilos con **Tailwind** y tokens copiados de Figma; variantes de componentes con **class-variance-authority** (`cva`) y `cn()` (`clsx` + `tailwind-merge`).
   **Por qué:** los nombres de colores y tipografías coinciden con Figma, así que pasar un diseño a código es directo.
@@ -39,12 +39,12 @@ Ver `package.json`. Las principales son React 18, React Router 7, TanStack Query
 
 ## Pendientes / problemas conocidos
 
-- [ ] Casi todos los módulos están como `ModulePlaceholder`. El estado de cada uno está en el README principal, sección 4.
+- [ ] Casi todos los módulos están como `ModulePlaceholder`. El estado de cada uno está en el frontend/README.md, sección 4.
 - [ ] Cambiar contraseña (auth) pendiente.
-- [ ] Conectar con el backend real (README principal, sección 2).
+- [ ] Conectar con el backend real (frontend/README.md, sección 2).
 
 ## Notas para quien siga
 
-- Para crear un módulo nuevo, sigue el paso a paso del README principal (sección 5) y usa `src/features/horarios` como plantilla.
+- Para crear un módulo nuevo, sigue el paso a paso del frontend/README.md (sección 5) y usa `frontend/src/features/horarios` como plantilla.
 - Los datos simulados se guardan en `localStorage` (`msw-db`). Si algo raro pasa con el login o los datos, bórralo.
 - Antes de subir cambios: `npm run lint && npm run check-types && npm test`.

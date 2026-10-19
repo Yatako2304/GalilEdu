@@ -14,9 +14,9 @@ Se unió frontend y backend en un solo repositorio (`GalilEdu/`, rama `feat/inte
 - `backend/src/main/resources/db/migration/`: esquema de la BD (V1 personas/seguridad, V2 estudiantes).
 - `backend/src/main/java/com/galiledu/usuarios/`: login JWT y gestión de cuentas.
 - `backend/src/main/java/com/galiledu/estudiantes/`: inscripción (HU-7).
-- `src/features/usuarios/`: Inicio del administrador, lista y modales de usuarios.
-- `src/features/estudiantes/`: listado, registro de inscripción en 5 pasos y ficha.
-- `src/components/personas/`: campos y validaciones de datos personales compartidos.
+- `frontend/src/features/usuarios/`: Inicio del administrador, lista y modales de usuarios.
+- `frontend/src/features/estudiantes/`: listado, registro de inscripción en 5 pasos y ficha.
+- `frontend/src/components/personas/`: campos y validaciones de datos personales compartidos.
 
 ## Decisiones y por qué
 
@@ -30,7 +30,7 @@ Se unió frontend y backend en un solo repositorio (`GalilEdu/`, rama `feat/inte
   **Por qué:** Figma muestra varios roles por usuario y la opción Eliminar; borrar físicamente rompería el historial.
 - **Decisión:** las credenciales se envían por correo (Figma: "Credenciales enviadas al correo"); sin SMTP configurado se escriben en el log del backend.
 - **Decisión:** MSW en el navegador solo simula módulos sin backend (`browserHandlers`); los tests siguen simulando todo.
-- **Decisión:** se corrigió `src/utils/cn.ts` para que `tailwind-merge` reconozca los tamaños de letra del design system (`text-body-3`, etc.).
+- **Decisión:** se corrigió `frontend/src/utils/cn.ts` para que `tailwind-merge` reconozca los tamaños de letra del design system (`text-body-3`, etc.).
   **Por qué:** los confundía con colores y borraba `text-white`, por eso el texto de los botones primarios no se veía.
 
 ## Pendientes / problemas conocidos

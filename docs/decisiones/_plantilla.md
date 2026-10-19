@@ -1,4 +1,8 @@
-# <Título corto de la tarea o decisión>
+# <Título corto de la decisión>
+
+<!-- Copia este archivo como docs/decisiones/AAAA-MM-DD-autor-tema.md (minúsculas y guiones).
+     Una entrada por decisión o tarea importante. No edites entradas de otros: si algo cambió,
+     crea una nueva que diga "reemplaza a <archivo>". -->
 
 - **Autor:** <tu nombre o usuario de GitHub>
 - **Fecha:** AAAA-MM-DD
@@ -12,7 +16,7 @@
 ## Archivos principales
 
 <!-- Los más importantes, no todos. -->
-- `src/...`
+- `backend/src/...` / `frontend/src/...`
 
 ## Decisiones y por qué
 
@@ -23,7 +27,7 @@
 
 ## Librerías o herramientas nuevas
 
-<!-- Si agregaste algo al package.json, di qué y para qué. Si no, borra esta sección. -->
+<!-- Si agregaste algo al package.json o al pom.xml, di qué y para qué. Si no, borra esta sección. -->
 
 ## Pendientes / problemas conocidos
 

@@ -1,34 +1,41 @@
-> **Aviso (2026-10-19):** esta carpeta describe el backend y la BD **anteriores**. Se rehicieron desde cero en la rama `feat/integracion`; la guía vigente está en el [README principal](../README.md) y en [backend/README.md](../backend/README.md). Se conserva solo como referencia de reglas de negocio.
+# Documentación de GalilEdu
 
-# GalilEdu documentation
+Toda la documentación del proyecto vive aquí, **en español** y en Markdown. Esta página dice qué va en cada lugar, para que nadie tenga que preguntar dónde buscar o dónde escribir.
 
-**Current delivery: backend REST API and PostgreSQL integration only.** The existing frontend is outside this delivery.
+## ¿Qué va dónde?
 
-> **Repository-state note (2026-10-02):** the verified Users/backend, Institutional Configuration and initial Payments slices are published on `main`. `develop-luis` remains Luis's working branch. Consult the module board for exact progress.
+| Archivo / carpeta | Responde a… | Quién lo actualiza y cuándo |
+| --- | --- | --- |
+| [`/README.md`](../README.md) | ¿Qué es GalilEdu y cómo lo levanto? | Solo si cambia cómo se instala o se ejecuta. |
+| [`/backend/README.md`](../backend/README.md) | ¿Cómo está armado el backend? Configuración, estructura, lista de endpoints. | Quien agrega endpoints o variables de entorno. |
+| [`/frontend/README.md`](../frontend/README.md) | ¿Cómo está armado el frontend? Estructura, design system, scripts. | Quien cambia la estructura o agrega librerías. |
+| [`guias/`](guias/) | ¿**Cómo** hago algo? (contribuir, crear un módulo, escribir pruebas) | Cuando cambia el proceso del equipo. |
+| [`modulos/`](modulos/README.md) | ¿**Qué** hace cada módulo y en qué estado está? (HU, pantallas, tablas, endpoints) | La pareja dueña del módulo, en cada PR que lo cambie. |
+| [`decisiones/`](decisiones/) | ¿**Por qué** se hizo así? (decisiones y alternativas descartadas) | Quien toma una decisión que afecta a otros. |
+| [`/AGENTS.md`](../AGENTS.md) | Instrucciones para asistentes de IA (Claude, Copilot, Cursor…). | Cuando cambian las reglas del equipo. |
+| [`/.github/pull_request_template.md`](../.github/pull_request_template.md) | Checklist que aparece al abrir un PR. | Cuando cambian los requisitos para integrar. |
 
-| Need | Read |
-| --- | --- |
-| Join the team or resume work | [Architecture](architecture.md) → [module board](modules/README.md) → the assigned module report. |
-| Implement an HU/RF | [Development guide](development-guide.md) → PO backlog and current database scripts, both shared outside Git. |
-| Understand design diagrams | [Views](views/README.md), then the relevant component/class/cardinality/deployment note. |
-| Check schema mismatches | [Database compatibility](database-compatibility.md) and the database-team scripts. |
-| Continue Users | [Users living report](modules/users.md) and [backend API/startup guide](../backend/README.md). |
+> Regla rápida: **README = cómo usar** · **guías = cómo trabajar** · **módulos = qué hay** · **decisiones = por qué**.
 
-```text
-docs/
-├── README.md
-├── architecture.md
-├── development-guide.md
-├── database-compatibility.md
-├── modules/
-│   ├── README.md             # status, ownership, mandatory report format
-│   ├── users.md              # Users living report
-│   ├── institutional-configuration.md  # Institutional Configuration slice
-│   ├── payments.md           # Payments slice and cross-module contracts
-│   └── enrollment.md         # Enrollment MVP and blockers
-└── views/                    # existing diagram notes in English
+## Guías
+
+- [Cómo contribuir](guias/contribuir.md): ramas, commits, pull requests, CI y revisión.
+- [Cómo crear un módulo](guias/nuevo-modulo.md): BD → backend → frontend → pruebas → documentación, paso a paso.
+- [Pruebas](guias/pruebas.md): qué se prueba, cómo correrlas y cómo escribir las tuyas.
+
+## Reglas de escritura
+
+1. **Español**, frases cortas, sin relleno. Si no tienes nada que poner en una sección, bórrala.
+2. **Enlaza, no copies.** Si algo ya está explicado en otro archivo, pon el enlace. La información duplicada se desactualiza.
+3. **Nombra archivos y rutas concretas** (`backend/src/.../ServicioUsuarios.java`, `V3__matricula.sql`).
+4. **La documentación va en el mismo PR que el código.** Un PR que cambia un módulo y no actualiza su `modulos/<modulo>.md` no está terminado.
+5. **Nada de secretos:** ni contraseñas reales, ni tokens, ni datos personales reales.
+6. **Fuente de verdad del diseño:** las pantallas de [Figma](https://www.figma.com/design/l8nXzicItzBnvPjFQP4G9O/GalilEdu). Si Figma y un requisito de Notion se contradicen, manda Figma; anótalo en la ficha del módulo.
+
+## Documentación anterior
+
+La documentación del backend y la BD anteriores (`architecture.md`, `modules/`, `views/`…) se eliminó al rehacer el proyecto el 2026-10-19. Si necesitas consultarla, está en el historial de Git, en el commit `4eab213`:
+
+```bash
+git show 4eab213:docs/architecture.md
 ```
-
-**Documentation rule:** each active module has one `docs/modules/<module>.md`, updated in the same PR as its code. Do not create a file per HU, endpoint or meeting. Record current owner/focus in [modules/README.md](modules/README.md). Cross-cutting decisions belong in architecture; verified code/schema gaps belong in database compatibility.
-
-The **PO-validated backlog** at `../backlog/` determines functional behavior. The **database team scripts** at `../scripts/` determine the current schema. Both paths are relative to the `GalilEdu/` repository root and intentionally outside Git. The original diagrams are also outside Git; these notes do not replace them. Code and tests show what is actually implemented. If a source is unavailable or contradictory, record the question rather than inventing a rule. Never commit `.env`, credentials or real personal data.
