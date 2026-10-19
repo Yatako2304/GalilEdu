@@ -23,6 +23,7 @@ Toda la documentación del proyecto vive aquí, **en español** y en Markdown. E
 - [Cómo crear un módulo](guias/nuevo-modulo.md): BD → backend → frontend → pruebas → documentación, paso a paso.
 - [Pruebas](guias/pruebas.md): qué se prueba, cómo correrlas y cómo escribir las tuyas.
 - [Convenciones de código](guias/convenciones.md): cómo nombrar tablas, clases, endpoints, componentes y variables.
+- [Despliegue en AWS](guias/despliegue.md): servidor EC2 con Docker y despliegue automático en cada merge a `main`.
 
 ## Reglas de escritura
 
