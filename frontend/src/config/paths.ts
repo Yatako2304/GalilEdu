@@ -46,16 +46,24 @@ export const paths = {
       getHref: () => '/app',
     },
 
-    // Figma: 🌟 Administrador
+    // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios)
     admin: {
       root: roleRoot(ADMIN),
       usuarios: route(ADMIN, 'usuarios'),
-      estudiantes: route(ADMIN, 'estudiantes'),
     },
 
     // Figma: 🌟 Personal Administrativo
     administrativo: {
       root: roleRoot(ADMINISTRATIVO),
+      estudiantes: route(ADMINISTRATIVO, 'estudiantes'),
+      nuevaInscripcion: {
+        path: 'estudiantes/nueva',
+        getHref: () => `${ADMINISTRATIVO}/estudiantes/nueva`,
+      },
+      fichaEstudiante: {
+        path: 'estudiantes/:estudianteId',
+        getHref: (id: string) => `${ADMINISTRATIVO}/estudiantes/${id}`,
+      },
       matricula: route(ADMINISTRATIVO, 'matricula'),
       pensiones: route(ADMINISTRATIVO, 'pensiones'),
       anioEscolar: route(ADMINISTRATIVO, 'anio-escolar'),

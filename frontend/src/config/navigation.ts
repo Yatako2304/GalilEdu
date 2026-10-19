@@ -6,8 +6,8 @@ import {
   ClipboardList,
   GraduationCap,
   Contact,
+  Home,
   type LucideIcon,
-  ShieldCheck,
   Star,
   Users,
   Wallet,
@@ -20,6 +20,8 @@ export type NavItem = {
   label: string;
   href: string;
   icon: LucideIcon;
+  /** Solo se marca activo en la ruta exacta (para "Inicio"). */
+  exact?: boolean;
 };
 
 export type NavSection = {
@@ -27,26 +29,42 @@ export type NavSection = {
   items: NavItem[];
 };
 
+const inicioItem = (href: string): NavItem => ({
+  label: 'Inicio',
+  href,
+  icon: Home,
+  exact: true,
+});
+
+/** Sección "General" con Inicio (y otros accesos generales del rol). */
+const inicio = (href: string, extra: NavItem[] = []): NavSection => ({
+  title: 'General',
+  items: [inicioItem(href), ...extra],
+});
+
 // Menú lateral por rol, copiado de las instancias "Sidebar" de cada página de Figma.
 export const NAVIGATION: Record<ROLES, NavSection[]> = {
   [ROLES.ADMINISTRADOR]: [
+    inicio(paths.app.admin.root.getHref()),
     {
       title: 'Seguridad',
       items: [
         {
           label: 'Usuarios',
           href: paths.app.admin.usuarios.getHref(),
-          icon: ShieldCheck,
-        },
-        {
-          label: 'Estudiantes',
-          href: paths.app.admin.estudiantes.getHref(),
           icon: Users,
         },
       ],
     },
   ],
   [ROLES.PERSONAL_ADMINISTRATIVO]: [
+    inicio(paths.app.administrativo.root.getHref(), [
+      {
+        label: 'Estudiantes',
+        href: paths.app.administrativo.estudiantes.getHref(),
+        icon: GraduationCap,
+      },
+    ]),
     {
       title: 'Académico y operaciones',
       items: [
@@ -84,6 +102,7 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
     },
   ],
   [ROLES.COORDINADOR]: [
+    inicio(paths.app.coordinador.root.getHref()),
     {
       title: 'Académico y operaciones',
       items: [
@@ -106,6 +125,7 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
     },
   ],
   [ROLES.DOCENTE]: [
+    inicio(paths.app.docente.root.getHref()),
     {
       title: 'Académico',
       items: [
@@ -128,6 +148,7 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
     },
   ],
   [ROLES.TUTOR]: [
+    inicio(paths.app.tutor.root.getHref()),
     {
       title: 'Académico',
       items: [
@@ -153,6 +174,7 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
     {
       title: 'General',
       items: [
+        inicioItem(paths.app.apoderado.root.getHref()),
         {
           label: 'Datos del Alumno',
           href: paths.app.apoderado.datosAlumno.getHref(),
@@ -195,6 +217,7 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
     {
       title: 'General',
       items: [
+        inicioItem(paths.app.estudiante.root.getHref()),
         {
           label: 'Datos del Alumno',
           href: paths.app.estudiante.datosAlumno.getHref(),

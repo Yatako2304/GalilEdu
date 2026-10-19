@@ -28,8 +28,8 @@ const logout = async (): Promise<void> => {
 };
 
 export const loginInputSchema = z.object({
-  username: z.string().min(1, 'Ingrese su usuario'),
-  password: z.string().min(1, 'Ingrese su contraseña'),
+  username: z.string().trim().min(1, 'Debe ingresar su usuario.'),
+  password: z.string().min(1, 'Debe ingresar su contraseña.'),
 });
 
 export type LoginInput = z.infer<typeof loginInputSchema>;

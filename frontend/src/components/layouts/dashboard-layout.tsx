@@ -162,6 +162,7 @@ const NavSections = ({
           <NavLink
             key={item.href}
             to={item.href}
+            end={item.exact}
             onClick={onNavigate}
             title={collapsed ? item.label : undefined}
             className={({ isActive }) =>

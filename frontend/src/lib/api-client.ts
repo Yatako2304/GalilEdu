@@ -57,8 +57,10 @@ api.interceptors.response.use(
   (error) => {
     const status = error.response?.status;
     const isSessionCheck = error.config?.url === '/auth/me';
+    // El login muestra su error debajo del formulario (Figma), no como notificación.
+    const isLogin = error.config?.url === '/auth/login';
 
-    if (!isSessionCheck) {
+    if (!isSessionCheck && !isLogin) {
       const message = error.response?.data?.message || error.message;
       useNotifications.getState().addNotification({
         type: 'error',

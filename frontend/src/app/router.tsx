@@ -88,10 +88,6 @@ export const createAppRouter = (queryClient: QueryClient) =>
               paths.app.admin.usuarios.path,
               () => import('./routes/app/admin/usuarios'),
             ],
-            [
-              paths.app.admin.estudiantes.path,
-              () => import('./routes/app/admin/estudiantes'),
-            ],
           ],
         ),
 
@@ -101,6 +97,18 @@ export const createAppRouter = (queryClient: QueryClient) =>
           paths.app.administrativo.root.path,
           () => import('./routes/app/administrativo/inicio'),
           [
+            [
+              paths.app.administrativo.estudiantes.path,
+              () => import('./routes/app/administrativo/estudiantes'),
+            ],
+            [
+              paths.app.administrativo.nuevaInscripcion.path,
+              () => import('./routes/app/administrativo/nueva-inscripcion'),
+            ],
+            [
+              paths.app.administrativo.fichaEstudiante.path,
+              () => import('./routes/app/administrativo/ficha-estudiante'),
+            ],
             [
               paths.app.administrativo.matricula.path,
               () => import('./routes/app/administrativo/matricula'),

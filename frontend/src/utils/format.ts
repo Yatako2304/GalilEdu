@@ -8,3 +8,7 @@ export const formatDate = (date: number | string) =>
 
 export const formatDay = (date: number | string) =>
   dayjs(date).format('DD/MM/YYYY');
+
+/** "01 oct. 2026" (Figma > Editar usuario). */
+export const formatFecha = (date: number | string) =>
+  dayjs(date).format('DD MMM YYYY');

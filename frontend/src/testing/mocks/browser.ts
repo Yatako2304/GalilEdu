@@ -1,5 +1,7 @@
 import { setupWorker } from 'msw/browser';
 
-import { handlers } from './handlers';
+import { browserHandlers } from './handlers';
 
-export const worker = setupWorker(...handlers);
+// En el navegador solo se simulan los módulos que aún no tienen backend.
+// Lo demás (auth, usuarios, estudiantes) pasa al backend real (onUnhandledRequest: 'bypass').
+export const worker = setupWorker(...browserHandlers);
