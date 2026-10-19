@@ -1,0 +1,73 @@
+# Prueba de humo del despliegue: construye las imágenes, levanta los 3 contenedores con
+# docker-compose.yml (igual que en el servidor) y verifica que la app responda e inicie sesión.
+# Corre cuando cambia algo del despliegue (en cualquier rama o PR); también a mano desde Actions.
+name: Docker
+
+on:
+  push:
+    paths: &archivos-despliegue
+      - '**/Dockerfile'
+      - '**/.dockerignore'
+      - 'docker-compose.yml'
+      - 'frontend/nginx.conf'
+      - 'deploy/**'
+      - 'backend/pom.xml'
+      - 'frontend/package.json'
+      - '.github/workflows/docker.yml'
+  pull_request:
+    paths: *archivos-despliegue
+  workflow_dispatch:
+
+jobs:
+  humo:
+    name: Prueba de humo (docker compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configuración de prueba
+        run: |
+          cp deploy/.env.example deploy/.env
+          sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=$(openssl rand -hex 16)|" deploy/.env
+          sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -hex 32)|" deploy/.env
+
+      - name: Construir y levantar
+        run: docker compose --env-file deploy/.env up -d --build
+
+      - name: Esperar a que responda (vía nginx)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost/api/actuator/health; then echo; exit 0; fi
+            sleep 5
+          done
+          docker compose --env-file deploy/.env logs
+          exit 1
+
+      - name: El frontend carga y las rutas de la SPA funcionan
+        run: |
+          curl -fsS http://localhost/ | grep -q '<div id="root"'
+          curl -fsS http://localhost/app/admin/usuarios | grep -q '<div id="root"'
+
+      - name: Iniciar sesión con un usuario de prueba
+        run: |
+          RESPUESTA=$(curl -fsS -X POST http://localhost/api/auth/login \
+            -H 'Content-Type: application/json' \
+            -d '{"username":"U20260001","password":"Galiledu2026"}')
+          echo "$RESPUESTA" | grep -q '"jwt"'
+          TOKEN=$(echo "$RESPUESTA" | sed -E 's/.*"jwt":"([^"]+)".*/\1/')
+          curl -fsS http://localhost/api/usuarios/resumen -H "Authorization: Bearer $TOKEN" | grep -q '"total"'
+
+      - name: Logs si algo falló
+        if: failure()
+        run: |
+          docker compose --env-file deploy/.env ps -a
+          docker compose --env-file deploy/.env logs --tail=100
+          # Las anotaciones se ven en la página del run sin iniciar sesión (los logs completos no).
+          for servicio in backend frontend db; do
+            resumen=$(docker compose --env-file deploy/.env logs --no-color --tail=25 "$servicio" 2>&1 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+            echo "::error title=Logs de $servicio::$resumen"
+          done
+
+      - name: Apagar
+        if: always()
+        run: docker compose --env-file deploy/.env down -v

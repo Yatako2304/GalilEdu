@@ -1,0 +1,63 @@
+# GalilEdu en producción (un servidor con Docker, p. ej. AWS EC2).
+# Uso:  docker compose --env-file deploy/.env up -d --build
+# Guía completa: docs/guias/despliegue.md
+#
+#   Internet :80 ──► frontend (nginx) ──/api──► backend (Spring Boot) ──► db (PostgreSQL 18)
+#
+# Solo el puerto 80 queda expuesto; backend y base de datos no son accesibles desde fuera.
+
+services:
+  db:
+    image: postgres:18
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: galiledu
+      POSTGRES_USER: galiledu
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD en deploy/.env}
+    volumes:
+      # Los datos sobreviven aunque se apague el servidor o se reconstruyan los contenedores.
+      - datos_postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U galiledu -d galiledu"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/galiledu
+      DB_USER: galiledu
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET:?Define JWT_SECRET en deploy/.env}
+      # Mismo dominio que el frontend (nginx reenvía /api), así que CORS solo necesita el propio sitio.
+      CORS_ORIGINS: ${URL_PUBLICA:-http://localhost}
+      FLYWAY_LOCATIONS: ${FLYWAY_LOCATIONS:-classpath:db/migration,classpath:db/datos-prueba}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-no-responder@galiledu.edu.pe}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 40s
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "80:80"
+
+volumes:
+  datos_postgres:
