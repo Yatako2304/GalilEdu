@@ -19,6 +19,7 @@ import com.jayway.jsonpath.JsonPath;
 class GestionUsuariosIT extends PruebaIntegracion {
 	private static final String ID_ADMIN = "10000000-0000-0000-0000-000000000001";
 	private static final String ID_MARIA = "10000000-0000-0000-0000-000000000004";
+	private static final String ID_ANA = "10000000-0000-0000-0000-000000000002";
 
 	private String admin;
 
@@ -144,6 +145,25 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.inactivos").value(1))
 				.andExpect(jsonPath("$.cuentasInactivas[0].username").value("U20260007"));
+	}
+
+	@Test
+	void desactivarCortaLaSesionAbiertaDeInmediato() throws Exception {
+		String tokenAna = token(PERSONAL_ADMINISTRATIVO);
+		mvc.perform(conToken(get("/estudiantes"), tokenAna)).andExpect(status().isOk());
+
+		mvc.perform(conToken(post("/usuarios/" + ID_ANA + "/desactivar"), admin)).andExpect(status().isOk());
+		mvc.perform(conToken(get("/estudiantes"), tokenAna)).andExpect(status().isUnauthorized());
+
+		mvc.perform(conToken(post("/usuarios/" + ID_ANA + "/reactivar"), admin)).andExpect(status().isOk());
+		mvc.perform(conToken(get("/estudiantes"), tokenAna)).andExpect(status().isOk());
+	}
+
+	@Test
+	void eliminarCortaLaSesionAbierta() throws Exception {
+		String tokenAna = token(PERSONAL_ADMINISTRATIVO);
+		mvc.perform(conToken(delete("/usuarios/" + ID_ANA), admin)).andExpect(status().isNoContent());
+		mvc.perform(conToken(get("/estudiantes"), tokenAna)).andExpect(status().isUnauthorized());
 	}
 
 	@Test
