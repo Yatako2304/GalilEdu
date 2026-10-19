@@ -58,4 +58,5 @@ Ver la tabla completa en [backend/README.md](../../backend/README.md#api-prefijo
 
 - [ ] Configurar SMTP real para el envío de credenciales.
 - [ ] HU-4/HU-5 contraseña, HU-3 Google.
-- [ ] Revocar el token al desactivar (hoy el usuario desactivado conserva su sesión hasta que expire, máx. 8 h).
+- [x] Cortar la sesión al desactivar o eliminar: cada petición verifica que la cuenta siga activa (`compartido/seguridad/VerificadorSesion`).
+- [ ] Si se cambian los roles de un usuario conectado, su menú se actualiza recién al volver a iniciar sesión.
