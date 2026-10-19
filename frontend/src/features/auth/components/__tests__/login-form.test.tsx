@@ -41,3 +41,11 @@ test('el botón está deshabilitado hasta llenar usuario y contraseña', async (
   await userEvent.type(screen.getByLabelText(/contraseña/i), 'x');
   await waitFor(() => expect(boton).toBeEnabled());
 });
+
+test('no muestra "¿Olvidaste tu contraseña?" mientras HU-4 no esté implementada', async () => {
+  await renderApp(<LoginForm onSuccess={vi.fn()} />, { user: null });
+
+  expect(
+    screen.queryByText(/olvidaste tu contraseña/i),
+  ).not.toBeInTheDocument();
+});
