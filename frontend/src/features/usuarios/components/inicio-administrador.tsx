@@ -23,6 +23,7 @@ type InicioAdministradorProps = {
   hrefUsuarios: string;
   hrefNuevoUsuario: string;
   hrefInactivos: string;
+  hrefCargaMasiva: string;
 };
 
 const Estadistica = ({
@@ -83,6 +84,7 @@ export const InicioAdministrador = ({
   hrefUsuarios,
   hrefNuevoUsuario,
   hrefInactivos,
+  hrefCargaMasiva,
 }: InicioAdministradorProps) => {
   const resumen = useResumenUsuarios();
 
@@ -211,10 +213,10 @@ export const InicioAdministrador = ({
             descripcion="Crea una cuenta y asigna su rol"
           />
           <AccesoRapido
-            to={hrefUsuarios}
+            to={hrefCargaMasiva}
             icono={<FileSpreadsheet className="size-4" aria-hidden="true" />}
             titulo="Carga masiva"
-            descripcion="Registra varios usuarios con una plantilla (HU-8, próximamente)"
+            descripcion="Registra varios usuarios con una plantilla"
           />
         </div>
       </section>

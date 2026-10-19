@@ -6,7 +6,11 @@ import java.util.UUID;
 
 import jakarta.validation.Valid;
 
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -19,15 +23,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.galiledu.compartido.seguridad.ServicioJwt;
 import com.galiledu.compartido.web.Pagina;
+import com.galiledu.usuarios.aplicacion.Dtos.ResultadoCargaMasiva;
 import com.galiledu.usuarios.aplicacion.Dtos.ResumenUsuarios;
 import com.galiledu.usuarios.aplicacion.Dtos.RolCatalogo;
 import com.galiledu.usuarios.aplicacion.Dtos.SolicitudUsuario;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioCreado;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioDetalle;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioResumen;
+import com.galiledu.usuarios.aplicacion.ServicioCargaMasiva;
 import com.galiledu.usuarios.aplicacion.ServicioUsuarios;
 import com.galiledu.usuarios.dominio.EstadoUsuario;
 import com.galiledu.usuarios.dominio.Rol;
@@ -38,9 +45,11 @@ import com.galiledu.usuarios.dominio.Rol;
 @PreAuthorize("hasRole('ADMINISTRADOR')")
 public class UsuarioController {
 	private final ServicioUsuarios servicio;
+	private final ServicioCargaMasiva cargaMasiva;
 
-	public UsuarioController(ServicioUsuarios servicio) {
+	public UsuarioController(ServicioUsuarios servicio, ServicioCargaMasiva cargaMasiva) {
 		this.servicio = servicio;
+		this.cargaMasiva = cargaMasiva;
 	}
 
 	/** GET /api/usuarios?q=&rol=&estado=&page=1&size=8 */
@@ -98,5 +107,30 @@ public class UsuarioController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void eliminar(@PathVariable UUID id, Authentication autenticacion) {
 		servicio.eliminar(id, ServicioJwt.usuarioActual(autenticacion));
+	}
+
+	// ---------- Carga masiva (HU-8) ----------
+
+	/** GET /api/usuarios/carga-masiva/plantilla → usuarios_galiledu.xlsx con los encabezados y un ejemplo. */
+	@GetMapping("/carga-masiva/plantilla")
+	public ResponseEntity<byte[]> plantilla() {
+		return ResponseEntity.ok()
+				.contentType(MediaType.parseMediaType(
+						"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+				.header(HttpHeaders.CONTENT_DISPOSITION,
+						ContentDisposition.attachment().filename("usuarios_galiledu.xlsx").build().toString())
+				.body(cargaMasiva.plantilla());
+	}
+
+	/** Paso 2: revisa el archivo y devuelve los errores por fila, sin crear usuarios. */
+	@PostMapping(path = "/carga-masiva/validacion", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResultadoCargaMasiva validarCarga(@RequestParam MultipartFile archivo) {
+		return cargaMasiva.validar(archivo);
+	}
+
+	/** Paso 3: crea los usuarios de las filas válidas y les envía sus credenciales. */
+	@PostMapping(path = "/carga-masiva", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public ResultadoCargaMasiva cargar(@RequestParam MultipartFile archivo) {
+		return cargaMasiva.cargar(archivo);
 	}
 }
