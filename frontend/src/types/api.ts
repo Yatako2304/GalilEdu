@@ -219,6 +219,12 @@ export type InscripcionRegistrada = {
   cuentaNueva: boolean;
 };
 
+export type DocumentoAdjunto = {
+  tipo: string;
+  nombreArchivo: string;
+  subidoEn: string;
+};
+
 export type PersonaEncontrada = {
   personaId: string;
   persona: DatosPersona;
@@ -244,6 +250,8 @@ export type FichaEstudiante = {
     viveConEstudiante: boolean;
     esResponsable: boolean;
     motivoNoRegistra: string | null;
+    /** Documento que acredita al apoderado (carta poder…), si se adjuntó. */
+    acreditacion: DocumentoAdjunto | null;
   }[];
   contactos: DatosContacto[];
   modoSalida: ModoSalida | null;

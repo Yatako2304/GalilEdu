@@ -11,6 +11,7 @@ import { formatDay } from '@/utils/format';
 
 import { useFichaEstudiante } from '../api/estudiantes';
 
+import { DocumentoApoderado } from './documento-apoderado';
 import { EstadoEstudianteTag } from './estudiantes-lista';
 
 const PESTANAS = [
@@ -288,6 +289,19 @@ export const FichaEstudiante = ({
                       <Tag color="success" size="md" className="rounded-full">
                         Responsable
                       </Tag>
+                    ) : (
+                      <span>—</span>
+                    ),
+                },
+                {
+                  title: 'Documento que lo acredita',
+                  field: 'acreditacion',
+                  Cell: ({ entry }) =>
+                    entry.parentesco === 'APODERADO' && entry.nombreCompleto ? (
+                      <DocumentoApoderado
+                        estudianteId={f.id}
+                        documento={entry.acreditacion}
+                      />
                     ) : (
                       <span>—</span>
                     ),

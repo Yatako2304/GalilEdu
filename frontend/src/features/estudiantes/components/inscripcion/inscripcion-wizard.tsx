@@ -5,10 +5,9 @@ import { useForm, UseFormReturn } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form';
-import { InscripcionRegistrada } from '@/types/api';
 import { cn } from '@/utils/cn';
 
-import { useInscribir } from '../../api/estudiantes';
+import { ResultadoInscripcion, useInscribir } from '../../api/estudiantes';
 
 import { Casilla, SeccionPaso } from './campos';
 import {
@@ -141,6 +140,16 @@ const PasoResponsable = ({
     ['Padre', familiarResumen(v.padre)],
     ['Madre', familiarResumen(v.madre)],
     ['Apoderado', familiarResumen(v.apoderado, v.incluirApoderado)],
+    ...(v.incluirApoderado
+      ? ([
+          [
+            'Documento del apoderado',
+            v.documentoApoderado.archivo
+              ? `${v.documentoApoderado.tipo || 'Documento'} · ${v.documentoApoderado.archivo.name}`
+              : 'Sin documento adjunto',
+          ],
+        ] as [string, string][])
+      : []),
     ['Contactos de emergencia', `${v.contactos.length} registrados`],
     [
       'Autorizados a recoger',
@@ -225,7 +234,7 @@ export const InscripcionWizard = ({
   onRegistrada,
 }: {
   onCancelar: () => void;
-  onRegistrada: (r: InscripcionRegistrada) => void;
+  onRegistrada: (r: ResultadoInscripcion) => void;
 }) => {
   const [paso, setPaso] = React.useState(0);
   const form = useForm<InscripcionForm>({
@@ -252,7 +261,15 @@ export const InscripcionWizard = ({
   };
 
   const registrar = () => {
-    inscribir.mutate(aSolicitud(form.getValues()));
+    const valores = form.getValues();
+    const { tipo, archivo } = valores.documentoApoderado;
+    inscribir.mutate({
+      solicitud: aSolicitud(valores),
+      documento:
+        valores.incluirApoderado && archivo
+          ? { tipo: tipo || 'Otro', archivo }
+          : null,
+    });
   };
 
   const e = form.watch('estudiante.persona');

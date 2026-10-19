@@ -1,6 +1,7 @@
 package com.galiledu.estudiantes.aplicacion;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -109,6 +110,10 @@ public final class DtosEstudiantes {
 
 	public record Familiar(UUID personaId, Parentesco parentesco, String nombreCompleto, String documento,
 			String celular, String relacion, boolean viveConEstudiante, boolean esResponsable,
-			String motivoNoRegistra) {
+			String motivoNoRegistra, DocumentoAdjunto acreditacion) {
+	}
+
+	/** Documento que acredita al apoderado (sin el contenido; se descarga aparte). */
+	public record DocumentoAdjunto(String tipo, String nombreArchivo, Instant subidoEn) {
 	}
 }

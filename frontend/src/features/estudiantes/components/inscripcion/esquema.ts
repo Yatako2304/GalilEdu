@@ -26,6 +26,8 @@ export type FamiliarForm = {
   viveConEstudiante: boolean;
   tienePatriaPotestad: boolean;
   relacion: string;
+  /** Texto libre cuando la relación es "Otro" (Figma: "Especificar"). */
+  relacionDetalle: string;
 };
 
 export type InscripcionForm = {
@@ -81,6 +83,8 @@ export type InscripcionForm = {
   correoResponsable: string;
   celularResponsable: string;
   verificado: boolean;
+  /** Documento que acredita al apoderado. Se sube después de registrar la inscripción. */
+  documentoApoderado: { tipo: string; archivo: File | null };
 };
 
 const familiarVacio = (sexo: 'MASCULINO' | 'FEMENINO' | ''): FamiliarForm => ({
@@ -94,6 +98,7 @@ const familiarVacio = (sexo: 'MASCULINO' | 'FEMENINO' | ''): FamiliarForm => ({
   viveConEstudiante: true,
   tienePatriaPotestad: true,
   relacion: '',
+  relacionDetalle: '',
 });
 
 const anioSiguiente = new Date().getFullYear() + 1;
@@ -153,6 +158,7 @@ export const inscripcionVacia = (): InscripcionForm => ({
   correoResponsable: '',
   celularResponsable: '',
   verificado: false,
+  documentoApoderado: { tipo: '', archivo: null },
 });
 
 /** Un familiar cuenta como registrado si no está marcado "no registra" y tiene documento. */
@@ -263,7 +269,8 @@ const familiar = (f: FamiliarForm) =>
         persona: f.personaId ? null : persona(f.persona),
         viveConEstudiante: f.viveConEstudiante,
         tienePatriaPotestad: f.tienePatriaPotestad,
-        relacion: texto(f.relacion),
+        relacion:
+          f.relacion === 'Otro' ? texto(f.relacionDetalle) : texto(f.relacion),
       };
 
 /** Convierte el formulario al contrato del backend (SolicitudInscripcion). */
@@ -349,5 +356,26 @@ export const gradoSugerido = (
     return { nivel: 'PRIMARIA', grado: `${edad - 5}.° grado`, edad };
   if (edad >= 12 && edad <= 16)
     return { nivel: 'SECUNDARIA', grado: `${edad - 11}.° grado`, edad };
+  return null;
+};
+
+export const TIPOS_DOCUMENTO_APODERADO = [
+  'Carta poder notarial',
+  'Resolución judicial de tutela',
+  'Partida de nacimiento (familiar)',
+  'Otro',
+];
+
+const MIME_PERMITIDOS = ['application/pdf', 'image/jpeg', 'image/png'];
+export const TAMANO_MAXIMO_DOCUMENTO = 5 * 1024 * 1024;
+
+/** Mismas reglas que el backend (ServicioDocumentosApoderado): PDF, JPG o PNG de hasta 5 MB. */
+export const validarDocumento = (archivo: File): string | null => {
+  if (!MIME_PERMITIDOS.includes(archivo.type)) {
+    return 'El documento debe ser PDF, JPG o PNG';
+  }
+  if (archivo.size > TAMANO_MAXIMO_DOCUMENTO) {
+    return 'El documento no puede pesar más de 5 MB';
+  }
   return null;
 };

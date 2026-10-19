@@ -21,6 +21,7 @@ import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosContacto;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosEstudiante;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosFamiliar;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosFichaMedica;
+import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DocumentoAdjunto;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.EstudianteResumen;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.Familiar;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.FichaEstudiante;
@@ -34,6 +35,7 @@ import com.galiledu.estudiantes.dominio.Estudiante;
 import com.galiledu.estudiantes.dominio.FichaMedica;
 import com.galiledu.estudiantes.dominio.Parentesco;
 import com.galiledu.estudiantes.dominio.VinculoFamiliar;
+import com.galiledu.estudiantes.infraestructura.DocumentoVinculoRepositorio;
 import com.galiledu.estudiantes.infraestructura.EstudianteRepositorio;
 import com.galiledu.personas.aplicacion.DatosPersona;
 import com.galiledu.personas.aplicacion.ServicioPersonas;
@@ -47,9 +49,11 @@ public class ServicioEstudiantes {
 	private final EstudianteRepositorio estudiantes;
 	private final ServicioPersonas personas;
 	private final ServicioUsuarios usuarios;
+	private final DocumentoVinculoRepositorio documentos;
 
 	public ServicioEstudiantes(EstudianteRepositorio estudiantes, ServicioPersonas personas,
-			ServicioUsuarios usuarios) {
+			ServicioUsuarios usuarios, DocumentoVinculoRepositorio documentos) {
+		this.documentos = documentos;
 		this.estudiantes = estudiantes;
 		this.personas = personas;
 		this.usuarios = usuarios;
@@ -161,7 +165,10 @@ public class ServicioEstudiantes {
 			return new Familiar(p == null ? null : p.getId(), v.getParentesco(),
 					p == null ? null : p.nombreCompleto(), p == null ? null : documento(p),
 					p == null ? null : p.getCelular(),
-					v.getRelacion(), v.isViveConEstudiante(), v.isEsResponsableMatricula(), v.getMotivoNoRegistra());
+					v.getRelacion(), v.isViveConEstudiante(), v.isEsResponsableMatricula(), v.getMotivoNoRegistra(),
+					documentos.findResumenByVinculoId(v.getId())
+							.map(d -> new DocumentoAdjunto(d.getTipo(), d.getNombreArchivo(), d.getSubidoEn()))
+							.orElse(null));
 		}).toList();
 		// Hermanos: otros estudiantes vinculados a los mismos padres/apoderado.
 		var hermanos = e.getVinculos().stream()
