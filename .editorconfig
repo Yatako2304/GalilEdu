@@ -1,0 +1,36 @@
+# Formato base para cualquier editor (IntelliJ y VS Code lo leen solos; en VS Code instala la
+# extensión "EditorConfig for VS Code"). Coincide con el estilo que ya usa el código.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Backend: Java con tabulaciones (estilo del proyecto Spring).
+[*.java]
+indent_style = tab
+indent_size = 4
+
+[*.{xml,properties}]
+indent_style = tab
+indent_size = 4
+
+[*.sql]
+indent_style = space
+indent_size = 4
+
+# Frontend y configuración: 2 espacios (igual que Prettier).
+[*.{ts,tsx,js,jsx,cjs,mjs,json,css,html,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+indent_style = space
+indent_size = 2
+# En Markdown, dos espacios al final de una línea son un salto de línea.
+trim_trailing_whitespace = false
+
+[*.{cmd,bat,ps1}]
+end_of_line = crlf

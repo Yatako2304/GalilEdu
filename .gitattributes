@@ -1,0 +1,25 @@
+# Fin de línea único para todo el repositorio: LF (estilo Unix), sin importar el sistema operativo.
+# Evita que Git marque como "cambiados" archivos que nadie tocó cuando alguien trabaja desde Windows.
+# Los editores modernos (IntelliJ, VS Code, Notepad++) leen y escriben LF sin problema.
+* text=auto eol=lf
+
+# Scripts de Windows: necesitan CRLF para ejecutarse bien en cmd/PowerShell.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Script de Maven para Linux/macOS (y GitHub Actions).
+/backend/mvnw text eol=lf
+
+# Binarios: Git no debe tocarlos.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.pdf binary
+*.jar binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
