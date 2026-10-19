@@ -4,11 +4,11 @@ import { DatosPersona } from '@/types/api';
 
 // Validaciones de datos personales (RF-12). Mismas reglas que backend/personas/aplicacion/DatosPersona.java.
 
-const sinNumeros = (campo: string) =>
+const sinNumeros = (mensaje: string) =>
   z
     .string()
     .trim()
-    .regex(/^[^0-9]*$/, `${campo} no puede contener números`);
+    .regex(/^[^0-9]*$/, mensaje);
 
 const opcional = z
   .string()
@@ -32,15 +32,18 @@ const base = z.object({
     message: 'Selecciona el tipo de documento',
   }),
   numeroDocumento: z.string().trim().min(1, 'Ingresa el número de documento'),
-  apellidoPaterno: sinNumeros('El apellido').min(
+  apellidoPaterno: sinNumeros('El apellido no puede contener números').min(
     1,
     'Ingresa el apellido paterno',
   ),
-  apellidoMaterno: sinNumeros('El apellido')
+  apellidoMaterno: sinNumeros('El apellido no puede contener números')
     .optional()
     .nullable()
     .transform((v) => (v ? v : null)),
-  nombres: sinNumeros('Los nombres').min(1, 'Ingresa los nombres'),
+  nombres: sinNumeros('Los nombres no pueden contener números').min(
+    1,
+    'Ingresa los nombres',
+  ),
   fechaNacimiento: opcional,
   nacionalidad: opcional,
   lugarNacimiento: opcional,

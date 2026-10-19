@@ -58,5 +58,8 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 ## Pruebas
 
 ```bash
-.\mvnw.cmd test
+.\mvnw.cmd test      # unitarias (sin BD)
+.\mvnw.cmd verify    # unitarias + integración: necesita la base vacía galiledu_test (o TEST_DB_URL)
 ```
+
+Las de integración heredan de `src/test/java/com/galiledu/PruebaIntegracion.java` y también corren en GitHub Actions.

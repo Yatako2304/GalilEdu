@@ -68,12 +68,47 @@ Para empezar de cero: borra y vuelve a crear la base `galiledu` y arranca el bac
 
 El resto de módulos del frontend siguen como *placeholder* (ver `frontend/README.md`, sección 4).
 
+## Pruebas y CI
+
+Hay pruebas automáticas en las dos partes, y **GitHub Actions** ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) las corre en cada push y en cada pull request a `main`. Si alguna falla, el PR aparece en rojo y (con la regla de abajo) **no se puede integrar**. Así, tus pruebas nuevas y las de los demás protegen lo que ya funciona.
+
+| Parte | Qué se prueba | Dónde |
+| --- | --- | --- |
+| Backend · unitarias | Reglas de dominio (usuario `U{año}{0001}`, contraseña, bloqueo) | `backend/src/test/java/**/*Tests.java` |
+| Backend · integración | La API completa contra PostgreSQL: login, usuarios, inscripción, permisos | `backend/src/test/java/**/*IT.java` |
+| Frontend | Lint (incluye reglas de arquitectura), tipos, Vitest y build | `frontend/src/**/__tests__/` |
+
+### Correrlas en tu PC antes de subir
+
+```bash
+cd backend
+.\mvnw.cmd verify
+```
+La primera vez crea una base vacía **`galiledu_test`** (distinta de `galiledu`). Cada prueba deshace sus cambios, así que la base no se ensucia. Si tu PostgreSQL no usa `localhost:5433`, define `TEST_DB_URL`. Con `.\mvnw.cmd test` corren solo las unitarias (no necesitan BD).
+
+```bash
+cd frontend
+npm run lint && npm run check-types && npm test
+```
+
+### Proteger `main` (una vez, lo hace el dueño del repo en GitHub)
+
+1. GitHub → **Settings → Branches → Add branch ruleset** (o *Add rule*) para la rama `main`.
+2. Activa **Require a pull request before merging** (nadie sube directo a `main`).
+3. Activa **Require status checks to pass** y agrega los checks **`Backend`** y **`Frontend`** (aparecen después de la primera ejecución del workflow).
+4. Opcional: **Require branches to be up to date before merging**, para que el PR se pruebe con lo último de `main`.
+
+### Al agregar tu módulo
+
+- Backend: crea tu `MiModuloIT extends PruebaIntegracion` (ver `usuarios/GestionUsuariosIT.java`); `token("U20260001")` te da un JWT de prueba.
+- Frontend: pon tus pruebas en `src/features/<modulo>/**/__tests__/` y simula el backend con `server.use(http.get(...))` (ver `usuarios-lista.test.tsx`).
+
 ## Cómo seguir (para cada pareja)
 
 1. Trabaja en una rama a partir de `feat/integracion`.
 2. **BD:** agrega un archivo nuevo `backend/src/main/resources/db/migration/V{n}__descripcion.sql` (nunca edites uno ya aplicado). Usa un esquema por módulo (`matricula`, `pagos`…).
 3. **Backend:** crea tu módulo en `backend/src/main/java/com/galiledu/<modulo>/` copiando la estructura de `usuarios` (`dominio`, `aplicacion`, `infraestructura`, `web`). Protege los endpoints con `@PreAuthorize("hasRole('...')")`.
 4. **Frontend:** crea tu feature en `frontend/src/features/<modulo>/` copiando `usuarios` o `estudiantes`; los tipos del contrato van en `frontend/src/types/api.ts`.
-5. Antes de subir: `.\mvnw.cmd test` en `backend/` y `npm run lint && npm run check-types && npm test` en `frontend/`.
+5. Antes de subir: `.\mvnw.cmd verify` en `backend/` y `npm run lint && npm run check-types && npm test` en `frontend/`. Luego abre un pull request a `main`: GitHub Actions lo vuelve a probar.
 
 > La carpeta [`docs/`](docs/README.md) describe el backend anterior (antes de rehacer la BD); se conserva solo como referencia.
