@@ -1,6 +1,14 @@
 # Pruebas
 
-Las pruebas corren en tu PC y, en cada push o pull request, en **GitHub Actions** ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)). Si alguna falla, el PR no se puede integrar a `main`: así nadie rompe lo que otra pareja ya hizo.
+Las pruebas corren en tu PC y en **GitHub Actions** ([`.github/workflows/ci.yml`](../../.github/workflows/ci.yml)):
+
+| Cuándo | ¿Corren? | ¿Bloquea si fallan? |
+| --- | --- | --- |
+| Push a **cualquier** rama | Sí | No: solo muestra ✅/❌ en GitHub para que te enteres temprano. |
+| Pull request hacia `main` | Sí | **Sí:** no se puede integrar hasta que `Backend` y `Frontend` estén en verde. |
+| `git commit` en tu PC | Solo lint, tipos y formato (hook) | Sí, si hay errores que no puede corregir solo. |
+
+Así nadie rompe en `main` lo que otra pareja ya hizo.
 
 ## Qué hay
 

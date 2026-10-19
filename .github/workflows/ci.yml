@@ -1,11 +1,11 @@
 # Integración continua de GalilEdu.
-# Corre en cada push y en cada pull request hacia main. Si una prueba falla, el PR no se puede
-# integrar (configura la regla de protección de main: ver README principal, sección "Pruebas y CI").
+# Corre en cada push a cualquier rama (solo avisa: ✅/❌ en GitHub) y en cada pull request hacia main,
+# donde sí bloquea: si una prueba falla, el PR no se puede integrar (ver docs/guias/contribuir.md).
 name: CI
 
 on:
   push:
-    branches: [main, 'feat/**', 'fix/**']
+    branches: ['**']
   pull_request:
     branches: [main]
   workflow_dispatch:
