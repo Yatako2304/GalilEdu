@@ -1,8 +1,8 @@
 # Pagos y pensiones
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** ⏳ por empezar: las tablas y los datos de prueba ya están; faltan backend y frontend
-- **Última actualización:** 2026-10-19
+- **Estado:** 🚧 en desarrollo: HU-37 hecha (backend y pantalla P8); falta HU-36 y la iteración 2
+- **Última actualización:** 2026-10-20
 
 ## Alcance
 
@@ -25,6 +25,13 @@ Apoderado elige cuotas ─► orden de pago (cuotas EN_PROCESO) ─► pasarela 
 - **Deuda del apoderado:** la suma de todos sus hijos.
 
 Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
+
+## Endpoints
+
+Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estudiantes/{id}/compromisos`, `/pagos/compromisos/{id}`, `/pagos/matriculas/{id}/cronograma` y `/pagos/compromisos/{id}/retiro`.
+
+- Al confirmarse el pago de la matrícula (HU-31), Matrícula debe llamar a `ServicioCronograma.generarPensiones(matriculaId, usuarioId)`. Ver la [decisión](../decisiones/2026-10-20-leonardo-cronograma-pensiones.md).
+- La pantalla P8 está en `/app/administrativo/pensiones/{estudianteId}`; falta enlazarla desde P1/P2 y desde B7 ("Ver compromiso de pago").
 
 ## Pantallas (Figma)
 
@@ -60,7 +67,8 @@ Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
 
 ## Pendientes
 
-- [ ] Backend y frontend.
+- [x] HU-37: generar, consultar y anular por retiro el cronograma de pensiones.
+- [ ] HU-36: generar la cuota de matrícula.
 - [x] La pensión vence el último día de cada mes (diciembre, el 15), como en el tarifario; el "día 05" del cronograma del apoderado no se usa. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).
 - [ ] Pasarela de pagos real: hoy la orden solo guarda la referencia y el resultado; falta elegir el proveedor.
 - [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).
