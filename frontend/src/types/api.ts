@@ -580,3 +580,33 @@ export type CompromisoDetalle = {
   resumen: ResumenCompromiso;
   cuotas: CuotaDetalle[];
 };
+
+// ---------- Pagos · Estado de cuenta (HU-37, P2) ----------
+
+export type AlumnoEstadoCuenta = {
+  estudianteId: string;
+  compromisoId: string;
+  nombre: string;
+  numeroDocumento: string;
+  apoderado: string | null;
+  seccion: string | null;
+  antiguedad: number;
+  estadoCompromiso: EstadoCompromiso;
+  totalAnual: number;
+  capitalPagado: number;
+  deudaVencida: number;
+  cuotasVencidas: number;
+};
+
+export type EstadoCuentaGeneral = {
+  anio: number;
+  comprometido: number;
+  cobrado: number;
+  porcentajeCobrado: number;
+  deudaVencida: number;
+  cuotasVencidas: number;
+  alumnosConDeuda: number;
+  alumnos: AlumnoEstadoCuenta[];
+};
+
+export type RetiroRegistrado = { cuotasAnuladas: number };

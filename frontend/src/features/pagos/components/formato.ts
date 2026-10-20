@@ -23,3 +23,22 @@ export const etiquetaCuota = (
     return { texto: 'Pago parcial', color: 'warning' };
   return { texto: 'Pendiente', color: 'neutral' };
 };
+
+/** 1 -> "1 año", 3 -> "3 años" (columna Antigüedad de P2). */
+export const anios = (n: number) => `${n} ${n === 1 ? 'año' : 'años'}`;
+
+/** Buscador de P2: por nombre (sin importar tildes ni mayúsculas) o por DNI. */
+export const filtrarAlumnos = <
+  T extends { nombre: string; numeroDocumento: string },
+>(
+  alumnos: T[],
+  texto: string,
+): T[] => {
+  const normalizar = (s: string) =>
+    s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+  const q = normalizar(texto.trim());
+  if (!q) return alumnos;
+  return alumnos.filter(
+    (a) => normalizar(a.nombre).includes(q) || a.numeroDocumento.includes(q),
+  );
+};

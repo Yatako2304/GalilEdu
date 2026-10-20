@@ -1,5 +1,6 @@
 package com.galiledu.pagos;
 
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -100,5 +101,17 @@ class CompromisoPagoIT extends PruebaIntegracion {
 	void otroRolNoPuedeGenerarElCronograma() throws Exception {
 		mvc.perform(conToken(post("/pagos/matriculas/{id}/cronograma", MATRICULA_VALERIA), token(APODERADO)))
 				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void estadoDeCuentaDelAnioListaLosCompromisosConSuDeuda() throws Exception {
+		mvc.perform(conToken(get("/pagos/estado-cuenta").param("anio", "2026"), token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.anio").value(2026))
+				.andExpect(jsonPath("$.alumnos[?(@.nombre == 'Sofía Paredes Rojas')].seccion").value("4.° A"))
+				.andExpect(jsonPath("$.alumnos[?(@.nombre == 'Sofía Paredes Rojas')].antiguedad").value(1))
+				.andExpect(jsonPath("$.alumnos[?(@.nombre == 'Sofía Paredes Rojas')].capitalPagado").value(4020.0))
+				.andExpect(jsonPath("$.deudaVencida").value(greaterThanOrEqualTo(600.0)))
+				.andExpect(jsonPath("$.alumnosConDeuda").value(greaterThanOrEqualTo(1)));
 	}
 }
