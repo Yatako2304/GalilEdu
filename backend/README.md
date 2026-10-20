@@ -21,18 +21,34 @@ Variables de entorno o `backend/.env` (ignorado por Git; plantilla en [`.env.exa
 src/main/java/com/galiledu/
 ├── compartido/     seguridad (JWT, CORS), errores y paginación comunes
 ├── personas/       persona (datos personales, validaciones RF-12/14/23)
-├── usuarios/       login (HU-1) y gestión de cuentas (HU-6, HU-9, HU-12)
+├── usuarios/       login (HU-1), gestión de cuentas (HU-6, HU-9, HU-12) y carga masiva (HU-8)
 └── estudiantes/    inscripción del estudiante (HU-7)
+
+Configuración, matrícula, pagos y catálogo académico: por ahora solo tienen BD (paquetes por crear).
 
 Cada módulo:  dominio/ (entidades JPA, reglas)  aplicacion/ (servicios + DTOs)
               infraestructura/ (repositorios)   web/ (controladores REST)
 
 src/main/resources/db/
-├── migration/      V1__personas_y_seguridad.sql, V2__estudiantes_inscripcion.sql
-└── datos-prueba/   R__datos_prueba.sql (un usuario por rol)
+├── migration/      V1…V7 (ver la tabla de abajo)
+└── datos-prueba/   R__datos_prueba.sql (usuarios por rol, año 2026/2027, familia Paredes con matrícula y pagos…)
 ```
 
 Reglas: un esquema de BD por módulo; los controladores no tocan repositorios directamente; los mensajes de error van en español porque el frontend los muestra tal cual (`{ "message": "..." }`).
+
+## Base de datos
+
+| Migración | Esquemas | Qué crea |
+| --- | --- | --- |
+| `V1__personas_y_seguridad.sql` | `personas`, `seguridad` | Personas, usuarios, roles |
+| `V2__estudiantes_inscripcion.sql` | `estudiantes` | Estudiante, ficha médica, familia, contactos, autorizados |
+| `V3__estudiantes_documento_apoderado.sql` | `estudiantes` | Documento que acredita al apoderado |
+| `V4__configuracion_anio_escolar.sql` | `configuracion`, `matricula`, `pagos` | Año escolar, periodos, grados, secciones, estructura horaria, periodo de matrícula, tarifario |
+| `V5__matricula_y_pagos.sql` | `matricula`, `pagos` | Matrícula, documentos, compromiso de pago, cuotas, descuentos, órdenes de pago, pagos y constancias |
+| `V6__catalogo_academico.sql` | `academico`, `configuracion` | Áreas, competencias, cursos, plan de evaluación, tabla de conversión, ambientes |
+| `V7__ajustes_integracion.sql` | varios | Grado del estudiante del catálogo, estado ACTIVO/RETIRADO, estructura horaria por nivel, descuento por estudiante, formato del código de matrícula |
+
+Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V8…).
 
 ## API (prefijo `/api`)
 
@@ -53,10 +69,10 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/usuarios/carga-masiva/plantilla` | Administrador | Plantilla `.xlsx` de la carga masiva (HU-8) |
 | POST | `/usuarios/carga-masiva/validacion` | Administrador | Revisa el archivo (multipart `archivo`: .xlsx/.xls/.csv ≤ 10 MB) y devuelve errores por fila, sin crear nada |
 | POST | `/usuarios/carga-masiva` | Administrador | Crea los usuarios de las filas válidas y devuelve el resumen |
-| GET | `/estudiantes?q=&estado=&page=` | Admin, Personal adm. | Lista de estudiantes |
+| GET | `/estudiantes?q=&estado=&page=` | Admin, Personal adm. | Lista de estudiantes. `estado`: INSCRITO, MATRICULADO o RETIRADO (se calcula desde la matrícula) |
 | GET | `/estudiantes/{id}` | Admin, Personal adm. | Ficha (datos, ficha médica, familia, contactos, hermanos) |
 | GET | `/estudiantes/personas?documento=` | Admin, Personal adm. | Busca padre/madre/apoderado ya registrado (404 = persona nueva) |
-| POST | `/estudiantes/inscripciones` | Admin, Personal adm. | Registra la inscripción completa (5 pasos) |
+| POST | `/estudiantes/inscripciones` | Admin, Personal adm. | Registra la inscripción completa (5 pasos). El grado va como código del catálogo: `gradoCodigo` = `PRI-1`…`PRI-6`, `SEC-1`…`SEC-5` |
 | POST | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Sube o reemplaza el documento del apoderado (multipart: `tipo`, `archivo`; PDF/JPG/PNG ≤ 5 MB) |
 | GET | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Descarga ese documento |
 

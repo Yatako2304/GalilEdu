@@ -33,11 +33,3 @@ Toda la documentación del proyecto vive aquí, **en español** y en Markdown. E
 4. **La documentación va en el mismo PR que el código.** Un PR que cambia un módulo y no actualiza su `modulos/<modulo>.md` no está terminado.
 5. **Nada de secretos:** ni contraseñas reales, ni tokens, ni datos personales reales.
 6. **Fuente de verdad del diseño:** las pantallas de [Figma](https://www.figma.com/design/l8nXzicItzBnvPjFQP4G9O/GalilEdu). Si Figma y un requisito de Notion se contradicen, manda Figma; anótalo en la ficha del módulo.
-
-## Documentación anterior
-
-La documentación del backend y la BD anteriores (`architecture.md`, `modules/`, `views/`…) se eliminó al rehacer el proyecto el 2026-10-19. Si necesitas consultarla, está en el historial de Git, en el commit `4eab213`:
-
-```bash
-git show 4eab213:docs/architecture.md
-```

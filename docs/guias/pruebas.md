@@ -15,7 +15,7 @@ Así nadie rompe en `main` lo que otra pareja ya hizo.
 | Tipo | Dónde | Qué prueba | Comando |
 | --- | --- | --- | --- |
 | Backend · unitarias | `backend/src/test/java/**/*Tests.java` | Reglas de dominio sin BD | `.\mvnw.cmd test` |
-| Backend · integración | `backend/src/test/java/**/*IT.java` | La API completa contra PostgreSQL real | `.\mvnw.cmd verify` |
+| Backend · integración | `backend/src/test/java/**/*IT.java` | La API completa y las tablas de la BD contra PostgreSQL real | `.\mvnw.cmd verify` |
 | Frontend | `frontend/src/**/__tests__/*.test.ts(x)` | Esquemas, componentes y pantallas (Vitest + Testing Library + MSW) | `npm test` |
 | Frontend · calidad | todo `frontend/src` | Lint (incluye reglas de arquitectura), tipos y build | `npm run lint`, `npm run check-types`, `npm run build` |
 
@@ -39,6 +39,26 @@ class MatriculaIT extends PruebaIntegracion {
 - `token("U20260001")` inicia sesión con un usuario de los datos de prueba.
 - Cada prueba corre en una transacción que se **deshace** al final: no dejes datos ni dependas del orden.
 - Prueba al menos: el caso feliz, cada validación de la HU y que otro rol reciba `403`.
+
+### Pruebas de la base de datos
+
+Las tablas de cada módulo tienen sus propias pruebas de integración, que le hablan a PostgreSQL con SQL a través de `JdbcClient` (`EsquemaConfiguracionIT`, `EsquemaMatriculaPagosIT`, `EsquemaAcademicoIT`, `IntegracionModulosIT`). Son de dos tipos:
+
+- **Recorrido:** une tablas de varios módulos y comprueba que se llegue al dato correcto. Ejemplo: de la cuenta del apoderado a sus hijos, su sección y su deuda.
+- **Rechazo:** usa un dato válido en todo, salvo en **una** regla, y exige que la BD lo rechace **por esa regla**, con `rechazaPor`:
+
+```java
+@Test
+void soloUnAnioPuedeEstarActivo() {
+	rechazaPor("ux_anio_escolar_un_activo", () -> jdbc.sql("""
+			INSERT INTO configuracion.anio_escolar (anio, fecha_inicio, fecha_fin, regimen, estado)
+			VALUES (2030, '2030-03-01', '2030-12-15', 'BIMESTRAL', 'ACTIVO')""").update());
+}
+```
+
+El primer argumento es el nombre de la restricción en la migración. Si la BD rechaza el dato por **otro** motivo (por ejemplo, una columna obligatoria vacía), la prueba falla. Así no pasa por accidente.
+
+Si agregas una migración con una regla nueva (`CHECK`, `UNIQUE`, FK), agrega su prueba de rechazo y, si hace falta, una contraprueba con un dato válido que sí se acepte.
 
 ## Frontend
 

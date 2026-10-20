@@ -4,7 +4,7 @@ Sistema de Información Web para la Gestión Integral de un Colegio de Educació
 
 - **Base:** [bulletproof-react](https://github.com/alan2207/bulletproof-react) (`apps/react-vite`)
 - **Diseño:** [Figma · GalilEdu](https://www.figma.com/design/l8nXzicItzBnvPjFQP4G9O/GalilEdu)
-- **Stack:** React 18 · TypeScript · Vite · Tailwind · React Router 7 · TanStack Query · React Hook Form + Zod · Axios · MSW (backend simulado) · Vitest · Playwright · Storybook
+- **Stack:** React 18 · TypeScript · Vite · Tailwind · React Router 7 · TanStack Query · React Hook Form + Zod · Axios · MSW (backend simulado) · Vitest · Storybook
 
 ---
 
@@ -19,7 +19,7 @@ npm run dev              # http://localhost:3000
 Necesitas el **backend corriendo** (ver el [README principal](../README.md)): login, usuarios y estudiantes usan la API real en `VITE_APP_API_URL`.
 Con `VITE_APP_ENABLE_API_MOCKING=true`, [MSW](https://mswjs.io) solo simula los módulos que **aún no tienen backend** (hoy: horarios). Cuando tu módulo tenga endpoints reales, quita sus handlers de `browserHandlers` en `src/testing/mocks/handlers/index.ts`.
 
-Usuarios de prueba: ver la tabla del [README principal](../README.md#4-entrar) (contraseña `Galiledu2026`). Los tests (`npm test`) siguen usando MSW para todo, incluido el login.
+Usuarios de prueba: ver la tabla del [README principal](../README.md#usuarios-de-prueba) (contraseña `Galiledu2026`). Los tests (`npm test`) siguen usando MSW para todo, incluido el login.
 
 ### Scripts
 
@@ -30,7 +30,6 @@ Usuarios de prueba: ver la tabla del [README principal](../README.md#4-entrar) (
 | `npm run lint`          | ESLint (incluye reglas de arquitectura)        |
 | `npm run check-types`   | Revisión de tipos                              |
 | `npm test`              | Tests unitarios/integración (Vitest)           |
-| `npm run test-e2e`      | Tests end-to-end (Playwright)                  |
 | `npm run storybook`     | Catálogo de componentes UI                     |
 | `npm run generate`      | Genera un componente (plop)                    |
 

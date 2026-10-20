@@ -44,10 +44,16 @@ Revisé las tablas de todos los módulos contra Figma y corregí lo que estaba d
 - **Decisión:** el código de matrícula es `MAT-AAAA-NNNN`, correlativo por año, y la sección se reserva al crear la matrícula (es obligatoria).
   **Por qué:** Figma mostraba dos formatos y dos momentos distintos. El código con la sección (`MAT-2027-05A-0142`) quedaría desactualizado si el alumno cambia de sección.
 
+- **Decisión:** al matricular se cobra **solo la cuota de matrícula del tarifario** (S/ 450 en 2027). La cuota de ingreso (S/ 500, solo alumnos nuevos) es una cuota aparte del compromiso.
+  **Por qué:** el tarifario y las pantallas del administrativo dicen S/ 450 ("Se toma del tarifario vigente"). El S/ 850 de la pantalla del apoderado (HU-31) es un dato de ejemplo que no coincide.
+  **Alternativa descartada:** cobrar matrícula y cuota de ingreso juntas antes de matricular.
+- **Decisión:** la pensión **vence el último día de cada mes**, y la de diciembre el 15. Las fechas se generan así en `pagos.cuota_tarifario`.
+  **Por qué:** así lo define el tarifario (P19: "Último día de cada mes · diciembre: 15/12"). El "día 05" del cronograma del apoderado es un dato de ejemplo.
+  **Alternativa descartada:** un día de vencimiento configurable.
+
 ## Pendientes / problemas conocidos
 
 - [ ] Crear la cuenta del estudiante al matricularlo (lo hace el servicio de Matrícula).
-- [ ] Contradicciones de Figma que no cambian la BD y quedan para definir al programar: el monto de matrícula (S/ 450 frente a S/ 850) y el día de vencimiento de la pensión (fin de mes frente al día 5).
 
 ## Notas para quien siga
 
