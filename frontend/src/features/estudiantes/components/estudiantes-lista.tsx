@@ -17,7 +17,7 @@ const ESTADOS: Record<
 > = {
   INSCRITO: { label: 'Inscrito', color: 'info' },
   MATRICULADO: { label: 'Matriculado', color: 'success' },
-  INACTIVO: { label: 'Inactivo', color: 'neutral' },
+  RETIRADO: { label: 'Retirado', color: 'neutral' },
 };
 
 export const EstadoEstudianteTag = ({

@@ -10,12 +10,12 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
-import com.galiledu.estudiantes.dominio.EstadoEstudiante;
 import com.galiledu.estudiantes.dominio.ModoSalida;
-import com.galiledu.estudiantes.dominio.Nivel;
 import com.galiledu.estudiantes.dominio.Parentesco;
+import com.galiledu.estudiantes.dominio.SituacionEstudiante;
 import com.galiledu.personas.aplicacion.DatosPersona;
 
 /** Contratos JSON del módulo de estudiantes (HU-7). Deben coincidir con frontend/src/types/api.ts. */
@@ -47,8 +47,7 @@ public final class DtosEstudiantes {
 			String autoidentificacionEtnica, Boolean tieneDiscapacidad, String discapacidadDetalle,
 			String colegioProcedencia, String gestionProcedencia,
 			@NotNull(message = "Indica el año académico") @Min(2000) @Max(2100) Integer anioAcademico,
-			@NotNull(message = "Indica el nivel") Nivel nivel,
-			@NotBlank(message = "Indica el grado") String grado,
+			@NotBlank(message = "Indica el grado") @Pattern(regexp = "PRI-[1-6]|SEC-[1-5]", message = "El grado no es válido") String gradoCodigo,
 			String formaIngreso) {
 	}
 
@@ -94,7 +93,7 @@ public final class DtosEstudiantes {
 
 	/** Fila del "Listado de estudiantes" de Figma. */
 	public record EstudianteResumen(UUID id, String nombreCompleto, String documento, String grado,
-			int anioAcademico, EstadoEstudiante estado, String responsable) {
+			int anioAcademico, SituacionEstudiante estado, String responsable) {
 	}
 
 	/** Respuesta de "Buscar por documento" del paso 3. */
@@ -102,7 +101,7 @@ public final class DtosEstudiantes {
 			List<String> estudiantesACargo) {
 	}
 
-	public record FichaEstudiante(UUID id, EstadoEstudiante estado, String grado, int anioAcademico,
+	public record FichaEstudiante(UUID id, SituacionEstudiante estado, String grado, int anioAcademico,
 			DatosPersona persona, DatosEstudiante datos, DatosFichaMedica fichaMedica, List<Familiar> familia,
 			List<DatosContacto> contactos, ModoSalida modoSalida, List<DatosAutorizado> autorizados,
 			List<EstudianteResumen> hermanos) {

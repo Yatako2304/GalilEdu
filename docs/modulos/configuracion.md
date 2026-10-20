@@ -52,7 +52,7 @@ Figma pone todo esto bajo **Configuraciones › Año escolar**; el tarifario est
 | `configuracion.periodo_academico` | Bimestres o trimestres, con su fecha límite de notas y su estado. |
 | `configuracion.grado` | Catálogo fijo con los 11 grados (`PRI-1`…`PRI-6`, `SEC-1`…`SEC-5`). Se llena en la migración. |
 | `configuracion.seccion` | Sección de un grado en un año: nombre, capacidad máxima (= vacantes), tutor, cotutor y estado. |
-| `configuracion.estructura_horaria` | Código (EH-SEC-26), días lectivos (`LUN`…`SAB`), hora de entrada, bloques por día y duración del bloque. |
+| `configuracion.estructura_horaria` | Código (EH-SEC-26), nivel, si es la principal del nivel, días lectivos (`LUN`…`SAB`), hora de entrada, bloques por día y duración del bloque. Las secciones usan la estructura principal de su nivel (V7). |
 | `configuracion.receso` | Recesos de una estructura: después de qué bloque van y cuánto duran. |
 | `matricula.periodo_matricula` | Inicio y cierre de la matrícula regular, reglas (bloqueo por morosidad, extemporánea) y estado. |
 | `pagos.tarifario` | Cuota de ingreso, matrícula, pensión, cantidad de cuotas y política de morosidad. |
@@ -72,6 +72,5 @@ Figma pone todo esto bajo **Configuraciones › Año escolar**; el tarifario est
 ## Pendientes
 
 - [ ] Backend y frontend de las 5 HU.
-- [ ] La sección no indica qué estructura horaria usa. Se agregará cuando Horarios lo necesite (Iteración 2).
 - [ ] `estudiantes.estudiante` guarda el nivel y el grado como texto ("1.° grado"). Cuando Matrícula asigne secciones, se enlazará con `configuracion.grado`.
 - [ ] Los documentos requeridos de la matrícula (HU-21/22) no están en esta migración.

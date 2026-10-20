@@ -55,5 +55,6 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 ## Pendientes
 
 - [ ] Backend y frontend.
-- [ ] El código de matrícula de Figma del apoderado (`MAT-2027-05A-0142`) y el del administrativo (`MAT-2027-0044`) no coinciden. La tabla acepta ambos; definir el formato al programarlo.
+- [x] Código de matrícula: `MAT-AAAA-NNNN`, correlativo por año. La BD lo exige (V7).
+- [ ] Al quedar matriculado, crear la cuenta del estudiante y enviar las credenciales al apoderado (V7).
 - [ ] La información adicional de HU-32 (dirección, contacto de emergencia, alergias y seguro) ya existe en `estudiantes.*`. Matrícula la muestra y la actualiza; no la duplica.

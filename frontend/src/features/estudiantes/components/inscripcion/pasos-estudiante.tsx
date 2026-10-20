@@ -8,6 +8,7 @@ import {
   DISTRITOS_LIMA,
   GRADOS_POR_NIVEL,
   NIVELES,
+  nombreGrado,
   TIPOS_SANGRE,
   TIPOS_SEGURO,
 } from '@/config/catalogos';
@@ -186,8 +187,7 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
             />
             <div>
               <p className="text-body-2 text-content-primary">
-                Grado sugerido: {sugerido.grado} de{' '}
-                {sugerido.nivel.toLowerCase()}
+                Grado sugerido: {nombreGrado(sugerido.grado)}
               </p>
               <p className="text-body-4 text-content-secondary">
                 Calculado con la fecha de nacimiento ({sugerido.edad} años

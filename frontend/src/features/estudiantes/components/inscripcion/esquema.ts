@@ -294,8 +294,7 @@ export const aSolicitud = (f: InscripcionForm): SolicitudInscripcion => {
       colegioProcedencia: texto(e.colegioProcedencia),
       gestionProcedencia: texto(e.gestionProcedencia),
       anioAcademico: Number(e.anioAcademico),
-      nivel: e.nivel as SolicitudInscripcion['estudiante']['nivel'],
-      grado: e.grado,
+      gradoCodigo: e.grado,
       formaIngreso: texto(e.formaIngreso),
     },
     fichaMedica: {
@@ -333,7 +332,10 @@ export const aSolicitud = (f: InscripcionForm): SolicitudInscripcion => {
   };
 };
 
-/** Grado sugerido según la edad cumplida al 31 de marzo del año académico (Minedu). */
+/**
+ * Grado sugerido según la edad cumplida al 31 de marzo del año académico (Minedu). Devuelve el código del
+ * catálogo de grados (PRI-1, SEC-2…); el colegio no tiene inicial.
+ */
 export const gradoSugerido = (
   fechaNacimiento: string | null | undefined,
   anio: number,
@@ -350,12 +352,10 @@ export const gradoSugerido = (
   ) {
     edad--;
   }
-  if (edad >= 3 && edad <= 5)
-    return { nivel: 'INICIAL', grado: `Inicial ${edad} años`, edad };
   if (edad >= 6 && edad <= 11)
-    return { nivel: 'PRIMARIA', grado: `${edad - 5}.° grado`, edad };
+    return { nivel: 'PRIMARIA', grado: `PRI-${edad - 5}`, edad };
   if (edad >= 12 && edad <= 16)
-    return { nivel: 'SECUNDARIA', grado: `${edad - 11}.° grado`, edad };
+    return { nivel: 'SECUNDARIA', grado: `SEC-${edad - 11}`, edad };
   return null;
 };
 

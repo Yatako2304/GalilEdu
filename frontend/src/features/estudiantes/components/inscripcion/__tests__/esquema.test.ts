@@ -19,7 +19,7 @@ const valida = (): InscripcionForm => {
     fechaNacimiento: '2015-05-10',
   };
   f.estudiante.nivel = 'PRIMARIA';
-  f.estudiante.grado = '6.° grado';
+  f.estudiante.grado = 'PRI-6';
   f.padre.personaId = 'id-del-padre';
   f.padre.persona.numeroDocumento = '41234567';
   f.madre.persona = {
@@ -55,14 +55,14 @@ const mensajes = (f: InscripcionForm) => {
 
 describe('gradoSugerido (edad al 31 de marzo del año académico)', () => {
   test.each([
-    ['2021-02-14', 2027, 'PRIMARIA', '1.° grado'],
-    ['2021-04-01', 2027, 'INICIAL', 'Inicial 5 años'],
-    ['2014-01-01', 2027, 'SECUNDARIA', '2.° grado'],
+    ['2021-02-14', 2027, 'PRIMARIA', 'PRI-1'],
+    ['2014-01-01', 2027, 'SECUNDARIA', 'SEC-2'],
   ])('nacido el %s para %i → %s %s', (fecha, anio, nivel, grado) => {
     expect(gradoSugerido(fecha, anio)).toMatchObject({ nivel, grado });
   });
 
-  test('sin fecha o fuera de rango no sugiere nada', () => {
+  test('sin fecha, en edad de inicial o fuera de rango no sugiere nada', () => {
+    expect(gradoSugerido('2021-04-01', 2027)).toBeNull();
     expect(gradoSugerido('', 2027)).toBeNull();
     expect(gradoSugerido('2025-01-01', 2027)).toBeNull();
   });
@@ -114,6 +114,7 @@ describe('aSolicitud (formulario → contrato del backend)', () => {
     expect(s.fichaMedica.pesoKg).toBe(22.5);
     expect(s.fichaMedica.tieneAlergias).toBe(true);
     expect(s.estudiante.anioAcademico).toBe(Number(f.estudiante.anioAcademico));
+    expect(s.estudiante.gradoCodigo).toBe('PRI-6');
   });
 
   test('"no registra" se envía con su motivo y sin persona', () => {

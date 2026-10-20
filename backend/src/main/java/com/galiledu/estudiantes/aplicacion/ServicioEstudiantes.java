@@ -30,10 +30,10 @@ import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.PersonaEncontrada;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.SolicitudInscripcion;
 import com.galiledu.estudiantes.dominio.AutorizadoRecojo;
 import com.galiledu.estudiantes.dominio.ContactoEmergencia;
-import com.galiledu.estudiantes.dominio.EstadoEstudiante;
 import com.galiledu.estudiantes.dominio.Estudiante;
 import com.galiledu.estudiantes.dominio.FichaMedica;
 import com.galiledu.estudiantes.dominio.Parentesco;
+import com.galiledu.estudiantes.dominio.SituacionEstudiante;
 import com.galiledu.estudiantes.dominio.VinculoFamiliar;
 import com.galiledu.estudiantes.infraestructura.DocumentoVinculoRepositorio;
 import com.galiledu.estudiantes.infraestructura.EstudianteRepositorio;
@@ -79,7 +79,7 @@ public class ServicioEstudiantes {
 				d.segundaLengua(),
 				d.autoidentificacionEtnica(), Boolean.TRUE.equals(d.tieneDiscapacidad()), d.discapacidadDetalle());
 		estudiante.procedencia(d.colegioProcedencia(), d.gestionProcedencia());
-		estudiante.datosAcademicos(d.anioAcademico().shortValue(), d.nivel(), d.grado(), d.formaIngreso());
+		estudiante.datosAcademicos(d.anioAcademico().shortValue(), d.gradoCodigo(), d.formaIngreso());
 		estudiante.setModoSalida(s.modoSalida());
 
 		if (s.fichaMedica() != null) {
@@ -132,7 +132,7 @@ public class ServicioEstudiantes {
 	}
 
 	@Transactional(readOnly = true)
-	public Pagina<EstudianteResumen> listar(String texto, EstadoEstudiante estado, int pagina, int tamano) {
+	public Pagina<EstudianteResumen> listar(String texto, SituacionEstudiante estado, int pagina, int tamano) {
 		Specification<Estudiante> filtro = (raiz, consulta, cb) -> {
 			List<Predicate> condiciones = new ArrayList<>();
 			condiciones.add(cb.isFalse(raiz.get("eliminado")));
@@ -145,7 +145,7 @@ public class ServicioEstudiantes {
 						cb.like(cb.lower(cb.coalesce(p.<String>get("correo"), "")), patron)));
 			}
 			if (estado != null) {
-				condiciones.add(cb.equal(raiz.get("estado"), estado));
+				condiciones.add(cb.equal(raiz.get("situacion"), estado.name()));
 			}
 			return cb.and(condiciones.toArray(Predicate[]::new));
 		};
@@ -183,7 +183,7 @@ public class ServicioEstudiantes {
 				e.getLenguaMaterna(), e.getSegundaLengua(), e.getAutoidentificacionEtnica(), e.isTieneDiscapacidad(),
 				e.getDiscapacidadDetalle(), e.getColegioProcedencia(), e.getGestionProcedencia(),
 				(int) e.getAnioAcademico(),
-				e.getNivel(), e.getGrado(), e.getFormaIngreso());
+				e.getGradoCodigo(), e.getFormaIngreso());
 		FichaMedica f = e.getFichaMedica();
 		var ficha = f == null
 				? null
@@ -199,7 +199,7 @@ public class ServicioEstudiantes {
 		var autorizados = e.getAutorizados().stream()
 				.map(a -> new DatosAutorizado(a.getNombreCompleto(), a.getRelacion()))
 				.toList();
-		return new FichaEstudiante(e.getId(), e.getEstado(), e.gradoDescriptivo(), e.getAnioAcademico(),
+		return new FichaEstudiante(e.getId(), e.getSituacion(), e.gradoDescriptivo(), e.getAnioAcademico(),
 				DatosPersona.de(e.getPersona()), datos, ficha, familia, contactos, e.getModoSalida(), autorizados,
 				hermanos);
 	}
@@ -269,7 +269,7 @@ public class ServicioEstudiantes {
 				.map(Persona::nombreCorto)
 				.findFirst().orElse("—");
 		return new EstudianteResumen(e.getId(), e.getPersona().nombreCompleto(), documento(e.getPersona()),
-				e.gradoDescriptivo(), e.getAnioAcademico(), e.getEstado(), responsable);
+				e.gradoDescriptivo(), e.getAnioAcademico(), e.getSituacion(), responsable);
 	}
 
 	private static String documento(Persona p) {

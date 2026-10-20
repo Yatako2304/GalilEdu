@@ -42,7 +42,7 @@ Contraseña de todos: **`Galiledu2026`**.
 | `U20260003` | Luis Paredes | Apoderado (padre de Mateo) |
 | `U20260004` | María Fernández | Docente + Tutor (prueba el selector de rol) |
 | `U20260005` | Carlos Ramírez | Coordinador |
-| `U20260006` | Valeria Sánchez | Estudiante |
+| `U20260006` | Valeria Sánchez | Estudiante (matriculada en 5.° A de 2026) |
 | `U20260007` | Leonardo Montoya | Administrador **inactivo** (no puede entrar) |
 
 Están en `backend/src/main/resources/db/datos-prueba/R__datos_prueba.sql`. Para empezar de cero, borra y vuelve a crear la base `galiledu`.

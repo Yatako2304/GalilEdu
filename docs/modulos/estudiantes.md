@@ -6,7 +6,7 @@
 
 ## Alcance
 
-Personal administrativo inscribe a un estudiante en 5 pasos: datos, ficha médica, padres/apoderado, contactos y autorización de salida, y responsable. El estudiante **no tiene usuario**; el **responsable de matrícula** (padre, madre o apoderado) tiene la cuenta de la familia con rol Apoderado: si ya la tiene, solo se vincula; si no, se crea y se le envían las credenciales.
+Personal administrativo inscribe a un estudiante de primaria o secundaria en 5 pasos: datos, ficha médica, padres/apoderado, contactos y autorización de salida, y responsable. El estudiante recibe su propia cuenta al quedar matriculado (V7). El **responsable de matrícula** (padre, madre o apoderado) tiene la cuenta de la familia con rol Apoderado: si ya la tiene, solo se vincula; si no, se crea y se le envían las credenciales.
 
 En Notion, HU-7 está en "Seguridad" como "registro de estudiante con apoderado"; seguimos el flujo de Figma, que lo resuelve como inscripción.
 
@@ -30,7 +30,7 @@ En Notion, HU-7 está en "Seguridad" como "registro de estudiante con apoderado"
 
 | Tabla | Para qué |
 | --- | --- |
-| `estudiantes.estudiante` | Datos propios del alumno (nacimiento, lengua, procedencia, nivel/grado, estado). Datos personales en `personas.persona`. |
+| `estudiantes.estudiante` | Datos propios del alumno: nacimiento, lengua, procedencia, año académico y grado (`grado_codigo` → `configuracion.grado`, V7). `estado` solo dice ACTIVO o RETIRADO; "Inscrito / Matriculado" se calcula desde su matrícula. Los datos personales están en `personas.persona`. |
 | `estudiantes.ficha_medica` | Paso 2. |
 | `estudiantes.vinculo_familiar` | Paso 3 y 5: padre/madre/apoderado, vive con él, tutela, **responsable de matrícula**. Permite detectar hermanos. |
 | `estudiantes.contacto_emergencia` | Paso 4 (mínimo 2). |

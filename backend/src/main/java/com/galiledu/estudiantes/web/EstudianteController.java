@@ -31,7 +31,7 @@ import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.SolicitudInscripcion;
 import com.galiledu.estudiantes.aplicacion.ServicioDocumentosApoderado;
 import com.galiledu.estudiantes.aplicacion.ServicioEstudiantes;
 import com.galiledu.estudiantes.dominio.DocumentoVinculo;
-import com.galiledu.estudiantes.dominio.EstadoEstudiante;
+import com.galiledu.estudiantes.dominio.SituacionEstudiante;
 
 /** Figma > Estudiantes (listado, inscripción en 5 pasos y ficha). HU-7. */
 @RestController
@@ -49,7 +49,7 @@ public class EstudianteController {
 	@GetMapping
 	public Pagina<EstudianteResumen> listar(
 			@RequestParam(name = "q", required = false) String texto,
-			@RequestParam(required = false) EstadoEstudiante estado,
+			@RequestParam(required = false) SituacionEstudiante estado,
 			@RequestParam(defaultValue = "1") int page,
 			@RequestParam(defaultValue = "8") int size) {
 		return servicio.listar(texto, estado, page, size);

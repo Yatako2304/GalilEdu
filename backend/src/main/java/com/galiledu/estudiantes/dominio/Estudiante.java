@@ -22,9 +22,13 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
+import org.hibernate.annotations.Formula;
+
 import com.galiledu.personas.dominio.Persona;
 
-/** Estudiante inscrito (tabla estudiantes.estudiante, V2). No tiene usuario propio. */
+/**
+ * Estudiante (tabla estudiantes.estudiante, V2 y V7). Si tiene cuenta propia, es el usuario con la misma persona.
+ */
 @Entity
 @Table(schema = "estudiantes", name = "estudiante")
 public class Estudiante {
@@ -64,11 +68,19 @@ public class Estudiante {
 	private String gestionProcedencia;
 	@Column(name = "anio_academico", nullable = false)
 	private short anioAcademico;
-	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
-	private Nivel nivel;
-	@Column(nullable = false)
-	private String grado;
+	/** Código del catálogo configuracion.grado (SEC-1, PRI-3…). */
+	@Column(name = "grado_codigo", nullable = false)
+	private String gradoCodigo;
+	@Formula("(SELECT g.nombre FROM configuracion.grado g WHERE g.codigo = grado_codigo)")
+	private String gradoNombre;
+	@Formula("""
+			(CASE WHEN estado = 'RETIRADO' THEN 'RETIRADO'
+			      WHEN EXISTS (SELECT 1 FROM matricula.matricula m
+			                   JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
+			                   WHERE m.estudiante_id = id AND a.anio = anio_academico AND m.estado = 'MATRICULADO')
+			      THEN 'MATRICULADO'
+			      ELSE 'INSCRITO' END)""")
+	private String situacion;
 	@Column(name = "forma_ingreso")
 	private String formaIngreso;
 	@Enumerated(EnumType.STRING)
@@ -76,7 +88,7 @@ public class Estudiante {
 	private ModoSalida modoSalida;
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
-	private EstadoEstudiante estado = EstadoEstudiante.INSCRITO;
+	private EstadoEstudiante estado = EstadoEstudiante.ACTIVO;
 	@Column(nullable = false)
 	private boolean eliminado;
 	@Column(name = "creado_en", nullable = false, updatable = false)
@@ -135,15 +147,24 @@ public class Estudiante {
 		autorizados.add(autorizado);
 	}
 
-	/** "1.° grado de primaria", "Inicial 5 años"… */
+	/** "1.° de secundaria", "3.° de primaria"… (nombre del catálogo de grados). */
 	public String gradoDescriptivo() {
-		return nivel == Nivel.INICIAL ? grado : grado + " " + nivel.name().toLowerCase();
+		if (gradoNombre != null) {
+			return gradoNombre;
+		}
+		// Recién creado en esta misma transacción: la fórmula aún no se leyó de la BD.
+		String nivel = gradoCodigo.startsWith("PRI") ? "primaria" : "secundaria";
+		return gradoCodigo.substring(gradoCodigo.indexOf('-') + 1) + ".° de " + nivel;
 	}
 
-	public void datosAcademicos(short anioAcademico, Nivel nivel, String grado, String formaIngreso) {
+	/** Inscrito, matriculado en su año académico o retirado. */
+	public SituacionEstudiante getSituacion() {
+		return situacion == null ? SituacionEstudiante.INSCRITO : SituacionEstudiante.valueOf(situacion);
+	}
+
+	public void datosAcademicos(short anioAcademico, String gradoCodigo, String formaIngreso) {
 		this.anioAcademico = anioAcademico;
-		this.nivel = nivel;
-		this.grado = grado;
+		this.gradoCodigo = gradoCodigo;
 		this.formaIngreso = formaIngreso;
 	}
 
@@ -223,11 +244,8 @@ public class Estudiante {
 	public short getAnioAcademico() {
 		return anioAcademico;
 	}
-	public Nivel getNivel() {
-		return nivel;
-	}
-	public String getGrado() {
-		return grado;
+	public String getGradoCodigo() {
+		return gradoCodigo;
 	}
 	public String getFormaIngreso() {
 		return formaIngreso;
