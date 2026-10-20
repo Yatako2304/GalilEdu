@@ -136,8 +136,9 @@ export type ResumenUsuarios = {
 
 // ---------- Estudiantes (HU-7) · backend: estudiantes/aplicacion/DtosEstudiantes.java ----------
 
-export type EstadoEstudiante = 'INSCRITO' | 'MATRICULADO' | 'INACTIVO';
-export type Nivel = 'INICIAL' | 'PRIMARIA' | 'SECUNDARIA';
+/** Situación del estudiante: inscrito, matriculado en su año académico o retirado. */
+export type EstadoEstudiante = 'INSCRITO' | 'MATRICULADO' | 'RETIRADO';
+export type Nivel = 'PRIMARIA' | 'SECUNDARIA';
 export type ModoSalida = 'PERSONA_AUTORIZADA' | 'SOLO' | 'MOVILIDAD';
 export type Parentesco = 'PADRE' | 'MADRE' | 'APODERADO';
 
@@ -167,8 +168,8 @@ export type DatosEstudiante = {
   colegioProcedencia?: string | null;
   gestionProcedencia?: string | null;
   anioAcademico: number;
-  nivel: Nivel;
-  grado: string;
+  /** Código del catálogo de grados: PRI-1…PRI-6, SEC-1…SEC-5. */
+  gradoCodigo: string;
   formaIngreso?: string | null;
 };
 

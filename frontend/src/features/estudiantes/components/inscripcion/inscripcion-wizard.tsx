@@ -5,6 +5,7 @@ import { useForm, UseFormReturn } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form';
+import { nombreGrado } from '@/config/catalogos';
 import { cn } from '@/utils/cn';
 
 import { ResultadoInscripcion, useInscribir } from '../../api/estudiantes';
@@ -129,7 +130,7 @@ const PasoResponsable = ({
     ],
     [
       'Grado',
-      `${v.estudiante.grado} de ${v.estudiante.nivel.toLowerCase()} · Año académico ${v.estudiante.anioAcademico}`,
+      `${nombreGrado(v.estudiante.grado)} · Año académico ${v.estudiante.anioAcademico}`,
     ],
     [
       'Ficha médica',

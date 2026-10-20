@@ -48,7 +48,7 @@ Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
 | `pagos.compromiso_pago` | Uno por estudiante y año (RF-83). Se enlaza con la matrícula y el tarifario; puede anularse con un motivo. |
 | `pagos.cuota` | Cada cuota guarda `monto_base`, `monto_descuento`, `monto_final` (calculado por la BD) y `monto_pagado`. Estado PENDIENTE, EN_PROCESO, PAGADA_PARCIAL, PAGADA o ANULADA. Solo puede haber una cuota de matrícula por compromiso (RF-79) y la pensión N no se duplica. |
 | `pagos.lote_cuota` | Cuota adicional masiva: los datos comunes de la cuota extraordinaria generada para varios estudiantes. |
-| `pagos.descuento_aplicado` | Descuento aplicado (HU-38). Guarda una copia del nombre y del porcentaje, la vigencia, el motivo, quién lo aplicó y la revocación. Solo puede haber uno ACTIVO por compromiso (RF-87). |
+| `pagos.descuento_aplicado` | Descuento aplicado (HU-38). Guarda una copia del nombre y del porcentaje, la vigencia, el motivo, quién lo aplicó y la revocación. Es del **estudiante**, con una vigencia que puede durar varios años (V7). Solo puede haber uno ACTIVO por estudiante (RF-87), y cada cuota rebajada guarda su `descuento_aplicado_id`. |
 | `pagos.orden_pago`, `orden_pago_cuota` | Orden de pago en línea (HU-41) con sus cuotas, capital y recargo. La `referencia_pasarela` es única, así un pago no se registra dos veces (RF-103). |
 | `pagos.pago`, `pago_detalle` | Pago confirmado con su constancia correlativa (HU-42). Queda OBSERVADO si el monto no coincide con la orden (RF-105). |
 | `pagos.correlativo_constancia` | Último número de constancia por año. |

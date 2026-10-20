@@ -6,7 +6,7 @@
 
 ## Alcance
 
-Inicio de sesión de todos los roles y gestión de cuentas por el Administrador. Un usuario puede tener **varios roles** y elige el activo en el menú lateral. Las cuentas no se borran: "Eliminar" es un borrado lógico. Según Figma, el **estudiante no tiene usuario**: lo gestiona su responsable de matrícula (ver [estudiantes.md](estudiantes.md)).
+Inicio de sesión de todos los roles y gestión de cuentas por el Administrador. Un usuario puede tener **varios roles** y elige el activo en el menú lateral. Las cuentas no se borran: "Eliminar" es un borrado lógico. El **estudiante** tiene su propia cuenta, que se crea al quedar matriculado; es el usuario con la misma persona que el estudiante (V7, ver [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md)).
 
 ## Historias de usuario
 

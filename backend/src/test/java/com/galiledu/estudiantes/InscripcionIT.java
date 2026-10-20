@@ -1,5 +1,9 @@
 package com.galiledu.estudiantes;
 
+import static org.hamcrest.Matchers.everyItem;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -31,7 +35,7 @@ class InscripcionIT extends PruebaIntegracion {
 		return """
 				{"estudiante":{"persona":{"tipoDocumento":"DNI","numeroDocumento":"78945699","apellidoPaterno":"Paredes",
 				  "apellidoMaterno":"Rojas","nombres":"Lucía","fechaNacimiento":"2015-05-10","sexo":"FEMENINO"},
-				  "anioAcademico":2027,"nivel":"PRIMARIA","grado":"6.° grado"},
+				  "anioAcademico":2027,"gradoCodigo":"PRI-6"},
 				 "fichaMedica":{"tipoSangre":"O+","tieneAlergias":true,"alergiasAlimentarias":"Maní"},
 				 "padre":%s,"madre":%s,"apoderado":%s,
 				 "contactos":[{"nombreCompleto":"Rosa Medina","parentesco":"Abuela","celular":"987654321"},
@@ -62,11 +66,12 @@ class InscripcionIT extends PruebaIntegracion {
 		mvc.perform(conToken(get("/estudiantes/" + id), personal))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.estado").value("INSCRITO"))
+				.andExpect(jsonPath("$.grado").value("6.° de primaria"))
 				.andExpect(jsonPath("$.familia.length()").value(2))
 				.andExpect(jsonPath("$.fichaMedica.alergiasAlimentarias").value("Maní"))
 				.andExpect(jsonPath("$.contactos.length()").value(2))
-				// Mateo comparte padre: aparece como hermano.
-				.andExpect(jsonPath("$.hermanos[0].nombreCompleto").value("Mateo Alonso Paredes Rojas"));
+				// Comparte padre con Mateo y Sofía: aparecen como hermanos.
+				.andExpect(jsonPath("$.hermanos[*].nombreCompleto", hasItem("Mateo Alonso Paredes Rojas")));
 	}
 
 	@Test
@@ -103,6 +108,18 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tieneCuenta").value(true));
 		mvc.perform(conToken(get("/estudiantes/personas").param("documento", "11111111"), personal))
 				.andExpect(status().isNotFound());
+	}
+
+	@Test
+	void elListadoFiltraPorLaSituacionQueSaleDeLaMatricula() throws Exception {
+		// Sofía y Valeria están matriculadas en 2026; Mateo solo tiene sección reservada para 2027.
+		mvc.perform(conToken(get("/estudiantes").param("estado", "MATRICULADO"), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[*].nombreCompleto", hasItem("Sofía Paredes Rojas")))
+				.andExpect(jsonPath("$.data[*].nombreCompleto", not(hasItem("Mateo Alonso Paredes Rojas"))))
+				.andExpect(jsonPath("$.data[*].estado", everyItem(is("MATRICULADO"))));
+		mvc.perform(conToken(get("/estudiantes").param("estado", "INSCRITO"), personal))
+				.andExpect(jsonPath("$.data[*].nombreCompleto", hasItem("Mateo Alonso Paredes Rojas")));
 	}
 
 	@Test

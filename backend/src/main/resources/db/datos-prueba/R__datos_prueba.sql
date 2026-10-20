@@ -55,11 +55,10 @@ VALUES ('00000000-0000-0000-0000-000000000101', 'DNI', '78945612', 'Paredes', 'R
 ON CONFLICT DO NOTHING;
 
 INSERT INTO estudiantes.estudiante (id, persona_id, pais_nacimiento, departamento_nacimiento, provincia_nacimiento,
-                                    distrito_nacimiento, lengua_materna, anio_academico, nivel, grado, forma_ingreso,
+                                    distrito_nacimiento, lengua_materna, anio_academico, grado_codigo, forma_ingreso,
                                     modo_salida, estado)
 VALUES ('20000000-0000-0000-0000-000000000001', '00000000-0000-0000-0000-000000000101', 'Perú', 'Lima', 'Lima',
-        'Magdalena del Mar', 'Castellano', 2027, 'SECUNDARIA', '1.° grado', 'Edad normativa', 'PERSONA_AUTORIZADA',
-        'INSCRITO')
+        'Magdalena del Mar', 'Castellano', 2027, 'SEC-1', 'Edad normativa', 'PERSONA_AUTORIZADA', 'ACTIVO')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO estudiantes.ficha_medica (estudiante_id, tipo_sangre, tipo_seguro)
@@ -107,12 +106,12 @@ WHERE g.nivel = 'SECUNDARIA'
 ON CONFLICT DO NOTHING;
 
 INSERT INTO configuracion.estructura_horaria (id, anio_escolar_id, codigo, descripcion, dias_lectivos, hora_entrada,
-                                              bloques_por_dia, duracion_bloque_min)
+                                              bloques_por_dia, duracion_bloque_min, nivel)
 VALUES
     ('31000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000002026', 'EH-PRI-26',
-     'Primaria · jornada de mañana', ARRAY['LUN', 'MAR', 'MIE', 'JUE', 'VIE'], '07:45', 8, 45),
+     'Primaria · jornada de mañana', ARRAY['LUN', 'MAR', 'MIE', 'JUE', 'VIE'], '07:45', 8, 45, 'PRIMARIA'),
     ('31000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000002026', 'EH-SEC-26',
-     'Secundaria · jornada de mañana', ARRAY['LUN', 'MAR', 'MIE', 'JUE', 'VIE'], '07:30', 9, 45)
+     'Secundaria · jornada de mañana', ARRAY['LUN', 'MAR', 'MIE', 'JUE', 'VIE'], '07:30', 9, 45, 'SECUNDARIA')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO configuracion.receso (estructura_horaria_id, despues_de_bloque, duracion_min)
@@ -216,10 +215,10 @@ VALUES ('00000000-0000-0000-0000-000000000102', 'DNI', '74125896', 'Paredes', 'R
         '2011-06-20', 'Peruana', 'FEMENINO', 'Magdalena del Mar', 'Calle 123')
 ON CONFLICT DO NOTHING;
 
-INSERT INTO estudiantes.estudiante (id, persona_id, pais_nacimiento, lengua_materna, anio_academico, nivel, grado,
+INSERT INTO estudiantes.estudiante (id, persona_id, pais_nacimiento, lengua_materna, anio_academico, grado_codigo,
                                     forma_ingreso, modo_salida, estado)
 VALUES ('20000000-0000-0000-0000-000000000002', '00000000-0000-0000-0000-000000000102', 'Perú', 'Castellano', 2026,
-        'SECUNDARIA', '4.° grado', 'Edad normativa', 'SOLO', 'MATRICULADO')
+        'SEC-4', 'Edad normativa', 'SOLO', 'ACTIVO')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO estudiantes.ficha_medica (estudiante_id, tipo_sangre, tipo_seguro)
@@ -255,7 +254,7 @@ FROM configuracion.seccion s
 WHERE s.anio_escolar_id = '30000000-0000-0000-0000-000000002027' AND s.grado_codigo = 'SEC-1' AND s.nombre = 'A'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO matricula.correlativo_matricula (anio, ultimo) VALUES (2026, 1)
+INSERT INTO matricula.correlativo_matricula (anio, ultimo) VALUES (2026, 2)
 ON CONFLICT (anio) DO UPDATE SET ultimo = GREATEST(matricula.correlativo_matricula.ultimo, EXCLUDED.ultimo);
 
 -- Compromiso 2026 de Sofía: matrícula y pensiones de marzo a agosto pagadas; septiembre vencida.
@@ -433,3 +432,43 @@ FROM configuracion.ambiente a
 WHERE s.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND s.grado_codigo = 'SEC-1'
   AND a.codigo = CASE s.nombre WHEN 'A' THEN 'A-101' WHEN 'B' THEN 'A-102' END
   AND s.ambiente_id IS NULL;
+
+-- ---------------------------------------------------------------------
+-- V7 · Estudiante con cuenta propia: Valeria Sánchez (U20260006) es la misma persona que la estudiante.
+-- Matriculada en 5.° A de 2026; su responsable es su mamá (sin cuenta en el sistema).
+-- ---------------------------------------------------------------------
+INSERT INTO personas.persona (id, tipo_documento, numero_documento, apellido_paterno, apellido_materno, nombres,
+                              fecha_nacimiento, nacionalidad, sexo, celular, correo, distrito, direccion)
+VALUES ('00000000-0000-0000-0000-000000000103', 'DNI', '41234599', 'Ferrara', 'Luna', 'Gabriela',
+        '1980-05-14', 'Peruana', 'FEMENINO', '987000099', 'gabriela.ferrara@correo.com', 'Magdalena del Mar', 'Calle 123')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO estudiantes.estudiante (id, persona_id, pais_nacimiento, lengua_materna, anio_academico, grado_codigo,
+                                    forma_ingreso, modo_salida, estado)
+VALUES ('20000000-0000-0000-0000-000000000003', '00000000-0000-0000-0000-000000000006', 'Perú', 'Castellano', 2026,
+        'SEC-5', 'Edad normativa', 'SOLO', 'ACTIVO')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO estudiantes.ficha_medica (estudiante_id, tipo_sangre, tipo_seguro)
+VALUES ('20000000-0000-0000-0000-000000000003', 'A+', 'SIS')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO estudiantes.vinculo_familiar (id, estudiante_id, persona_id, parentesco, vive_con_estudiante,
+                                          tiene_patria_potestad, es_responsable_matricula)
+VALUES ('30000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000003',
+        '00000000-0000-0000-0000-000000000103', 'MADRE', TRUE, TRUE, TRUE)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO estudiantes.contacto_emergencia (id, estudiante_id, nombre_completo, parentesco, celular, orden)
+VALUES ('40000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000003', 'Gabriela Ferrara Luna', 'Madre', '987000099', 1),
+       ('40000000-0000-0000-0000-000000000006', '20000000-0000-0000-0000-000000000003', 'Marco Sánchez Ruiz', 'Padre', '987000098', 2)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO matricula.matricula (id, estudiante_id, anio_escolar_id, grado_codigo, seccion_id, tipo_estudiante, estado,
+                                 codigo, confirmado_en, creado_por)
+SELECT '50000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-000000000003',
+       '30000000-0000-0000-0000-000000002026', 'SEC-5', s.id, 'CONTINUADOR', 'MATRICULADO', 'MAT-2026-0002',
+       '2026-02-10 09:15-05', '10000000-0000-0000-0000-000000000002'
+FROM configuracion.seccion s
+WHERE s.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND s.grado_codigo = 'SEC-5' AND s.nombre = 'A'
+ON CONFLICT DO NOTHING;

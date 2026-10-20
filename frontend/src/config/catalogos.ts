@@ -79,29 +79,28 @@ export const DISTRITOS_LIMA = opciones([
   'Otro',
 ]);
 
+// El colegio tiene primaria y secundaria (catálogo configuracion.grado, V4).
 export const NIVELES: SelectOption[] = [
-  { label: 'Inicial', value: 'INICIAL' },
   { label: 'Primaria', value: 'PRIMARIA' },
   { label: 'Secundaria', value: 'SECUNDARIA' },
 ];
 
+const grados = (prefijo: string, cantidad: number): SelectOption[] =>
+  Array.from({ length: cantidad }, (_, i) => ({
+    label: `${i + 1}.° grado`,
+    value: `${prefijo}-${i + 1}`,
+  }));
+
+/** El valor es el código del catálogo de grados (PRI-1…PRI-6, SEC-1…SEC-5). */
 export const GRADOS_POR_NIVEL: Record<string, SelectOption[]> = {
-  INICIAL: opciones(['Inicial 3 años', 'Inicial 4 años', 'Inicial 5 años']),
-  PRIMARIA: opciones([
-    '1.° grado',
-    '2.° grado',
-    '3.° grado',
-    '4.° grado',
-    '5.° grado',
-    '6.° grado',
-  ]),
-  SECUNDARIA: opciones([
-    '1.° grado',
-    '2.° grado',
-    '3.° grado',
-    '4.° grado',
-    '5.° grado',
-  ]),
+  PRIMARIA: grados('PRI', 6),
+  SECUNDARIA: grados('SEC', 5),
+};
+
+/** "SEC-1" → "1.° de secundaria" (mismo texto que configuracion.grado.nombre). */
+export const nombreGrado = (codigo: string) => {
+  const [prefijo, numero] = codigo.split('-');
+  return `${numero}.° de ${prefijo === 'PRI' ? 'primaria' : 'secundaria'}`;
 };
 
 export const TIPOS_SANGRE = opciones([
