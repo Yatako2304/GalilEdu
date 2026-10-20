@@ -98,6 +98,10 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/planes-evaluacion/copias` | Personal adm. | Copia `{anioEscolarId, gradoCodigo, origenAnioEscolarId, origenGradoCodigo}` a un grado vacío, sin docentes |
 | GET · PUT · DELETE | `/planes-evaluacion/{id}` | Personal adm. | Detalle del curso en el plan · `{horasSemanales, competencias}` · quitarlo del plan. 409 si el año está cerrado |
 | GET · PUT | `/planes-evaluacion/{id}/docentes` | Personal adm. | Docente de cada sección `{asignaciones: [{seccionId, docenteId}]}` (`docenteId` null = sin docente) |
+| GET | `/pagos/estudiantes/{estudianteId}/compromisos` | Personal adm. | Compromisos de pago del estudiante, del año más reciente al más antiguo (selector de P8, HU-37) |
+| GET | `/pagos/compromisos/{id}` | Personal adm. | Resumen (total anual, capital pagado, descuento, pensión, saldo) y cronograma de cuotas; `vencida` se calcula con los días de gracia (HU-37, RF-84, RF-91) |
+| POST | `/pagos/matriculas/{matriculaId}/cronograma` | Personal adm. | Genera las pensiones del tarifario para una matrícula MATRICULADO: solo las que vencen después de la matrícula y con el descuento activo (RF-81, RF-82). 409 si ya existen (RF-83), si no está matriculado o si el tarifario no está confirmado |
+| POST | `/pagos/compromisos/{id}/retiro` | Personal adm. | Anula las pensiones PENDIENTES que vencen después de `{fechaRetiro}`; las vencidas y parciales se mantienen (RF-85). Devuelve `{cuotasAnuladas}` |
 
 ## Formato
 
