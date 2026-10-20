@@ -56,3 +56,56 @@ export const textoGrados = (grados: string[]) =>
         `${nivel} ${(lista as string[]).map(ORDINAL).join(', ')}`,
     )
     .join(' · ');
+
+// ---------- Escala de calificación (HU-55) ----------
+
+export const NIVELES_DE_MENOR_A_MAYOR = ['C', 'B', 'A', 'AD'] as const;
+
+type Rango = { nivel: string; notaDesde: number; notaHasta: number };
+
+/**
+ * Mismas reglas y mensajes que TablaConversion.validarRangos (backend): C empieza en 0, cada nivel empieza justo
+ * después del anterior y AD termina en 20. Devuelve el primer error o null.
+ */
+export const errorDeRangos = (niveles: Rango[]): string | null => {
+  let esperado = 0;
+  for (const codigo of NIVELES_DE_MENOR_A_MAYOR) {
+    const n = niveles.find((r) => r.nivel === codigo);
+    if (!n) return 'Define un rango para cada nivel: AD, A, B y C.';
+    if (n.notaDesde > n.notaHasta)
+      return `En ${codigo}, la nota "desde" no puede ser mayor que "hasta".`;
+    if (n.notaDesde < esperado)
+      return `El rango de ${codigo} se cruza con el nivel anterior.`;
+    if (n.notaDesde > esperado)
+      return `Falta cubrir de ${esperado} a ${n.notaDesde - 1} antes de ${codigo}.`;
+    esperado = n.notaHasta + 1;
+  }
+  return esperado - 1 === 20 ? null : 'El nivel AD debe terminar en 20.';
+};
+
+const nota = z.coerce
+  .number({ invalid_type_error: 'Ingresa una nota.' })
+  .int('Ingresa una nota entera.')
+  .min(0, 'Las notas van de 0 a 20.')
+  .max(20, 'Las notas van de 0 a 20.');
+
+export const nuevaVersionSchema = z
+  .object({
+    vigenteDesde: z
+      .string()
+      .min(1, 'Elige la fecha desde la que rige la versión.'),
+    niveles: z.array(
+      z.object({
+        nivel: z.enum(['AD', 'A', 'B', 'C']),
+        notaDesde: nota,
+        notaHasta: nota,
+      }),
+    ),
+  })
+  .superRefine((valores, ctx) => {
+    const error = errorDeRangos(valores.niveles);
+    if (error)
+      ctx.addIssue({ code: 'custom', path: ['niveles'], message: error });
+  });
+
+export type NuevaVersionFormulario = z.input<typeof nuevaVersionSchema>;
