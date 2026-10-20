@@ -1,7 +1,7 @@
 # Catálogo académico
 
 - **HU:** HU-52, 53, 54, 55, 56 (iteración 1) · HU-43 (3)
-- **Estado:** 🚧 en desarrollo: el plan curricular (HU-52, 53, 54) está hecho; faltan HU-55, HU-56 y HU-43
+- **Estado:** 🚧 en desarrollo: plan curricular (HU-52, 53, 54) y escala de calificación (HU-55) hechos; faltan HU-56 y HU-43
 - **Última actualización:** 2026-10-20
 
 ## Alcance
@@ -28,7 +28,7 @@ En ambos casos manda Figma.
 | HU-52 | Áreas curriculares | ✅ | Nombre único, sin importar mayúsculas. Descripción opcional. Al desactivar un área, sus competencias y cursos quedan como están. |
 | HU-53 | Competencias de un área | ✅ | Nombre único dentro del área. Se agregan al final de la lista. |
 | HU-54 | Cursos de un área y sus grados | ✅ | Nombre único y al menos un grado. No se puede quitar un grado en el que el curso ya está en un plan de evaluación. |
-| HU-55 | Escala de calificación | ⏳ | Pestaña con `ModulePlaceholder`. |
+| HU-55 | Escala de calificación | ✅ | Las versiones no se editan: se agrega una nueva con su fecha "Vigente desde", que no puede ser anterior a hoy. Si la fecha es futura, queda **programada**. El estado (vigente, programada, anterior) se calcula con la fecha de hoy y no se guarda. **Diferencia con Figma:** debajo de la tabla vigente agregamos "Otras versiones" (programadas y anteriores), porque CI-23 no muestra dónde ver la versión programada ni el historial que menciona el modal. |
 | HU-56 | Plan de evaluación | ⏳ | Pestaña con `ModulePlaceholder`. |
 | HU-43 | Ambientes físicos | ⏳ | Iteración 3. |
 
@@ -62,10 +62,14 @@ En ambos casos manda Figma.
 - A un área inactiva no se le agregan competencias ni cursos: primero hay que reactivarla.
 - Un curso no puede perder un grado en el que ya está planificado (lo exige `fk_plan_curso_grado`).
 
-**Lo validará el servicio (HU-55, HU-56, HU-43):**
+**Lo valida la escala de calificación (`TablaConversion.validarRangos`, también en el frontend):**
+- Están los 4 niveles, sin repetir.
+- C empieza en 0, cada nivel empieza justo después del anterior (sin vacíos ni cruces) y AD termina en 20.
+- La fecha "Vigente desde" no es anterior a hoy y no se repite.
+
+**Lo validará el servicio (HU-56, HU-43):**
 - La competencia de un plan debe ser del área del curso.
 - La sección del docente debe ser del mismo grado y año.
-- Los rangos de la tabla de conversión deben cubrir de 0 a 20 sin vacíos ni cruces.
 - Al bajar el aforo de un aula, no puede quedar por debajo de la matrícula de sus secciones (RF-111).
 
 **Datos de prueba:**
@@ -90,16 +94,20 @@ Rol: Personal administrativo. La tabla completa está en [backend/README.md](../
 | POST | `/areas/{id}/competencias` · `/areas/{id}/cursos` | Agrega una competencia o un curso al área |
 | PUT | `/competencias/{id}` · `/cursos/{id}` | Edita una competencia o un curso |
 | POST | `/{areas,competencias,cursos}/{id}/desactivar` · `/reactivar` | Cambia el estado |
+| GET | `/tablas-conversion` | Versiones de la tabla de conversión, de la más nueva a la más antigua, con su estado |
+| GET | `/tablas-conversion/vigente` | La versión que rige hoy |
+| POST | `/tablas-conversion` | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}` (HU-55) |
 
 ## Código
 
-- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioPlanCurricular`, `AreaController`, `CompetenciaController`, `CursoController`).
-- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas.
-- Pruebas: `backend/src/test/java/com/galiledu/academico/PlanCurricularIT.java` y `frontend/src/features/catalogo-academico/components/__tests__/`.
+- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioPlanCurricular`, `ServicioEscalaCalificacion`, `AreaController`, `CompetenciaController`, `CursoController`, `TablaConversionController`).
+- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular`, `EscalaCalificacion` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas.
+- Pruebas: `backend/src/test/java/com/galiledu/academico/` (`PlanCurricularIT`, `EscalaCalificacionIT`, `dominio/TablaConversionTests`) y `frontend/src/features/catalogo-academico/components/__tests__/`.
 
 ## Pendientes
 
 - [x] Backend y frontend del plan curricular (HU-52, 53, 54).
-- [ ] HU-55 Escala de calificación, HU-56 Plan de evaluación y HU-43 Ambientes físicos.
+- [x] Escala de calificación (HU-55).
+- [ ] HU-56 Plan de evaluación y HU-43 Ambientes físicos.
 - [ ] Comparar con Figma los textos exactos de los modales del plan curricular (placeholders y descripciones).
 - [ ] Faltan las competencias de las demás áreas en los datos de prueba. Se cargan desde la pantalla.

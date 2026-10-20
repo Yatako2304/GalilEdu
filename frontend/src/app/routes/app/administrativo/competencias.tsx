@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { ContentLayout } from '@/components/layouts';
 import { ModulePlaceholder } from '@/components/module-placeholder';
+import { EscalaCalificacion } from '@/features/catalogo-academico/components/escala-calificacion';
 import { PlanCurricular } from '@/features/catalogo-academico/components/plan-curricular';
 import { cn } from '@/utils/cn';
 
@@ -23,7 +24,7 @@ const PESTANAS = [
     id: 'escala',
     titulo: 'Escala de calificación',
     subtitulo:
-      'Tabla de conversión de la nota vigesimal a los niveles de logro AD, A, B y C.',
+      'Define cómo se convierte una nota vigesimal (0–20) a un nivel de logro (AD, A, B, C).',
   },
 ] as const;
 
@@ -71,9 +72,7 @@ const AdministrativoCompetenciasRoute = () => {
           figmaNodeId="853:8120"
         />
       )}
-      {pestana === 'escala' && (
-        <ModulePlaceholder feature="catalogo-academico" historias={['HU-55']} />
-      )}
+      {pestana === 'escala' && <EscalaCalificacion />}
     </ContentLayout>
   );
 };

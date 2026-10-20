@@ -23,7 +23,7 @@ src/main/java/com/galiledu/
 ├── personas/       persona (datos personales, validaciones RF-12/14/23)
 ├── usuarios/       login (HU-1), gestión de cuentas (HU-6, HU-9, HU-12) y carga masiva (HU-8)
 ├── estudiantes/    inscripción del estudiante (HU-7)
-└── academico/      catálogo académico: plan curricular (HU-52, HU-53, HU-54)
+└── academico/      catálogo académico: plan curricular (HU-52, HU-53, HU-54) y escala de calificación (HU-55)
 
 Configuración, matrícula y pagos: por ahora solo tienen BD (paquetes por crear).
 
@@ -87,6 +87,9 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/areas/{id}/cursos` | Personal adm. | Nuevo curso `{nombre, grados: ["SEC-1", …]}` (HU-54). 409 si el área está inactiva o el nombre ya existe |
 | PUT | `/cursos/{id}` | Personal adm. | Edita el curso. 409 si quita un grado en el que ya está planificado |
 | POST | `/cursos/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado del curso |
+| GET | `/tablas-conversion` | Personal adm. | Versiones de la tabla de conversión (HU-55), de la más nueva a la más antigua; `estado`: PROGRAMADA, VIGENTE o ANTERIOR (se calcula con la fecha de hoy) |
+| GET | `/tablas-conversion/vigente` | Personal adm. | La versión que rige hoy. 404 si no hay ninguna |
+| POST | `/tablas-conversion` | Personal adm. | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}`. 400 si la fecha es pasada o los rangos no cubren 0–20 sin vacíos ni cruces; 409 si ya hay una versión con esa fecha |
 
 ## Formato
 

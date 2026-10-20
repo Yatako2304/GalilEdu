@@ -7,6 +7,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { cn } from '@/utils/cn';
 
 type DialogoCatalogoProps = {
   open: boolean;
@@ -18,10 +19,12 @@ type DialogoCatalogoProps = {
   formId: string;
   textoGuardar: string;
   guardando: boolean;
+  /** Ancho del modal; por defecto 520 px. */
+  className?: string;
   children: React.ReactNode;
 };
 
-// Marco común de los modales "Nueva área curricular", "Nueva competencia" y "Nuevo curso" (Figma CI-14).
+// Marco común de los modales "Nueva área curricular", "Nueva competencia" y "Nuevo curso" (CI-14) y "Nueva versión de la tabla de conversión" (CI-23).
 export const DialogoCatalogo = ({
   open,
   onCerrar,
@@ -31,10 +34,16 @@ export const DialogoCatalogo = ({
   formId,
   textoGuardar,
   guardando,
+  className,
   children,
 }: DialogoCatalogoProps) => (
   <Dialog open={open} onOpenChange={(abierto) => !abierto && onCerrar()}>
-    <DialogContent className="max-w-[520px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
+    <DialogContent
+      className={cn(
+        'max-h-[92vh] max-w-[520px] gap-0 overflow-y-auto rounded-[12px] border-stroke-tertiary bg-white p-0',
+        className,
+      )}
+    >
       <div className="flex flex-col gap-3 px-6 pt-6">
         <span className="inline-flex size-10 items-center justify-center rounded-full bg-surface-accent-light text-content-accent-primary">
           {icono}

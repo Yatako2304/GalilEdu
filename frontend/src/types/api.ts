@@ -372,3 +372,30 @@ export type SolicitudCompetencia = {
   descripcion: string | null;
 };
 export type SolicitudCurso = { nombre: string; grados: string[] };
+
+// ---------- Catálogo académico · Escala de calificación (HU-55) ----------
+
+export type NivelLogro = 'AD' | 'A' | 'B' | 'C';
+/** Se calcula con la fecha de vigencia: una versión con fecha futura queda programada. */
+export type EstadoVersion = 'PROGRAMADA' | 'VIGENTE' | 'ANTERIOR';
+
+export type RangoNivelDetalle = {
+  nivel: NivelLogro;
+  significado: string;
+  notaDesde: number;
+  notaHasta: number;
+};
+
+export type TablaConversionDetalle = {
+  id: string;
+  /** "2025-03-01" */
+  vigenteDesde: string;
+  estado: EstadoVersion;
+  /** De mayor a menor: AD, A, B, C. */
+  niveles: RangoNivelDetalle[];
+};
+
+export type SolicitudTablaConversion = {
+  vigenteDesde: string;
+  niveles: { nivel: NivelLogro; notaDesde: number; notaHasta: number }[];
+};

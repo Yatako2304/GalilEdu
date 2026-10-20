@@ -1,11 +1,16 @@
 package com.galiledu.academico.aplicacion;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import com.galiledu.academico.dominio.Area;
@@ -13,6 +18,10 @@ import com.galiledu.academico.dominio.Competencia;
 import com.galiledu.academico.dominio.Curso;
 import com.galiledu.academico.dominio.EstadoArea;
 import com.galiledu.academico.dominio.EstadoCurso;
+import com.galiledu.academico.dominio.EstadoVersion;
+import com.galiledu.academico.dominio.NivelLogro;
+import com.galiledu.academico.dominio.RangoNivel;
+import com.galiledu.academico.dominio.TablaConversion;
 
 /** Contratos JSON del catálogo académico. Deben coincidir con frontend/src/types/api.ts. */
 public final class DtosAcademico {
@@ -70,5 +79,34 @@ public final class DtosAcademico {
 	public record SolicitudCurso(
 			@NotBlank(message = "Ingresa el nombre del curso.") @Size(max = 80, message = "El nombre admite hasta 80 caracteres.") String nombre,
 			@NotEmpty(message = "Elige al menos un grado.") Set<String> grados) {
+	}
+
+	// ---------- Escala de calificación (HU-55) ----------
+
+	public record RangoNivelDetalle(NivelLogro nivel, String significado, int notaDesde, int notaHasta) {
+		static RangoNivelDetalle de(RangoNivel r) {
+			return new RangoNivelDetalle(r.getNivel(), r.getSignificado(), r.getNotaDesde(), r.getNotaHasta());
+		}
+	}
+
+	/** Una versión de la tabla. niveles: de mayor a menor (AD, A, B, C), como la tabla de Figma CI-23. */
+	public record TablaConversionDetalle(UUID id, LocalDate vigenteDesde, EstadoVersion estado,
+			List<RangoNivelDetalle> niveles) {
+		static TablaConversionDetalle de(TablaConversion t, EstadoVersion estado) {
+			return new TablaConversionDetalle(t.getId(), t.getVigenteDesde(), estado,
+					t.nivelesDeMayorAMenor().stream().map(RangoNivelDetalle::de).toList());
+		}
+	}
+
+	public record SolicitudRango(
+			@NotNull(message = "Falta el nivel.") NivelLogro nivel,
+			@NotNull(message = "Completa la nota \"desde\" de cada nivel.") @Min(value = 0, message = "Las notas van de 0 a 20.") @Max(value = 20, message = "Las notas van de 0 a 20.") Integer notaDesde,
+			@NotNull(message = "Completa la nota \"hasta\" de cada nivel.") @Min(value = 0, message = "Las notas van de 0 a 20.") @Max(value = 20, message = "Las notas van de 0 a 20.") Integer notaHasta) {
+	}
+
+	/** Modal "Nueva versión de la tabla de conversión". */
+	public record SolicitudTablaConversion(
+			@NotNull(message = "Elige la fecha desde la que rige la versión.") LocalDate vigenteDesde,
+			@NotNull(message = "Define un rango para cada nivel: AD, A, B y C.") List<@Valid SolicitudRango> niveles) {
 	}
 }
