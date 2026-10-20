@@ -298,3 +298,138 @@ ON CONFLICT DO NOTHING;
 
 INSERT INTO pagos.correlativo_constancia (anio, ultimo) VALUES (2026, 7)
 ON CONFLICT (anio) DO UPDATE SET ultimo = GREATEST(pagos.correlativo_constancia.ultimo, EXCLUDED.ultimo);
+
+-- ---------------------------------------------------------------------
+-- Catálogo académico y ambientes (V6), con los valores de Figma CI-14 a CI-26.
+-- ---------------------------------------------------------------------
+INSERT INTO academico.area (nombre, descripcion, orden, estado)
+VALUES
+    ('Matemática', 'Desarrolla el pensamiento matemático para plantear y resolver problemas en diversos contextos.', 1, 'ACTIVA'),
+    ('Comunicación', NULL, 2, 'ACTIVA'),
+    ('Inglés como lengua extranjera', NULL, 3, 'ACTIVA'),
+    ('Ciencia y Tecnología', NULL, 4, 'ACTIVA'),
+    ('Personal Social', NULL, 5, 'ACTIVA'),
+    ('Ciencias Sociales', NULL, 6, 'ACTIVA'),
+    ('Desarrollo Personal, Ciudadanía y Cívica', NULL, 7, 'ACTIVA'),
+    ('Arte y Cultura', NULL, 8, 'ACTIVA'),
+    ('Educación Física', NULL, 9, 'ACTIVA'),
+    ('Educación Religiosa', NULL, 10, 'ACTIVA'),
+    ('Educación para el Trabajo', NULL, 11, 'ACTIVA'),
+    ('Formación complementaria', NULL, 12, 'INACTIVA')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO academico.competencia (area_id, nombre, descripcion, orden)
+SELECT a.id, c.nombre, c.descripcion, c.orden
+FROM academico.area a
+JOIN (VALUES
+    ('Matemática', 'Resuelve problemas de cantidad', 'Traduce cantidades a expresiones numéricas y usa estrategias de cálculo.', 1),
+    ('Matemática', 'Resuelve problemas de regularidad, equivalencia y cambio', 'Trabaja con patrones, ecuaciones, inecuaciones y funciones.', 2),
+    ('Matemática', 'Resuelve problemas de forma, movimiento y localización', 'Modela objetos con formas geométricas y sus transformaciones.', 3),
+    ('Matemática', 'Resuelve problemas de gestión de datos e incertidumbre', 'Analiza datos y usa nociones de probabilidad.', 4),
+    ('Comunicación', 'Se comunica oralmente en su lengua materna', NULL, 1),
+    ('Comunicación', 'Lee diversos tipos de textos escritos en su lengua materna', NULL, 2),
+    ('Comunicación', 'Escribe diversos tipos de textos en su lengua materna', NULL, 3),
+    ('Ciencia y Tecnología', 'Indaga mediante métodos científicos para construir sus conocimientos', NULL, 1),
+    ('Ciencia y Tecnología', 'Explica el mundo físico basándose en conocimientos científicos', NULL, 2),
+    ('Ciencia y Tecnología', 'Diseña y construye soluciones tecnológicas para resolver problemas', NULL, 3)
+) AS c (area, nombre, descripcion, orden) ON c.area = a.nombre
+ON CONFLICT DO NOTHING;
+
+-- Los 16 cursos de 1.° de secundaria (CI-17). Se dictan en toda la secundaria.
+INSERT INTO academico.curso (area_id, nombre)
+SELECT a.id, c.nombre
+FROM academico.area a
+JOIN (VALUES
+    ('Matemática', 'Álgebra'), ('Matemática', 'Geometría'), ('Matemática', 'Aritmética'),
+    ('Comunicación', 'Comunicación'), ('Comunicación', 'Razonamiento verbal'),
+    ('Inglés como lengua extranjera', 'Inglés'),
+    ('Ciencia y Tecnología', 'Física'), ('Ciencia y Tecnología', 'Química'), ('Ciencia y Tecnología', 'Biología'),
+    ('Ciencias Sociales', 'Historia'), ('Ciencias Sociales', 'Geografía'),
+    ('Desarrollo Personal, Ciudadanía y Cívica', 'DPCC'),
+    ('Arte y Cultura', 'Arte y Cultura'), ('Educación Física', 'Educación Física'),
+    ('Educación Religiosa', 'Educación Religiosa'), ('Educación para el Trabajo', 'Computación')
+) AS c (area, nombre) ON c.area = a.nombre
+ON CONFLICT DO NOTHING;
+
+INSERT INTO academico.curso_grado (curso_id, grado_codigo)
+SELECT c.id, g.codigo FROM academico.curso c CROSS JOIN configuracion.grado g WHERE g.nivel = 'SECUNDARIA'
+ON CONFLICT DO NOTHING;
+
+-- Plan de evaluación 2026 de 1.° de secundaria con las horas de Figma.
+INSERT INTO academico.plan_curso (anio_escolar_id, grado_codigo, curso_id, horas_semanales)
+SELECT '30000000-0000-0000-0000-000000002026', 'SEC-1', c.id, h.horas
+FROM academico.curso c
+JOIN (VALUES ('Álgebra', 3), ('Geometría', 2), ('Aritmética', 2), ('Comunicación', 4), ('Razonamiento verbal', 2),
+             ('Inglés', 3), ('Física', 2), ('Química', 2), ('Biología', 2), ('Historia', 2), ('Geografía', 2),
+             ('DPCC', 2), ('Arte y Cultura', 2), ('Educación Física', 2), ('Educación Religiosa', 1),
+             ('Computación', 2)) AS h (curso, horas) ON h.curso = c.nombre
+ON CONFLICT DO NOTHING;
+
+-- Competencias de los cursos de Matemática y Comunicación (Aritmética evalúa 2, como en el modal de Figma).
+INSERT INTO academico.plan_competencia (plan_curso_id, competencia_id, escala, regla_nota, consolidacion)
+SELECT pc.id, co.id, 'VIGESIMAL', 'PROMEDIO_PONDERADO', 'PROMEDIO_PERIODOS'
+FROM academico.plan_curso pc
+JOIN academico.curso cu ON cu.id = pc.curso_id
+JOIN (VALUES ('Álgebra', 'Resuelve problemas de regularidad, equivalencia y cambio'),
+             ('Geometría', 'Resuelve problemas de forma, movimiento y localización'),
+             ('Aritmética', 'Resuelve problemas de cantidad'),
+             ('Aritmética', 'Resuelve problemas de gestión de datos e incertidumbre')) AS x (curso, competencia)
+    ON x.curso = cu.nombre
+JOIN academico.competencia co ON co.nombre = x.competencia
+WHERE pc.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND pc.grado_codigo = 'SEC-1'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO academico.plan_competencia (plan_curso_id, competencia_id, escala, regla_nota, consolidacion)
+SELECT pc.id, co.id, 'CUALITATIVA', 'NIVEL_MAS_FRECUENTE', 'ULTIMO_PERIODO'
+FROM academico.plan_curso pc
+JOIN academico.curso cu ON cu.id = pc.curso_id AND cu.nombre = 'Comunicación'
+JOIN academico.competencia co ON co.area_id = cu.area_id
+WHERE pc.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND pc.grado_codigo = 'SEC-1'
+ON CONFLICT DO NOTHING;
+
+-- María Fernández (Docente + Tutor) dicta Álgebra en 1.° A de 2026.
+INSERT INTO academico.docente_seccion (plan_curso_id, seccion_id, docente_id)
+SELECT pc.id, s.id, '10000000-0000-0000-0000-000000000004'
+FROM academico.plan_curso pc
+JOIN academico.curso cu ON cu.id = pc.curso_id AND cu.nombre = 'Álgebra'
+JOIN configuracion.seccion s ON s.anio_escolar_id = pc.anio_escolar_id AND s.grado_codigo = pc.grado_codigo AND s.nombre = 'A'
+WHERE pc.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND pc.grado_codigo = 'SEC-1'
+ON CONFLICT DO NOTHING;
+
+-- Tabla de conversión vigente desde 01/03/2025 y la versión programada para 2027 (CI-23).
+INSERT INTO academico.tabla_conversion (id, vigente_desde)
+VALUES ('60000000-0000-0000-0000-000000002025', '2025-03-01'),
+       ('60000000-0000-0000-0000-000000002027', '2027-03-01')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO academico.tabla_conversion_nivel (tabla_id, nivel, significado, nota_desde, nota_hasta)
+VALUES ('60000000-0000-0000-0000-000000002025', 'AD', 'Logro destacado', 18, 20),
+       ('60000000-0000-0000-0000-000000002025', 'A', 'Logro esperado', 14, 17),
+       ('60000000-0000-0000-0000-000000002025', 'B', 'En proceso', 11, 13),
+       ('60000000-0000-0000-0000-000000002025', 'C', 'En inicio', 0, 10),
+       ('60000000-0000-0000-0000-000000002027', 'AD', 'Logro destacado', 18, 20),
+       ('60000000-0000-0000-0000-000000002027', 'A', 'Logro esperado', 15, 17),
+       ('60000000-0000-0000-0000-000000002027', 'B', 'En proceso', 11, 14),
+       ('60000000-0000-0000-0000-000000002027', 'C', 'En inicio', 0, 10)
+ON CONFLICT DO NOTHING;
+
+-- Ambientes físicos (CI-26).
+INSERT INTO configuracion.ambiente (codigo, nombre, tipo, aforo_maximo, recursos, estado)
+VALUES
+    ('A-101', 'Aula 101', 'AULA_REGULAR', 30, ARRAY['Pizarra acrílica', 'Proyector'], 'ACTIVO'),
+    ('A-102', 'Aula 102', 'AULA_REGULAR', 30, ARRAY['Pizarra acrílica', 'Proyector'], 'ACTIVO'),
+    ('A-201', 'Aula 201', 'AULA_REGULAR', 32, ARRAY['Pizarra acrílica', 'Proyector', 'Parlantes'], 'ACTIVO'),
+    ('A-205', 'Aula 205', 'AULA_REGULAR', 32, ARRAY['Pizarra acrílica'], 'INACTIVO'),
+    ('LAB-01', 'Laboratorio de ciencias', 'ESPACIO_ESPECIAL', 30, ARRAY['Microscopios', 'Campana extractora'], 'ACTIVO'),
+    ('LAB-02', 'Laboratorio de cómputo', 'ESPACIO_ESPECIAL', 35, ARRAY['35 computadoras', 'Proyector'], 'ACTIVO'),
+    ('BIB-01', 'Biblioteca', 'ESPACIO_ESPECIAL', 40, ARRAY['Estanterías', '10 computadoras'], 'ACTIVO'),
+    ('AUD-01', 'Auditorio', 'ESPACIO_ESPECIAL', 180, ARRAY['Sonido', 'Escenario'], 'ACTIVO')
+ON CONFLICT DO NOTHING;
+
+-- 1.° A y 1.° B de 2026 usan las aulas A-101 y A-102.
+UPDATE configuracion.seccion s
+SET ambiente_id = a.id
+FROM configuracion.ambiente a
+WHERE s.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND s.grado_codigo = 'SEC-1'
+  AND a.codigo = CASE s.nombre WHEN 'A' THEN 'A-101' WHEN 'B' THEN 'A-102' END
+  AND s.ambiente_id IS NULL;
