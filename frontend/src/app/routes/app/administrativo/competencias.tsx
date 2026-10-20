@@ -1,9 +1,9 @@
 import * as React from 'react';
 
 import { ContentLayout } from '@/components/layouts';
-import { ModulePlaceholder } from '@/components/module-placeholder';
 import { EscalaCalificacion } from '@/features/catalogo-academico/components/escala-calificacion';
 import { PlanCurricular } from '@/features/catalogo-academico/components/plan-curricular';
+import { PlanEvaluacion } from '@/features/catalogo-academico/components/plan-evaluacion';
 import { cn } from '@/utils/cn';
 
 // Figma > Personal Administrativo > Competencias: pestañas CI-14, CI-17 y CI-23.
@@ -65,13 +65,7 @@ const AdministrativoCompetenciasRoute = () => {
       </div>
 
       {pestana === 'plan-curricular' && <PlanCurricular />}
-      {pestana === 'plan-evaluacion' && (
-        <ModulePlaceholder
-          feature="catalogo-academico"
-          historias={['HU-56']}
-          figmaNodeId="853:8120"
-        />
-      )}
+      {pestana === 'plan-evaluacion' && <PlanEvaluacion />}
       {pestana === 'escala' && <EscalaCalificacion />}
     </ContentLayout>
   );
