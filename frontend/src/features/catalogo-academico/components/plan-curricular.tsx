@@ -77,7 +77,7 @@ export const PlanCurricular = () => {
     <>
       <ResumenTarjetas />
 
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
         <div className="flex flex-col gap-3">
           <label className="relative">
             <span className="sr-only">Buscar área</span>
@@ -261,7 +261,8 @@ const DetalleArea = ({
   return (
     <>
       <Card className="flex flex-wrap items-start justify-between gap-4 p-5">
-        <div className="min-w-0 flex-1">
+        {/* Ancho mínimo: si no entran los botones al lado, bajan en vez de apretar la descripción. */}
+        <div className="min-w-64 flex-1">
           <div className="flex items-center gap-2">
             <h2 className="text-h6 font-semibold text-content-primary">
               {area.nombre}
@@ -278,9 +279,11 @@ const DetalleArea = ({
             </p>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
+          {/* Figma CI-14: "Editar área" en azul y "Desactivar" con borde. */}
           <Button
             size="sm"
+            variant="secondary"
             icon={<Pencil className="size-4" />}
             onClick={() => onModal({ tipo: 'area', area })}
           >
@@ -288,7 +291,7 @@ const DetalleArea = ({
           </Button>
           <Button
             size="sm"
-            variant={activa ? 'secondary' : 'primary-light'}
+            variant="primary-light"
             icon={
               activa ? (
                 <CircleOff className="size-4" />
