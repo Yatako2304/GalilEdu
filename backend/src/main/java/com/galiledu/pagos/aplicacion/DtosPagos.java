@@ -1,0 +1,76 @@
+package com.galiledu.pagos.aplicacion;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.UUID;
+
+import jakarta.validation.constraints.NotNull;
+
+import com.galiledu.pagos.dominio.EstadoCompromiso;
+import com.galiledu.pagos.dominio.EstadoCuota;
+
+/** Contratos JSON del módulo de pagos. Deben coincidir con frontend/src/types/api.ts. */
+public final class DtosPagos {
+	private DtosPagos() {
+	}
+
+	/** Opción del selector "Compromiso 2026" (Figma P8). */
+	public record CompromisoAnio(UUID id, int anio, EstadoCompromiso estado) {
+	}
+
+	/** HU-37 · Figma "P8 · Compromiso — Cronograma de cuotas". */
+	public record CompromisoDetalle(
+			UUID id,
+			int anio,
+			EstadoCompromiso estado,
+			EstudianteCompromiso estudiante,
+			ResumenCompromiso resumen,
+			List<CuotaDetalle> cuotas) {
+	}
+
+	public record EstudianteCompromiso(UUID id, String nombre, String numeroDocumento, String apoderado,
+			String seccion) {
+	}
+
+	/** Las 5 tarjetas del encabezado: total anual, capital pagado, descuento, pensión mensual y saldo. */
+	public record ResumenCompromiso(
+			BigDecimal totalAnual,
+			int cuotasActivas,
+			BigDecimal capitalPagado,
+			int pensionesPagadas,
+			int pensionesTotal,
+			BigDecimal descuentoPorcentaje,
+			String descuentoNombre,
+			BigDecimal pensionMensual,
+			BigDecimal saldoPendiente,
+			int cuotasVencidas) {
+	}
+
+	public record CuotaDetalle(
+			UUID id,
+			String concepto,
+			Short numero,
+			String nombre,
+			LocalDate fechaVencimiento,
+			BigDecimal montoBase,
+			BigDecimal montoDescuento,
+			BigDecimal porcentajeDescuento,
+			BigDecimal montoFinal,
+			BigDecimal montoPagado,
+			EstadoCuota estado,
+			boolean vencida,
+			LocalDate fechaPago) {
+	}
+
+	/** Respuesta de POST /pagos/matriculas/{id}/cronograma (RF-81, RF-82). */
+	public record CronogramaGenerado(UUID compromisoId, int anio, int cuotasGeneradas) {
+	}
+
+	/** Cuerpo de POST /pagos/compromisos/{id}/retiro (RF-85). */
+	public record SolicitudRetiro(@NotNull LocalDate fechaRetiro) {
+	}
+
+	public record RetiroRegistrado(int cuotasAnuladas) {
+	}
+}

@@ -522,3 +522,61 @@ export type SolicitudCopiaPlan = {
   origenAnioEscolarId: string;
   origenGradoCodigo: string;
 };
+
+// ---------- Pagos y pensiones (HU-37) ----------
+// Iguales a backend/.../pagos/aplicacion/DtosPagos.java
+
+export type EstadoCompromiso = 'VIGENTE' | 'ANULADO';
+
+export type EstadoCuota =
+  'PENDIENTE' | 'EN_PROCESO' | 'PAGADA_PARCIAL' | 'PAGADA' | 'ANULADA';
+
+export type CompromisoAnio = {
+  id: string;
+  anio: number;
+  estado: EstadoCompromiso;
+};
+
+export type CuotaDetalle = {
+  id: string;
+  concepto: string;
+  numero: number | null;
+  nombre: string;
+  fechaVencimiento: string;
+  montoBase: number;
+  montoDescuento: number;
+  porcentajeDescuento: number | null;
+  montoFinal: number;
+  montoPagado: number;
+  estado: EstadoCuota;
+  vencida: boolean;
+  fechaPago: string | null;
+};
+
+export type ResumenCompromiso = {
+  totalAnual: number;
+  cuotasActivas: number;
+  capitalPagado: number;
+  pensionesPagadas: number;
+  pensionesTotal: number;
+  descuentoPorcentaje: number | null;
+  descuentoNombre: string | null;
+  pensionMensual: number;
+  saldoPendiente: number;
+  cuotasVencidas: number;
+};
+
+export type CompromisoDetalle = {
+  id: string;
+  anio: number;
+  estado: EstadoCompromiso;
+  estudiante: {
+    id: string;
+    nombre: string;
+    numeroDocumento: string;
+    apoderado: string | null;
+    seccion: string | null;
+  };
+  resumen: ResumenCompromiso;
+  cuotas: CuotaDetalle[];
+};
