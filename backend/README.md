@@ -22,9 +22,10 @@ src/main/java/com/galiledu/
 ├── compartido/     seguridad (JWT, CORS), errores y paginación comunes
 ├── personas/       persona (datos personales, validaciones RF-12/14/23)
 ├── usuarios/       login (HU-1), gestión de cuentas (HU-6, HU-9, HU-12) y carga masiva (HU-8)
-└── estudiantes/    inscripción del estudiante (HU-7)
+├── estudiantes/    inscripción del estudiante (HU-7)
+└── academico/      catálogo académico: plan curricular (HU-52, HU-53, HU-54)
 
-Configuración, matrícula, pagos y catálogo académico: por ahora solo tienen BD (paquetes por crear).
+Configuración, matrícula y pagos: por ahora solo tienen BD (paquetes por crear).
 
 Cada módulo:  dominio/ (entidades JPA, reglas)  aplicacion/ (servicios + DTOs)
               infraestructura/ (repositorios)   web/ (controladores REST)
@@ -75,6 +76,17 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/estudiantes/inscripciones` | Admin, Personal adm. | Registra la inscripción completa (5 pasos). El grado va como código del catálogo: `gradoCodigo` = `PRI-1`…`PRI-6`, `SEC-1`…`SEC-5` |
 | POST | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Sube o reemplaza el documento del apoderado (multipart: `tipo`, `archivo`; PDF/JPG/PNG ≤ 5 MB) |
 | GET | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Descarga ese documento |
+| GET | `/areas/resumen` | Personal adm. | Áreas, competencias y cursos activos de los registrados, y el año escolar activo (CI-14) |
+| GET | `/areas` | Personal adm. | Áreas en orden, con cuántas competencias y cursos tiene cada una |
+| GET / PUT | `/areas/{id}` | Personal adm. | Detalle con competencias y cursos / edición `{nombre, descripcion}` (HU-52) |
+| POST | `/areas` | Personal adm. | Nueva área (HU-52). 409 si el nombre ya existe |
+| POST | `/areas/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado del área |
+| POST | `/areas/{id}/competencias` | Personal adm. | Nueva competencia `{nombre, descripcion}` (HU-53). 409 si el área está inactiva o el nombre ya está en el área |
+| PUT | `/competencias/{id}` | Personal adm. | Edita la competencia |
+| POST | `/competencias/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado de la competencia |
+| POST | `/areas/{id}/cursos` | Personal adm. | Nuevo curso `{nombre, grados: ["SEC-1", …]}` (HU-54). 409 si el área está inactiva o el nombre ya existe |
+| PUT | `/cursos/{id}` | Personal adm. | Edita el curso. 409 si quita un grado en el que ya está planificado |
+| POST | `/cursos/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado del curso |
 
 ## Formato
 

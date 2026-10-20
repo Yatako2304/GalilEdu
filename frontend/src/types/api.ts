@@ -313,3 +313,62 @@ export type HorarioSeccion = {
   bloques: BloqueHorario[];
   sesiones: SesionClase[];
 };
+
+// ---------- Catálogo académico · Plan curricular (HU-52, HU-53, HU-54) ----------
+// Iguales a backend/.../academico/aplicacion/DtosAcademico.java
+
+export type EstadoArea = 'ACTIVA' | 'INACTIVA';
+export type EstadoCurso = 'ACTIVO' | 'INACTIVO';
+
+export type ResumenPlanCurricular = {
+  areasActivas: number;
+  areasRegistradas: number;
+  competenciasActivas: number;
+  competenciasRegistradas: number;
+  cursosActivos: number;
+  cursosRegistrados: number;
+  anioActivo: number | null;
+};
+
+export type AreaResumen = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  estado: EstadoArea;
+  competencias: number;
+  cursos: number;
+};
+
+export type CompetenciaResumen = {
+  id: string;
+  areaId: string;
+  nombre: string;
+  descripcion: string | null;
+  orden: number;
+  estado: EstadoArea;
+};
+
+export type CursoResumen = {
+  id: string;
+  areaId: string;
+  nombre: string;
+  estado: EstadoCurso;
+  /** Códigos del catálogo de grados en orden: PRI-1…PRI-6, SEC-1…SEC-5. */
+  grados: string[];
+};
+
+export type AreaDetalle = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  estado: EstadoArea;
+  competencias: CompetenciaResumen[];
+  cursos: CursoResumen[];
+};
+
+export type SolicitudArea = { nombre: string; descripcion: string | null };
+export type SolicitudCompetencia = {
+  nombre: string;
+  descripcion: string | null;
+};
+export type SolicitudCurso = { nombre: string; grados: string[] };
