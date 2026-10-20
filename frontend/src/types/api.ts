@@ -399,3 +399,126 @@ export type SolicitudTablaConversion = {
   vigenteDesde: string;
   niveles: { nivel: NivelLogro; notaDesde: number; notaHasta: number }[];
 };
+
+// ---------- Catálogo académico · Plan de evaluación (HU-56) ----------
+
+export type Escala = 'VIGESIMAL' | 'CUALITATIVA';
+export type ReglaNota =
+  | 'PROMEDIO_SIMPLE'
+  | 'PROMEDIO_PONDERADO'
+  | 'NIVEL_MAS_FRECUENTE'
+  | 'ULTIMO_NIVEL';
+export type Consolidacion = 'PROMEDIO_PERIODOS' | 'ULTIMO_PERIODO';
+export type EstadoAnioEscolar = 'PLANIFICADO' | 'ACTIVO' | 'CERRADO';
+
+export type AnioEscolarOpcion = {
+  id: string;
+  anio: number;
+  estado: EstadoAnioEscolar;
+};
+
+export type DocenteOpcion = { id: string; nombre: string };
+
+export type SeccionPlan = { id: string; nombre: string; tutor: string | null };
+
+export type PlanCursoResumen = {
+  id: string;
+  cursoId: string;
+  curso: string;
+  area: string;
+  horasSemanales: number;
+  competencias: number;
+  /** null = sin configurar; MIXTA si sus competencias usan las dos escalas. */
+  escala: Escala | 'MIXTA' | null;
+  docentesAsignados: number;
+};
+
+export type PlanGrado = {
+  anioEscolarId: string;
+  anio: number;
+  estadoAnio: EstadoAnioEscolar;
+  gradoCodigo: string;
+  grado: string;
+  /** Bloques semanales de la estructura horaria; null si el año aún no la tiene. */
+  bloquesDisponibles: number | null;
+  horasAsignadas: number;
+  competenciasEvaluadas: number;
+  cursosConfigurados: number;
+  docentesAsignados: number;
+  docentesRequeridos: number;
+  secciones: SeccionPlan[];
+  cursos: PlanCursoResumen[];
+};
+
+export type CompetenciaPlan = {
+  competenciaId: string;
+  nombre: string;
+  estado: EstadoArea;
+  seleccionada: boolean;
+  escala: Escala;
+  reglaNota: ReglaNota;
+  consolidacion: Consolidacion;
+};
+
+export type PlanCursoDetalle = {
+  id: string;
+  cursoId: string;
+  curso: string;
+  area: string;
+  anio: number;
+  grado: string;
+  horasSemanales: number;
+  actualizadoEn: string;
+  competencias: CompetenciaPlan[];
+};
+
+export type CursoDisponible = {
+  id: string;
+  nombre: string;
+  area: string;
+  competencias: CompetenciaResumen[];
+};
+
+export type OrigenPlan = {
+  anioEscolarId: string;
+  anio: number;
+  gradoCodigo: string;
+  grado: string;
+  cursos: number;
+  horas: number;
+  competencias: number;
+};
+
+export type SolicitudCompetenciaPlan = {
+  competenciaId: string;
+  escala: Escala;
+  reglaNota: ReglaNota;
+  consolidacion: Consolidacion;
+};
+
+export type SolicitudPlanCurso = {
+  anioEscolarId: string;
+  gradoCodigo: string;
+  cursoId: string;
+  horasSemanales: number;
+  competencias: SolicitudCompetenciaPlan[];
+};
+
+export type SolicitudConfigurarCurso = {
+  horasSemanales: number;
+  competencias: SolicitudCompetenciaPlan[];
+};
+
+export type DocenteSeccion = {
+  seccionId: string;
+  seccion: string;
+  tutor: string | null;
+  docenteId: string | null;
+};
+
+export type SolicitudCopiaPlan = {
+  anioEscolarId: string;
+  gradoCodigo: string;
+  origenAnioEscolarId: string;
+  origenGradoCodigo: string;
+};

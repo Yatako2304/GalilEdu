@@ -1,7 +1,7 @@
 # Catálogo académico
 
 - **HU:** HU-52, 53, 54, 55, 56 (iteración 1) · HU-43 (3)
-- **Estado:** 🚧 en desarrollo: plan curricular (HU-52, 53, 54) y escala de calificación (HU-55) hechos; faltan HU-56 y HU-43
+- **Estado:** 🚧 en desarrollo: la iteración 1 (HU-52 a HU-56) está hecha; falta HU-43 (iteración 3)
 - **Última actualización:** 2026-10-20
 
 ## Alcance
@@ -29,7 +29,7 @@ En ambos casos manda Figma.
 | HU-53 | Competencias de un área | ✅ | Nombre único dentro del área. Se agregan al final de la lista. |
 | HU-54 | Cursos de un área y sus grados | ✅ | Nombre único y al menos un grado. No se puede quitar un grado en el que el curso ya está en un plan de evaluación. |
 | HU-55 | Escala de calificación | ✅ | Las versiones no se editan: se agrega una nueva con su fecha "Vigente desde", que no puede ser anterior a hoy. Si la fecha es futura, queda **programada**. El estado (vigente, programada, anterior) se calcula con la fecha de hoy y no se guarda. **Diferencia con Figma:** debajo de la tabla vigente agregamos "Otras versiones" (programadas y anteriores), porque CI-23 no muestra dónde ver la versión programada ni el historial que menciona el modal. |
-| HU-56 | Plan de evaluación | ⏳ | Pestaña con `ModulePlaceholder`. |
+| HU-56 | Plan de evaluación | ✅ | Por grado y año: agregar cursos con sus horas y competencias, configurarlos, quitarlos, asignar docentes por sección y copiar el plan de otro grado o año a un grado vacío (sin docentes). Un año CERRADO es de solo lectura. **Diferencias con Figma:** (1) el modal de configuración también muestra "Agregación de ítems", como el de "Agregar curso", porque la BD exige la regla de nota (`regla_nota`); (2) la columna Estado dice "Configurado" o "Sin configurar" (curso sin competencias); (3) el menú de cada curso tiene "Configurar competencias", "Asignar docentes" y "Quitar del plan"; (4) "Copiar plan" solo aparece cuando el grado está vacío. |
 | HU-43 | Ambientes físicos | ⏳ | Iteración 3. |
 
 ## Pantallas (Figma)
@@ -67,9 +67,15 @@ En ambos casos manda Figma.
 - C empieza en 0, cada nivel empieza justo después del anterior (sin vacíos ni cruces) y AD termina en 20.
 - La fecha "Vigente desde" no es anterior a hoy y no se repite.
 
-**Lo validará el servicio (HU-56, HU-43):**
-- La competencia de un plan debe ser del área del curso.
-- La sección del docente debe ser del mismo grado y año.
+**Lo valida el plan de evaluación (`ServicioPlanEvaluacion`):**
+- Solo se agregan cursos activos, de áreas activas, que se dictan en el grado y que aún no están en su plan.
+- Las competencias son del área del curso, no se repiten y su agregación corresponde a la escala. Una competencia inactiva solo se conserva si el curso ya la evaluaba.
+- La suma de horas del grado no supera los bloques semanales de la estructura horaria principal de su nivel (bloques por día × días lectivos). Si el año aún no tiene estructura, no hay límite.
+- La sección del docente es del mismo grado y año, y el docente es un usuario activo con rol Docente.
+- Solo se copia a un grado sin cursos. Se copian los cursos y las competencias que siguen activos, sin los docentes.
+- Un año escolar CERRADO no se modifica.
+
+**Lo validará el servicio (HU-43):**
 - Al bajar el aforo de un aula, no puede quedar por debajo de la matrícula de sus secciones (RF-111).
 
 **Datos de prueba:**
@@ -97,17 +103,26 @@ Rol: Personal administrativo. La tabla completa está en [backend/README.md](../
 | GET | `/tablas-conversion` | Versiones de la tabla de conversión, de la más nueva a la más antigua, con su estado |
 | GET | `/tablas-conversion/vigente` | La versión que rige hoy |
 | POST | `/tablas-conversion` | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}` (HU-55) |
+| GET | `/planes-evaluacion?anioEscolarId=&grado=` | Plan del grado: tarjetas, secciones y cursos (HU-56) |
+| GET | `/planes-evaluacion/anios` · `/docentes` | Años escolares para el selector · docentes activos |
+| GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Cursos que se pueden agregar, con las competencias activas de su área |
+| GET | `/planes-evaluacion/origenes?anioEscolarId=&grado=` | Planes que se pueden copiar |
+| POST | `/planes-evaluacion` · `/planes-evaluacion/copias` | Agrega un curso al plan · copia otro plan a un grado vacío |
+| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Detalle del curso en el plan · horas y competencias · quitarlo |
+| GET · PUT | `/planes-evaluacion/{id}/docentes` | Docente de cada sección |
 
 ## Código
 
-- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioPlanCurricular`, `ServicioEscalaCalificacion`, `AreaController`, `CompetenciaController`, `CursoController`, `TablaConversionController`).
-- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular`, `EscalaCalificacion` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas.
-- Pruebas: `backend/src/test/java/com/galiledu/academico/` (`PlanCurricularIT`, `EscalaCalificacionIT`, `dominio/TablaConversionTests`) y `frontend/src/features/catalogo-academico/components/__tests__/`.
+- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioPlanCurricular`, `ServicioEscalaCalificacion`, `ServicioPlanEvaluacion` y sus controladores). Lo que se lee de otros módulos (años, secciones, estructura horaria, docentes) está en `infraestructura/ConsultasCatalogo.java`.
+- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular`, `EscalaCalificacion`, `PlanEvaluacion` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas.
+- Pruebas: `backend/src/test/java/com/galiledu/academico/` (`PlanCurricularIT`, `EscalaCalificacionIT`, `PlanEvaluacionIT`, `dominio/TablaConversionTests`) y `frontend/src/features/catalogo-academico/components/__tests__/`.
 
 ## Pendientes
 
 - [x] Backend y frontend del plan curricular (HU-52, 53, 54).
 - [x] Escala de calificación (HU-55).
-- [ ] HU-56 Plan de evaluación y HU-43 Ambientes físicos.
+- [x] Plan de evaluación (HU-56).
+- [ ] HU-43 Ambientes físicos (iteración 3).
+- [ ] Cuando Configuración tenga su servicio, `ConsultasCatalogo` debería llamarlo en vez de leer sus tablas con SQL.
 - [ ] Comparar con Figma los textos exactos de los modales del plan curricular (placeholders y descripciones).
 - [ ] Faltan las competencias de las demás áreas en los datos de prueba. Se cargan desde la pantalla.
