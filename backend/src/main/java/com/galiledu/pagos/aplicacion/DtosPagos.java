@@ -73,4 +73,32 @@ public final class DtosPagos {
 
 	public record RetiroRegistrado(int cuotasAnuladas) {
 	}
+
+	/** HU-37 · Figma "P2 · Estado de cuenta — Todos los alumnos": tarjetas y tabla de compromisos del año. */
+	public record EstadoCuentaGeneral(
+			int anio,
+			BigDecimal comprometido,
+			BigDecimal cobrado,
+			int porcentajeCobrado,
+			BigDecimal deudaVencida,
+			int cuotasVencidas,
+			int alumnosConDeuda,
+			List<AlumnoEstadoCuenta> alumnos) {
+	}
+
+	/** Una fila de P2. {@code antiguedad}: años con matrícula en el colegio hasta ese año. */
+	public record AlumnoEstadoCuenta(
+			UUID estudianteId,
+			UUID compromisoId,
+			String nombre,
+			String numeroDocumento,
+			String apoderado,
+			String seccion,
+			int antiguedad,
+			EstadoCompromiso estadoCompromiso,
+			BigDecimal totalAnual,
+			BigDecimal capitalPagado,
+			BigDecimal deudaVencida,
+			int cuotasVencidas) {
+	}
 }
