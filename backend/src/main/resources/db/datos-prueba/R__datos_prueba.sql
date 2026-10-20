@@ -76,3 +76,67 @@ INSERT INTO estudiantes.contacto_emergencia (id, estudiante_id, nombre_completo,
 VALUES ('40000000-0000-0000-0000-000000000001', '20000000-0000-0000-0000-000000000001', 'Rosa Medina Torres', 'Abuela', '987654321', 1),
        ('40000000-0000-0000-0000-000000000002', '20000000-0000-0000-0000-000000000001', 'Pedro Rojas Medina', 'Tío', '976543210', 2)
 ON CONFLICT DO NOTHING;
+
+-- ---------------------------------------------------------------------
+-- Configuración del año escolar (V4), con los valores de las pantallas de Figma.
+-- 2026 activo (bimestral) y 2027 planificado (trimestral).
+-- ---------------------------------------------------------------------
+INSERT INTO configuracion.anio_escolar (id, anio, fecha_inicio, fecha_fin, regimen, estado)
+VALUES
+    ('30000000-0000-0000-0000-000000002026', 2026, '2026-03-02', '2026-12-18', 'BIMESTRAL', 'ACTIVO'),
+    ('30000000-0000-0000-0000-000000002027', 2027, '2027-03-01', '2027-12-17', 'TRIMESTRAL', 'PLANIFICADO')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO configuracion.periodo_academico (anio_escolar_id, numero, nombre, fecha_inicio, fecha_fin, fecha_limite_notas, estado)
+VALUES
+    ('30000000-0000-0000-0000-000000002026', 1, 'I Bimestre',   '2026-03-02', '2026-05-08', '2026-05-15', 'CERRADO'),
+    ('30000000-0000-0000-0000-000000002026', 2, 'II Bimestre',  '2026-05-18', '2026-07-24', '2026-07-31', 'CERRADO'),
+    ('30000000-0000-0000-0000-000000002026', 3, 'III Bimestre', '2026-08-03', '2026-10-09', '2026-10-16', 'EN_CURSO'),
+    ('30000000-0000-0000-0000-000000002026', 4, 'IV Bimestre',  '2026-10-19', '2026-12-18', '2026-12-23', 'PLANIFICADO'),
+    ('30000000-0000-0000-0000-000000002027', 1, 'I Trimestre',  '2027-03-01', '2027-05-31', '2027-06-05', 'PLANIFICADO'),
+    ('30000000-0000-0000-0000-000000002027', 2, 'II Trimestre', '2027-06-08', '2027-09-07', '2027-09-12', 'PLANIFICADO'),
+    ('30000000-0000-0000-0000-000000002027', 3, 'III Trimestre','2027-09-15', '2027-12-17', '2027-12-22', 'PLANIFICADO')
+ON CONFLICT DO NOTHING;
+
+-- Secciones A y B de secundaria en 2026. María Fernández (Docente + Tutor) es tutora de 1.° A.
+INSERT INTO configuracion.seccion (anio_escolar_id, grado_codigo, nombre, capacidad_maxima, tutor_id)
+SELECT '30000000-0000-0000-0000-000000002026', g.codigo, s.nombre, 30,
+       CASE WHEN g.codigo = 'SEC-1' AND s.nombre = 'A' THEN '10000000-0000-0000-0000-000000000004'::uuid END
+FROM configuracion.grado g CROSS JOIN (VALUES ('A'), ('B')) AS s (nombre)
+WHERE g.nivel = 'SECUNDARIA'
+ON CONFLICT DO NOTHING;
+
+INSERT INTO configuracion.estructura_horaria (id, anio_escolar_id, codigo, descripcion, dias_lectivos, hora_entrada,
+                                              bloques_por_dia, duracion_bloque_min)
+VALUES
+    ('31000000-0000-0000-0000-000000000001', '30000000-0000-0000-0000-000000002026', 'EH-PRI-26',
+     'Primaria · jornada de mañana', ARRAY['LUN', 'MAR', 'MIE', 'JUE', 'VIE'], '07:45', 8, 45),
+    ('31000000-0000-0000-0000-000000000002', '30000000-0000-0000-0000-000000002026', 'EH-SEC-26',
+     'Secundaria · jornada de mañana', ARRAY['LUN', 'MAR', 'MIE', 'JUE', 'VIE'], '07:30', 9, 45)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO configuracion.receso (estructura_horaria_id, despues_de_bloque, duracion_min)
+VALUES
+    ('31000000-0000-0000-0000-000000000001', 3, 20),
+    ('31000000-0000-0000-0000-000000000001', 6, 15),
+    ('31000000-0000-0000-0000-000000000002', 3, 20),
+    ('31000000-0000-0000-0000-000000000002', 6, 15)
+ON CONFLICT DO NOTHING;
+
+-- Matrícula 2027 habilitada (15/09/2026 – 31/10/2026) y tarifario 2027 en configuración.
+INSERT INTO matricula.periodo_matricula (anio_escolar_id, inicio, cierre, bloquear_por_morosidad, permitir_extemporanea, estado)
+VALUES ('30000000-0000-0000-0000-000000002027', '2026-09-15 08:00-05', '2026-10-31 23:59-05', TRUE, TRUE, 'HABILITADO')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO pagos.tarifario (id, anio_escolar_id, monto_cuota_ingreso, monto_matricula, vencimiento_matricula, monto_pension,
+                             cantidad_cuotas, dias_gracia, recargo_porcentaje, tope_recargo_porcentaje)
+VALUES ('32000000-0000-0000-0000-000000002027', '30000000-0000-0000-0000-000000002027', 500, 450, '2027-02-28', 620, 10, 5, 2, 10)
+ON CONFLICT DO NOTHING;
+
+INSERT INTO pagos.cuota_tarifario (tarifario_id, numero, nombre, fecha_vencimiento)
+SELECT '32000000-0000-0000-0000-000000002027', m.numero, 'Pensión de ' || m.mes,
+       CASE WHEN m.numero = 10 THEN DATE '2027-12-15'
+            ELSE (DATE '2027-03-01' + make_interval(months => m.numero) - INTERVAL '1 day')::date END
+FROM (VALUES (1, 'marzo'), (2, 'abril'), (3, 'mayo'), (4, 'junio'), (5, 'julio'), (6, 'agosto'),
+             (7, 'septiembre'), (8, 'octubre'), (9, 'noviembre'), (10, 'diciembre')) AS m (numero, mes)
+ON CONFLICT DO NOTHING;

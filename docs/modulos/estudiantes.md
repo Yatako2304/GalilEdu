@@ -1,6 +1,5 @@
 # Estudiantes (inscripción)
 
-- **Pareja:** P2 · Luis Yataco y pareja
 - **HU:** HU-7 (iteración 1)
 - **Estado:** 🚧 hecha; falta una prueba manual completa desde la pantalla
 - **Última actualización:** 2026-10-19

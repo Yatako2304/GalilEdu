@@ -10,7 +10,7 @@ Toda la documentación del proyecto vive aquí, **en español** y en Markdown. E
 | [`/backend/README.md`](../backend/README.md) | ¿Cómo está armado el backend? Configuración, estructura, lista de endpoints. | Quien agrega endpoints o variables de entorno. |
 | [`/frontend/README.md`](../frontend/README.md) | ¿Cómo está armado el frontend? Estructura, design system, scripts. | Quien cambia la estructura o agrega librerías. |
 | [`guias/`](guias/) | ¿**Cómo** hago algo? (contribuir, crear un módulo, escribir pruebas) | Cuando cambia el proceso del equipo. |
-| [`modulos/`](modulos/README.md) | ¿**Qué** hace cada módulo y en qué estado está? (HU, pantallas, tablas, endpoints) | La pareja dueña del módulo, en cada PR que lo cambie. |
+| [`modulos/`](modulos/README.md) | ¿**Qué** hace cada módulo y en qué estado está? (HU, pantallas, tablas, endpoints) | Quien trabaja en el módulo, en cada PR que lo cambie. |
 | [`decisiones/`](decisiones/) | ¿**Por qué** se hizo así? (decisiones y alternativas descartadas) | Quien toma una decisión que afecta a otros. |
 | [`/AGENTS.md`](../AGENTS.md) | Instrucciones para asistentes de IA (Claude, Copilot, Cursor…). | Cuando cambian las reglas del equipo. |
 | [`/.github/pull_request_template.md`](../.github/pull_request_template.md) | Checklist que aparece al abrir un PR. | Cuando cambian los requisitos para integrar. |

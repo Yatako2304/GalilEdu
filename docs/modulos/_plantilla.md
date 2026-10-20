@@ -1,6 +1,5 @@
 # <Nombre del módulo>
 
-- **Pareja:** <P1, P2…> · <integrantes>
 - **HU:** <HU-xx, HU-yy>
 - **Estado:** ⏳ por empezar | 🚧 en desarrollo | ✅ terminado
 - **Última actualización:** AAAA-MM-DD
