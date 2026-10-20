@@ -1,19 +1,18 @@
 package com.galiledu.matricula;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.math.BigDecimal;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import com.galiledu.PruebaIntegracion;
 
 /**
- * Tablas de matrícula y pagos (V5): las relaciones entre módulos y las reglas que guarda la propia BD.
+ * Tablas de matrícula y pagos (V5 y V7): las relaciones entre módulos y las reglas que guarda la propia BD. Cada prueba
+ * de rechazo usa un dato válido en todo lo demás y exige la restricción exacta que protege la regla.
  */
 class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 	private static final String SOFIA = "20000000-0000-0000-0000-000000000002";
@@ -24,6 +23,11 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 	private static final String DESCUENTO_BECA = "52000000-0000-0000-0000-000000000002";
 	private static final String DESCUENTO_ACUERDO = "52000000-0000-0000-0000-000000000003";
 	private static final String LUIS_PAREDES = "10000000-0000-0000-0000-000000000003";
+
+	/** Sección de 2026 del grado indicado (A), para que las matrículas de prueba sean válidas en todo lo demás. */
+	private static final String SECCION_2026 = """
+			(SELECT id FROM configuracion.seccion
+			 WHERE anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND grado_codigo = ? AND nombre = 'A')""";
 
 	@Autowired
 	private JdbcClient jdbc;
@@ -73,36 +77,54 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 
 	@Test
 	void unEstudianteTieneUnaSolaMatriculaPorAnio() {
-		assertThatThrownBy(() -> jdbc.sql("""
-				INSERT INTO matricula.matricula (estudiante_id, anio_escolar_id, grado_codigo, tipo_estudiante)
-				VALUES (?::uuid, ?::uuid, 'SEC-4', 'CONTINUADOR')""").param(SOFIA).param(ANIO_2026).update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+		// Matrícula completa y válida (con sección); solo falla porque Sofía ya está matriculada en 2026.
+		rechazaPor("uq_matricula_estudiante_anio",
+				() -> jdbc
+						.sql("""
+								INSERT INTO matricula.matricula (estudiante_id, anio_escolar_id, grado_codigo, seccion_id, tipo_estudiante)
+								VALUES (?::uuid, ?::uuid, 'SEC-4', %s, 'CONTINUADOR')"""
+								.formatted(SECCION_2026))
+						.param(SOFIA).param(ANIO_2026).param("SEC-4").update());
 	}
 
 	@Test
 	void unaMatriculaMatriculadaNecesitaSuCodigo() {
-		assertThatThrownBy(() -> jdbc.sql("""
-				INSERT INTO matricula.matricula (estudiante_id, anio_escolar_id, grado_codigo, tipo_estudiante, estado)
-				VALUES (?::uuid, ?::uuid, 'SEC-1', 'NUEVO', 'MATRICULADO')""").param(MATEO).param(ANIO_2026)
-				.update()).isInstanceOf(DataIntegrityViolationException.class);
+		// Mateo no tiene matrícula en 2026: el único problema es que está MATRICULADO sin código.
+		rechazaPor("ck_matricula_codigo",
+				() -> jdbc
+						.sql("""
+								INSERT INTO matricula.matricula (estudiante_id, anio_escolar_id, grado_codigo, seccion_id, tipo_estudiante,
+								                                 estado)
+								VALUES (?::uuid, ?::uuid, 'SEC-1', %s, 'NUEVO', 'MATRICULADO')"""
+								.formatted(SECCION_2026))
+						.param(MATEO).param(ANIO_2026).param("SEC-1").update());
+	}
+
+	@Test
+	void unaMatriculaConSuCodigoSiSeRegistra() {
+		// Contraprueba: el mismo dato con código se acepta (la regla anterior no rechaza todo).
+		int filas = jdbc
+				.sql("""
+						INSERT INTO matricula.matricula (estudiante_id, anio_escolar_id, grado_codigo, seccion_id, tipo_estudiante,
+						                                 estado, codigo)
+						VALUES (?::uuid, ?::uuid, 'SEC-1', %s, 'NUEVO', 'MATRICULADO', 'MAT-2026-9999')"""
+						.formatted(SECCION_2026))
+				.param(MATEO).param(ANIO_2026).param("SEC-1").update();
+		assertThat(filas).isEqualTo(1);
 	}
 
 	@Test
 	void noSeGeneraDosVecesLaCuotaDeMatricula() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ux_cuota_una_matricula", () -> jdbc.sql("""
 				INSERT INTO pagos.cuota (compromiso_id, concepto_codigo, nombre, monto_base, fecha_vencimiento)
 				VALUES (?::uuid, 'MATRICULA', 'Matrícula 2026', 420, '2026-02-28')""").param(COMPROMISO_SOFIA)
-				.update()).isInstanceOf(DataIntegrityViolationException.class);
+				.update());
 	}
 
 	@Test
 	void unDescuentoDeVariosAniosRebajaLasCuotasYElMontoFinalSeCalculaSolo() {
 		// V7: el descuento es del estudiante, con vigencia de julio 2026 a diciembre 2028 ("por 3 años" en Figma).
-		String descuento = jdbc.sql("""
-				INSERT INTO pagos.descuento_aplicado (estudiante_id, descuento_id, nombre, porcentaje, vigencia_desde,
-				                                      vigencia_hasta, motivo)
-				VALUES (?::uuid, ?::uuid, 'Acuerdo particular', 10, '2026-07-01', '2028-12-31', 'Prueba')
-				RETURNING id::text""").param(SOFIA).param(DESCUENTO_ACUERDO).query(String.class).single();
+		String descuento = aplicarDescuento(DESCUENTO_ACUERDO, "2028-12-31");
 		jdbc.sql("""
 				UPDATE pagos.cuota SET monto_descuento = 60, descuento_aplicado_id = ?::uuid
 				WHERE compromiso_id = ?::uuid AND numero = 10""").param(descuento).param(COMPROMISO_SOFIA).update();
@@ -112,19 +134,15 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 
 	@Test
 	void unaCuotaRebajadaDiceQueDescuentoLaRebajo() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ck_cuota_descuento", () -> jdbc.sql("""
 				UPDATE pagos.cuota SET monto_descuento = 60 WHERE compromiso_id = ?::uuid AND numero = 10""")
-				.param(COMPROMISO_SOFIA).update()).isInstanceOf(DataIntegrityViolationException.class);
+				.param(COMPROMISO_SOFIA).update());
 	}
 
 	@Test
 	void soloHayUnDescuentoActivoPorEstudiante() {
-		String aplicar = """
-				INSERT INTO pagos.descuento_aplicado (estudiante_id, descuento_id, nombre, porcentaje, vigencia_desde, motivo)
-				VALUES (?::uuid, ?::uuid, 'Beca institucional', 50, '2026-03-01', 'Prueba')""";
-		jdbc.sql(aplicar).param(SOFIA).param(DESCUENTO_BECA).update();
-		assertThatThrownBy(() -> jdbc.sql(aplicar).param(SOFIA).param(DESCUENTO_BECA).update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+		aplicarDescuento(DESCUENTO_BECA, null);
+		rechazaPor("ux_descuento_aplicado_activo", () -> aplicarDescuento(DESCUENTO_ACUERDO, null));
 	}
 
 	@Test
@@ -133,20 +151,31 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 				INSERT INTO pagos.orden_pago (codigo, usuario_id, monto_total, referencia_pasarela)
 				VALUES (?, ?::uuid, 600, 'TX999001')""";
 		jdbc.sql(orden).param("OP-1").param(LUIS_PAREDES).update();
-		assertThatThrownBy(() -> jdbc.sql(orden).param("OP-2").param(LUIS_PAREDES).update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+		// Otra orden (OP-2) con la misma transacción de la pasarela.
+		rechazaPor("orden_pago_referencia_pasarela_key",
+				() -> jdbc.sql(orden).param("OP-2").param(LUIS_PAREDES).update());
 	}
 
 	@Test
 	void unDocumentoDeMatriculaNoPuedePesarMasDe10Mb() {
-		assertThatThrownBy(() -> jdbc
-				.sql("""
-						INSERT INTO matricula.documento_matricula (matricula_id, documento_requerido_id, nombre_archivo, tipo_mime,
-						                                           tamano_bytes, contenido)
-						SELECT ?::uuid, id, 'ficha.pdf', 'application/pdf', 10485761, '\\x00'::bytea
-						FROM matricula.documento_requerido LIMIT 1""")
-				.param(MATRICULA_SOFIA).update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+		rechazaPor("ck_documento_matricula_tamano", () -> jdbc.sql("""
+				INSERT INTO matricula.documento_matricula (matricula_id, documento_requerido_id, nombre_archivo,
+				                                           tipo_mime, tamano_bytes, contenido)
+				SELECT ?::uuid, d.id, 'ficha.pdf', 'application/pdf', 10485761, '\\x00'::bytea
+				FROM matricula.documento_requerido d
+				JOIN matricula.periodo_matricula p ON p.id = d.periodo_matricula_id
+				WHERE p.anio_escolar_id = ?::uuid AND d.orden = 1""").param(MATRICULA_SOFIA).param(ANIO_2026)
+				.update());
+	}
+
+	private String aplicarDescuento(String descuentoId, String vigenciaHasta) {
+		return jdbc.sql("""
+				INSERT INTO pagos.descuento_aplicado (estudiante_id, descuento_id, nombre, porcentaje, vigencia_desde,
+				                                      vigencia_hasta, motivo)
+				SELECT ?::uuid, d.id, d.nombre, 10, '2026-07-01', ?::date, 'Prueba'
+				FROM pagos.descuento d WHERE d.id = ?::uuid
+				RETURNING id::text""").param(SOFIA).param(vigenciaHasta).param(descuentoId).query(String.class)
+				.single();
 	}
 
 	private int contar(String sql, Object... parametros) {

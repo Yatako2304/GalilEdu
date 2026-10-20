@@ -1,11 +1,9 @@
 package com.galiledu;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /** Ajustes de integración entre módulos (V7). */
@@ -38,17 +36,18 @@ class IntegracionModulosIT extends PruebaIntegracion {
 
 	@Test
 	void elGradoDelEstudianteEsDelCatalogoYYaNoHayInicial() {
-		assertThatThrownBy(() -> jdbc.sql("UPDATE estudiantes.estudiante SET grado_codigo = 'INI-5' WHERE id = ?::uuid")
-				.param(MATEO).update()).isInstanceOf(DataIntegrityViolationException.class);
+		rechazaPor("estudiante_grado_codigo_fkey",
+				() -> jdbc.sql("UPDATE estudiantes.estudiante SET grado_codigo = 'INI-5' WHERE id = ?::uuid")
+						.param(MATEO).update());
 	}
 
 	@Test
 	void hayUnaSolaEstructuraPrincipalPorNivelYAnio() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ux_estructura_horaria_principal", () -> jdbc.sql("""
 				INSERT INTO configuracion.estructura_horaria (anio_escolar_id, codigo, dias_lectivos, hora_entrada,
 				                                              bloques_por_dia, duracion_bloque_min, nivel)
 				VALUES (?::uuid, 'EH-SEC-OTRA', ARRAY['LUN'], '08:00', 6, 45, 'SECUNDARIA')""").param(ANIO_2026)
-				.update()).isInstanceOf(DataIntegrityViolationException.class);
+				.update());
 	}
 
 	@Test
@@ -63,8 +62,8 @@ class IntegracionModulosIT extends PruebaIntegracion {
 
 	@Test
 	void elCodigoDeMatriculaTieneElFormatoMatAnioNumero() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ck_matricula_formato_codigo", () -> jdbc.sql("""
 				UPDATE matricula.matricula SET codigo = 'MAT-2026-05A-0142'
-				WHERE codigo = 'MAT-2026-0002'""").update()).isInstanceOf(DataIntegrityViolationException.class);
+				WHERE codigo = 'MAT-2026-0002'""").update());
 	}
 }

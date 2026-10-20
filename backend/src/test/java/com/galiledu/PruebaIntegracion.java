@@ -1,11 +1,14 @@
 package com.galiledu;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.AbstractMockHttpServletRequestBuilder;
@@ -60,5 +63,15 @@ public abstract class PruebaIntegracion {
 
 	protected static <B extends AbstractMockHttpServletRequestBuilder<B>> B conToken(B peticion, String token) {
 		return conToken(peticion, token, null);
+	}
+
+	/**
+	 * Exige que la BD rechace la operación por la restricción indicada (su nombre en la migración), y no por otra. Así
+	 * la prueba no pasa por accidente si el dato falla por un motivo distinto (p. ej. una columna obligatoria vacía).
+	 */
+	protected static void rechazaPor(String restriccion, ThrowingCallable operacion) {
+		assertThatThrownBy(operacion)
+				.isInstanceOf(DataIntegrityViolationException.class)
+				.hasMessageContaining(restriccion);
 	}
 }
