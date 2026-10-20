@@ -39,13 +39,24 @@ Contraseña de todos: **`Galiledu2026`**.
 | --- | --- | --- |
 | `U20260001` | Selene Curo | Administrador |
 | `U20260002` | Ana Torres | Personal administrativo |
-| `U20260003` | Luis Paredes | Apoderado (padre de Mateo) |
-| `U20260004` | María Fernández | Docente + Tutor (prueba el selector de rol) |
+| `U20260003` | Luis Paredes | Apoderado de Sofía y Mateo (tiene una pensión vencida) |
+| `U20260004` | María Fernández | Docente + Tutor (prueba el selector de rol); dicta Álgebra y es tutora de 1.° A |
 | `U20260005` | Carlos Ramírez | Coordinador |
-| `U20260006` | Valeria Sánchez | Estudiante (matriculada en 5.° A de 2026) |
+| `U20260006` | Valeria Sánchez | Estudiante con cuenta propia, matriculada en 5.° A de 2026 |
 | `U20260007` | Leonardo Montoya | Administrador **inactivo** (no puede entrar) |
 
-Están en `backend/src/main/resources/db/datos-prueba/R__datos_prueba.sql`. Para empezar de cero, borra y vuelve a crear la base `galiledu`.
+### Otros datos de prueba
+
+| Dato | Para probar |
+| --- | --- |
+| Año 2026 **activo** (bimestral, 4 periodos) y 2027 **planificado** (trimestral) | Configuración del año escolar |
+| Secciones A y B de 1.° a 5.° de secundaria en 2026 y 2027; estructuras EH-PRI-26 y EH-SEC-26; 8 ambientes | Secciones, horario, aulas |
+| Sofía Paredes: **matriculada** en 4.° A de 2026, pensiones pagadas hasta agosto y la de **septiembre vencida** | Compromiso de pago, constancias, morosidad, deuda que bloquea la matrícula |
+| Mateo Paredes: inscrito, con **sección reservada** en 1.° A de 2027 | Flujo de matrícula 2027 |
+| Matrícula 2027 **habilitada** (15/09 – 31/10/2026) y tarifario 2027 en configuración | Periodo de matrícula, tarifario |
+| Catálogo de descuentos, 12 áreas, 16 cursos y el plan 2026 de 1.° de secundaria | Pagos y catálogo académico |
+
+Todo está en `backend/src/main/resources/db/datos-prueba/R__datos_prueba.sql`. Para empezar de cero, borra y vuelve a crear la base `galiledu`.
 
 ---
 

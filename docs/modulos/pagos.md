@@ -61,5 +61,6 @@ Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
 ## Pendientes
 
 - [ ] Backend y frontend.
+- [x] La pensión vence el último día de cada mes (diciembre, el 15), como en el tarifario; el "día 05" del cronograma del apoderado no se usa. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).
 - [ ] Pasarela de pagos real: hoy la orden solo guarda la referencia y el resultado; falta elegir el proveedor.
 - [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).
