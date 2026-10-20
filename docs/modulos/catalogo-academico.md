@@ -21,6 +21,8 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 
 En ambos casos manda Figma.
 
+El porqué de las decisiones del módulo (límite de horas, versiones de la tabla de conversión, copia de planes, años cerrados) está en [2026-10-20-galleta-catalogo-academico.md](../decisiones/2026-10-20-galleta-catalogo-academico.md).
+
 ## Historias de usuario
 
 | HU | Qué | Estado | Notas |
