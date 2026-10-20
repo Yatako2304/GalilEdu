@@ -1,18 +1,16 @@
 package com.galiledu.configuracion;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import com.galiledu.PruebaIntegracion;
 
 /**
- * Tablas de la configuración del año escolar (V4). Verifica que las reglas que guarda la propia BD
- * se cumplan, para que el servicio pueda confiar en ellas.
+ * Tablas de la configuración del año escolar (V4). Cada prueba de rechazo exige la restricción exacta que protege la
+ * regla, así no pasa por accidente si el dato falla por otro motivo.
  */
 class EsquemaConfiguracionIT extends PruebaIntegracion {
 	private static final String ANIO_2026 = "30000000-0000-0000-0000-000000002026";
@@ -36,43 +34,41 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 
 	@Test
 	void soloUnAnioPuedeEstarActivo() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		// 2030 es un año válido; solo falla porque 2026 ya está activo.
+		rechazaPor("ux_anio_escolar_un_activo", () -> jdbc.sql("""
 				INSERT INTO configuracion.anio_escolar (anio, fecha_inicio, fecha_fin, regimen, estado)
-				VALUES (2030, '2030-03-01', '2030-12-15', 'BIMESTRAL', 'ACTIVO')""").update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				VALUES (2030, '2030-03-01', '2030-12-15', 'BIMESTRAL', 'ACTIVO')""").update());
 	}
 
 	@Test
 	void noSeRepiteElNombreDeUnaSeccionEnElMismoGrado() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("uq_seccion_nombre", () -> jdbc.sql("""
 				INSERT INTO configuracion.seccion (anio_escolar_id, grado_codigo, nombre, capacidad_maxima)
-				VALUES (?::uuid, 'SEC-1', 'A', 30)""").param(ANIO_2026).update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				VALUES (?::uuid, 'SEC-1', 'A', 30)""").param(ANIO_2026).update());
 	}
 
 	@Test
 	void laCapacidadDeUnaSeccionVaDe1A45() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ck_seccion_capacidad", () -> jdbc.sql("""
 				INSERT INTO configuracion.seccion (anio_escolar_id, grado_codigo, nombre, capacidad_maxima)
-				VALUES (?::uuid, 'SEC-1', 'Z', 46)""").param(ANIO_2026).update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				VALUES (?::uuid, 'SEC-1', 'Z', 46)""").param(ANIO_2026).update());
 	}
 
 	@Test
 	void dosCuotasDelTarifarioNoPuedenVencerElMismoDia() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		// La cuota 11 no existe; solo falla porque el 31/03/2027 ya lo usa la pensión de marzo.
+		rechazaPor("uq_cuota_tarifario_vencimiento", () -> jdbc.sql("""
 				INSERT INTO pagos.cuota_tarifario (tarifario_id, numero, nombre, fecha_vencimiento)
-				VALUES (?::uuid, 11, 'Cuota repetida', '2027-03-31')""").param(TARIFARIO_2027).update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				VALUES (?::uuid, 11, 'Cuota repetida', '2027-03-31')""").param(TARIFARIO_2027).update());
 	}
 
 	@Test
 	void losDiasLectivosSoloAceptanLunesASabado() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ck_estructura_horaria_dias", () -> jdbc.sql("""
 				INSERT INTO configuracion.estructura_horaria (anio_escolar_id, codigo, dias_lectivos, hora_entrada,
-				                                              bloques_por_dia, duracion_bloque_min)
-				VALUES (?::uuid, 'EH-DOM', ARRAY['DOM'], '08:00', 4, 45)""").param(ANIO_2026).update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				                                              bloques_por_dia, duracion_bloque_min, nivel, es_principal)
+				VALUES (?::uuid, 'EH-DOM', ARRAY['DOM'], '08:00', 4, 45, 'SECUNDARIA', FALSE)""").param(ANIO_2026)
+				.update());
 	}
 
 	private int contar(String sql, Object... parametros) {

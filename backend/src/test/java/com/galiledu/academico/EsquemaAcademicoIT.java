@@ -1,11 +1,9 @@
 package com.galiledu.academico;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 import com.galiledu.PruebaIntegracion;
@@ -53,40 +51,36 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 
 	@Test
 	void noSePlanificaUnCursoEnUnGradoDondeNoSeDicta() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("fk_plan_curso_grado", () -> jdbc.sql("""
 				INSERT INTO academico.plan_curso (anio_escolar_id, grado_codigo, curso_id, horas_semanales)
 				SELECT ?::uuid, 'PRI-1', id, 3 FROM academico.curso WHERE nombre = 'Álgebra'""").param(ANIO_2026)
-				.update()).isInstanceOf(DataIntegrityViolationException.class);
+				.update());
 	}
 
 	@Test
 	void unaCompetenciaCualitativaNoUsaReglasNumericas() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ck_plan_competencia_regla", () -> jdbc.sql("""
 				UPDATE academico.plan_competencia SET escala = 'CUALITATIVA'
-				WHERE regla_nota = 'PROMEDIO_PONDERADO'""").update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				WHERE regla_nota = 'PROMEDIO_PONDERADO'""").update());
 	}
 
 	@Test
 	void losRangosDeLaTablaDeConversionVanDe0A20() {
-		assertThatThrownBy(() -> jdbc.sql("""
-				UPDATE academico.tabla_conversion_nivel SET nota_hasta = 21 WHERE nivel = 'AD'""").update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+		rechazaPor("ck_tabla_conversion_rango", () -> jdbc.sql("""
+				UPDATE academico.tabla_conversion_nivel SET nota_hasta = 21 WHERE nivel = 'AD'""").update());
 	}
 
 	@Test
 	void unAulaRegularAdmiteComoMaximo45() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ck_ambiente_aforo", () -> jdbc.sql("""
 				INSERT INTO configuracion.ambiente (codigo, nombre, tipo, aforo_maximo)
-				VALUES ('A-999', 'Aula grande', 'AULA_REGULAR', 46)""").update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				VALUES ('A-999', 'Aula grande', 'AULA_REGULAR', 46)""").update());
 	}
 
 	@Test
 	void elCodigoDeUnAmbienteNoSeRepite() {
-		assertThatThrownBy(() -> jdbc.sql("""
+		rechazaPor("ambiente_codigo_key", () -> jdbc.sql("""
 				INSERT INTO configuracion.ambiente (codigo, nombre, tipo, aforo_maximo)
-				VALUES ('LAB-01', 'Laboratorio de robótica', 'ESPACIO_ESPECIAL', 25)""").update())
-				.isInstanceOf(DataIntegrityViolationException.class);
+				VALUES ('LAB-01', 'Laboratorio de robótica', 'ESPACIO_ESPECIAL', 25)""").update());
 	}
 }
