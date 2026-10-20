@@ -1,8 +1,8 @@
 # Catálogo académico
 
 - **HU:** HU-52, 53, 54, 55, 56 (iteración 1) · HU-43 (3)
-- **Estado:** ⏳ por empezar: las tablas y los datos de prueba ya están; faltan backend y frontend
-- **Última actualización:** 2026-10-19
+- **Estado:** 🚧 en desarrollo: el plan curricular (HU-52, 53, 54) está hecho; faltan HU-55, HU-56 y HU-43
+- **Última actualización:** 2026-10-20
 
 ## Alcance
 
@@ -20,6 +20,17 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 - RF-126 pide una descripción obligatoria para el área; en Figma es opcional.
 
 En ambos casos manda Figma.
+
+## Historias de usuario
+
+| HU | Qué | Estado | Notas |
+| --- | --- | --- | --- |
+| HU-52 | Áreas curriculares | ✅ | Nombre único, sin importar mayúsculas. Descripción opcional. Al desactivar un área, sus competencias y cursos quedan como están. |
+| HU-53 | Competencias de un área | ✅ | Nombre único dentro del área. Se agregan al final de la lista. |
+| HU-54 | Cursos de un área y sus grados | ✅ | Nombre único y al menos un grado. No se puede quitar un grado en el que el curso ya está en un plan de evaluación. |
+| HU-55 | Escala de calificación | ⏳ | Pestaña con `ModulePlaceholder`. |
+| HU-56 | Plan de evaluación | ⏳ | Pestaña con `ModulePlaceholder`. |
+| HU-43 | Ambientes físicos | ⏳ | Iteración 3. |
 
 ## Pantallas (Figma)
 
@@ -46,7 +57,12 @@ En ambos casos manda Figma.
 | `academico.tabla_conversion`, `tabla_conversion_nivel` | Versiones de la tabla de conversión, con su fecha de vigencia y los rangos de AD, A, B y C (de 0 a 20). |
 | `configuracion.ambiente` | Aula regular (aforo máximo 45) o espacio especial, con sus recursos. Además, `configuracion.seccion.ambiente_id` indica el aula de cada sección. |
 
-**Lo valida el servicio:**
+**Lo valida el servicio del plan curricular (`ServicioPlanCurricular`):**
+- Los nombres no se repiten, sin importar mayúsculas: ni las áreas, ni los cursos, ni las competencias dentro de su área.
+- A un área inactiva no se le agregan competencias ni cursos: primero hay que reactivarla.
+- Un curso no puede perder un grado en el que ya está planificado (lo exige `fk_plan_curso_grado`).
+
+**Lo validará el servicio (HU-55, HU-56, HU-43):**
 - La competencia de un plan debe ser del área del curso.
 - La sección del docente debe ser del mismo grado y año.
 - Los rangos de la tabla de conversión deben cubrir de 0 a 20 sin vacíos ni cruces.
@@ -61,7 +77,29 @@ En ambos casos manda Figma.
 - La tabla de conversión vigente desde 2025 y la versión programada para 2027.
 - 8 ambientes. 1.° A usa el aula A-101 y 1.° B la A-102.
 
+## API
+
+Rol: Personal administrativo. La tabla completa está en [backend/README.md](../../backend/README.md#api-prefijo-api).
+
+| Método | Ruta | Qué hace |
+| --- | --- | --- |
+| GET | `/areas/resumen` | Tarjetas de CI-14 (activos de los registrados) y el año escolar activo |
+| GET | `/areas` | Áreas con su número de competencias y cursos |
+| GET | `/areas/{id}` | Área con sus competencias y cursos (grados en el orden del catálogo) |
+| POST · PUT | `/areas` · `/areas/{id}` | Crea o edita un área |
+| POST | `/areas/{id}/competencias` · `/areas/{id}/cursos` | Agrega una competencia o un curso al área |
+| PUT | `/competencias/{id}` · `/cursos/{id}` | Edita una competencia o un curso |
+| POST | `/{areas,competencias,cursos}/{id}/desactivar` · `/reactivar` | Cambia el estado |
+
+## Código
+
+- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioPlanCurricular`, `AreaController`, `CompetenciaController`, `CursoController`).
+- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas.
+- Pruebas: `backend/src/test/java/com/galiledu/academico/PlanCurricularIT.java` y `frontend/src/features/catalogo-academico/components/__tests__/`.
+
 ## Pendientes
 
-- [ ] Backend y frontend.
+- [x] Backend y frontend del plan curricular (HU-52, 53, 54).
+- [ ] HU-55 Escala de calificación, HU-56 Plan de evaluación y HU-43 Ambientes físicos.
+- [ ] Comparar con Figma los textos exactos de los modales del plan curricular (placeholders y descripciones).
 - [ ] Faltan las competencias de las demás áreas en los datos de prueba. Se cargan desde la pantalla.
