@@ -1,5 +1,5 @@
 -- =====================================================================
--- V4 · Configuración del año escolar (pareja P3: HU-74, HU-75, HU-44, HU-23, HU-34)
+-- V4 · Configuración del año escolar (HU-74, HU-75, HU-44, HU-23, HU-34)
 -- Figma > Personal Administrativo:
 --   "CI-01 / CI-03 / CI-06 · Año escolar" y "Modal - Nuevo año escolar"     (HU-74)
 --   "CI-09 · Secciones por grado y tutores" y "Modal - Nueva sección"       (HU-75)

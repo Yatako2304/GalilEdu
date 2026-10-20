@@ -11,7 +11,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import com.galiledu.PruebaIntegracion;
 
 /**
- * Tablas de la configuración del año escolar (V4) para la pareja P3. Verifica que las reglas que guarda la propia BD
+ * Tablas de la configuración del año escolar (V4). Verifica que las reglas que guarda la propia BD
  * se cumplan, para que el servicio pueda confiar en ellas.
  */
 class EsquemaConfiguracionIT extends PruebaIntegracion {

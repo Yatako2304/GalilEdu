@@ -1,6 +1,5 @@
 # Usuarios y acceso
 
-- **Pareja:** P2 · Luis Yataco y pareja
 - **HU:** HU-1, HU-6, HU-9, HU-12 (iteración 1) · HU-8, HU-10 (2) · HU-3, HU-4, HU-5 (3)
 - **Estado:** 🚧 en desarrollo
 - **Última actualización:** 2026-10-19

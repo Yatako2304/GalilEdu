@@ -1,6 +1,5 @@
 # Configuración del año escolar
 
-- **Pareja:** P3 · *tablas preparadas por P1 (BD y conexiones)*
 - **HU:** HU-74, HU-75, HU-23, HU-34, HU-44 (iteración 1)
 - **Estado:** ⏳ por empezar: las tablas y los datos de prueba ya están; faltan backend y frontend
 - **Última actualización:** 2026-10-19
@@ -72,7 +71,7 @@ Figma pone todo esto bajo **Configuraciones › Año escolar**; el tarifario est
 
 ## Pendientes
 
-- [ ] Backend y frontend de las 5 HU (pareja P3).
+- [ ] Backend y frontend de las 5 HU.
 - [ ] La sección no indica qué estructura horaria usa. Se agregará cuando Horarios lo necesite (Iteración 2).
 - [ ] `estudiantes.estudiante` guarda el nivel y el grado como texto ("1.° grado"). Cuando Matrícula asigne secciones, se enlazará con `configuracion.grado`.
 - [ ] Los documentos requeridos de la matrícula (HU-21/22) no están en esta migración.
