@@ -66,6 +66,11 @@ export const paths = {
       },
       matricula: route(ADMINISTRATIVO, 'matricula'),
       pensiones: route(ADMINISTRATIVO, 'pensiones'),
+      compromisoPago: {
+        path: 'pensiones/:estudianteId',
+        getHref: (estudianteId: string) =>
+          `${ADMINISTRATIVO}/pensiones/${estudianteId}`,
+      },
       anioEscolar: route(ADMINISTRATIVO, 'anio-escolar'),
       competencias: route(ADMINISTRATIVO, 'competencias'),
       ambientes: route(ADMINISTRATIVO, 'ambientes'),

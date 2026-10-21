@@ -98,6 +98,14 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/planes-evaluacion/copias` | Personal adm. · Coordinador | Copia `{anioEscolarId, gradoCodigo, origenAnioEscolarId, origenGradoCodigo}` a un grado vacío, sin docentes |
 | GET · PUT · DELETE | `/planes-evaluacion/{id}` | Personal adm. · Coordinador | Detalle del curso en el plan · `{horasSemanales, competencias}` · quitarlo del plan. 409 si el año está cerrado |
 | GET · PUT | `/planes-evaluacion/{id}/docentes` | Personal adm. · Coordinador | Docente de cada sección `{asignaciones: [{seccionId, docenteId}]}` (`docenteId` null = sin docente) |
+| GET | `/pagos/estado-cuenta?anio=` | Personal adm. | P2 · Estado de cuenta (HU-37): compromisos del año (por defecto el ACTIVO) con sección, antigüedad y deuda vencida de cada alumno, y las tarjetas comprometido, cobrado (%), deuda vencida y cuotas vencidas (solo compromisos VIGENTES) |
+| GET | `/pagos/estudiantes/{estudianteId}/compromisos` | Personal adm. | Compromisos de pago del estudiante, del año más reciente al más antiguo (selector de P8, HU-37) |
+| GET | `/pagos/compromisos/{id}` | Personal adm. | Resumen (total anual, capital pagado, descuento, pensión, saldo) y cronograma de cuotas; `vencida` se calcula con los días de gracia (HU-37, RF-84, RF-91) |
+| POST | `/pagos/matriculas/{matriculaId}/cronograma` | Personal adm. | Genera las pensiones del tarifario para una matrícula MATRICULADO: solo las que vencen después de la matrícula y con el descuento activo (RF-81, RF-82). 409 si ya existen (RF-83), si no está matriculado o si el tarifario no está confirmado |
+| POST | `/pagos/compromisos/{id}/retiro` | Personal adm. | Anula las pensiones PENDIENTES que vencen después de `{fechaRetiro}`; las vencidas y parciales se mantienen (RF-85). Devuelve `{cuotasAnuladas}` |
+| GET | `/configuracion/anios-escolares` | Personal adm. | Años escolares, del más reciente al más antiguo, con régimen, estado y cantidad de periodos (arreglo simple, HU-74) |
+| GET | `/configuracion/anios-escolares/{id}` | Personal adm. | El año con sus periodos ordenados por número (HU-74) |
+| POST | `/configuracion/anios-escolares` | Personal adm. | Crea un año PLANIFICADO `{anio, fechaInicio, fechaFin, regimen}` y genera sus 4 bimestres o 3 trimestres con fechas sugeridas. 400 si `fechaFin` no es posterior a `fechaInicio`, si el año es muy corto o está fuera de 2000–2100; 409 si el año ya existe |
 
 ## Formato
 

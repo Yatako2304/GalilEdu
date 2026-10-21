@@ -118,6 +118,10 @@ export const createAppRouter = (queryClient: QueryClient) =>
               () => import('./routes/app/administrativo/pensiones'),
             ],
             [
+              paths.app.administrativo.compromisoPago.path,
+              () => import('./routes/app/administrativo/compromiso-pago'),
+            ],
+            [
               paths.app.administrativo.anioEscolar.path,
               () => import('./routes/app/administrativo/anio-escolar'),
             ],

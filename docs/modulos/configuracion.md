@@ -1,8 +1,8 @@
 # Configuración del año escolar
 
 - **HU:** HU-74, HU-75, HU-23, HU-34, HU-44 (iteración 1)
-- **Estado:** ⏳ por empezar: las tablas y los datos de prueba ya están; faltan backend y frontend
-- **Última actualización:** 2026-10-19
+- **Estado:** 🚧 en curso: las tablas y los datos de prueba ya están; el backend de HU-74 cubre listar, ver y crear un año (sin activar, cerrar ni cambiar régimen); falta el resto del backend y el frontend
+- **Última actualización:** 2026-10-20
 
 ## Alcance
 
@@ -24,7 +24,7 @@ Figma pone todo esto bajo **Configuraciones › Año escolar**; el tarifario est
 
 | HU | Qué | Estado | Notas |
 | --- | --- | --- | --- |
-| HU-74 | Año escolar y sus periodos | ⏳ | Estados: año PLANIFICADO/ACTIVO/CERRADO; periodo PLANIFICADO/EN_CURSO/CERRADO. Mientras el año está planificado se puede cambiar el régimen, y los periodos se regeneran. |
+| HU-74 | Año escolar y sus periodos | 🚧 | Estados: año PLANIFICADO/ACTIVO/CERRADO; periodo PLANIFICADO/EN_CURSO/CERRADO. Mientras el año está planificado se puede cambiar el régimen, y los periodos se regeneran. **Hecho:** listar, detalle y crear (nace PLANIFICADO con sus periodos). **Falta:** activar, cerrar, cambiar régimen, editar periodo y reutilizar configuración. |
 | HU-75 | Secciones por grado | ⏳ | Nombre único por grado y año. Capacidad de 1 a 45. Tutor y cotutor opcionales. |
 | HU-44 | Estructura horaria | ⏳ | Los horarios de bloques y recesos se **calculan**, no se guardan. La jornada termina como máximo a las 18:00 (lo valida el servicio). |
 | HU-23 | Fechas de matrícula regular | ⏳ | Un periodo por año. Una vez HABILITADO no se edita, solo se deshabilita. Las vacantes por sección son `seccion.capacidad_maxima`. |
@@ -63,14 +63,26 @@ Figma pone todo esto bajo **Configuraciones › Año escolar**; el tarifario est
 - Estructuras EH-PRI-26 y EH-SEC-26.
 - 2027 PLANIFICADO (trimestral), con la matrícula habilitada del 15/09 al 31/10/2026 y el tarifario en configuración (S/ 450 la matrícula y 10 pensiones de S/ 620).
 
+## Endpoints (HU-74, rol Personal administrativo)
+
+| Método | Ruta | Qué hace |
+| --- | --- | --- |
+| GET | `/configuracion/anios-escolares` | Lista de años (arreglo simple) con régimen, estado y cantidad de periodos |
+| GET | `/configuracion/anios-escolares/{id}` | Detalle del año con sus periodos |
+| POST | `/configuracion/anios-escolares` | Crea un año PLANIFICADO `{anio, fechaInicio, fechaFin, regimen}` y genera sus periodos |
+
+**Cómo se generan los periodos:** BIMESTRAL = 4 y TRIMESTRAL = 3, numerados desde 1 ("I Bimestre"…). Los días del año se reparten en partes iguales (los sobrantes van a los primeros periodos); quedan seguidos, sin cruzarse, y el último termina en `fechaFin`. La fecha límite de notas es `fin + 5 días` (`PeriodoAcademico.DIAS_LIMITE_NOTAS`, **pendiente de confirmar** con el colegio). Un año necesita al menos 2 días por periodo (8 bimestral, 6 trimestral).
+
 ## Código
 
-- Backend: `backend/src/main/java/com/galiledu/configuracion/` (por crear)
+- Backend: `backend/src/main/java/com/galiledu/configuracion/` (`AnioEscolar`, `PeriodoAcademico`, `ServicioAnioEscolar`, `AnioEscolarController`)
 - Frontend: `frontend/src/features/configuracion/` (por crear)
-- Pruebas: `backend/src/test/java/com/galiledu/configuracion/EsquemaConfiguracionIT.java` (reglas de la BD)
+- Pruebas: `backend/src/test/java/com/galiledu/configuracion/` (`AnioEscolarIT` la API, `dominio/AnioEscolarTests` el reparto de fechas y `EsquemaConfiguracionIT` las reglas de la BD)
 
 ## Pendientes
 
-- [ ] Backend y frontend de las 5 HU.
+- [ ] HU-74: activar, cerrar, cambiar régimen, editar periodo y reutilizar configuración (copiar secciones, estructuras y plan de evaluación).
+- [ ] Backend de HU-75, HU-44, HU-23 y HU-34, y el frontend de las 5 HU.
+- [ ] Confirmar con el colegio los 5 días entre el fin del periodo y la fecha límite de notas.
 - [ ] `estudiantes.estudiante` guarda el nivel y el grado como texto ("1.° grado"). Cuando Matrícula asigne secciones, se enlazará con `configuracion.grado`.
 - [ ] Los documentos requeridos de la matrícula (HU-21/22) no están en esta migración.
