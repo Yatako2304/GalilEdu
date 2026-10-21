@@ -1,27 +1,40 @@
 package com.galiledu.configuracion;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.time.LocalDate;
 
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
-import com.galiledu.PruebaIntegracion;
 import com.jayway.jsonpath.JsonPath;
 
-/** HU-74: listar, ver y crear años escolares con sus periodos, y permisos. */
-class AnioEscolarIT extends PruebaIntegracion {
+/**
+ * HU-74: listar, ver y crear años escolares con sus periodos, y permisos. El reloj está fijo en 15/09/2026, así que el
+ * III Bimestre de 2026 está en curso.
+ */
+class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 	private static final String ID_2026 = "30000000-0000-0000-0000-000000002026";
+	private static final String ID_2027 = "30000000-0000-0000-0000-000000002027";
 	private static final String RUTA = "/configuracion/anios-escolares";
 
 	@Autowired
 	private EntityManager entityManager;
+	@Autowired
+	private JdbcClient jdbc;
+	@Autowired
+	private RelojPrueba reloj;
 
 	private String personal;
 
@@ -103,6 +116,15 @@ class AnioEscolarIT extends PruebaIntegracion {
 	}
 
 	@Test
+	void elEstadoDelPeriodoSeCalculaConLasFechasYElRelojDeHoy() throws Exception {
+		mvc.perform(conToken(get(RUTA + "/" + ID_2026), personal))
+				.andExpect(jsonPath("$.periodos[0].estado").value("CERRADO"))
+				.andExpect(jsonPath("$.periodos[1].estado").value("CERRADO"))
+				.andExpect(jsonPath("$.periodos[2].estado").value("EN_CURSO"))
+				.andExpect(jsonPath("$.periodos[3].estado").value("PLANIFICADO"));
+	}
+
+	@Test
 	void detalleDeUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/00000000-0000-0000-0000-000000000000"), personal))
 				.andExpect(status().isNotFound())
@@ -153,7 +175,204 @@ class AnioEscolarIT extends PruebaIntegracion {
 			mvc.perform(conToken(get(RUTA), token)).andExpect(status().isForbidden());
 			mvc.perform(conToken(get(RUTA + "/" + ID_2026), token)).andExpect(status().isForbidden());
 			mvc.perform(conToken(post(RUTA), token, cuerpo)).andExpect(status().isForbidden());
+			mvc.perform(conToken(get(RUTA + "/actual"), token)).andExpect(status().isForbidden());
+			mvc.perform(conToken(get(RUTA + "/" + ID_2027 + "/requisitos"), token)).andExpect(status().isForbidden());
+			mvc.perform(conToken(put(RUTA + "/" + ID_2027), token, fechas("2027-03-08", "2027-12-10")))
+					.andExpect(status().isForbidden());
+			mvc.perform(conToken(put(RUTA + "/" + ID_2027 + "/regimen"), token, regimen("BIMESTRAL")))
+					.andExpect(status().isForbidden());
 		}
-		mvc.perform(get(RUTA)).andExpect(status().isUnauthorized());
+		mvc.perform(get(RUTA + "/actual")).andExpect(status().isUnauthorized());
+		mvc.perform(
+				put(RUTA + "/" + ID_2027).contentType("application/json").content(fechas("2027-03-08", "2027-12-10")))
+				.andExpect(status().isUnauthorized());
+	}
+
+	// --- GET /actual (CI-01) ---
+
+	@Test
+	void elAnioActualTraeElPeriodoEnCursoLosConteosYElAvance() throws Exception {
+		mvc.perform(conToken(get(RUTA + "/actual"), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.anio").value(2026))
+				.andExpect(jsonPath("$.periodoEnCurso.nombre").value("III Bimestre"))
+				.andExpect(jsonPath("$.periodoEnCurso.fechaLimiteNotas").value("2026-10-16"))
+				.andExpect(jsonPath("$.periodoEnCurso.diasParaLimiteNotas").value(31))
+				.andExpect(jsonPath("$.periodoNotasAbiertas").value(nullValue()))
+				.andExpect(jsonPath("$.proximoPeriodo.nombre").value("IV Bimestre"))
+				.andExpect(jsonPath("$.proximoPeriodo.fechaInicio").value("2026-10-19"))
+				.andExpect(jsonPath("$.seccionesActivas").value(10))
+				.andExpect(jsonPath("$.alumnosMatriculados").value(2))
+				.andExpect(jsonPath("$.estructurasHorarias").value(2))
+				.andExpect(jsonPath("$.codigosEstructuras[0]").value("EH-PRI-26"))
+				.andExpect(jsonPath("$.avance").value(67));
+	}
+
+	@Test
+	void entreDosPeriodosLaCardMuestraElPlazoDeNotasYElProximoPeriodo() throws Exception {
+		reloj.fijarEn(LocalDate.of(2026, 10, 12));
+
+		mvc.perform(conToken(get(RUTA + "/actual"), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.periodoEnCurso").value(nullValue()))
+				.andExpect(jsonPath("$.periodoNotasAbiertas.nombre").value("III Bimestre"))
+				.andExpect(jsonPath("$.periodoNotasAbiertas.fechaFin").value("2026-10-09"))
+				.andExpect(jsonPath("$.periodoNotasAbiertas.diasParaLimiteNotas").value(4))
+				.andExpect(jsonPath("$.proximoPeriodo.nombre").value("IV Bimestre"));
+	}
+
+	@Test
+	void sinAnioActivoNoHayAnioActual() throws Exception {
+		jdbc.sql("UPDATE configuracion.anio_escolar SET estado = 'CERRADO' WHERE anio = 2026").update();
+
+		mvc.perform(conToken(get(RUTA + "/actual"), personal))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("No hay un año escolar activo."));
+	}
+
+	// --- PUT /{id} (CI-06 · Editar) ---
+
+	@Test
+	void editaLasFechasDeUnAnioPlanificadoYRegeneraSusPeriodos() throws Exception {
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027), personal, fechas("2027-03-08", "2027-12-10")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.fechaInicio").value("2027-03-08"))
+				.andExpect(jsonPath("$.fechaFin").value("2027-12-10"))
+				.andExpect(jsonPath("$.periodos.length()").value(3))
+				.andExpect(jsonPath("$.periodos[0].fechaInicio").value("2027-03-08"))
+				.andExpect(jsonPath("$.periodos[0].id").isNotEmpty())
+				.andExpect(jsonPath("$.periodos[2].fechaFin").value("2027-12-10"));
+		assertThat(jdbc.sql("SELECT count(*) FROM configuracion.periodo_academico WHERE anio_escolar_id = ?::uuid")
+				.param(ID_2027).query(Integer.class).single()).isEqualTo(3);
+	}
+
+	@Test
+	void editarElAnioValidaLasFechas() throws Exception {
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027), personal, fechas("2027-12-10", "2027-03-08")))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("La fecha de fin debe ser posterior a la fecha de inicio."));
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027), personal, fechas("2027-03-01", "2027-03-03")))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("El año escolar es muy corto para dividirlo en 3 periodos."));
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027), personal, "{\"fechaFin\":\"2027-12-10\"}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Ingresa la fecha de inicio."));
+	}
+
+	@Test
+	void soloSeEditaUnAnioPlanificado() throws Exception {
+		mvc.perform(conToken(put(RUTA + "/" + ID_2026), personal, fechas("2026-03-02", "2026-12-18")))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("Solo se puede modificar un año planificado."));
+		assertThat(jdbc.sql("SELECT count(*) FROM configuracion.periodo_academico WHERE anio_escolar_id = ?::uuid")
+				.param(ID_2026).query(Integer.class).single()).isEqualTo(4);
+	}
+
+	@Test
+	void editarUnAnioQueNoExisteDa404() throws Exception {
+		mvc.perform(conToken(put(RUTA + "/00000000-0000-0000-0000-000000000000"), personal,
+				fechas("2027-03-08", "2027-12-10")))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
+	}
+
+	// --- PUT /{id}/regimen (CI-06 · Cambiar régimen) ---
+
+	@Test
+	void cambiaElRegimenDeUnAnioPlanificadoYRegeneraLosPeriodosConFechasSugeridas() throws Exception {
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027 + "/regimen"), personal, regimen("BIMESTRAL")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.regimen").value("BIMESTRAL"))
+				.andExpect(jsonPath("$.periodos.length()").value(4))
+				.andExpect(jsonPath("$.periodos[0].nombre").value("I Bimestre"))
+				.andExpect(jsonPath("$.periodos[0].fechaInicio").value("2027-03-01"))
+				.andExpect(jsonPath("$.periodos[3].fechaFin").value("2027-12-17"))
+				.andExpect(jsonPath("$.periodos[3].id").isNotEmpty());
+		assertThat(jdbc.sql("SELECT count(*) FROM configuracion.periodo_academico WHERE anio_escolar_id = ?::uuid")
+				.param(ID_2027).query(Integer.class).single()).isEqualTo(4);
+	}
+
+	@Test
+	void soloSeCambiaElRegimenDeUnAnioPlanificado() throws Exception {
+		mvc.perform(conToken(put(RUTA + "/" + ID_2026 + "/regimen"), personal, regimen("TRIMESTRAL")))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("Solo se puede modificar un año planificado."));
+	}
+
+	@Test
+	void elRegimenEsObligatorioYDebeSerValido() throws Exception {
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027 + "/regimen"), personal, "{}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Elige el régimen de periodos."));
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027 + "/regimen"), personal, regimen("SEMESTRAL")))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void cambiarElRegimenDeUnAnioQueNoExisteDa404() throws Exception {
+		mvc.perform(conToken(put(RUTA + "/00000000-0000-0000-0000-000000000000/regimen"), personal,
+				regimen("BIMESTRAL")))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
+	}
+
+	// --- GET /{id}/requisitos (CI-06 · Antes de activar el año) ---
+
+	@Test
+	void losRequisitosDelAnioPlanificadoMuestranLosObligatoriosYLosRecomendados() throws Exception {
+		mvc.perform(conToken(get(RUTA + "/" + ID_2027 + "/requisitos"), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.puedeActivar").value(false))
+				.andExpect(jsonPath("$.obligatorios.length()").value(3))
+				.andExpect(jsonPath("$.obligatorios[0].texto").value("Periodos académicos definidos"))
+				.andExpect(jsonPath("$.obligatorios[0].cumplido").value(true))
+				.andExpect(jsonPath("$.obligatorios[0].detalle").value("3 trimestres del 01/03/2027 al 17/12/2027"))
+				.andExpect(jsonPath("$.obligatorios[1].detalle").value("10 secciones activas en 5 grados"))
+				.andExpect(jsonPath("$.obligatorios[2].cumplido").value(false))
+				.andExpect(jsonPath("$.recomendados.length()").value(2))
+				.andExpect(jsonPath("$.recomendados[0].detalle").value("10 de 10 secciones aún no tienen tutor"))
+				.andExpect(jsonPath("$.recomendados[1].detalle").value("0 de 5 grados con cursos asignados"));
+	}
+
+	@Test
+	void unAnioConSusRequisitosObligatoriosPuedeActivarse() throws Exception {
+		mvc.perform(conToken(get(RUTA + "/" + ID_2026 + "/requisitos"), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.puedeActivar").value(true))
+				.andExpect(jsonPath("$.obligatorios[2].detalle").value("EH-PRI-26 · EH-SEC-26"));
+	}
+
+	@Test
+	void losRequisitosDeUnAnioQueNoExisteDan404() throws Exception {
+		mvc.perform(conToken(get(RUTA + "/00000000-0000-0000-0000-000000000000/requisitos"), personal))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
+	}
+
+	// --- Listado y detalle ampliados ---
+
+	@Test
+	void elListadoYElDetalleTraenLasCantidadesDeSeccionesYEstructuras() throws Exception {
+		mvc.perform(conToken(get(RUTA), personal))
+				.andExpect(jsonPath("$[1].seccionesActivas").value(10))
+				.andExpect(jsonPath("$[1].estructurasHorarias").value(2))
+				.andExpect(jsonPath("$[0].estructurasHorarias").value(0));
+		mvc.perform(conToken(get(RUTA + "/" + ID_2026), personal))
+				.andExpect(jsonPath("$.cantidadSecciones").value(10))
+				.andExpect(jsonPath("$.cantidadEstructuras").value(2))
+				.andExpect(jsonPath("$.periodos[0].duracionSemanas").value(10))
+				.andExpect(jsonPath("$.periodos[3].duracionSemanas").value(9))
+				.andExpect(jsonPath("$.periodos[2].registroNotasAbierto").value(true))
+				.andExpect(jsonPath("$.periodos[0].registroNotasAbierto").value(false));
+	}
+
+	private static String fechas(String inicio, String fin) {
+		return """
+				{"fechaInicio":"%s","fechaFin":"%s"}""".formatted(inicio, fin);
+	}
+
+	private static String regimen(String regimen) {
+		return """
+				{"regimen":"%s"}""".formatted(regimen);
 	}
 }

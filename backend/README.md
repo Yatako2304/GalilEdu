@@ -31,7 +31,7 @@ Cada módulo:  dominio/ (entidades JPA, reglas)  aplicacion/ (servicios + DTOs)
               infraestructura/ (repositorios)   web/ (controladores REST)
 
 src/main/resources/db/
-├── migration/      V1…V7 (ver la tabla de abajo)
+├── migration/      V1…V8 (ver la tabla de abajo)
 └── datos-prueba/   R__datos_prueba.sql (usuarios por rol, año 2026/2027, familia Paredes con matrícula y pagos…)
 ```
 
@@ -48,8 +48,9 @@ Reglas: un esquema de BD por módulo; los controladores no tocan repositorios di
 | `V5__matricula_y_pagos.sql` | `matricula`, `pagos` | Matrícula, documentos, compromiso de pago, cuotas, descuentos, órdenes de pago, pagos y constancias |
 | `V6__catalogo_academico.sql` | `academico`, `configuracion` | Áreas, competencias, cursos, plan de evaluación, tabla de conversión, ambientes |
 | `V7__ajustes_integracion.sql` | varios | Grado del estudiante del catálogo, estado ACTIVO/RETIRADO, estructura horaria por nivel, descuento por estudiante, formato del código de matrícula |
+| `V8__configuracion_periodo_sin_estado.sql` | `configuracion` | Elimina `periodo_academico.estado`: el estado del periodo se calcula con las fechas |
 
-Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V8…).
+Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V9…).
 
 ## API (prefijo `/api`)
 
@@ -103,9 +104,14 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/pagos/compromisos/{id}` | Personal adm. | Resumen (total anual, capital pagado, descuento, pensión, saldo) y cronograma de cuotas; `vencida` se calcula con los días de gracia (HU-37, RF-84, RF-91) |
 | POST | `/pagos/matriculas/{matriculaId}/cronograma` | Personal adm. | Genera las pensiones del tarifario para una matrícula MATRICULADO: solo las que vencen después de la matrícula y con el descuento activo (RF-81, RF-82). 409 si ya existen (RF-83), si no está matriculado o si el tarifario no está confirmado |
 | POST | `/pagos/compromisos/{id}/retiro` | Personal adm. | Anula las pensiones PENDIENTES que vencen después de `{fechaRetiro}`; las vencidas y parciales se mantienen (RF-85). Devuelve `{cuotasAnuladas}` |
-| GET | `/configuracion/anios-escolares` | Personal adm. | Años escolares, del más reciente al más antiguo, con régimen, estado y cantidad de periodos (arreglo simple, HU-74) |
-| GET | `/configuracion/anios-escolares/{id}` | Personal adm. | El año con sus periodos ordenados por número (HU-74) |
+| GET | `/configuracion/anios-escolares` | Personal adm. | Años escolares, del más reciente al más antiguo, con régimen, estado, cantidad de periodos, secciones activas y estructuras horarias (arreglo simple, HU-74) |
+| GET | `/configuracion/anios-escolares/actual` | Personal adm. | Card del año en curso (CI-01): periodo en curso, periodo ya terminado con notas abiertas, próximo periodo, secciones activas, alumnos matriculados, estructuras y avance (%). Los periodos son `null` si no aplican. 404 si no hay año activo |
+| GET | `/configuracion/anios-escolares/{id}` | Personal adm. | El año con sus periodos ordenados por número; cada periodo trae `duracionSemanas`, su `estado` (se calcula con las fechas) y `registroNotasAbierto` (HU-74) |
 | POST | `/configuracion/anios-escolares` | Personal adm. | Crea un año PLANIFICADO `{anio, fechaInicio, fechaFin, regimen}` y genera sus 4 bimestres o 3 trimestres con fechas sugeridas. 400 si `fechaFin` no es posterior a `fechaInicio`, si el año es muy corto o está fuera de 2000–2100; 409 si el año ya existe |
+| PUT | `/configuracion/anios-escolares/{id}` | Personal adm. | Cambia las fechas `{fechaInicio, fechaFin}` y regenera los periodos con fechas sugeridas. 400 si `fechaFin` no es posterior o el año es muy corto; 404 si no existe; 409 si el año no está PLANIFICADO |
+| PUT | `/configuracion/anios-escolares/{id}/regimen` | Personal adm. | Cambia el régimen `{regimen}` y regenera los periodos con fechas sugeridas. 404 si no existe; 409 si el año no está PLANIFICADO |
+| GET | `/configuracion/anios-escolares/{id}/requisitos` | Personal adm. | Card "Antes de activar el año" (CI-06): `{puedeActivar, obligatorios, recomendados}`, cada requisito con `{codigo, texto, cumplido, detalle}`. 404 si no existe |
+| PUT | `/configuracion/periodos-academicos/{id}` | Personal adm. | Edita el periodo `{nombre, fechaInicio, fechaFin, fechaLimiteNotas}`. 400 si hay fechas fuera del año, cruce con otro periodo (`Se cruza con el IV Bimestre, que empieza el 19/10/2026.`) o límite anterior al fin; 404 si no existe; 409 si el año está cerrado, el periodo ya empezó (no cambia su inicio) o ya terminó (solo cambia la fecha límite de notas) |
 
 ## Formato
 
