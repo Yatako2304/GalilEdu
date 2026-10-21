@@ -3,6 +3,7 @@ package com.galiledu.pagos.infraestructura;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -27,7 +28,8 @@ public class ConsultasPagos {
 			OffsetDateTime confirmadoEn) {
 	}
 
-	public record Tarifario(UUID id, BigDecimal montoPension, String estado) {
+	public record Tarifario(UUID id, BigDecimal montoPension, String estado, BigDecimal montoMatricula,
+			LocalDate vencimientoMatricula) {
 	}
 
 	public record CuotaTarifario(short numero, String nombre, LocalDate fechaVencimiento) {
@@ -51,9 +53,12 @@ public class ConsultasPagos {
 	}
 
 	public Optional<Tarifario> tarifario(UUID anioEscolarId) {
-		return jdbc.sql("SELECT id, monto_pension, estado FROM pagos.tarifario WHERE anio_escolar_id = ?")
+		return jdbc.sql("""
+				SELECT id, monto_pension, estado, monto_matricula, vencimiento_matricula
+				FROM pagos.tarifario WHERE anio_escolar_id = ?""")
 				.param(anioEscolarId)
-				.query((rs, i) -> new Tarifario(rs.getObject(1, UUID.class), rs.getBigDecimal(2), rs.getString(3)))
+				.query((rs, i) -> new Tarifario(rs.getObject(1, UUID.class), rs.getBigDecimal(2), rs.getString(3),
+						rs.getBigDecimal(4), rs.getObject(5, LocalDate.class)))
 				.optional();
 	}
 
@@ -67,15 +72,15 @@ public class ConsultasPagos {
 				.list();
 	}
 
-	/** Descuento ACTIVO del estudiante que aplica al concepto PENSION (HU-38 lo registra; aquí solo se usa). */
-	public Optional<DescuentoActivo> descuentoPension(UUID estudianteId) {
+	/** Descuento ACTIVO del estudiante que aplica al concepto indicado (HU-38 lo registra; aquí solo se usa). */
+	public Optional<DescuentoActivo> descuentoPara(UUID estudianteId, String concepto) {
 		return jdbc.sql("""
 				SELECT da.id, da.porcentaje, da.vigencia_desde, da.vigencia_hasta
 				FROM pagos.descuento_aplicado da
 				WHERE da.estudiante_id = ? AND da.estado = 'ACTIVO'
 				  AND EXISTS (SELECT 1 FROM pagos.descuento_concepto dc
-				              WHERE dc.descuento_id = da.descuento_id AND dc.concepto_codigo = 'PENSION')""")
-				.param(estudianteId)
+				              WHERE dc.descuento_id = da.descuento_id AND dc.concepto_codigo = ?)""")
+				.params(estudianteId, concepto)
 				.query((rs, i) -> new DescuentoActivo(rs.getObject(1, UUID.class), rs.getBigDecimal(2),
 						rs.getObject(3, LocalDate.class), rs.getObject(4, LocalDate.class)))
 				.optional();
@@ -142,5 +147,62 @@ public class ConsultasPagos {
 						rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getString(7),
 						rs.getInt(8), rs.getBigDecimal(9), rs.getBigDecimal(10), rs.getBigDecimal(11), rs.getInt(12)))
 				.list();
+	}
+
+	public record CuotaVencidaFila(UUID estudianteId, String estudiante, String concepto, LocalDate fechaVencimiento,
+			BigDecimal saldo) {
+	}
+
+	/**
+	 * Pensiones impagas de los estudiantes indicados que ya pasaron su vencimiento más los días de gracia del tarifario
+	 * (RF-91). Es la misma regla de {@code Cuota.estaVencida}, pero en SQL para varios estudiantes a la vez.
+	 */
+	public List<CuotaVencidaFila> cuotasVencidas(Collection<UUID> estudianteIds, LocalDate hoy) {
+		if (estudianteIds.isEmpty()) {
+			return List.of();
+		}
+		return jdbc.sql("""
+				SELECT c.estudiante_id, concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno),
+				       q.nombre, q.fecha_vencimiento, q.monto_final - q.monto_pagado
+				FROM pagos.cuota q
+				JOIN pagos.compromiso_pago c ON c.id = q.compromiso_id
+				JOIN pagos.tarifario t ON t.id = c.tarifario_id
+				JOIN estudiantes.estudiante e ON e.id = c.estudiante_id
+				JOIN personas.persona p ON p.id = e.persona_id
+				WHERE c.estudiante_id IN (:ids) AND c.estado = 'VIGENTE'
+				  AND q.concepto_codigo = 'PENSION' AND q.estado NOT IN ('PAGADA', 'ANULADA')
+				  AND q.fecha_vencimiento + t.dias_gracia < :hoy
+				ORDER BY q.fecha_vencimiento, 2""")
+				.param("ids", estudianteIds)
+				.param("hoy", hoy)
+				.query((rs, i) -> new CuotaVencidaFila(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
+						rs.getObject(4, LocalDate.class), rs.getBigDecimal(5)))
+				.list();
+	}
+
+	public record FilaCuotaMatricula(UUID cuotaId, UUID compromisoId, UUID estudianteId, int anio, String concepto,
+			BigDecimal montoBase, BigDecimal montoDescuento, BigDecimal montoFinal, BigDecimal montoPagado,
+			LocalDate fechaVencimiento, String estado, LocalDate fechaPago, String responsable) {
+	}
+
+	/** RF-80: la cuota de matrícula (no anulada) del compromiso de esa matrícula. */
+	public Optional<FilaCuotaMatricula> cuotaMatricula(UUID matriculaId) {
+		return jdbc.sql("""
+				SELECT q.id, c.id, c.estudiante_id, a.anio, q.nombre, q.monto_base, q.monto_descuento, q.monto_final,
+				       q.monto_pagado, q.fecha_vencimiento, q.estado, q.fecha_pago,
+				       (SELECT min(concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno))
+				        FROM estudiantes.vinculo_familiar v JOIN personas.persona p ON p.id = v.persona_id
+				        WHERE v.estudiante_id = c.estudiante_id AND v.es_responsable_matricula)
+				FROM pagos.cuota q
+				JOIN pagos.compromiso_pago c ON c.id = q.compromiso_id
+				JOIN configuracion.anio_escolar a ON a.id = c.anio_escolar_id
+				WHERE c.matricula_id = ? AND q.concepto_codigo = 'MATRICULA' AND q.estado <> 'ANULADA'""")
+				.param(matriculaId)
+				.query((rs, i) -> new FilaCuotaMatricula(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
+						rs.getObject(3, UUID.class), rs.getInt(4), rs.getString(5), rs.getBigDecimal(6),
+						rs.getBigDecimal(7), rs.getBigDecimal(8), rs.getBigDecimal(9),
+						rs.getObject(10, LocalDate.class),
+						rs.getString(11), rs.getObject(12, LocalDate.class), rs.getString(13)))
+				.optional();
 	}
 }

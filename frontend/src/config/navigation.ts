@@ -117,6 +117,11 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           icon: Star,
         },
         {
+          label: 'Plan de evaluación',
+          href: paths.app.coordinador.planEvaluacion.getHref(),
+          icon: BookOpenCheck,
+        },
+        {
           label: 'Ambientes físicos',
           href: paths.app.coordinador.ambientes.getHref(),
           icon: Building2,

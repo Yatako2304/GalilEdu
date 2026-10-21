@@ -118,6 +118,11 @@ public class CompromisoPago {
 		return cuotas.stream().anyMatch(q -> q.esPension() && q.estaActiva());
 	}
 
+	/** RF-79: ¿ya tiene una cuota de matrícula (sin contar las anuladas)? */
+	public boolean tieneCuotaMatricula() {
+		return cuotas.stream().anyMatch(q -> q.esMatricula() && q.estaActiva());
+	}
+
 	/** Vincula el compromiso a la matrícula si se creó antes sin ella. */
 	public void vincularMatricula(UUID matriculaId) {
 		if (this.matriculaId == null) {

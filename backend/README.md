@@ -91,19 +91,21 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/tablas-conversion` | Personal adm. | Versiones de la tabla de conversión (HU-55), de la más nueva a la más antigua; `estado`: PROGRAMADA, VIGENTE o ANTERIOR (se calcula con la fecha de hoy) |
 | GET | `/tablas-conversion/vigente` | Personal adm. | La versión que rige hoy. 404 si no hay ninguna |
 | POST | `/tablas-conversion` | Personal adm. | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}`. 400 si la fecha es pasada o los rangos no cubren 0–20 sin vacíos ni cruces; 409 si ya hay una versión con esa fecha |
-| GET | `/planes-evaluacion?anioEscolarId=&grado=` | Personal adm. | Plan de evaluación del grado (HU-56): tarjetas de CI-17, secciones con tutor y cursos con horas, competencias, escala y docentes asignados |
-| GET | `/planes-evaluacion/anios` · `/planes-evaluacion/docentes` | Personal adm. | Años escolares (del más reciente) · usuarios activos con rol Docente |
-| GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Personal adm. | Cursos activos que se dictan en el grado y aún no están en su plan, con las competencias activas del área |
-| GET | `/planes-evaluacion/origenes?anioEscolarId=&grado=` | Personal adm. | Otros planes con cursos, para copiarlos |
-| POST | `/planes-evaluacion` | Personal adm. | Agrega un curso `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId, escala, reglaNota, consolidacion}]}`. 409 si ya está, si no se dicta en el grado o si las horas superan los bloques |
-| POST | `/planes-evaluacion/copias` | Personal adm. | Copia `{anioEscolarId, gradoCodigo, origenAnioEscolarId, origenGradoCodigo}` a un grado vacío, sin docentes |
-| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Personal adm. | Detalle del curso en el plan · `{horasSemanales, competencias}` · quitarlo del plan. 409 si el año está cerrado |
-| GET · PUT | `/planes-evaluacion/{id}/docentes` | Personal adm. | Docente de cada sección `{asignaciones: [{seccionId, docenteId}]}` (`docenteId` null = sin docente) |
+| GET | `/planes-evaluacion?anioEscolarId=&grado=` | Personal adm. · Coordinador | Plan de evaluación del grado (HU-56): tarjetas de CI-17, secciones con tutor y cursos con horas, competencias, escala y docentes asignados |
+| GET | `/planes-evaluacion/anios` · `/planes-evaluacion/docentes` | Personal adm. · Coordinador | Años escolares (del más reciente) · usuarios activos con rol Docente |
+| GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Personal adm. · Coordinador | Cursos activos que se dictan en el grado y aún no están en su plan, con las competencias activas del área |
+| GET | `/planes-evaluacion/origenes?anioEscolarId=&grado=` | Personal adm. · Coordinador | Otros planes con cursos, para copiarlos |
+| POST | `/planes-evaluacion` | Personal adm. · Coordinador | Agrega un curso `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId, escala, reglaNota, consolidacion}]}`. 409 si ya está, si no se dicta en el grado o si las horas superan los bloques |
+| POST | `/planes-evaluacion/copias` | Personal adm. · Coordinador | Copia `{anioEscolarId, gradoCodigo, origenAnioEscolarId, origenGradoCodigo}` a un grado vacío, sin docentes |
+| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Personal adm. · Coordinador | Detalle del curso en el plan · `{horasSemanales, competencias}` · quitarlo del plan. 409 si el año está cerrado |
+| GET · PUT | `/planes-evaluacion/{id}/docentes` | Personal adm. · Coordinador | Docente de cada sección `{asignaciones: [{seccionId, docenteId}]}` (`docenteId` null = sin docente) |
 | GET | `/pagos/estado-cuenta?anio=` | Personal adm. | P2 · Estado de cuenta (HU-37): compromisos del año (por defecto el ACTIVO) con sección, antigüedad y deuda vencida de cada alumno, y las tarjetas comprometido, cobrado (%), deuda vencida y cuotas vencidas (solo compromisos VIGENTES) |
 | GET | `/pagos/estudiantes/{estudianteId}/compromisos` | Personal adm. | Compromisos de pago del estudiante, del año más reciente al más antiguo (selector de P8, HU-37) |
 | GET | `/pagos/compromisos/{id}` | Personal adm. | Resumen (total anual, capital pagado, descuento, pensión, saldo) y cronograma de cuotas; `vencida` se calcula con los días de gracia (HU-37, RF-84, RF-91) |
 | POST | `/pagos/matriculas/{matriculaId}/cronograma` | Personal adm. | Genera las pensiones del tarifario para una matrícula MATRICULADO: solo las que vencen después de la matrícula y con el descuento activo (RF-81, RF-82). 409 si ya existen (RF-83), si no está matriculado o si el tarifario no está confirmado |
 | POST | `/pagos/compromisos/{id}/retiro` | Personal adm. | Anula las pensiones PENDIENTES que vencen después de `{fechaRetiro}`; las vencidas y parciales se mantienen (RF-85). Devuelve `{cuotasAnuladas}` |
+| POST | `/pagos/matriculas/{matriculaId}/cuota-matricula` | Personal adm. | Genera la cuota de matrícula PENDIENTE con el monto y el vencimiento del tarifario del año (y el descuento activo si aplica a MATRICULA); crea el compromiso si no existe (HU-36, RF-78). 409 si ya existe (RF-79), si la matrícula ya está MATRICULADO/RETIRADO/ANULADA o si no hay tarifario |
+| GET | `/pagos/matriculas/{matriculaId}/cuota-matricula` | Personal adm. | Concepto, monto, vencimiento, estado, fecha de pago y responsable de la cuota de matrícula (HU-36, RF-80; tarjeta "Pago de matrícula" de B6/B7). 404 si aún no se generó |
 | GET | `/configuracion/anios-escolares` | Personal adm. | Años escolares, del más reciente al más antiguo, con régimen, estado, cantidad de periodos, secciones activas y estructuras horarias (arreglo simple, HU-74) |
 | GET | `/configuracion/anios-escolares/actual` | Personal adm. | Card del año en curso (CI-01): periodo en curso, periodo ya terminado con notas abiertas, próximo periodo, secciones activas, alumnos matriculados, estructuras y avance (%). Los periodos son `null` si no aplican. 404 si no hay año activo |
 | GET | `/configuracion/anios-escolares/{id}` | Personal adm. | El año con sus periodos ordenados por número; cada periodo trae `duracionSemanas`, su `estado` (se calcula con las fechas) y `registroNotasAbierto` (HU-74) |
@@ -112,6 +114,8 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | PUT | `/configuracion/anios-escolares/{id}/regimen` | Personal adm. | Cambia el régimen `{regimen}` y regenera los periodos con fechas sugeridas. 404 si no existe; 409 si el año no está PLANIFICADO |
 | GET | `/configuracion/anios-escolares/{id}/requisitos` | Personal adm. | Card "Antes de activar el año" (CI-06): `{puedeActivar, obligatorios, recomendados}`, cada requisito con `{codigo, texto, cumplido, detalle}`. 404 si no existe |
 | PUT | `/configuracion/periodos-academicos/{id}` | Personal adm. | Edita el periodo `{nombre, fechaInicio, fechaFin, fechaLimiteNotas}`. 400 si hay fechas fuera del año, cruce con otro periodo (`Se cruza con el IV Bimestre, que empieza el 19/10/2026.`) o límite anterior al fin; 404 si no existe; 409 si el año está cerrado, el periodo ya empezó (no cambia su inicio) o ya terminó (solo cambia la fecha límite de notas) |
+| GET | `/matricula/apoderado/estudiantes` | Apoderado | Hijos del apoderado con su grado y el estado de su matrícula en el periodo vigente (selector de Figma, HU-27, RF-58) |
+| GET | `/matricula/apoderado/estudiantes/{id}/estado` | Apoderado | Periodo vigente (`abierto` según fechas, RF-59), matrícula, paso del stepper, deuda vencida del apoderado y sus hijos con el estudiante al que corresponde (HU-30, RF-64) e impedimentos `PERIODO`, `SIN_SECCION`, `DOCUMENTOS` o `DEUDA` (RF-60). 404 si el estudiante no está a su cargo |
 
 ## Formato
 
