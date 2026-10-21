@@ -3,6 +3,7 @@ package com.galiledu.pagos.infraestructura;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -141,6 +142,37 @@ public class ConsultasPagos {
 				.query((rs, i) -> new FilaEstadoCuenta(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
 						rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getString(7),
 						rs.getInt(8), rs.getBigDecimal(9), rs.getBigDecimal(10), rs.getBigDecimal(11), rs.getInt(12)))
+				.list();
+	}
+
+	public record CuotaVencidaFila(UUID estudianteId, String estudiante, String concepto, LocalDate fechaVencimiento,
+			BigDecimal saldo) {
+	}
+
+	/**
+	 * Pensiones impagas de los estudiantes indicados que ya pasaron su vencimiento más los días de gracia del tarifario
+	 * (RF-91). Es la misma regla de {@code Cuota.estaVencida}, pero en SQL para varios estudiantes a la vez.
+	 */
+	public List<CuotaVencidaFila> cuotasVencidas(Collection<UUID> estudianteIds, LocalDate hoy) {
+		if (estudianteIds.isEmpty()) {
+			return List.of();
+		}
+		return jdbc.sql("""
+				SELECT c.estudiante_id, concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno),
+				       q.nombre, q.fecha_vencimiento, q.monto_final - q.monto_pagado
+				FROM pagos.cuota q
+				JOIN pagos.compromiso_pago c ON c.id = q.compromiso_id
+				JOIN pagos.tarifario t ON t.id = c.tarifario_id
+				JOIN estudiantes.estudiante e ON e.id = c.estudiante_id
+				JOIN personas.persona p ON p.id = e.persona_id
+				WHERE c.estudiante_id IN (:ids) AND c.estado = 'VIGENTE'
+				  AND q.concepto_codigo = 'PENSION' AND q.estado NOT IN ('PAGADA', 'ANULADA')
+				  AND q.fecha_vencimiento + t.dias_gracia < :hoy
+				ORDER BY q.fecha_vencimiento, 2""")
+				.param("ids", estudianteIds)
+				.param("hoy", hoy)
+				.query((rs, i) -> new CuotaVencidaFila(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
+						rs.getObject(4, LocalDate.class), rs.getBigDecimal(5)))
 				.list();
 	}
 }

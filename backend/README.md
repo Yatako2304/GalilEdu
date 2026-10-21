@@ -106,6 +106,8 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/configuracion/anios-escolares` | Personal adm. | Años escolares, del más reciente al más antiguo, con régimen, estado y cantidad de periodos (arreglo simple, HU-74) |
 | GET | `/configuracion/anios-escolares/{id}` | Personal adm. | El año con sus periodos ordenados por número (HU-74) |
 | POST | `/configuracion/anios-escolares` | Personal adm. | Crea un año PLANIFICADO `{anio, fechaInicio, fechaFin, regimen}` y genera sus 4 bimestres o 3 trimestres con fechas sugeridas. 400 si `fechaFin` no es posterior a `fechaInicio`, si el año es muy corto o está fuera de 2000–2100; 409 si el año ya existe |
+| GET | `/matricula/apoderado/estudiantes` | Apoderado | Hijos del apoderado con su grado y el estado de su matrícula en el periodo vigente (selector de Figma, HU-27, RF-58) |
+| GET | `/matricula/apoderado/estudiantes/{id}/estado` | Apoderado | Periodo vigente (`abierto` según fechas, RF-59), matrícula, paso del stepper, deuda vencida del apoderado y sus hijos con el estudiante al que corresponde (HU-30, RF-64) e impedimentos `PERIODO`, `SIN_SECCION`, `DOCUMENTOS` o `DEUDA` (RF-60). 404 si el estudiante no está a su cargo |
 
 ## Formato
 
