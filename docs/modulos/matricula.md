@@ -1,8 +1,8 @@
 # Matrícula
 
 - **HU:** HU-24, 27, 30 (iteración 1) · HU-28, 29, 31, 32 (2) · HU-25, 26, 33, 71, 72 (3)
-- **Estado:** ⏳ por empezar: las tablas y los datos de prueba ya están; faltan backend y frontend
-- **Última actualización:** 2026-10-19
+- **Estado:** 🚧 en desarrollo: backend de HU-27 y HU-30 hecho; faltan sus pantallas y HU-24
+- **Última actualización:** 2026-10-20
 
 ## Alcance
 
@@ -20,6 +20,14 @@ MATRICULADO (código MAT-…, cronograma de pensiones, HU-37)          · tambi�
 
 - **Deuda (HU-30):** antes de aprobar se revisa si el apoderado tiene cuotas vencidas de **cualquiera** de sus hijos. Se calcula desde `pagos.cuota`; no se guarda.
 - **Vacantes:** capacidad de la sección (`configuracion.seccion.capacidad_maxima`) menos las matrículas activas de esa sección. Se calculan; cambiar de sección (HU-26) mueve la matrícula y deja historial.
+
+## Endpoints (apoderado)
+
+Ver la tabla de [`backend/README.md`](../../backend/README.md): `GET /matricula/apoderado/estudiantes` y `GET /matricula/apoderado/estudiantes/{id}/estado`.
+
+- La deuda (HU-30) se pide a Pagos con `ServicioEstadoCuenta.cuotasVencidas` (IEstadoCuenta): pensiones impagas después del vencimiento más los días de gracia, de **todos** los hijos del apoderado. Solo bloquea si el periodo tiene `bloquear_por_morosidad`.
+- `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula).
+- Si `periodo.abierto` es false, el frontend no muestra la opción de matricular (RF-59).
 
 ## Pantallas (Figma)
 
@@ -54,7 +62,9 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 
 ## Pendientes
 
-- [ ] Backend y frontend.
+- [x] Backend de HU-27 y HU-30 (estado de matrícula y deuda del apoderado).
+- [ ] Pantallas de HU-27 y HU-30 (Apoderado › Matrícula 2027 y tarjeta del Home).
+- [ ] HU-24: reservar la sección.
 - [x] Código de matrícula: `MAT-AAAA-NNNN`, correlativo por año. La BD lo exige (V7).
 - [x] Al matricular se cobra solo la cuota de matrícula del tarifario (S/ 450 en 2027); el S/ 850 de la pantalla del apoderado no se usa. La cuota de ingreso va aparte. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).
 - [ ] Al quedar matriculado, crear la cuenta del estudiante y enviar las credenciales al apoderado (V7).

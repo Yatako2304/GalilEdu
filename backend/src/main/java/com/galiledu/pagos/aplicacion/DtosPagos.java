@@ -101,4 +101,29 @@ public final class DtosPagos {
 			BigDecimal deudaVencida,
 			int cuotasVencidas) {
 	}
+
+	/** IEstadoCuenta: pensión vencida e impaga de un estudiante (la usa Matrícula en HU-30). */
+	public record CuotaVencida(UUID estudianteId, String estudiante, String concepto, LocalDate fechaVencimiento,
+			BigDecimal saldo) {
+	}
+
+	/**
+	 * HU-36 · Cuota de matrícula (RF-78, RF-80). Figma B6 "Pago de matrícula" (concepto, monto, estado, responsable) y
+	 * B7 (estado "Pagada · fecha"). {@code estudianteId} sirve para el enlace "Ver compromiso de pago" (P8).
+	 */
+	public record CuotaMatriculaDetalle(
+			UUID cuotaId,
+			UUID compromisoId,
+			UUID estudianteId,
+			int anio,
+			String concepto,
+			BigDecimal montoBase,
+			BigDecimal montoDescuento,
+			BigDecimal monto,
+			BigDecimal montoPagado,
+			LocalDate fechaVencimiento,
+			EstadoCuota estado,
+			LocalDate fechaPago,
+			String responsable) {
+	}
 }

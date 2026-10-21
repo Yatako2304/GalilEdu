@@ -23,6 +23,7 @@ import org.hibernate.annotations.Formula;
 @Table(schema = "pagos", name = "cuota")
 public class Cuota {
 	public static final String CONCEPTO_PENSION = "PENSION";
+	public static final String CONCEPTO_MATRICULA = "MATRICULA";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -87,6 +88,23 @@ public class Cuota {
 		q.estado = EstadoCuota.PENDIENTE;
 		q.creadoPor = creadoPor;
 		return q;
+	}
+
+	/**
+	 * RF-78: cuota de matrícula PENDIENTE con el monto y el vencimiento del tarifario. Si el estudiante tiene un
+	 * descuento activo que aplica a MATRICULA, se guarda rebajada (ck_cuota_descuento exige el id del descuento).
+	 */
+	public static Cuota matricula(CompromisoPago compromiso, String nombre, BigDecimal monto, LocalDate vencimiento,
+			BigDecimal descuento, UUID descuentoAplicadoId, UUID creadoPor) {
+		Cuota q = pension(compromiso, (short) 0, nombre, monto, vencimiento, descuento, descuentoAplicadoId,
+				creadoPor);
+		q.conceptoCodigo = CONCEPTO_MATRICULA;
+		q.numero = null;
+		return q;
+	}
+
+	public boolean esMatricula() {
+		return CONCEPTO_MATRICULA.equals(conceptoCodigo);
 	}
 
 	/** RF-85: por retiro se anulan solo las pensiones PENDIENTES que vencen después de la fecha de retiro. */
