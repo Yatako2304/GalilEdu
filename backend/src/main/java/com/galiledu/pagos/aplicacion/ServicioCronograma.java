@@ -80,7 +80,7 @@ public class ServicioCronograma {
 			throw ExcepcionNegocio.conflicto("No quedan pensiones por vencer en el año " + m.anio() + ".");
 		}
 
-		Optional<DescuentoActivo> descuento = consultas.descuentoPension(m.estudianteId());
+		Optional<DescuentoActivo> descuento = consultas.descuentoPara(m.estudianteId(), Cuota.CONCEPTO_PENSION);
 		for (CuotaTarifario ct : pendientes) {
 			BigDecimal rebaja = descuento.filter(d -> d.vigenteEn(ct.fechaVencimiento()))
 					.map(d -> tarifario.montoPension().multiply(d.porcentaje()).divide(CIEN, 2, RoundingMode.HALF_UP))
