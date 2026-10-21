@@ -10,7 +10,7 @@ Hay un archivo por módulo, creado desde [`_plantilla.md`](_plantilla.md). Quien
 | Estudiantes (inscripción) | [estudiantes.md](estudiantes.md) | HU-7 | 1 | 🚧 hecha, falta prueba manual completa |
 | Configuración del año escolar | [configuracion.md](configuracion.md) | HU-74, 75, 44, 23, 34 | 1 | 🚧 tablas y datos de prueba listos; backend de HU-74 (listar, detalle y crear año); falta el resto del backend y el frontend |
 | Catálogo académico | [catalogo-academico.md](catalogo-academico.md) | HU-52–56 · (HU-43) | 1 · 3 | 🚧 HU-52 a HU-56 hechas; falta HU-43 |
-| Matrícula | [matricula.md](matricula.md) | HU-24, 27, 30 · HU-28, 29, 31, 32 · (HU-25, 26, 33, 71, 72) | 1 · 2 · 3 | 🚧 tablas y datos de prueba listos; faltan backend y frontend |
+| Matrícula | [matricula.md](matricula.md) | HU-24, 27, 30 · HU-28, 29, 31, 32 · (HU-25, 26, 33, 71, 72) | 1 · 2 · 3 | 🚧 backend de HU-27 y HU-30 hecho |
 | Pagos y pensiones | [pagos.md](pagos.md) | HU-36, 37 · HU-35, 38–42 | 1 · 2 | 🚧 HU-37 hecha |
 | Horarios | — | HU-45, 46, 49, 51 · (HU-47, 48) | 2 · 3 | ⏳ |
 | Académico (calificaciones) | — | HU-57, 59, 62 · (HU-60, 63, 64, 69) | 3 | ⏳ |

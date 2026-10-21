@@ -101,4 +101,9 @@ public final class DtosPagos {
 			BigDecimal deudaVencida,
 			int cuotasVencidas) {
 	}
+
+	/** IEstadoCuenta: pensión vencida e impaga de un estudiante (la usa Matrícula en HU-30). */
+	public record CuotaVencida(UUID estudianteId, String estudiante, String concepto, LocalDate fechaVencimiento,
+			BigDecimal saldo) {
+	}
 }
