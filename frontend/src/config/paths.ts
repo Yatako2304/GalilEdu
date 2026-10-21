@@ -81,6 +81,7 @@ export const paths = {
       root: roleRoot(COORDINADOR),
       horarios: route(COORDINADOR, 'horarios'),
       calificaciones: route(COORDINADOR, 'calificaciones'),
+      planEvaluacion: route(COORDINADOR, 'plan-evaluacion'),
       ambientes: route(COORDINADOR, 'ambientes'),
     },
 

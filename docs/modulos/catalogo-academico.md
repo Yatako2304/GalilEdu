@@ -16,10 +16,8 @@ También mantiene la **tabla de conversión** de vigesimal a AD/A/B/C, que tiene
 Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y entonces ya no se pueden agregar a planes nuevos.
 
 **Figma frente a los RF de Notion:**
-- RF-130 a RF-132 dicen que el plan lo configura el Coordinador; en Figma está en el menú del Personal administrativo.
-- RF-126 pide una descripción obligatoria para el área; en Figma es opcional.
-
-En ambos casos manda Figma.
+- RF-130 a RF-132 dicen que el plan lo configura el Coordinador; en Figma está en el menú del Personal administrativo. **Excepción a "manda Figma" (2026-10-20, a pedido del equipo):** lo tienen los dos roles, con los mismos permisos. El Coordinador lo ve en su menú como "Plan de evaluación" (`/app/coordinador/plan-evaluacion`).
+- RF-126 pide una descripción obligatoria para el área; en Figma es opcional. Aquí manda Figma.
 
 ## Historias de usuario
 
@@ -37,7 +35,7 @@ En ambos casos manda Figma.
 | Pantalla | Frame en Figma | Ruta |
 | --- | --- | --- |
 | Plan curricular | Personal Administrativo › "CI-14 · Plan curricular: áreas, competencias y cursos (HU-52, 53, 54)" y modales "Nueva área", "Nueva competencia", "Nuevo curso", "¿Desactivar …?" | `/app/administrativo/competencias` |
-| Plan de evaluación | "CI-17 · Plan de evaluación — 1.° de secundaria 2026 (HU-56)", modal "Aritmética · 1.° de secundaria", "CI-20 · … sin cursos" | pestaña |
+| Plan de evaluación | "CI-17 · Plan de evaluación — 1.° de secundaria 2026 (HU-56)", modal "Aritmética · 1.° de secundaria", "CI-20 · … sin cursos" | pestaña · `/app/coordinador/plan-evaluacion` (no está en Figma) |
 | Escala de calificación | "CI-23 · Escala de calificación — tabla de conversión vigente (HU-55)", modal "Nueva versión de la tabla de conversión" | pestaña |
 | Ambientes físicos | "CI-26 · Ambientes físicos (HU-43)", modales "Nuevo ambiente físico" y "¿Desactivar …?" | `/app/administrativo/ambientes` |
 
@@ -89,7 +87,7 @@ En ambos casos manda Figma.
 
 ## API
 
-Rol: Personal administrativo. La tabla completa está en [backend/README.md](../../backend/README.md#api-prefijo-api).
+Rol: Personal administrativo; las rutas de `/planes-evaluacion` también las usa el Coordinador. La tabla completa está en [backend/README.md](../../backend/README.md#api-prefijo-api).
 
 | Método | Ruta | Qué hace |
 | --- | --- | --- |
@@ -114,7 +112,7 @@ Rol: Personal administrativo. La tabla completa está en [backend/README.md](../
 ## Código
 
 - Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioPlanCurricular`, `ServicioEscalaCalificacion`, `ServicioPlanEvaluacion` y sus controladores). Lo que se lee de otros módulos (años, secciones, estructura horaria, docentes) está en `infraestructura/ConsultasCatalogo.java`.
-- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular`, `EscalaCalificacion`, `PlanEvaluacion` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas.
+- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular`, `EscalaCalificacion`, `PlanEvaluacion` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas; `src/app/routes/app/coordinador/plan-evaluacion.tsx` muestra solo el plan de evaluación.
 - Pruebas: `backend/src/test/java/com/galiledu/academico/` (`PlanCurricularIT`, `EscalaCalificacionIT`, `PlanEvaluacionIT`, `dominio/TablaConversionTests`) y `frontend/src/features/catalogo-academico/components/__tests__/`.
 
 ## Pendientes

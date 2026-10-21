@@ -36,6 +36,7 @@ public abstract class PruebaIntegracion {
 	protected static final String ADMIN = "U20260001";
 	protected static final String PERSONAL_ADMINISTRATIVO = "U20260002";
 	protected static final String DOCENTE = "U20260004";
+	protected static final String COORDINADOR = "U20260005";
 
 	@Autowired
 	protected MockMvc mvc;

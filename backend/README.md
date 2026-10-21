@@ -90,14 +90,14 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/tablas-conversion` | Personal adm. | Versiones de la tabla de conversión (HU-55), de la más nueva a la más antigua; `estado`: PROGRAMADA, VIGENTE o ANTERIOR (se calcula con la fecha de hoy) |
 | GET | `/tablas-conversion/vigente` | Personal adm. | La versión que rige hoy. 404 si no hay ninguna |
 | POST | `/tablas-conversion` | Personal adm. | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}`. 400 si la fecha es pasada o los rangos no cubren 0–20 sin vacíos ni cruces; 409 si ya hay una versión con esa fecha |
-| GET | `/planes-evaluacion?anioEscolarId=&grado=` | Personal adm. | Plan de evaluación del grado (HU-56): tarjetas de CI-17, secciones con tutor y cursos con horas, competencias, escala y docentes asignados |
-| GET | `/planes-evaluacion/anios` · `/planes-evaluacion/docentes` | Personal adm. | Años escolares (del más reciente) · usuarios activos con rol Docente |
-| GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Personal adm. | Cursos activos que se dictan en el grado y aún no están en su plan, con las competencias activas del área |
-| GET | `/planes-evaluacion/origenes?anioEscolarId=&grado=` | Personal adm. | Otros planes con cursos, para copiarlos |
-| POST | `/planes-evaluacion` | Personal adm. | Agrega un curso `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId, escala, reglaNota, consolidacion}]}`. 409 si ya está, si no se dicta en el grado o si las horas superan los bloques |
-| POST | `/planes-evaluacion/copias` | Personal adm. | Copia `{anioEscolarId, gradoCodigo, origenAnioEscolarId, origenGradoCodigo}` a un grado vacío, sin docentes |
-| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Personal adm. | Detalle del curso en el plan · `{horasSemanales, competencias}` · quitarlo del plan. 409 si el año está cerrado |
-| GET · PUT | `/planes-evaluacion/{id}/docentes` | Personal adm. | Docente de cada sección `{asignaciones: [{seccionId, docenteId}]}` (`docenteId` null = sin docente) |
+| GET | `/planes-evaluacion?anioEscolarId=&grado=` | Personal adm. · Coordinador | Plan de evaluación del grado (HU-56): tarjetas de CI-17, secciones con tutor y cursos con horas, competencias, escala y docentes asignados |
+| GET | `/planes-evaluacion/anios` · `/planes-evaluacion/docentes` | Personal adm. · Coordinador | Años escolares (del más reciente) · usuarios activos con rol Docente |
+| GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Personal adm. · Coordinador | Cursos activos que se dictan en el grado y aún no están en su plan, con las competencias activas del área |
+| GET | `/planes-evaluacion/origenes?anioEscolarId=&grado=` | Personal adm. · Coordinador | Otros planes con cursos, para copiarlos |
+| POST | `/planes-evaluacion` | Personal adm. · Coordinador | Agrega un curso `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId, escala, reglaNota, consolidacion}]}`. 409 si ya está, si no se dicta en el grado o si las horas superan los bloques |
+| POST | `/planes-evaluacion/copias` | Personal adm. · Coordinador | Copia `{anioEscolarId, gradoCodigo, origenAnioEscolarId, origenGradoCodigo}` a un grado vacío, sin docentes |
+| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Personal adm. · Coordinador | Detalle del curso en el plan · `{horasSemanales, competencias}` · quitarlo del plan. 409 si el año está cerrado |
+| GET · PUT | `/planes-evaluacion/{id}/docentes` | Personal adm. · Coordinador | Docente de cada sección `{asignaciones: [{seccionId, docenteId}]}` (`docenteId` null = sin docente) |
 | GET | `/pagos/estado-cuenta?anio=` | Personal adm. | P2 · Estado de cuenta (HU-37): compromisos del año (por defecto el ACTIVO) con sección, antigüedad y deuda vencida de cada alumno, y las tarjetas comprometido, cobrado (%), deuda vencida y cuotas vencidas (solo compromisos VIGENTES) |
 | GET | `/pagos/estudiantes/{estudianteId}/compromisos` | Personal adm. | Compromisos de pago del estudiante, del año más reciente al más antiguo (selector de P8, HU-37) |
 | GET | `/pagos/compromisos/{id}` | Personal adm. | Resumen (total anual, capital pagado, descuento, pensión, saldo) y cronograma de cuotas; `vencida` se calcula con los días de gracia (HU-37, RF-84, RF-91) |
