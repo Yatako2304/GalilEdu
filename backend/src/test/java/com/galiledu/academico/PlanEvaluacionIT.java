@@ -287,6 +287,17 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 	}
 
 	@Test
+	void elCoordinadorTambienGestionaElPlan() throws Exception {
+		String coordinador = token(COORDINADOR);
+		mvc.perform(conToken(get("/planes-evaluacion").param("anioEscolarId", ANIO_2026).param("grado", "SEC-1"),
+				coordinador))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.cursos.length()").value(16));
+		mvc.perform(conToken(delete("/planes-evaluacion/" + idPlan("Computación")), coordinador))
+				.andExpect(status().isNoContent());
+	}
+
+	@Test
 	void otrosRolesReciben403() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion/anios"), token(DOCENTE))).andExpect(status().isForbidden());
 		mvc.perform(conToken(delete("/planes-evaluacion/" + idPlan("Computación")), token(ADMIN)))

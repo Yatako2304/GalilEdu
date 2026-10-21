@@ -33,11 +33,12 @@ import com.galiledu.academico.aplicacion.ServicioPlanEvaluacion;
 
 /**
  * Figma > Personal Administrativo > CI-17 y CI-20 · Plan de evaluación (HU-56). Cada recurso es un curso del plan de
- * un grado y año (academico.plan_curso).
+ * un grado y año (academico.plan_curso). También lo usa el Coordinador (RF-130 a RF-132), aunque en Figma solo está
+ * en el menú del Personal administrativo.
  */
 @RestController
 @RequestMapping("/planes-evaluacion")
-@PreAuthorize("hasRole('PERSONAL_ADMINISTRATIVO')")
+@PreAuthorize("hasAnyRole('PERSONAL_ADMINISTRATIVO', 'COORDINADOR')")
 public class PlanEvaluacionController {
 	private final ServicioPlanEvaluacion servicio;
 

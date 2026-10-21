@@ -147,6 +147,10 @@ export const createAppRouter = (queryClient: QueryClient) =>
               () => import('./routes/app/coordinador/calificaciones'),
             ],
             [
+              paths.app.coordinador.planEvaluacion.path,
+              () => import('./routes/app/coordinador/plan-evaluacion'),
+            ],
+            [
               paths.app.coordinador.ambientes.path,
               () => import('./routes/app/coordinador/ambientes'),
             ],
