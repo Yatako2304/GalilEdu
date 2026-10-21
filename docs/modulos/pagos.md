@@ -1,7 +1,7 @@
 # Pagos y pensiones
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** 🚧 en desarrollo: HU-37 hecha (backend y pantalla P8); falta HU-36 y la iteración 2
+- **Estado:** 🚧 en desarrollo: HU-37 hecha (backend y pantallas P2, P8 y modal de retiro); falta HU-36 y la iteración 2
 - **Última actualización:** 2026-10-20
 
 ## Alcance
@@ -28,10 +28,11 @@ Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
 
 ## Endpoints
 
-Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estudiantes/{id}/compromisos`, `/pagos/compromisos/{id}`, `/pagos/matriculas/{id}/cronograma` y `/pagos/compromisos/{id}/retiro`.
+Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-cuenta`, `/pagos/estudiantes/{id}/compromisos`, `/pagos/compromisos/{id}`, `/pagos/matriculas/{id}/cronograma` y `/pagos/compromisos/{id}/retiro`.
 
 - Al confirmarse el pago de la matrícula (HU-31), Matrícula debe llamar a `ServicioCronograma.generarPensiones(matriculaId, usuarioId)`. Ver la [decisión](../decisiones/2026-10-20-leonardo-cronograma-pensiones.md).
-- La pantalla P8 está en `/app/administrativo/pensiones/{estudianteId}`; falta enlazarla desde P1/P2 y desde B7 ("Ver compromiso de pago").
+- Flujo de la HU-37: menú **Pensiones** → P2 ("Todos los alumnos") → ⋮ del alumno → **Ver cronograma** (P8, `/app/administrativo/pensiones/{estudianteId}`) o **Registrar retiro** (modal, fecha de hoy). Falta el enlace desde B7 ("Ver compromiso de pago") cuando exista ese detalle de matrícula.
+- Las pestañas "Compromisos vigentes" (P1, HU-38) y "Cuotas vencidas" (P3, HU-39) se ven desactivadas.
 
 ## Pantallas (Figma)
 

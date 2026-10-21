@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,6 +21,7 @@ import com.galiledu.compartido.seguridad.ServicioJwt;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoAnio;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoDetalle;
 import com.galiledu.pagos.aplicacion.DtosPagos.CronogramaGenerado;
+import com.galiledu.pagos.aplicacion.DtosPagos.EstadoCuentaGeneral;
 import com.galiledu.pagos.aplicacion.DtosPagos.RetiroRegistrado;
 import com.galiledu.pagos.aplicacion.DtosPagos.SolicitudRetiro;
 import com.galiledu.pagos.aplicacion.ServicioCompromisos;
@@ -36,6 +38,12 @@ public class CompromisoController {
 	public CompromisoController(ServicioCompromisos servicio, ServicioCronograma cronograma) {
 		this.servicio = servicio;
 		this.cronograma = cronograma;
+	}
+
+	/** GET /api/pagos/estado-cuenta?anio= · Figma "P2 · Estado de cuenta — Todos los alumnos" (HU-37). */
+	@GetMapping("/estado-cuenta")
+	public EstadoCuentaGeneral estadoCuenta(@RequestParam(required = false) Integer anio) {
+		return servicio.estadoCuenta(anio);
 	}
 
 	/** GET /api/pagos/estudiantes/{estudianteId}/compromisos */
