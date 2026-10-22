@@ -28,7 +28,7 @@ Eliminé la columna `estado` de `configuracion.periodo_academico` (migración `V
 
 ## Pendientes / problemas conocidos
 
-- [ ] Activar y cerrar año existen en el dominio, pero no tienen endpoint (`PENDIENTE(grupo)`: Figma no tiene botón "Activar").
+- [x] Activar y cerrar año ya tienen endpoint; el botón Activar aún no está en Figma (CI-06) y "Cerrar año" solo aparece en CI-12.
 
 ## Notas para quien siga
 

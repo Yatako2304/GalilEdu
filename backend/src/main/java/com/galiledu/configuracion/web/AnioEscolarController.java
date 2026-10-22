@@ -29,8 +29,7 @@ import com.galiledu.configuracion.aplicacion.ServicioAnioEscolar;
  * Figma > Personal Administrativo > Configuraciones > Año escolar: "CI-01", "CI-03", "CI-06", "Modal - Nuevo año
  * escolar" y "Modal - Cambiar régimen de periodos" (HU-74).
  * <p>
- * PENDIENTE(grupo): activar y cerrar el año existen en el servicio pero no se exponen; Figma no tiene botón
- * "Activar".
+ * Endpoint disponible; el botón Activar aún no está en Figma (CI-06) y Cerrar año solo aparece en CI-12.
  */
 @RestController
 @RequestMapping("/configuracion/anios-escolares")
@@ -84,6 +83,18 @@ public class AnioEscolarController {
 	@PutMapping("/{id}")
 	public AnioEscolarDetalle editar(@PathVariable UUID id, @Valid @RequestBody SolicitudEdicionAnio solicitud) {
 		return servicio.editar(id, solicitud);
+	}
+
+	/** POST /api/configuracion/anios-escolares/{id}/activar · pasa el año de PLANIFICADO a ACTIVO. */
+	@PostMapping("/{id}/activar")
+	public AnioEscolarDetalle activar(@PathVariable UUID id) {
+		return servicio.activar(id);
+	}
+
+	/** POST /api/configuracion/anios-escolares/{id}/cerrar · cierra el año ACTIVO cuando venció el plazo de notas. */
+	@PostMapping("/{id}/cerrar")
+	public AnioEscolarDetalle cerrar(@PathVariable UUID id) {
+		return servicio.cerrar(id);
 	}
 
 	/** PUT /api/configuracion/anios-escolares/{id}/regimen · "Modal - Cambiar régimen de periodos" de "CI-06". */

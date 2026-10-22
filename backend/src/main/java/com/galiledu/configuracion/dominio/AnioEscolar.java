@@ -193,7 +193,6 @@ public class AnioEscolar {
 		periodo.actualizar(nombreLimpio, fechaInicio, fechaFin, fechaLimiteNotas);
 	}
 
-	// PENDIENTE(grupo): activar y cerrar aún no tienen endpoint; Figma no tiene botón "Activar".
 	/** Pasa el año de PLANIFICADO a ACTIVO. Que no haya otro año activo y los requisitos los valida el servicio. */
 	public void activar() {
 		if (estado != EstadoAnioEscolar.PLANIFICADO) {
@@ -202,7 +201,6 @@ public class AnioEscolar {
 		estado = EstadoAnioEscolar.ACTIVO;
 	}
 
-	// PENDIENTE(grupo): sin endpoint todavía (ver activar).
 	/** Cierra un año ACTIVO una vez vencido el plazo de notas del último periodo. Un año CERRADO no se reabre. */
 	public void cerrar(LocalDate hoy) {
 		if (estado != EstadoAnioEscolar.ACTIVO) {

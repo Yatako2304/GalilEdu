@@ -366,6 +366,113 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos[0].registroNotasAbierto").value(false));
 	}
 
+	// --- POST /{id}/activar y /{id}/cerrar ---
+
+	private void cerrarElAnio2026PorSql() {
+		jdbc.sql("UPDATE configuracion.anio_escolar SET estado = 'CERRADO' WHERE id = CAST(:id AS uuid)")
+				.param("id", ID_2026)
+				.update();
+		entityManager.clear();
+	}
+
+	private void registrarEstructura2027PorSql() {
+		jdbc.sql("""
+				INSERT INTO configuracion.estructura_horaria (anio_escolar_id, codigo, dias_lectivos, hora_entrada,
+				                                              bloques_por_dia, duracion_bloque_min, nivel)
+				VALUES (CAST(:id AS uuid), 'EH-SEC-27', ARRAY['LUN'], '07:30', 8, 45, 'SECUNDARIA')""")
+				.param("id", ID_2027).update();
+	}
+
+	@Test
+	void activaUnAnioPlanificadoConSusRequisitosYSinOtroActivo() throws Exception {
+		cerrarElAnio2026PorSql();
+		registrarEstructura2027PorSql();
+
+		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/activar"), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.anio").value(2027))
+				.andExpect(jsonPath("$.estado").value("ACTIVO"))
+				.andExpect(jsonPath("$.periodos.length()").value(3));
+		mvc.perform(conToken(get(RUTA + "/actual"), personal))
+				.andExpect(jsonPath("$.anio").value(2027));
+	}
+
+	@Test
+	void noActivaUnAnioMientrasOtroSigueActivo() throws Exception {
+		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/activar"), personal))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("El año 2026 sigue activo. Ciérralo antes de activar este."));
+	}
+
+	@Test
+	void noActivaUnAnioSinSusRequisitosObligatorios() throws Exception {
+		cerrarElAnio2026PorSql();
+
+		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/activar"), personal))
+				.andExpect(status().isConflict())
+				.andExpect(
+						jsonPath("$.message").value("Faltan requisitos obligatorios: Estructura horaria registrada."));
+	}
+
+	@Test
+	void soloActivaUnAnioPlanificado() throws Exception {
+		mvc.perform(conToken(post(RUTA + "/" + ID_2026 + "/activar"), personal))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("Solo se puede activar un año planificado."));
+	}
+
+	@Test
+	void activarUnAnioQueNoExisteDa404() throws Exception {
+		mvc.perform(conToken(post(RUTA + "/00000000-0000-0000-0000-000000000000/activar"), personal))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
+	}
+
+	@Test
+	void cierraElAnioCuandoYaVencioElPlazoDeNotasDelUltimoPeriodo() throws Exception {
+		reloj.fijarEn(LocalDate.of(2026, 12, 24)); // el límite del IV Bimestre es el 23/12
+
+		mvc.perform(conToken(post(RUTA + "/" + ID_2026 + "/cerrar"), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.estado").value("CERRADO"))
+				.andExpect(jsonPath("$.periodos[3].estado").value("CERRADO"));
+		mvc.perform(conToken(get(RUTA + "/actual"), personal)).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void noCierraElAnioAntesDeQueVenzaElPlazoDeNotas() throws Exception {
+		reloj.fijarEn(LocalDate.of(2026, 12, 23)); // el último día todavía se registran notas
+
+		mvc.perform(conToken(post(RUTA + "/" + ID_2026 + "/cerrar"), personal))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("Los docentes pueden registrar notas hasta el 23/12/2026."));
+	}
+
+	@Test
+	void soloCierraUnAnioActivo() throws Exception {
+		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/cerrar"), personal))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("Solo se puede cerrar un año activo."));
+	}
+
+	@Test
+	void cerrarUnAnioQueNoExisteDa404() throws Exception {
+		mvc.perform(conToken(post(RUTA + "/00000000-0000-0000-0000-000000000000/cerrar"), personal))
+				.andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
+	}
+
+	@Test
+	void activarYCerrarSoloLoHaceElPersonalAdministrativo() throws Exception {
+		for (String usuario : new String[]{DOCENTE, ADMIN}) {
+			String token = token(usuario);
+			mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/activar"), token)).andExpect(status().isForbidden());
+			mvc.perform(conToken(post(RUTA + "/" + ID_2026 + "/cerrar"), token)).andExpect(status().isForbidden());
+		}
+		mvc.perform(post(RUTA + "/" + ID_2027 + "/activar")).andExpect(status().isUnauthorized());
+		mvc.perform(post(RUTA + "/" + ID_2026 + "/cerrar")).andExpect(status().isUnauthorized());
+	}
+
 	private static String fechas(String inicio, String fin) {
 		return """
 				{"fechaInicio":"%s","fechaFin":"%s"}""".formatted(inicio, fin);

@@ -24,7 +24,7 @@ Figma pone todo esto bajo **Configuraciones › Año escolar**; el tarifario est
 
 | HU | Qué | Estado | Notas |
 | --- | --- | --- | --- |
-| HU-74 | Año escolar y sus periodos | 🚧 | El año es PLANIFICADO, ACTIVO o CERRADO. El estado del periodo (PLANIFICADO, EN_CURSO, CERRADO) **no se guarda**: se calcula con las fechas y el estado del año ([decisión](../decisiones/2026-10-21-royal-22-estado-periodo-calculado.md)). Mientras el año está planificado se pueden editar sus fechas y cambiar el régimen, y los periodos se regeneran con fechas sugeridas. Al editar un periodo, el que ya empezó no cambia su inicio y el que ya terminó solo amplía su fecha límite de notas. Los docentes registran notas solo en un año ACTIVO, desde que empieza el periodo hasta su fecha límite. **Hecho:** listar, detalle, crear, año actual, editar fechas, cambiar régimen, requisitos para activar y editar periodo; activar y cerrar existen en el servicio, sin endpoint. **Falta:** endpoints de activar y cerrar (pendiente de confirmar con el equipo) y reutilizar configuración. |
+| HU-74 | Año escolar y sus periodos | 🚧 | El año es PLANIFICADO, ACTIVO o CERRADO. El estado del periodo (PLANIFICADO, EN_CURSO, CERRADO) **no se guarda**: se calcula con las fechas y el estado del año ([decisión](../decisiones/2026-10-21-royal-22-estado-periodo-calculado.md)). Mientras el año está planificado se pueden editar sus fechas y cambiar el régimen, y los periodos se regeneran con fechas sugeridas. Al editar un periodo, el que ya empezó no cambia su inicio y el que ya terminó solo amplía su fecha límite de notas. Los docentes registran notas solo en un año ACTIVO, desde que empieza el periodo hasta su fecha límite. **Hecho:** listar, detalle, crear, año actual, editar fechas, cambiar régimen, requisitos para activar y editar periodo; activar y cerrar el año. **Falta:** reutilizar configuración (copiar secciones, estructuras y plan de evaluación). El botón Activar aún no está en Figma (CI-06) y "Cerrar año" solo aparece en CI-12. |
 | HU-75 | Secciones por grado | ⏳ | Nombre único por grado y año. Capacidad de 1 a 45. Tutor y cotutor opcionales. |
 | HU-44 | Estructura horaria | ⏳ | Los horarios de bloques y recesos se **calculan**, no se guardan. La jornada termina como máximo a las 18:00 (lo valida el servicio). |
 | HU-23 | Fechas de matrícula regular | ⏳ | Un periodo por año. Una vez HABILITADO no se edita, solo se deshabilita. Las vacantes por sección son `seccion.capacidad_maxima`. |
@@ -74,9 +74,11 @@ Figma pone todo esto bajo **Configuraciones › Año escolar**; el tarifario est
 | PUT | `/configuracion/anios-escolares/{id}` | Cambia las fechas `{fechaInicio, fechaFin}` de un año PLANIFICADO y regenera sus periodos (CI-06 · Editar) |
 | PUT | `/configuracion/anios-escolares/{id}/regimen` | Cambia el régimen `{regimen}` de un año PLANIFICADO y regenera sus periodos (CI-06 · Cambiar régimen) |
 | GET | `/configuracion/anios-escolares/{id}/requisitos` | Requisitos de "Antes de activar el año" (CI-06): 3 obligatorios y 2 recomendados |
+| POST | `/configuracion/anios-escolares/{id}/activar` | Activa un año PLANIFICADO; 409 si otro año sigue activo o faltan requisitos obligatorios |
+| POST | `/configuracion/anios-escolares/{id}/cerrar` | Cierra un año ACTIVO; 409 si aún no vence la fecha límite de notas del último periodo |
 | PUT | `/configuracion/periodos-academicos/{id}` | Edita un periodo `{nombre, fechaInicio, fechaFin, fechaLimiteNotas}` (Modal · Editar periodo) |
 
-No hay endpoints para activar ni cerrar el año (`PENDIENTE(grupo)`: Figma no tiene botón "Activar" y "Cerrar año" solo aparece en CI-12) ni para abrir o cerrar un periodo (su estado se calcula). `ServicioAnioEscolar` ya tiene `activar` y `cerrar`, y `periodoEnCurso(anioId)` y `registroNotasAbierto(periodoId)` para que Calificaciones consulte los periodos.
+No hay endpoints para abrir o cerrar un periodo (su estado se calcula). Los de activar y cerrar el año existen, aunque el botón Activar aún no está en Figma (CI-06) y "Cerrar año" solo aparece en CI-12. `ServicioAnioEscolar` además tiene `periodoEnCurso(anioId)` y `registroNotasAbierto(periodoId)` para que Calificaciones consulte los periodos.
 
 **Cómo se generan los periodos:** BIMESTRAL = 4 y TRIMESTRAL = 3, numerados desde 1 ("I Bimestre"…). Los días del año se reparten en partes iguales (los sobrantes van a los primeros periodos); quedan seguidos, sin cruzarse, y el último termina en `fechaFin`. La fecha límite de notas es `fin + 5 días` (`PeriodoAcademico.DIAS_LIMITE_NOTAS`, **pendiente de confirmar** con el colegio). Un año necesita al menos 2 días por periodo (8 bimestral, 6 trimestral).
 
@@ -88,7 +90,7 @@ No hay endpoints para activar ni cerrar el año (`PENDIENTE(grupo)`: Figma no ti
 
 ## Pendientes
 
-- [ ] HU-74: endpoints de activar y cerrar el año (`PENDIENTE(grupo)`; el servicio ya los tiene) y reutilizar configuración (copiar secciones, estructuras y plan de evaluación).
+- [ ] HU-74: reutilizar configuración (copiar secciones, estructuras y plan de evaluación).
 - [ ] Backend de HU-75, HU-44, HU-23 y HU-34, y el frontend de las 5 HU.
 - [ ] Confirmar con el colegio los 5 días entre el fin del periodo y la fecha límite de notas.
 - [ ] `estudiantes.estudiante` guarda el nivel y el grado como texto ("1.° grado"). Cuando Matrícula asigne secciones, se enlazará con `configuracion.grado`.
