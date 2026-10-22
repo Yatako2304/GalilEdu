@@ -530,12 +530,12 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	@Test
 	void unUuidMalEscritoEnLaRutaDevuelveElCodigoQueDaElManejadorCompartido() throws Exception {
-		// Observado: el manejador compartido (ManejadorErrores) no trata MethodArgumentTypeMismatchException y la
-		// atrapa su handler de Exception: responde 500 en lugar de 400. No se corrige aquí (archivo compartido).
+		// ManejadorErrores trata MethodArgumentTypeMismatchException: un UUID mal escrito es un error del cliente (400),
+		// no un error inesperado del servidor (antes respondía 500).
 		mvc.perform(conToken(get(rutaEstructura("no-es-un-uuid")), personalAdministrativo))
-				.andExpect(status().isInternalServerError());
+				.andExpect(status().isBadRequest());
 		mvc.perform(conToken(get(rutaDelAnio("no-es-un-uuid")), personalAdministrativo))
-				.andExpect(status().isInternalServerError());
+				.andExpect(status().isBadRequest());
 	}
 
 	@Test
