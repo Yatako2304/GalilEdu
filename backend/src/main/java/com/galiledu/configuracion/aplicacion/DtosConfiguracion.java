@@ -192,8 +192,12 @@ public final class DtosConfiguracion {
 	public record CuotaVista(int numero, String nombre, LocalDate fechaVencimiento, BigDecimal monto) {
 	}
 
-	/** Para otros módulos (HU-23, Pagos): los montos y la morosidad de un tarifario CONFIRMADO. */
-	public record TarifarioVigente(BigDecimal montoCuotaIngreso, BigDecimal montoMatricula,
+	/**
+	 * Para otros módulos (HU-23, Pagos): los montos y la morosidad de un tarifario CONFIRMADO. {@code tarifarioId} es
+	 * el
+	 * que referencia {@code compromiso_pago.tarifario_id}.
+	 */
+	public record TarifarioVigente(UUID tarifarioId, BigDecimal montoCuotaIngreso, BigDecimal montoMatricula,
 			LocalDate vencimientoMatricula, BigDecimal montoPension, int diasGracia, BigDecimal recargoPorcentaje,
 			BigDecimal topeRecargoPorcentaje) {
 	}
