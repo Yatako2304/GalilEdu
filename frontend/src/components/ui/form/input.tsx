@@ -3,6 +3,8 @@ import { type UseFormRegisterReturn } from 'react-hook-form';
 
 import { cn } from '@/utils/cn';
 
+import { DateInput } from '../date-picker/date-picker';
+
 import {
   FieldWrapper,
   FieldWrapperPassThroughProps,
@@ -40,26 +42,36 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         error={error}
         className={wrapperClassName}
       >
-        <div className="relative">
-          <input
-            type={type}
-            className={cn(
-              fieldClassName(!!error),
-              'h-11',
-              endAdornment && 'pr-10',
-              className,
-            )}
-            aria-invalid={!!error}
+        {type === 'date' ? (
+          // Figma > Componentes > Date picker en vez del calendario nativo del navegador.
+          <DateInput
             ref={ref}
-            {...registration}
+            registration={registration}
+            invalid={!!error}
             {...props}
           />
-          {endAdornment && (
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-              {endAdornment}
-            </div>
-          )}
-        </div>
+        ) : (
+          <div className="relative">
+            <input
+              type={type}
+              className={cn(
+                fieldClassName(!!error),
+                'h-11',
+                endAdornment && 'pr-10',
+                className,
+              )}
+              aria-invalid={!!error}
+              ref={ref}
+              {...registration}
+              {...props}
+            />
+            {endAdornment && (
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                {endAdornment}
+              </div>
+            )}
+          </div>
+        )}
       </FieldWrapper>
     );
   },

@@ -20,34 +20,17 @@ import {
 } from '@/components/ui/dropdown';
 import { useNotifications } from '@/components/ui/notifications';
 import { Spinner } from '@/components/ui/spinner';
+import { StatCard } from '@/components/ui/stat-card';
 import { Table } from '@/components/ui/table';
+import { Tabs } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
 import { paths } from '@/config/paths';
 import { AlumnoEstadoCuenta } from '@/types/api';
-import { cn } from '@/utils/cn';
 
 import { useEstadoCuenta, useRegistrarRetiro } from '../api/estado-cuenta';
 
 import { DialogoRetiro } from './dialogo-retiro';
 import { anios, filtrarAlumnos, soles } from './formato';
-
-const Indicador = ({
-  icono,
-  valor,
-  etiqueta,
-}: {
-  icono: React.ReactNode;
-  valor: string;
-  etiqueta: string;
-}) => (
-  <Card className="flex flex-col gap-3 p-5">
-    <span className="inline-flex size-9 items-center justify-center rounded-lg bg-surface-accent-light text-content-accent-primary">
-      {icono}
-    </span>
-    <p className="text-h4 font-semibold text-content-primary">{valor}</p>
-    <p className="text-body-3 text-content-tertiary">{etiqueta}</p>
-  </Card>
-);
 
 type Fila = AlumnoEstadoCuenta & { id: string };
 
@@ -110,56 +93,58 @@ export const EstadoCuenta = () => {
   const verCronograma = (a: Fila) =>
     navigate(paths.app.administrativo.compromisoPago.getHref(a.estudianteId));
 
+  // Las otras dos vistas llegan con HU-38 a HU-42; por ahora se muestran deshabilitadas.
   const pestanas = [
-    { texto: `Todos los alumnos (${e.alumnos.length})`, activa: true },
-    { texto: 'Compromisos vigentes', activa: false },
-    { texto: 'Cuotas vencidas', activa: false },
+    { value: 'todos', label: `Todos los alumnos (${e.alumnos.length})` },
+    {
+      value: 'vigentes',
+      label: 'Compromisos vigentes',
+      disabled: true,
+      title: 'Disponible pronto',
+    },
+    {
+      value: 'vencidas',
+      label: 'Cuotas vencidas',
+      disabled: true,
+      title: 'Disponible pronto',
+    },
   ];
 
   return (
     <div className="flex flex-col gap-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Indicador
-          icono={<Landmark className="size-4" aria-hidden="true" />}
-          valor={soles(e.comprometido)}
-          etiqueta={`Comprometido ${e.anio}`}
+        <StatCard
+          icon={<Landmark aria-hidden="true" />}
+          value={soles(e.comprometido)}
+          label={`Comprometido ${e.anio}`}
         />
-        <Indicador
-          icono={<CircleCheck className="size-4" aria-hidden="true" />}
-          valor={soles(e.cobrado)}
-          etiqueta={`Cobrado ${e.anio} · ${e.porcentajeCobrado} %`}
+        <StatCard
+          icon={<CircleCheck aria-hidden="true" />}
+          value={soles(e.cobrado)}
+          label={`Cobrado ${e.anio} · ${e.porcentajeCobrado} %`}
         />
-        <Indicador
-          icono={<TriangleAlert className="size-4" aria-hidden="true" />}
-          valor={soles(e.deudaVencida)}
-          etiqueta="Deuda vencida"
+        <StatCard
+          icon={<TriangleAlert aria-hidden="true" />}
+          value={soles(e.deudaVencida)}
+          label="Deuda vencida"
         />
-        <Indicador
-          icono={<CalendarX className="size-4" aria-hidden="true" />}
-          valor={`${e.cuotasVencidas}`}
-          etiqueta={`Cuotas vencidas · ${e.alumnosConDeuda} alumno(s)`}
+        <StatCard
+          icon={<CalendarX aria-hidden="true" />}
+          value={`${e.cuotasVencidas}`}
+          label={`Cuotas vencidas · ${e.alumnosConDeuda} alumno(s)`}
         />
       </div>
 
       <Card className="flex flex-col gap-4 p-6">
-        <div className="flex flex-wrap gap-2 border-b border-stroke-tertiary pb-4">
-          {pestanas.map((p) => (
-            <button
-              key={p.texto}
-              type="button"
-              disabled={!p.activa}
-              title={p.activa ? undefined : 'Disponible en la iteración 2'}
-              className={cn(
-                'rounded-lg px-4 py-2.5 text-label-2',
-                p.activa
-                  ? 'bg-surface-accent-primary text-white'
-                  : 'cursor-not-allowed text-content-placeholder',
-              )}
-            >
-              {p.texto}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          variant="pill"
+          size="md"
+          aria-label="Vista del estado de cuenta"
+          className="border-b border-stroke-tertiary pb-4"
+          items={pestanas}
+          value="todos"
+          onValueChange={() => {}}
+        />
 
         <div className="relative w-full max-w-xs">
           <Search

@@ -18,6 +18,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown';
 import { Select } from '@/components/ui/form';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { Spinner } from '@/components/ui/spinner';
 import { Table } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
@@ -284,9 +285,9 @@ const ContenidoPlan = ({
 
       {vacio ? (
         <Card className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-          <span className="inline-flex size-12 items-center justify-center rounded-full bg-surface-accent-light text-content-accent-primary">
-            <ListPlus className="size-6" aria-hidden="true" />
-          </span>
+          <IconBadge size="lg">
+            <ListPlus aria-hidden="true" />
+          </IconBadge>
           <p className="text-label-1 font-semibold text-content-primary">
             {plan.grado} aún no tiene cursos en {plan.anio}
           </p>

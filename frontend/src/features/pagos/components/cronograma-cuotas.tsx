@@ -13,9 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tabs } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
 import { CompromisoDetalle } from '@/types/api';
-import { cn } from '@/utils/cn';
 import { formatDay } from '@/utils/format';
 
 import { etiquetaCuota, soles } from './formato';
@@ -194,28 +194,20 @@ export const CronogramaCuotas = ({
       <ResumenCompromiso compromiso={compromiso} />
 
       <Card className="flex flex-col gap-4 p-6">
-        <div className="flex flex-wrap gap-2 border-b border-stroke-tertiary pb-4">
-          {PESTANAS.map((p) => (
-            <button
-              key={p}
-              type="button"
-              onClick={() => setPestana(p)}
-              className={cn(
-                'rounded-lg px-4 py-2.5 text-label-2',
-                p === pestana
-                  ? 'bg-surface-accent-primary text-white'
-                  : 'text-content-secondary hover:bg-surface-secondary',
-              )}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+        <Tabs
+          variant="pill"
+          size="md"
+          aria-label="Detalle del compromiso"
+          className="border-b border-stroke-tertiary pb-4"
+          items={PESTANAS.map((p) => ({ value: p, label: p }))}
+          value={pestana}
+          onValueChange={setPestana}
+        />
         {pestana === 'Cronograma de cuotas' ? (
           <TablaCuotas compromiso={compromiso} />
         ) : (
           <p className="py-10 text-center text-body-3 text-content-tertiary">
-            Disponible en la iteración 2 (HU-38 a HU-42).
+            Esta sección estará disponible pronto.
           </p>
         )}
       </Card>

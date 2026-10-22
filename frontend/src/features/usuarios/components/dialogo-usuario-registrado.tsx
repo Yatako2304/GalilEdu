@@ -7,6 +7,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { Status } from '@/components/ui/tag';
 import { UsuarioCreado } from '@/types/api';
 
@@ -23,9 +24,9 @@ export const DialogoUsuarioRegistrado = ({
       {usuario && (
         <>
           <div className="flex flex-col items-center gap-3 px-8 pt-10 text-center">
-            <span className="inline-flex size-16 items-center justify-center rounded-full bg-surface-success-light text-content-success">
-              <UserPlus className="size-7" aria-hidden="true" />
-            </span>
+            <IconBadge color="success" size="xl">
+              <UserPlus aria-hidden="true" />
+            </IconBadge>
             <DialogTitle className="text-h5 font-semibold text-content-primary">
               Usuario registrado
             </DialogTitle>

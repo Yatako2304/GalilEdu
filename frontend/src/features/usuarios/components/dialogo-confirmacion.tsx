@@ -7,27 +7,30 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { cn } from '@/utils/cn';
+import { IconBadge } from '@/components/ui/icon-badge';
 
 export type TipoConfirmacion =
   'guardar' | 'desactivar' | 'reactivar' | 'eliminar';
 
-const ICONO = {
+const ICONO: Record<
+  TipoConfirmacion,
+  { Icono: typeof Save; color: 'accent' | 'success' | 'error' }
+> = {
   guardar: {
     Icono: Save,
-    clase: 'bg-surface-accent-light text-content-accent-primary',
+    color: 'accent',
   },
   desactivar: {
     Icono: UserX,
-    clase: 'bg-surface-error-light text-content-error',
+    color: 'error',
   },
   reactivar: {
     Icono: UserCheck,
-    clase: 'bg-surface-success-light text-content-success',
+    color: 'success',
   },
   eliminar: {
     Icono: Trash2,
-    clase: 'bg-surface-error-light text-content-error',
+    color: 'error',
   },
 };
 
@@ -53,19 +56,14 @@ export const DialogoConfirmacion = ({
   cargando,
   textoConfirmar = 'Confirmar',
 }: DialogoConfirmacionProps) => {
-  const { Icono, clase } = ICONO[tipo];
+  const { Icono, color } = ICONO[tipo];
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[448px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
         <div className="flex flex-col items-center gap-4 px-8 pb-6 pt-8 text-center">
-          <span
-            className={cn(
-              'inline-flex size-16 items-center justify-center rounded-full',
-              clase,
-            )}
-          >
-            <Icono className="size-7" aria-hidden="true" />
-          </span>
+          <IconBadge color={color} size="xl">
+            <Icono aria-hidden="true" />
+          </IconBadge>
           <DialogTitle className="text-h6 font-semibold text-content-primary">
             {titulo}
           </DialogTitle>

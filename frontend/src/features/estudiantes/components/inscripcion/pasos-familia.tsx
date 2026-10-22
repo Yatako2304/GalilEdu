@@ -1,19 +1,14 @@
-import {
-  CircleAlert,
-  FileText,
-  Paperclip,
-  Plus,
-  Search,
-  Trash2,
-} from 'lucide-react';
+import { Paperclip, Plus, Search, Trash2 } from 'lucide-react';
 import * as React from 'react';
 import { useFieldArray, UseFormReturn } from 'react-hook-form';
 
 import { PersonaFields } from '@/components/personas/persona-fields';
 import { personaAFormulario } from '@/components/personas/persona-schema';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Input, Select } from '@/components/ui/form';
+import { FileItem } from '@/components/ui/files';
+import { Input, Radio, Select } from '@/components/ui/form';
 import { Tag } from '@/components/ui/tag';
 import { TIPOS_DOCUMENTO } from '@/config/catalogos';
 
@@ -257,30 +252,22 @@ const RelacionYDocumento = ({ form }: PasoProps) => {
         }}
       />
       {documento.archivo ? (
-        <div className="flex items-center gap-3 rounded-[12px] bg-surface-secondary px-4 py-3">
-          <FileText
-            className="size-6 shrink-0 text-content-error"
-            aria-hidden="true"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-body-3 text-content-primary">
-              {documento.archivo.name}
-            </p>
-            <p className="text-body-4 text-content-tertiary">
-              {(documento.archivo.size / 1024).toFixed(0)} KB · se subirá al
-              registrar la inscripción
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            icon={<Trash2 className="size-4" />}
-            onClick={() => setValue('documentoApoderado.archivo', null)}
-          >
-            Quitar
-          </Button>
-        </div>
+        <FileItem
+          name={documento.archivo.name}
+          mimeType={documento.archivo.type}
+          meta={`${(documento.archivo.size / 1024).toFixed(0)} KB · se subirá al registrar la inscripción`}
+          actions={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              icon={<Trash2 className="size-4" />}
+              onClick={() => setValue('documentoApoderado.archivo', null)}
+            >
+              Quitar
+            </Button>
+          }
+        />
       ) : (
         <Button
           type="button"
@@ -334,21 +321,10 @@ export const PasoFamilia = ({ form }: PasoProps) => {
       />
 
       {sinPadres && (
-        <div className="flex gap-3 rounded-[12px] border border-stroke-warning bg-surface-warning-light px-4 py-3">
-          <CircleAlert
-            className="mt-0.5 size-5 shrink-0 text-content-warning"
-            aria-hidden="true"
-          />
-          <div>
-            <p className="text-label-2 font-medium text-content-primary">
-              No hay padre ni madre registrados
-            </p>
-            <p className="text-body-4 text-content-secondary">
-              Para continuar debes registrar un apoderado. Puede ser un familiar
-              o una persona sin parentesco.
-            </p>
-          </div>
-        </div>
+        <Alert type="warning" title="No hay padre ni madre registrados">
+          Para continuar debes registrar un apoderado. Puede ser un familiar o
+          una persona sin parentesco.
+        </Alert>
       )}
 
       {incluirApoderado ? (
@@ -489,18 +465,12 @@ export const PasoContactos = ({ form }: PasoProps) => {
               ['MOVILIDAD', 'Se va en movilidad escolar'],
             ] as const
           ).map(([valor, etiqueta]) => (
-            <label
+            <Radio
               key={valor}
-              className="flex items-center gap-2 text-body-3 text-content-primary"
-            >
-              <input
-                type="radio"
-                value={valor}
-                className="size-4 accent-deep-blue-900"
-                {...register('modoSalida')}
-              />
-              {etiqueta}
-            </label>
+              value={valor}
+              label={etiqueta}
+              {...register('modoSalida')}
+            />
           ))}
         </div>
         {modoSalida === 'PERSONA_AUTORIZADA' && (
