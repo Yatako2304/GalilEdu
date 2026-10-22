@@ -134,7 +134,6 @@ public class ServicioAnioEscolar {
 		return periodoDe(anio, periodoId).registroNotasAbierto(hoy(), anio.getEstado());
 	}
 
-	// PENDIENTE(grupo): activar y cerrar aún no tienen endpoint; Figma no tiene botón "Activar".
 	/**
 	 * Activa un año PLANIFICADO. Rechaza si otro año sigue activo o si falta un requisito obligatorio. Esas
 	 * validaciones
@@ -159,7 +158,6 @@ public class ServicioAnioEscolar {
 		return detalle(anio);
 	}
 
-	// PENDIENTE(grupo): sin endpoint todavía (ver activar).
 	/** Cierra un año ACTIVO cuando ya venció el plazo de notas de su último periodo. */
 	@Transactional
 	public AnioEscolarDetalle cerrar(UUID id) {

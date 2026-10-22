@@ -337,7 +337,6 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.registroNotasAbierto(periodo(ID_2027, 1))).isFalse(); // año planificado
 	}
 
-	// PENDIENTE(grupo): activar y cerrar no tienen endpoint; se prueban por el servicio.
 	@Test
 	void noSeActivaUnAnioMientrasOtroSigueActivo() {
 		rechaza(HttpStatus.CONFLICT, "El año 2026 sigue activo. Ciérralo antes de activar este.",
