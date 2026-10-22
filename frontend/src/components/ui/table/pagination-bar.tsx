@@ -17,10 +17,14 @@ const paginasVisibles = (actual: number, total: number): (number | '…')[] => {
   return [1, '…', actual, '…', total];
 };
 
-const botonPagina =
-  'inline-flex size-8 items-center justify-center rounded-lg border text-body-4 transition-colors disabled:pointer-events-none disabled:opacity-40';
+const flecha =
+  'inline-flex size-8 items-center justify-center rounded-lg border border-stroke-primary bg-white text-content-tertiary transition-colors hover:bg-surface-primary-hover disabled:pointer-events-none disabled:opacity-40';
 
-// Figma > Componentes > Pagination: "Mostrando 1-8 de 253" + flechas y números.
+// Figma > Componentes > Count (State = Default, Hover, Selected · Page = número o "...")
+const numero =
+  'inline-flex min-w-8 items-center justify-center rounded-lg px-1 py-2 text-label-2 transition-colors';
+
+// Figma > Componentes > Pagination: "Mostrando 1-10 de 200" + flechas y números (Count).
 export const PaginationBar = ({
   page,
   size,
@@ -40,10 +44,10 @@ export const PaginationBar = ({
         </span>{' '}
         de <span className="font-semibold text-content-primary">{total}</span>
       </p>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <button
           type="button"
-          className={cn(botonPagina, 'border-stroke-primary bg-white')}
+          className={flecha}
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
         >
@@ -52,8 +56,8 @@ export const PaginationBar = ({
         </button>
         {paginasVisibles(page, totalPages).map((p, i) =>
           p === '…' ? (
-            <span key={`e${i}`} className="px-1 text-content-quartiary">
-              …
+            <span key={`e${i}`} className={cn(numero, 'text-content-tertiary')}>
+              ...
             </span>
           ) : (
             <button
@@ -62,10 +66,10 @@ export const PaginationBar = ({
               aria-current={p === page ? 'page' : undefined}
               onClick={() => onPageChange(p)}
               className={cn(
-                botonPagina,
+                numero,
                 p === page
-                  ? 'border-transparent bg-surface-accent-primary text-white'
-                  : 'border-stroke-primary bg-white text-content-secondary',
+                  ? 'bg-surface-accent-primary font-medium text-white'
+                  : 'text-content-tertiary hover:bg-surface-accent-light-hover hover:text-content-tertiary-hover',
               )}
             >
               {p}
@@ -74,7 +78,7 @@ export const PaginationBar = ({
         )}
         <button
           type="button"
-          className={cn(botonPagina, 'border-stroke-primary bg-white')}
+          className={flecha}
           disabled={page >= totalPages}
           onClick={() => onPageChange(page + 1)}
         >

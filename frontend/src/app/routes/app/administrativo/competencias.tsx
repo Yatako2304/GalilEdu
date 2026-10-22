@@ -1,10 +1,10 @@
 import * as React from 'react';
 
 import { ContentLayout } from '@/components/layouts';
+import { Tabs } from '@/components/ui/tabs';
 import { EscalaCalificacion } from '@/features/catalogo-academico/components/escala-calificacion';
 import { PlanCurricular } from '@/features/catalogo-academico/components/plan-curricular';
 import { PlanEvaluacion } from '@/features/catalogo-academico/components/plan-evaluacion';
-import { cn } from '@/utils/cn';
 
 // Figma > Personal Administrativo > Competencias: pestañas CI-14, CI-17 y CI-23.
 const PESTANAS = [
@@ -40,29 +40,14 @@ const AdministrativoCompetenciasRoute = () => {
       breadcrumbs={['Configuración', 'Competencias', actual.titulo]}
       subtitle={actual.subtitulo}
     >
-      <div
-        role="tablist"
+      <Tabs
+        variant="pill"
+        size="md"
         aria-label="Secciones de competencias"
-        className="flex gap-2"
-      >
-        {PESTANAS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            role="tab"
-            aria-selected={p.id === pestana}
-            onClick={() => setPestana(p.id)}
-            className={cn(
-              'rounded-lg px-4 py-2 text-body-3 transition-colors',
-              p.id === pestana
-                ? 'bg-deep-blue-800 text-white'
-                : 'text-content-secondary hover:bg-surface-tertiary',
-            )}
-          >
-            {p.titulo}
-          </button>
-        ))}
-      </div>
+        items={PESTANAS.map((p) => ({ value: p.id, label: p.titulo }))}
+        value={pestana}
+        onValueChange={setPestana}
+      />
 
       {pestana === 'plan-curricular' && <PlanCurricular />}
       {pestana === 'plan-evaluacion' && <PlanEvaluacion />}

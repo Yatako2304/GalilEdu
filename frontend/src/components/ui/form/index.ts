@@ -5,3 +5,6 @@ export * from './textarea';
 export * from './form-drawer';
 export * from './label';
 export * from './switch';
+export * from './checkbox';
+export * from './option-card';
+export * from './tag-field';

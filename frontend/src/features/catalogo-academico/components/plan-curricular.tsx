@@ -19,7 +19,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { Spinner } from '@/components/ui/spinner';
+import { StatCard } from '@/components/ui/stat-card';
 import { Table } from '@/components/ui/table';
 import { Status, Tag } from '@/components/ui/tag';
 import {
@@ -194,16 +196,14 @@ const ResumenTarjetas = () => {
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {tarjetas.map(({ Icono, titulo, valor, detalle }) => (
-        <Card key={titulo} className="px-5 py-4">
-          <p className="flex items-center gap-2 text-body-4 text-content-tertiary">
-            <Icono className="size-4" aria-hidden="true" />
-            {titulo}
-          </p>
-          <p className="mt-1 text-h6 font-semibold text-content-primary">
-            {valor ?? '—'}
-          </p>
-          <p className="text-body-4 text-content-quartiary">{detalle}</p>
-        </Card>
+        <StatCard
+          key={titulo}
+          icon={<Icono />}
+          value={valor ?? '—'}
+          label={titulo}
+          trend={detalle}
+          trendTone="neutral"
+        />
       ))}
     </div>
   );
@@ -450,9 +450,7 @@ const FilaCompetencia = ({
   const activa = competencia.estado === 'ACTIVA';
   return (
     <li className="flex items-start gap-3 rounded-lg border border-stroke-tertiary px-4 py-3">
-      <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-surface-accent-light text-caption-1 font-semibold text-content-accent-primary">
-        {numero}
-      </span>
+      <IconBadge size="sm">{numero}</IconBadge>
       <div className="min-w-0 flex-1">
         <p
           className={cn(

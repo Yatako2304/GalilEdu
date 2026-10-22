@@ -2,6 +2,7 @@ import * as React from 'react';
 import { UseFormRegisterReturn } from 'react-hook-form';
 
 import { Card } from '@/components/ui/card';
+import { Checkbox, Radio } from '@/components/ui/form';
 import { cn } from '@/utils/cn';
 
 // Piezas pequeñas reutilizadas en los pasos de la inscripción.
@@ -72,18 +73,12 @@ export const SiNo = ({
     </legend>
     <div className="flex gap-6">
       {(['SI', 'NO'] as const).map((v) => (
-        <label
+        <Radio
           key={v}
-          className="flex items-center gap-2 text-body-3 text-content-primary"
-        >
-          <input
-            type="radio"
-            value={v}
-            className="size-4 accent-deep-blue-900"
-            {...registration}
-          />
-          {v === 'SI' ? 'Sí' : 'No'}
-        </label>
+          value={v}
+          label={v === 'SI' ? 'Sí' : 'No'}
+          {...registration}
+        />
       ))}
     </div>
   </fieldset>
@@ -97,14 +92,4 @@ export const Casilla = ({
   etiqueta: string;
   registration: UseFormRegisterReturn;
   disabled?: boolean;
-}) => (
-  <label className="flex items-center gap-2 text-body-3 text-content-secondary">
-    <input
-      type="checkbox"
-      className="size-4 accent-deep-blue-900"
-      disabled={disabled}
-      {...registration}
-    />
-    {etiqueta}
-  </label>
-);
+}) => <Checkbox label={etiqueta} disabled={disabled} {...registration} />;

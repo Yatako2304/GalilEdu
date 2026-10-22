@@ -4,9 +4,9 @@ import * as React from 'react';
 import { Card } from '@/components/ui/card';
 import { Spinner } from '@/components/ui/spinner';
 import { Table } from '@/components/ui/table';
+import { Tabs } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
 import { FichaEstudiante as Ficha, ModoSalida } from '@/types/api';
-import { cn } from '@/utils/cn';
 import { formatDay } from '@/utils/format';
 
 import { useFichaEstudiante } from '../api/estudiantes';
@@ -107,28 +107,13 @@ export const FichaEstudiante = ({
         </div>
       )}
 
-      <div
-        role="tablist"
-        className="grid grid-cols-2 border-b border-stroke-tertiary md:grid-cols-4"
-      >
-        {PESTANAS.map((t) => (
-          <button
-            key={t}
-            role="tab"
-            type="button"
-            aria-selected={pestana === t}
-            onClick={() => setPestana(t)}
-            className={cn(
-              '-mb-px border-b-2 py-3 text-body-3 transition-colors',
-              pestana === t
-                ? 'border-surface-accent-primary text-content-primary'
-                : 'border-transparent text-content-tertiary hover:text-content-primary',
-            )}
-          >
-            {t}
-          </button>
-        ))}
-      </div>
+      <Tabs
+        aria-label="Secciones de la ficha"
+        fullWidth
+        items={PESTANAS.map((t) => ({ value: t, label: t }))}
+        value={pestana}
+        onValueChange={setPestana}
+      />
 
       {pestana === 'Datos personales' && (
         <Card className="p-6">

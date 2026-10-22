@@ -324,6 +324,6 @@ export const TEXTOS: Record<
   eliminar: (n) => ({
     titulo: `¿Eliminar a ${n}?`,
     descripcion:
-      'La cuenta dejará de aparecer en la lista y no podrá iniciar sesión. Sus datos se conservan en el sistema (borrado lógico).',
+      'Al eliminarlo, dejará de aparecer en la lista de usuarios y no podrá iniciar sesión en Galiledu.',
   }),
 };

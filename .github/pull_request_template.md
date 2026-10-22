@@ -14,6 +14,7 @@
 ## Checklist
 
 - [ ] Sigue las pantallas de Figma (textos, campos, mensajes).
+- [ ] Las pantallas usan los componentes de `frontend/src/components/ui` (`docs/guias/componentes-ui.md`); no copié sus estilos y lo que faltaba lo creé ahí, no en el módulo.
 - [ ] Los nombres siguen `docs/guias/convenciones.md` (español, sin tildes en el código, mismo nombre en BD/Java/TS).
 - [ ] Pruebas nuevas para lo que agregué, y **todas** las pruebas pasan en mi PC (`mvnw verify`, `npm run lint && npm run check-types && npm test`).
 - [ ] Si cambia la BD: migración **nueva** `V{n}__...sql` (no edité una existente).

@@ -12,7 +12,7 @@ Repositorio con `backend/` (Spring Boot + PostgreSQL + Flyway) y `frontend/` (Re
 
 - Sigue [`docs/guias/nuevo-modulo.md`](docs/guias/nuevo-modulo.md) y los nombres de [`docs/guias/convenciones.md`](docs/guias/convenciones.md). Copia los patrones de `usuarios` y `estudiantes`.
 - BD: solo migraciones **nuevas** en `backend/src/main/resources/db/migration/`; un esquema por módulo.
-- Frontend: usa `src/components/ui` y los tokens de Tailwind; un feature no importa de otro.
+- Frontend: arma las pantallas con `src/components/ui` ([catálogo](docs/guias/componentes-ui.md)) y los tokens de Tailwind; no copies estilos de un componente y, si falta uno de Figma, créalo en `components/ui`. Un feature no importa de otro.
 - Escribe pruebas para lo que agregues ([`docs/guias/pruebas.md`](docs/guias/pruebas.md)).
 
 ## Antes de dar algo por terminado

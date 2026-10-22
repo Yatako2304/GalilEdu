@@ -7,6 +7,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { cn } from '@/utils/cn';
 
 type DialogoCatalogoProps = {
@@ -45,9 +46,7 @@ export const DialogoCatalogo = ({
       )}
     >
       <div className="flex flex-col gap-3 px-6 pt-6">
-        <span className="inline-flex size-10 items-center justify-center rounded-full bg-surface-accent-light text-content-accent-primary">
-          {icono}
-        </span>
+        <IconBadge>{icono}</IconBadge>
         <div>
           <DialogTitle className="text-h6 font-semibold text-content-primary">
             {titulo}
