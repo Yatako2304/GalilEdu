@@ -50,7 +50,7 @@ Reglas:
 1. Tipos del contrato en `frontend/src/types/api.ts` (iguales a tus DTOs Java).
 2. Feature en `frontend/src/features/matricula/`:
    - `api/`: hooks de React Query (ver `features/usuarios/api/`).
-   - `components/`: pantallas y modales con los componentes de `src/components/ui` y los tokens de Tailwind (no inventes colores ni tamaños).
+   - `components/`: pantallas y modales armados **solo** con los componentes de `src/components/ui` y los tokens de Tailwind (no inventes colores ni tamaños). Busca cada pieza de Figma en el [catálogo de componentes](componentes-ui.md); si falta, créala en `components/ui`, no en tu módulo.
 3. Tu ruta **ya existe**: en `src/app/routes/app/<rol>/` hay un `ModulePlaceholder` con el enlace a su frame de Figma. Reemplázalo. Para una ruta nueva usa `src/config/paths.ts`, `navigation.ts` y `app/router.tsx`.
 4. Si tu módulo tenía handlers de MSW en `src/testing/mocks/handlers/`, quítalo de `browserHandlers` cuando el backend ya responda.
 5. Un feature **no importa de otro feature** (ESLint lo bloquea). Lo compartido va en `src/components`, `src/config` o `src/utils`.

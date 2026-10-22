@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Select } from '@/components/ui/form';
+import { IconBadge } from '@/components/ui/icon-badge';
 import { Spinner } from '@/components/ui/spinner';
 import { PlanCursoResumen, PlanGrado } from '@/types/api';
 
@@ -245,9 +246,9 @@ export const DialogoQuitarCurso = ({
     <Dialog open onOpenChange={(abierto) => !abierto && onCerrar()}>
       <DialogContent className="max-w-[448px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
         <div className="flex flex-col gap-3 px-6 pt-6">
-          <span className="inline-flex size-10 items-center justify-center rounded-full bg-surface-error-light text-content-error">
-            <Trash2 className="size-5" aria-hidden="true" />
-          </span>
+          <IconBadge color="error">
+            <Trash2 aria-hidden="true" />
+          </IconBadge>
           <DialogTitle className="text-h6 font-semibold text-content-primary">
             ¿Quitar {curso.curso} del plan?
           </DialogTitle>

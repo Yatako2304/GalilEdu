@@ -1,12 +1,7 @@
-import {
-  AlertCircle,
-  Check,
-  ChevronDown,
-  CircleCheck,
-  FileText,
-  WalletCards,
-} from 'lucide-react';
+import { Check, ChevronDown } from 'lucide-react';
 
+import { Alert } from '@/components/ui/alert';
+import { Avatar } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -17,13 +12,13 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown';
 import { Spinner } from '@/components/ui/spinner';
+import { Stepper } from '@/components/ui/stepper';
 import { Tag, TagProps } from '@/components/ui/tag';
 import {
   EstadoMatricula,
   EstadoMatriculaApoderado,
   HijoApoderado,
 } from '@/types/api';
-import { cn } from '@/utils/cn';
 
 const estados: Record<
   EstadoMatricula,
@@ -61,15 +56,6 @@ export const fechaPeriodo = (fecha?: string) => {
     .format(new Date(fecha))
     .replace('.', '');
 };
-
-const iniciales = (nombre: string) =>
-  nombre
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((parte) => parte[0])
-    .join('')
-    .toUpperCase();
 
 const soles = (monto: number) =>
   `S/ ${new Intl.NumberFormat('es-PE', {
@@ -145,9 +131,7 @@ const SelectorEstudiante = ({
           className="flex min-w-0 items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus"
           aria-label="Seleccionar estudiante"
         >
-          <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-accent-light text-label-2 font-semibold text-content-accent-primary">
-            {elegido ? iniciales(elegido.nombre) : '—'}
-          </span>
+          <Avatar name={elegido?.nombre ?? ''} />
           <span className="min-w-0">
             <span className="block truncate text-label-2 font-medium text-content-primary">
               {elegido?.nombre ?? 'Selecciona un estudiante'}
@@ -178,9 +162,7 @@ const SelectorEstudiante = ({
               onSelect={() => onElegir(hijo.id)}
               className="gap-3 rounded-lg p-3 focus:bg-surface-secondary"
             >
-              <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-surface-accent-light text-caption-1 font-semibold text-content-accent-primary">
-                {iniciales(hijo.nombre)}
-              </span>
+              <Avatar name={hijo.nombre} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-body-3 font-medium text-content-primary">
                   {hijo.nombre}
@@ -207,75 +189,17 @@ const SelectorEstudiante = ({
   </Card>
 );
 
-const pasos = [
-  { titulo: 'Datos y documentos', icono: FileText },
-  { titulo: 'Validación', icono: CircleCheck },
-  { titulo: 'Pago de matrícula', icono: WalletCards },
-  { titulo: 'Matriculado', icono: Check },
+const PASOS_MATRICULA = [
+  { label: 'Datos y documentos' },
+  { label: 'Validación' },
+  { label: 'Pago de matrícula' },
+  { label: 'Matriculado' },
 ];
 
+// Figma > Apoderado > Matrícula > "Card - Progreso": instancia de Componentes > Stepper.
 const ProgresoMatricula = ({ pasoActual }: { pasoActual: number }) => (
-  <Card className="p-5">
-    <p className="mb-5 text-label-2 font-medium text-content-primary">
-      Progreso de la matrícula
-    </p>
-    <ol className="grid gap-4 md:grid-cols-4">
-      {pasos.map(({ titulo, icono: Icono }, index) => {
-        const numero = index + 1;
-        const completado = pasoActual > numero;
-        const activo = pasoActual === numero;
-        return (
-          <li
-            key={titulo}
-            className="relative flex items-center gap-3 md:block"
-          >
-            <div className="flex items-center md:mb-3">
-              <span
-                className={cn(
-                  'inline-flex size-9 shrink-0 items-center justify-center rounded-full border',
-                  completado &&
-                    'border-growth-green-500 bg-growth-green-500 text-white',
-                  activo &&
-                    'border-stroke-focus bg-surface-accent-light text-content-accent-primary',
-                  !completado &&
-                    !activo &&
-                    'border-stroke-tertiary bg-white text-content-placeholder',
-                )}
-              >
-                {completado ? (
-                  <Check className="size-4" />
-                ) : (
-                  <Icono className="size-4" />
-                )}
-              </span>
-              {index < pasos.length - 1 && (
-                <span
-                  className={cn(
-                    'mx-2 hidden h-px flex-1 md:block',
-                    completado ? 'bg-growth-green-500' : 'bg-stroke-tertiary',
-                  )}
-                />
-              )}
-            </div>
-            <div>
-              <p
-                className={cn(
-                  'text-body-3 font-medium',
-                  activo || completado
-                    ? 'text-content-primary'
-                    : 'text-content-quartiary',
-                )}
-              >
-                {titulo}
-              </p>
-              <p className="text-caption-1 text-content-quartiary">
-                Paso {numero} de 4
-              </p>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+  <Card className="p-6">
+    <Stepper steps={PASOS_MATRICULA} current={pasoActual} />
   </Card>
 );
 
@@ -370,6 +294,9 @@ export const ConsultaMatricula = ({
     );
   }
 
+  const tituloImpedimento =
+    `No puedes iniciar la matrícula ${estado?.periodo.anio ?? ''}`.trim();
+
   return (
     <div className="flex flex-col gap-6">
       <SelectorEstudiante
@@ -380,24 +307,20 @@ export const ConsultaMatricula = ({
       />
 
       {otrosImpedimentos.map((impedimento) => (
-        <div
+        <Alert
           key={`${impedimento.tipo}-${impedimento.mensaje}`}
-          className="flex gap-3 rounded-[12px] border border-stroke-error-secondary bg-surface-error-light px-4 py-3 text-content-error"
-          role="alert"
+          type="error"
+          title={tituloImpedimento}
         >
-          <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          <p className="text-body-3">{impedimento.mensaje}</p>
-        </div>
+          {impedimento.mensaje}
+        </Alert>
       ))}
 
+      {/* Figma > HU-30: "No puedes iniciar la matrícula 2027" + detalle de la deuda. */}
       {estado && estado.deuda.total > 0 && (
-        <div
-          className="flex gap-3 rounded-[12px] border border-stroke-error-secondary bg-surface-error-light px-4 py-3 text-content-error"
-          role="alert"
-        >
-          <AlertCircle className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
-          <p className="text-body-3">{mensajeDeuda(estado.deuda, elegido)}</p>
-        </div>
+        <Alert type="error" title={tituloImpedimento}>
+          {mensajeDeuda(estado.deuda, elegido)}
+        </Alert>
       )}
 
       <ProgresoMatricula pasoActual={estado?.pasoActual ?? 0} />

@@ -8,7 +8,7 @@ Cómo nombrar las cosas en BD, backend y frontend. Si una regla no está aquí, 
 2. **Sin tildes ni `ñ` en nombres de código:** `anio`, `numeroDocumento`, `contrasena`, `Inscripcion`. Las tildes van solo en textos que ve el usuario y en comentarios.
 3. **El mismo nombre en las tres capas.** La columna `numero_documento` es `numeroDocumento` en Java, en el JSON y en TypeScript. Nunca `nroDoc` en un lado y `documento` en otro.
 4. **Nombres completos, sin abreviaturas:** `fechaNacimiento`, no `fNac`; `apellidoPaterno`, no `apPat`. Excepciones aceptadas: `id`, `dni`, `url`.
-5. **Mensajes al usuario** en español, tuteo, con punto final y con el texto exacto de Figma cuando exista: "El correo ya está registrado.", "Debe ingresar su usuario."
+5. **Mensajes al usuario** en español, tuteo, con punto final y con el texto exacto de Figma cuando exista: "El correo ya está registrado.", "Debe ingresar su usuario." Si Figma no tiene el texto, escríbelo en el mismo estilo de sus mensajes y **sin términos técnicos**: nada de "borrado lógico", "base de datos", "backend", "token" ni códigos de HU o RF. Esos detalles van en los comentarios del código y en la documentación, no en pantalla.
 
 ## Base de datos (PostgreSQL)
 
@@ -82,6 +82,8 @@ ESLint ya obliga a que **archivos y carpetas** estén en `kebab-case` y a que un
 | Manejadores | `on<Evento>` en props, verbo en el componente | `onCerrar={cerrar}` |
 | Constantes de catálogo | `MAYUSCULAS` | `TIPOS_DOCUMENTO`, `DISTRITOS_LIMA` |
 | Pruebas | `__tests__/<archivo>.test.ts(x)`, descripción en español | `test('el DNI debe tener 8 dígitos', …)` |
+
+Interfaz: cada pieza de la página Componentes de Figma ya está en `src/components/ui`; úsala en vez de copiar sus estilos. Ver [componentes-ui.md](componentes-ui.md).
 
 Excepción heredada: `ROLES` (`src/config/roles.ts`) y algunos componentes base de `src/components/ui` vienen de bulletproof-react en inglés; no se renombran.
 

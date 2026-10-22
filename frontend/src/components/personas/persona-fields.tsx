@@ -1,6 +1,6 @@
 import { FieldErrors, UseFormRegister } from 'react-hook-form';
 
-import { Input, Select } from '@/components/ui/form';
+import { Checkbox, Input, Select } from '@/components/ui/form';
 import {
   DISTRITOS_LIMA,
   ESTADOS_CIVILES,
@@ -126,15 +126,12 @@ export const PersonaFields = ({
       />
       <Input label="Dirección" {...campo('direccion')} />
       {!sinDatosLaborales && (
-        <label className="flex items-center gap-2 text-body-2 text-content-secondary md:col-span-2">
-          <input
-            type="checkbox"
-            className="size-4 accent-deep-blue-900"
-            disabled={disabled}
-            {...register(`${prefix}.esExalumno`)}
-          />
-          Es exalumno(a) del colegio
-        </label>
+        <Checkbox
+          className="md:col-span-2"
+          label="Es exalumno(a) del colegio"
+          disabled={disabled}
+          {...register(`${prefix}.esExalumno`)}
+        />
       )}
     </div>
   );
