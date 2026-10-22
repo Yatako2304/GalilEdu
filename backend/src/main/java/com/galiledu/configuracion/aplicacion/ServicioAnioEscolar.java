@@ -26,9 +26,12 @@ import com.galiledu.configuracion.dominio.AnioEscolar;
 import com.galiledu.configuracion.dominio.EstadoAnioEscolar;
 import com.galiledu.configuracion.dominio.PeriodoAcademico;
 import com.galiledu.configuracion.dominio.Regimen;
+import com.galiledu.configuracion.dominio.Tarifario;
 import com.galiledu.configuracion.infraestructura.AnioEscolarRepositorio;
 import com.galiledu.configuracion.infraestructura.ConsultasConfiguracion;
 import com.galiledu.configuracion.infraestructura.ConsultasConfiguracion.ConteosAnio;
+import com.galiledu.configuracion.infraestructura.ConsultasTarifario;
+import com.galiledu.configuracion.infraestructura.TarifarioRepositorio;
 
 /**
  * HU-74: años escolares y sus periodos. "Hoy" sale del {@link Clock} (America/Lima). El dominio lanza
@@ -41,11 +44,16 @@ public class ServicioAnioEscolar {
 
 	private final AnioEscolarRepositorio anios;
 	private final ConsultasConfiguracion consultas;
+	private final TarifarioRepositorio tarifarios;
+	private final ConsultasTarifario consultasTarifario;
 	private final Clock reloj;
 
-	public ServicioAnioEscolar(AnioEscolarRepositorio anios, ConsultasConfiguracion consultas, Clock reloj) {
+	public ServicioAnioEscolar(AnioEscolarRepositorio anios, ConsultasConfiguracion consultas,
+			TarifarioRepositorio tarifarios, ConsultasTarifario consultasTarifario, Clock reloj) {
 		this.anios = anios;
 		this.consultas = consultas;
+		this.tarifarios = tarifarios;
+		this.consultasTarifario = consultasTarifario;
 		this.reloj = reloj;
 	}
 
@@ -84,12 +92,22 @@ public class ServicioAnioEscolar {
 		return detalle(anios.save(nuevo));
 	}
 
-	/** Cambia las fechas de un año PLANIFICADO y vuelve a generar sus periodos con fechas sugeridas. */
+	/**
+	 * Cambia las fechas de un año PLANIFICADO y vuelve a generar sus periodos con fechas sugeridas. Si el año ya tiene
+	 * tarifario (HU-34) y todavía no tiene compromisos de pago, también regenera su calendario de cuotas y el
+	 * vencimiento de la matrícula; con compromisos no lo toca (el GET del tarifario avisa que quedó desactualizado).
+	 */
 	@Transactional
 	public AnioEscolarDetalle editar(UUID id, SolicitudEdicionAnio solicitud) {
 		AnioEscolar anio = buscar(id);
 		validarFechas(solicitud.fechaInicio(), solicitud.fechaFin(), anio.getRegimen());
+		// Con tarifario sin compromisos, primero se valida su calendario nuevo: un 400 no debe dejar nada a medias.
+		Optional<Tarifario> tarifario = tarifarios.findByAnioEscolarId(id)
+				.filter(t -> anio.getEstado() == EstadoAnioEscolar.PLANIFICADO)
+				.filter(t -> !consultasTarifario.tieneCompromisos(t.getId()));
+		tarifario.ifPresent(t -> validarCalendarioTarifario(anio, solicitud));
 		regenerarPeriodos(anio, () -> anio.editarFechas(solicitud.fechaInicio(), solicitud.fechaFin()));
+		tarifario.ifPresent(t -> regenerarCalendarioTarifario(anio, t));
 		return detalle(anio);
 	}
 
@@ -204,6 +222,23 @@ public class ServicioAnioEscolar {
 		anios.flush();
 		traducir(regenerar);
 		anios.flush();
+	}
+
+	private void validarCalendarioTarifario(AnioEscolar anio, SolicitudEdicionAnio solicitud) {
+		try {
+			Tarifario.validarCalendario(solicitud.fechaInicio(), solicitud.fechaFin());
+		} catch (IllegalArgumentException e) {
+			throw ExcepcionNegocio.invalido("No se pueden cambiar las fechas: el calendario del tarifario "
+					+ anio.getAnio() + " no sería válido con ellas. " + e.getMessage());
+		}
+	}
+
+	/** Mismo patrón que los periodos: quitar, flush y recién entonces generar (UNIQUE de número y de vencimiento). */
+	private void regenerarCalendarioTarifario(AnioEscolar anio, Tarifario tarifario) {
+		tarifario.quitarCuotas();
+		tarifarios.flush();
+		tarifario.regenerarCalendario(anio.getFechaInicio(), anio.getFechaFin());
+		tarifarios.flush();
 	}
 
 	/** Traduce las excepciones del dominio conservando el mensaje: estado no permitido es 409; dato inválido, 400. */
