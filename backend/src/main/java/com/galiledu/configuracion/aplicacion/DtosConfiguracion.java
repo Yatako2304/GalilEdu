@@ -1,5 +1,6 @@
 package com.galiledu.configuracion.aplicacion;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -12,8 +13,10 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import com.galiledu.configuracion.dominio.AnioEscolar;
+import com.galiledu.configuracion.dominio.DatosTarifario;
 import com.galiledu.configuracion.dominio.EstadoAnioEscolar;
 import com.galiledu.configuracion.dominio.EstadoPeriodo;
+import com.galiledu.configuracion.dominio.EstadoTarifario;
 import com.galiledu.configuracion.dominio.PeriodoAcademico;
 import com.galiledu.configuracion.dominio.Regimen;
 import com.galiledu.configuracion.infraestructura.ConsultasConfiguracion.AnioListado;
@@ -143,5 +146,62 @@ public final class DtosConfiguracion {
 	 * {@code texto} y {@code detalle} van como en Figma ("Secciones creadas" · "23 secciones activas en 11 grados").
 	 */
 	public record Requisito(String codigo, String texto, boolean cumplido, String detalle) {
+	}
+
+	/**
+	 * Botón "Confirmar tarifario" de "P19 · Configuración › Tarifario y calendario" (HU-34). Los campos vacíos los
+	 * rechaza el dominio con un mensaje propio (400).
+	 */
+	public record SolicitudTarifario(BigDecimal montoCuotaIngreso, BigDecimal montoMatricula, BigDecimal montoPension,
+			Integer diasGracia, BigDecimal recargoPorcentaje, BigDecimal topeRecargoPorcentaje) {
+		DatosTarifario datos() {
+			return new DatosTarifario(montoCuotaIngreso, montoMatricula, montoPension, diasGracia, recargoPorcentaje,
+					topeRecargoPorcentaje);
+		}
+	}
+
+	/**
+	 * Pantalla P19 de un año. Si {@code existe} es false es una propuesta que todavía no se guardó: los montos y la
+	 * morosidad son los del año anterior (o vienen vacíos) y el calendario sale de las fechas del año. {@code estado}
+	 * es EN_CONFIGURACION mientras no exista; confirmar lo crea ya CONFIRMADO.
+	 *
+	 * <p>
+	 * {@code soloLectura} no se guarda: es verdadero si el año está CERRADO (RF-73) o si el tarifario CONFIRMADO ya
+	 * tiene compromisos de pago; {@code motivoSoloLectura} dice cuál. {@code calendarioDesactualizado} es verdadero si
+	 * el calendario guardado ya no coincide con las fechas del año (cambiaron cuando había compromisos).
+	 */
+	public record TarifarioVista(UUID anioEscolarId, int anio, boolean existe, EstadoTarifario estado,
+			boolean soloLectura, String motivoSoloLectura, boolean calendarioDesactualizado,
+			ConceptosTarifario conceptos, MorosidadTarifario morosidad, CalendarioVista calendario) {
+	}
+
+	/** Tabla "Conceptos y montos" de P19. */
+	public record ConceptosTarifario(BigDecimal montoCuotaIngreso, BigDecimal montoMatricula,
+			LocalDate vencimientoMatricula, BigDecimal montoPension, int cantidadCuotas) {
+	}
+
+	/** "Política de morosidad" de P19. */
+	public record MorosidadTarifario(Integer diasGracia, BigDecimal recargoPorcentaje,
+			BigDecimal topeRecargoPorcentaje) {
+	}
+
+	/** "Calendario de cuotas" de P19; {@code totalPensiones} es null mientras no haya monto de pensión. */
+	public record CalendarioVista(List<CuotaVista> cuotas, BigDecimal totalPensiones) {
+	}
+
+	public record CuotaVista(int numero, String nombre, LocalDate fechaVencimiento, BigDecimal monto) {
+	}
+
+	/** Para otros módulos (HU-23, Pagos): los montos y la morosidad de un tarifario CONFIRMADO. */
+	public record TarifarioVigente(BigDecimal montoCuotaIngreso, BigDecimal montoMatricula,
+			LocalDate vencimientoMatricula, BigDecimal montoPension, int diasGracia, BigDecimal recargoPorcentaje,
+			BigDecimal topeRecargoPorcentaje) {
+	}
+
+	/** Para Pagos: las cuotas de pensión de un tarifario CONFIRMADO; todas valen {@code montoPension}. */
+	public record CalendarioPension(BigDecimal montoPension, List<CuotaCalendario> cuotas) {
+	}
+
+	public record CuotaCalendario(int numero, String nombre, LocalDate fechaVencimiento) {
 	}
 }
