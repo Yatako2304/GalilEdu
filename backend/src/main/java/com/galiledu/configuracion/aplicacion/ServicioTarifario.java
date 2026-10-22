@@ -87,9 +87,9 @@ public class ServicioTarifario {
 	 */
 	@Transactional(readOnly = true)
 	public Optional<TarifarioVigente> vigente(UUID anioEscolarId) {
-		return confirmado(anioEscolarId).map(t -> new TarifarioVigente(t.getMontoCuotaIngreso(), t.getMontoMatricula(),
-				t.getVencimientoMatricula(), t.getMontoPension(), t.getDiasGracia(), t.getRecargoPorcentaje(),
-				t.getTopeRecargoPorcentaje()));
+		return confirmado(anioEscolarId).map(t -> new TarifarioVigente(t.getId(), t.getMontoCuotaIngreso(),
+				t.getMontoMatricula(), t.getVencimientoMatricula(), t.getMontoPension(), t.getDiasGracia(),
+				t.getRecargoPorcentaje(), t.getTopeRecargoPorcentaje()));
 	}
 
 	/**

@@ -33,6 +33,7 @@ import com.galiledu.configuracion.dominio.EstadoTarifario;
 class ServicioTarifarioIT extends PruebaIntegracion {
 	private static final UUID ID_2026 = UUID.fromString("30000000-0000-0000-0000-000000002026");
 	private static final UUID ID_2027 = UUID.fromString("30000000-0000-0000-0000-000000002027");
+	private static final UUID TARIFARIO_2026 = UUID.fromString("32000000-0000-0000-0000-000000002026");
 	private static final UUID TARIFARIO_2027 = UUID.fromString("32000000-0000-0000-0000-000000002027");
 	private static final UUID SOFIA = UUID.fromString("20000000-0000-0000-0000-000000000002");
 
@@ -304,6 +305,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 	@Test
 	void vigenteYCalendarioSoloExistenParaUnTarifarioConfirmado() {
 		var vigente = servicio.vigente(ID_2026).orElseThrow();
+		assertThat(vigente.tarifarioId()).isEqualTo(TARIFARIO_2026);
 		assertThat(vigente.montoCuotaIngreso()).isEqualByComparingTo("500");
 		assertThat(vigente.montoMatricula()).isEqualByComparingTo("420");
 		assertThat(vigente.vencimientoMatricula()).isEqualTo(fecha(2026, 2, 28));
@@ -325,7 +327,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(servicio.vigente(UUID.randomUUID())).isEmpty();
 
 		servicio.confirmar(ID_2027, solicitudValida());
-		assertThat(servicio.vigente(ID_2027)).isPresent();
+		assertThat(servicio.vigente(ID_2027)).get().extracting(v -> v.tarifarioId()).isEqualTo(TARIFARIO_2027);
 		assertThat(servicio.calendario(ID_2027)).isPresent();
 	}
 
