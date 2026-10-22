@@ -1,12 +1,11 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Check } from 'lucide-react';
 import * as React from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/form';
+import { Input, Radio } from '@/components/ui/form';
+import { Stepper } from '@/components/ui/stepper';
 import { nombreGrado } from '@/config/catalogos';
-import { cn } from '@/utils/cn';
 
 import { ResultadoInscripcion, useInscribir } from '../../api/estudiantes';
 
@@ -37,46 +36,6 @@ const SIGUIENTE = [
   'Siguiente: Contactos y salida',
   'Siguiente: Responsable',
 ];
-
-const Pasos = ({ actual }: { actual: number }) => (
-  <ol className="grid grid-cols-5 border-t border-stroke-secondary">
-    {PASOS.map((p, i) => (
-      <li
-        key={p.titulo}
-        className="-mt-3 flex flex-col items-center gap-1 text-center"
-      >
-        <span
-          className={cn(
-            'inline-flex size-6 items-center justify-center rounded-full border text-caption-1',
-            i < actual &&
-              'border-transparent bg-surface-accent-secondary text-white',
-            i === actual &&
-              'border-content-primary bg-white text-content-primary',
-            i > actual &&
-              'border-stroke-primary bg-white text-content-tertiary',
-          )}
-        >
-          {i < actual ? (
-            <Check className="size-3.5" aria-hidden="true" />
-          ) : (
-            i + 1
-          )}
-        </span>
-        <span
-          className={cn(
-            'text-body-3',
-            i === actual ? 'text-content-primary' : 'text-content-tertiary',
-          )}
-        >
-          {p.titulo}
-        </span>
-        <span className="hidden text-body-4 text-content-quartiary md:block">
-          {p.detalle}
-        </span>
-      </li>
-    ))}
-  </ol>
-);
 
 const nombre = (f: FamiliarForm) =>
   `${f.persona.nombres} ${f.persona.apellidoPaterno} ${f.persona.apellidoMaterno ?? ''}`.trim();
@@ -172,24 +131,17 @@ const PasoResponsable = ({
       >
         <div className="flex flex-col gap-3">
           {candidatos.map(([clave, rol, f]) => (
-            <label key={clave} className="flex items-start gap-3">
-              <input
-                type="radio"
-                value={clave}
-                className="mt-1 size-4 accent-deep-blue-900"
-                {...register('responsable')}
-              />
-              <span>
-                <span className="block text-body-2 text-content-primary">
-                  {nombre(f)} — {rol}
-                </span>
-                <span className="block text-body-4 text-content-tertiary">
-                  {f.tieneCuenta
-                    ? `Ya tiene usuario${f.aCargo.length ? `: es responsable de ${f.aCargo.join(', ')}` : ''}.`
-                    : 'No tiene usuario: se creará uno nuevo con su correo.'}
-                </span>
-              </span>
-            </label>
+            <Radio
+              key={clave}
+              value={clave}
+              label={`${nombre(f)} — ${rol}`}
+              helperText={
+                f.tieneCuenta
+                  ? `Ya tiene usuario${f.aCargo.length ? `: es responsable de ${f.aCargo.join(', ')}` : ''}.`
+                  : 'No tiene usuario: se creará uno nuevo con su correo.'
+              }
+              {...register('responsable')}
+            />
           ))}
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -282,7 +234,10 @@ export const InscripcionWizard = ({
   return (
     <div className="flex flex-col gap-8">
       <p className="-mt-6 text-body-3 text-content-quartiary">{subtitulo}</p>
-      <Pasos actual={paso} />
+      <Stepper
+        steps={PASOS.map((p) => ({ label: p.titulo, description: p.detalle }))}
+        current={paso + 1}
+      />
 
       <form
         onSubmit={(ev) => ev.preventDefault()}

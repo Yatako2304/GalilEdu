@@ -1,7 +1,7 @@
 import { ListPlus, SlidersHorizontal } from 'lucide-react';
 import * as React from 'react';
 
-import { Select, Input } from '@/components/ui/form';
+import { Checkbox, Select, Input } from '@/components/ui/form';
 import { Spinner } from '@/components/ui/spinner';
 import {
   Consolidacion,
@@ -260,19 +260,15 @@ export const DialogoCursoPlan = ({
                       className="border-b border-stroke-tertiary"
                     >
                       <td className="py-2 pr-3">
-                        <label className="flex items-start gap-2 text-body-3 text-content-primary">
-                          <input
-                            type="checkbox"
-                            className="mt-1 size-4 accent-deep-blue-800"
-                            checked={f.seleccionada}
-                            onChange={(e) =>
-                              cambiar(f.competenciaId, {
-                                seleccionada: e.target.checked,
-                              })
-                            }
-                          />
-                          {f.nombre}
-                        </label>
+                        <Checkbox
+                          label={f.nombre}
+                          checked={f.seleccionada}
+                          onChange={(e) =>
+                            cambiar(f.competenciaId, {
+                              seleccionada: e.target.checked,
+                            })
+                          }
+                        />
                       </td>
                       <CeldaSelect
                         etiqueta={`Escala de ${f.nombre}`}

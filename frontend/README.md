@@ -114,7 +114,7 @@ Sigue la guía completa (BD → backend → frontend → pruebas) en [`docs/guia
 
 1. **Tipos** del contrato en `src/types/api.ts`, iguales a los DTO del backend.
 2. **API** en `src/features/<modulo>/api/`: hooks de React Query; las mutaciones invalidan la query al terminar (ver `features/usuarios/api/`).
-3. **Componentes** en `src/features/<modulo>/components/` con el design system (`Button`, `Input`, `Select`, `Card`, `Table`, `PaginationBar`, `Tag`, `Status`, `Dialog`…) y los textos y medidas del frame de Figma.
+3. **Componentes** en `src/features/<modulo>/components/`, armados con `src/components/ui` (ver el [catálogo](../docs/guias/componentes-ui.md)) y con los textos del frame de Figma. No copies estilos de un componente: si falta uno de Figma, créalo en `components/ui`.
 4. **Ruta**: reemplaza el `ModulePlaceholder` en `src/app/routes/app/<rol>/`. ¿Ruta o rol nuevo? `config/paths.ts`, `config/navigation.ts` y `app/router.tsx`.
 5. **Pruebas** en `components/__tests__/` (ver [`docs/guias/pruebas.md`](../docs/guias/pruebas.md)).
 6. `npm run lint && npm run check-types && npm test` antes de subir.
@@ -128,5 +128,6 @@ Los tokens vienen de Figma (*🗂️ DESIGN SYSTEM › Foundations*) y están en
 - **Colores primitivos:** `deep-blue-*`, `vibrant-blue-*`, `growth-green-*`, `warm-yellow-*`, `turquoise-*`, `slate-*`, `red-*`, `amber-*`.
 - **Semánticos:** `bg-surface-*`, `text-content-*`, `border-stroke-*` (ej. `bg-surface-accent-light`, `text-content-accent-primary`).
 - **Tipografía (Inter):** `text-h4`, `text-h6`, `text-label-1..3`, `text-body-1..4`, `text-caption-1..2`.
-- **Componentes:** `Button` tiene las variantes de Figma (`primary`, `secondary`, `primary-light`, `tertiary`, `error`, `error-light`) y tamaños (`lg`, `md`, `sm`). Revisa todo en Storybook (`npm run storybook`).
+- **Efectos:** `shadow-card` y `shadow-event` (Card-shadow y Event-shadow de Figma).
+- **Componentes:** todos los de la página Componentes de Figma están en `src/components/ui`; la tabla Figma → código está en [`docs/guias/componentes-ui.md`](../docs/guias/componentes-ui.md). Revísalos en Storybook (`npm run storybook`).
 - **Si agregas un tamaño de letra** en `tailwind.config.cjs`, regístralo también en `src/utils/cn.ts`; si no, `cn()` lo confunde con un color y borra el color del texto.

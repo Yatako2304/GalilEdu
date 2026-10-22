@@ -22,6 +22,11 @@ module.exports = {
       },
     },
     extend: {
+      boxShadow: {
+        // Effects (Figma): Card-shadow y Event-shadow
+        card: '2px 4px 4px 0 rgba(0, 0, 0, 0.05)',
+        event: '0 0 8px 0 rgba(0, 0, 0, 0.25)',
+      },
       fontFamily: {
         sans: ['Inter', ...defaultTheme.fontFamily.sans],
       },
@@ -117,10 +122,13 @@ module.exports = {
         // ---- Semantics (Figma > Semantics) ----
         surface: {
           primary: 'var(--bg-primary)',
+          'primary-hover': 'var(--bg-primary-hover)',
+          'primary-pressed': 'var(--bg-primary-pressed)',
           secondary: 'var(--bg-secondary)',
           tertiary: 'var(--bg-tertiary)',
           quartiary: 'var(--bg-quartiary)',
           'accent-light': 'var(--bg-accent-light)',
+          'accent-light-hover': 'var(--bg-accent-light-hover)',
           'accent-primary': 'var(--bg-accent-primary-solid)',
           'accent-secondary': 'var(--bg-accent-secondary-solid)',
           'error-light': 'var(--bg-error-light)',
@@ -132,14 +140,18 @@ module.exports = {
           'info-light': 'var(--bg-info-primary-light)',
           info: 'var(--bg-info-primary-solid)',
           disabled: 'var(--bg-disabled)',
+          'disabled-alt': 'var(--bg-disabled-alt)',
         },
         content: {
           primary: 'var(--text-primary)',
+          'primary-hover': 'var(--text-primary-hover)',
           secondary: 'var(--text-secondary)',
           tertiary: 'var(--text-tertiary)',
+          'tertiary-hover': 'var(--text-tertiary-hover)',
           quartiary: 'var(--text-quartiary)',
           placeholder: 'var(--text-placeholder)',
           disabled: 'var(--text-disabled)',
+          'disabled-alt': 'var(--text-disabled-alt)',
           'accent-primary': 'var(--text-accent-primary)',
           'accent-secondary': 'var(--text-accent-secondary)',
           error: 'var(--text-error-primary)',
@@ -149,14 +161,19 @@ module.exports = {
         },
         stroke: {
           primary: 'var(--stroke-primary)',
+          'primary-solid': 'var(--stroke-primary-solid)',
           secondary: 'var(--stroke-secondary)',
           tertiary: 'var(--stroke-tertiary)',
+          disabled: 'var(--stroke-disabled)',
           'accent-primary': 'var(--stroke-accent-primary)',
+          'accent-secondary': 'var(--stroke-accent-secondary)',
           focus: 'var(--stroke-accent-focus-alt)',
           error: 'var(--stroke-error-primary)',
           'error-secondary': 'var(--stroke-error-secondary)',
           success: 'var(--stroke-success-primary)',
+          'success-secondary': 'var(--stroke-success-secondary)',
           warning: 'var(--stroke-warning-primary)',
+          'warning-secondary': 'var(--stroke-warning-secondary)',
         },
 
         // ---- Alias usados por los componentes base de bulletproof-react (shadcn) ----
