@@ -1,10 +1,11 @@
 import * as React from 'react';
+import { z } from 'zod';
 
-import { rtlRender, screen, userEvent } from '@/testing/test-utils';
+import { rtlRender, screen, userEvent, within } from '@/testing/test-utils';
 
 import { Accordion } from '../accordion';
 import { Calendar, DatePicker } from '../date-picker';
-import { TagField } from '../form';
+import { Form, Input, Select, TagField } from '../form';
 import { Rating } from '../rating';
 import { Tabs } from '../tabs';
 
@@ -106,4 +107,62 @@ test('Rating: se lee como texto y, editable, devuelve la estrella elegida', asyn
   rtlRender(<Rating value={0} onChange={calificar} />);
   await userEvent.click(screen.getByRole('radio', { name: '4 de 5' }));
   expect(calificar).toHaveBeenCalledWith(4);
+});
+
+test('Select: la lista de Figma elige la opción y avisa al formulario como el <select> nativo', async () => {
+  const cambiar = vi.fn();
+  rtlRender(
+    <Select
+      label="Grado de instrucción"
+      placeholder="Selecciona"
+      defaultValue=""
+      onChange={(e) => cambiar(e.target.value)}
+      options={[
+        { label: 'Primaria', value: 'PRIMARIA' },
+        { label: 'Secundaria', value: 'SECUNDARIA' },
+      ]}
+    />,
+  );
+
+  await userEvent.click(screen.getByRole('combobox', { expanded: false }));
+  await userEvent.click(
+    within(screen.getByRole('listbox')).getByRole('option', {
+      name: 'Secundaria',
+    }),
+  );
+
+  expect(cambiar).toHaveBeenCalledWith('SECUNDARIA');
+  expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Grado de instrucción')).toHaveValue(
+    'SECUNDARIA',
+  );
+});
+
+test('Input type="date": usa el calendario de Figma y el formulario recibe la fecha', async () => {
+  const enviar = vi.fn();
+  rtlRender(
+    <Form
+      id="f"
+      schema={z.object({ fecha: z.string().min(1) })}
+      onSubmit={(valores) => enviar(valores)}
+    >
+      {({ register }) => (
+        <>
+          <Input type="date" label="Fecha" registration={register('fecha')} />
+          <button type="submit">Guardar</button>
+        </>
+      )}
+    </Form>,
+  );
+
+  await userEvent.click(screen.getByRole('button', { name: 'DD/MM/AAAA' }));
+  await userEvent.click(screen.getByRole('button', { name: 'Mes siguiente' }));
+  const dia = within(screen.getByRole('dialog')).getAllByRole('button', {
+    name: /^15\//,
+  })[0];
+  await userEvent.click(dia);
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+  expect(enviar).toHaveBeenCalledTimes(1);
+  expect(enviar.mock.calls[0][0].fecha).toMatch(/^\d{4}-\d{2}-15$/);
 });

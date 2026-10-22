@@ -168,7 +168,7 @@ export const Calendar = ({
     if (vista === 'anios') {
       listaAnios.current
         ?.querySelector('[aria-pressed="true"]')
-        ?.scrollIntoView({ block: 'center' });
+        ?.scrollIntoView?.({ block: 'center' });
     }
   }, [vista]);
 

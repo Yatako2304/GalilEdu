@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import { CalendarDays } from 'lucide-react';
 import * as React from 'react';
-import { type FieldError } from 'react-hook-form';
+import { type FieldError, type UseFormRegisterReturn } from 'react-hook-form';
 
 import { cn } from '@/utils/cn';
 
@@ -9,10 +9,7 @@ import { FieldWrapper, fieldClassName } from '../form/field-wrapper';
 
 import { Calendar } from './calendar';
 
-export type DatePickerProps = {
-  label?: string;
-  hint?: string;
-  error?: FieldError;
+type CampoFechaProps = {
   /** Fecha en formato YYYY-MM-DD (el mismo que guarda el backend). */
   value?: string | null;
   onChange: (value: string) => void;
@@ -20,30 +17,31 @@ export type DatePickerProps = {
   max?: string;
   placeholder?: string;
   disabled?: boolean;
-  className?: string;
+  invalid?: boolean;
+  onBlur?: () => void;
 };
 
-// Campo de fecha: Text Field + Figma > Componentes > Date picker como desplegable.
-// Con react-hook-form úsalo dentro de <Controller> (value / onChange).
-export const DatePicker = ({
-  label,
-  hint,
-  error,
+// Botón con la fecha elegida + el calendario de Figma desplegable.
+const CampoFecha = ({
   value,
   onChange,
   min,
   max,
   placeholder = 'DD/MM/AAAA',
   disabled = false,
-  className,
-}: DatePickerProps) => {
+  invalid = false,
+  onBlur,
+}: CampoFechaProps) => {
   const [abierto, setAbierto] = React.useState(false);
   const contenedor = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (!abierto) return;
     const alClickFuera = (e: MouseEvent) => {
-      if (!contenedor.current?.contains(e.target as Node)) setAbierto(false);
+      if (!contenedor.current?.contains(e.target as Node)) {
+        setAbierto(false);
+        onBlur?.();
+      }
     };
     const alTeclear = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setAbierto(false);
@@ -54,47 +52,145 @@ export const DatePicker = ({
       document.removeEventListener('mousedown', alClickFuera);
       document.removeEventListener('keydown', alTeclear);
     };
-  }, [abierto]);
+  }, [abierto, onBlur]);
 
   return (
-    <FieldWrapper label={label} hint={hint} error={error} className={className}>
-      <div ref={contenedor} className="relative">
-        <button
-          type="button"
-          disabled={disabled}
-          aria-haspopup="dialog"
-          aria-expanded={abierto}
-          onClick={() => setAbierto(!abierto)}
-          className={cn(
-            fieldClassName(!!error),
-            'flex h-11 items-center justify-between text-left',
-            !value && 'text-content-placeholder',
-          )}
-        >
-          {value ? dayjs(value).format('DD/MM/YYYY') : placeholder}
-          <CalendarDays
-            className="size-5 text-content-tertiary"
-            aria-hidden="true"
-          />
-        </button>
-        {abierto && (
-          <div
-            role="dialog"
-            aria-label="Elegir fecha"
-            className="absolute left-0 top-full z-50 mt-1"
-          >
-            <Calendar
-              value={value}
-              min={min}
-              max={max}
-              onChange={(fecha) => {
-                onChange(fecha);
-                setAbierto(false);
-              }}
-            />
-          </div>
+    <div ref={contenedor} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        aria-haspopup="dialog"
+        aria-expanded={abierto}
+        onClick={() => setAbierto(!abierto)}
+        className={cn(
+          fieldClassName(invalid),
+          'flex h-11 items-center justify-between text-left',
+          abierto && 'border-stroke-focus ring-2 ring-deep-blue-100',
+          !value && 'text-content-placeholder',
         )}
-      </div>
-    </FieldWrapper>
+      >
+        {value ? dayjs(value).format('DD/MM/YYYY') : placeholder}
+        <CalendarDays
+          className="size-5 text-content-tertiary"
+          aria-hidden="true"
+        />
+      </button>
+      {abierto && (
+        <div
+          role="dialog"
+          aria-label="Elegir fecha"
+          className="absolute left-0 top-full z-50 mt-1"
+        >
+          <Calendar
+            value={value}
+            min={min}
+            max={max}
+            onChange={(fecha) => {
+              onChange(fecha);
+              setAbierto(false);
+            }}
+          />
+        </div>
+      )}
+    </div>
   );
 };
+
+export type DatePickerProps = Omit<CampoFechaProps, 'invalid' | 'onBlur'> & {
+  label?: string;
+  hint?: string;
+  error?: FieldError;
+  className?: string;
+};
+
+// Campo de fecha controlado: Text Field + Figma > Componentes > Date picker como desplegable.
+// Con react-hook-form usa <Input type="date" registration={register(...)} /> o este dentro de <Controller>.
+export const DatePicker = ({
+  label,
+  hint,
+  error,
+  className,
+  ...campo
+}: DatePickerProps) => (
+  <FieldWrapper label={label} hint={hint} error={error} className={className}>
+    <CampoFecha {...campo} invalid={!!error} />
+  </FieldWrapper>
+);
+
+const asignarValor = Object.getOwnPropertyDescriptor(
+  HTMLInputElement.prototype,
+  'value',
+)?.set;
+
+export type DateInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  registration?: Partial<UseFormRegisterReturn>;
+  invalid?: boolean;
+};
+
+/**
+ * Lo que dibuja `<Input type="date">`: el <input type="date"> sigue en el formulario (oculto) para que
+ * register(), `value` y `onChange` funcionen igual, y encima va el calendario de Figma
+ * (el calendario nativo del navegador no se puede estilizar).
+ */
+export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
+  (
+    { registration, invalid, disabled, min, max, placeholder, ...props },
+    ref,
+  ) => {
+    const nativo = React.useRef<HTMLInputElement | null>(null);
+    const [valor, setValor] = React.useState('');
+
+    // El valor puede cambiar por fuera (reset, setValue): se lee del input en cada render.
+    // Va sin dependencias a propósito; el if evita el bucle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    React.useLayoutEffect(() => {
+      const actual = nativo.current?.value ?? '';
+      if (actual !== valor) setValor(actual);
+    });
+
+    const unirRef = (el: HTMLInputElement | null) => {
+      nativo.current = el;
+      if (typeof ref === 'function') ref(el);
+      else if (ref) ref.current = el;
+      registration?.ref?.(el);
+    };
+
+    return (
+      <>
+        <input
+          type="date"
+          tabIndex={-1}
+          className="sr-only"
+          disabled={disabled}
+          min={min}
+          max={max}
+          aria-invalid={invalid}
+          {...registration}
+          {...props}
+          onChange={(e) => {
+            setValor(e.target.value);
+            registration?.onChange?.(e);
+            props.onChange?.(e);
+          }}
+          ref={unirRef}
+        />
+        <CampoFecha
+          value={valor}
+          min={min === undefined ? undefined : String(min)}
+          max={max === undefined ? undefined : String(max)}
+          placeholder={placeholder}
+          disabled={disabled}
+          invalid={invalid}
+          onChange={(fecha) => {
+            const input = nativo.current;
+            if (!input) return;
+            // Igual que si se escribiera en el input: React y react-hook-form reciben el evento.
+            asignarValor?.call(input, fecha);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          }}
+        />
+      </>
+    );
+  },
+);
+DateInput.displayName = 'DateInput';
