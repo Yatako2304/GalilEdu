@@ -18,6 +18,11 @@ public enum Regimen {
 		return cantidadPeriodos;
 	}
 
+	/** "bimestres" o "trimestres", como en los textos de Figma ("3 trimestres del 01/03/2027 al 17/12/2027"). */
+	public String unidadPlural() {
+		return unidad.toLowerCase() + "s";
+	}
+
 	/** "I Bimestre", "II Trimestre"… Es el nombre que usan los datos de prueba y Figma. */
 	public String nombrePeriodo(int numero) {
 		return ROMANOS[numero - 1] + " " + unidad;

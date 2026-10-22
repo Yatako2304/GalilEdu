@@ -33,6 +33,18 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 	}
 
 	@Test
+	void elPeriodoNoGuardaSuEstadoPorqueSeCalculaConLasFechas() {
+		assertThat(
+				contar("""
+						SELECT count(*) FROM information_schema.columns
+						WHERE table_schema = 'configuracion' AND table_name = 'periodo_academico' AND column_name = 'estado'"""))
+				.isZero();
+		assertThat(contar("""
+				SELECT count(*) FROM information_schema.table_constraints
+				WHERE constraint_name = 'ck_periodo_academico_estado'""")).isZero();
+	}
+
+	@Test
 	void soloUnAnioPuedeEstarActivo() {
 		// 2030 es un año válido; solo falla porque 2026 ya está activo.
 		rechazaPor("ux_anio_escolar_un_activo", () -> jdbc.sql("""

@@ -10,19 +10,26 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarActual;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarDetalle;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarResumen;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.RequisitosAnio;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudAnioEscolar;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudEdicionAnio;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudRegimen;
 import com.galiledu.configuracion.aplicacion.ServicioAnioEscolar;
 
 /**
- * Figma > Personal Administrativo > Configuraciones > Año escolar: "CI-01", "CI-03" y "Modal - Nuevo año escolar"
- * (HU-74).
+ * Figma > Personal Administrativo > Configuraciones > Año escolar: "CI-01", "CI-03", "CI-06", "Modal - Nuevo año
+ * escolar" y "Modal - Cambiar régimen de periodos" (HU-74).
+ * <p>
+ * Endpoint disponible; el botón Activar aún no está en Figma (CI-06) y Cerrar año solo aparece en CI-12.
  */
 @RestController
 @RequestMapping("/configuracion/anios-escolares")
@@ -34,22 +41,65 @@ public class AnioEscolarController {
 		this.servicio = servicio;
 	}
 
-	/** GET /api/configuracion/anios-escolares */
+	/** GET /api/configuracion/anios-escolares · tabla de años de "CI-01". */
 	@GetMapping
 	public List<AnioEscolarResumen> listar() {
 		return servicio.listar();
 	}
 
-	/** GET /api/configuracion/anios-escolares/{id} · el año con sus periodos. */
+	/** GET /api/configuracion/anios-escolares/actual · card del año en curso de "CI-01". 404 si no hay año activo. */
+	@GetMapping("/actual")
+	public AnioEscolarActual actual() {
+		return servicio.actual();
+	}
+
+	/**
+	 * GET /api/configuracion/anios-escolares/{id} · el año con sus periodos: "CI-03" (activo) y "CI-06" (planificado).
+	 */
 	@GetMapping("/{id}")
 	public AnioEscolarDetalle detalle(@PathVariable UUID id) {
 		return servicio.detalle(id);
 	}
 
-	/** POST /api/configuracion/anios-escolares · crea el año PLANIFICADO y genera sus periodos. */
+	/** GET /api/configuracion/anios-escolares/{id}/requisitos · card "Antes de activar el año" de "CI-06". */
+	@GetMapping("/{id}/requisitos")
+	public RequisitosAnio requisitos(@PathVariable UUID id) {
+		return servicio.requisitos(id);
+	}
+
+	/**
+	 * POST /api/configuracion/anios-escolares · "Modal - Nuevo año escolar": crea el año PLANIFICADO y sus periodos.
+	 */
 	@PostMapping
 	@ResponseStatus(HttpStatus.CREATED)
 	public AnioEscolarDetalle crear(@Valid @RequestBody SolicitudAnioEscolar solicitud) {
 		return servicio.crear(solicitud);
+	}
+
+	/**
+	 * PUT /api/configuracion/anios-escolares/{id} · botón "Editar" de "CI-06": cambia las fechas y regenera los
+	 * periodos.
+	 */
+	@PutMapping("/{id}")
+	public AnioEscolarDetalle editar(@PathVariable UUID id, @Valid @RequestBody SolicitudEdicionAnio solicitud) {
+		return servicio.editar(id, solicitud);
+	}
+
+	/** POST /api/configuracion/anios-escolares/{id}/activar · pasa el año de PLANIFICADO a ACTIVO. */
+	@PostMapping("/{id}/activar")
+	public AnioEscolarDetalle activar(@PathVariable UUID id) {
+		return servicio.activar(id);
+	}
+
+	/** POST /api/configuracion/anios-escolares/{id}/cerrar · cierra el año ACTIVO cuando venció el plazo de notas. */
+	@PostMapping("/{id}/cerrar")
+	public AnioEscolarDetalle cerrar(@PathVariable UUID id) {
+		return servicio.cerrar(id);
+	}
+
+	/** PUT /api/configuracion/anios-escolares/{id}/regimen · "Modal - Cambiar régimen de periodos" de "CI-06". */
+	@PutMapping("/{id}/regimen")
+	public AnioEscolarDetalle cambiarRegimen(@PathVariable UUID id, @Valid @RequestBody SolicitudRegimen solicitud) {
+		return servicio.cambiarRegimen(id, solicitud);
 	}
 }
