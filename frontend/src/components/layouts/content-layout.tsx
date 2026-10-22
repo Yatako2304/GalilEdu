@@ -10,6 +10,8 @@ type ContentLayoutProps = {
   /** Migas de pan; por defecto solo el título (Figma: "Item" sobre el título). */
   breadcrumbs?: string[];
   subtitle?: string;
+  /** Etiqueta de estado junto al título. */
+  titleTag?: React.ReactNode;
   /** Botones a la derecha del título (Figma > Page Header: 1 o 2 botones). */
   actions?: React.ReactNode;
 };
@@ -20,6 +22,7 @@ export const ContentLayout = ({
   title,
   breadcrumbs,
   subtitle,
+  titleTag,
   actions,
 }: ContentLayoutProps) => {
   const crumbs = breadcrumbs ?? [title];
@@ -53,9 +56,12 @@ export const ContentLayout = ({
 
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-0">
-            <h1 className="text-h4 font-semibold text-content-primary">
-              {title}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-h4 font-semibold text-content-primary">
+                {title}
+              </h1>
+              {titleTag}
+            </div>
             {subtitle && (
               <p className="mt-1 text-body-3 text-content-quartiary">
                 {subtitle}
