@@ -26,6 +26,8 @@ Figma pone todo esto bajo **Configuraciones › Año escolar**; el tarifario est
 | --- | --- | --- | --- |
 | HU-74 | Año escolar y sus periodos | 🚧 | El año es PLANIFICADO, ACTIVO o CERRADO. El estado del periodo (PLANIFICADO, EN_CURSO, CERRADO) **no se guarda**: se calcula con las fechas y el estado del año ([decisión](../decisiones/2026-10-21-royal-22-estado-periodo-calculado.md)). Mientras el año está planificado se pueden editar sus fechas y cambiar el régimen, y los periodos se regeneran con fechas sugeridas. Al editar un periodo, el que ya empezó no cambia su inicio y el que ya terminó solo amplía su fecha límite de notas. Los docentes registran notas solo en un año ACTIVO, desde que empieza el periodo hasta su fecha límite. **Hecho:** listar, detalle, crear, año actual, editar fechas, cambiar régimen, requisitos para activar y editar periodo; activar y cerrar el año. **Falta:** reutilizar configuración (copiar secciones, estructuras y plan de evaluación). El botón Activar aún no está en Figma (CI-06) y "Cerrar año" solo aparece en CI-12. |
 | HU-75 | Secciones por grado | ⏳ | Nombre único por grado y año. Capacidad de 1 a 45. Tutor y cotutor opcionales. |
+| HU-74 | Año escolar y sus periodos | 🚧 | Estados: año PLANIFICADO/ACTIVO/CERRADO; periodo PLANIFICADO/EN_CURSO/CERRADO. Mientras el año está planificado se puede cambiar el régimen, y los periodos se regeneran. **Hecho:** listar, detalle y crear (nace PLANIFICADO con sus periodos). **Falta:** activar, cerrar, cambiar régimen, editar periodo y reutilizar configuración. |
+| HU-75 | Secciones por grado | 🚧 | Nombre único por grado y año. Capacidad de 1 a 45. Tutor obligatorio y cotutor opcional al asignarlos; un docente es tutor de una sola sección ACTIVA por año (el cotutor no cuenta). Capacidad no menor a los alumnos que ocupan vacante (RF-50). Eliminar solo sin matrículas ni cambios de sección; si no, inactivar. **Hecho:** backend (listar, crear, capacidad, tutores, eliminar, inactivar/reactivar, docentes elegibles y `listarSeccionesActivasConVacantes` para HU-23). **Falta:** historial de tutores y "Vigente desde" (con su migración) y el frontend. Eliminar una sección borra en cascada sus asignaciones de docentes por cursos (`academico.docente_seccion`); avisar al equipo de Académico. Inactivar no borra nada. |
 | HU-44 | Estructura horaria | ⏳ | Los horarios de bloques y recesos se **calculan**, no se guardan. La jornada termina como máximo a las 18:00 (lo valida el servicio). |
 | HU-23 | Fechas de matrícula regular | ⏳ | Un periodo por año. Una vez HABILITADO no se edita, solo se deshabilita. Las vacantes por sección son `seccion.capacidad_maxima`. |
 | HU-34 | Tarifario del año | ⏳ | Pensión única para toda la institución (RF-70). Las validaciones de RF-71 (cuotas dentro del año y cantidad igual a la declarada) las hace el servicio. Si el año está CERRADO, el tarifario es de solo lectura (RF-73). |
@@ -84,14 +86,23 @@ No hay endpoints para abrir o cerrar un periodo (su estado se calcula). Los de a
 
 ## Código
 
+<<<<<<< Updated upstream
 - Backend: `backend/src/main/java/com/galiledu/configuracion/` (`AnioEscolar`, `PeriodoAcademico`, `ServicioAnioEscolar`, `ConsultasConfiguracion`, `AnioEscolarController`, `PeriodoAcademicoController`). El "hoy" sale del bean `Clock` de `compartido/RelojConfig` (America/Lima).
+=======
+- Backend: `backend/src/main/java/com/galiledu/configuracion/` (`AnioEscolar`, `PeriodoAcademico`, `ServicioAnioEscolar`, `AnioEscolarController`; `Seccion`, `ServicioSecciones`, `SeccionController`)
+>>>>>>> Stashed changes
 - Frontend: `frontend/src/features/configuracion/` (por crear)
 - Pruebas: `backend/src/test/java/com/galiledu/configuracion/` (`AnioEscolarIT` y `PeriodoAcademicoIT` la API, `ServicioAnioEscolarIT` el servicio, `ConsultasConfiguracionIT` las consultas, `dominio/AnioEscolarTests` las reglas del dominio y `EsquemaConfiguracionIT` las reglas de la BD). Las IT que dependen de la fecha extienden `PruebaIntegracionConfiguracion`, que fija el reloj en 15/09/2026.
 
 ## Pendientes
 
+<<<<<<< Updated upstream
 - [ ] HU-74: reutilizar configuración (copiar secciones, estructuras y plan de evaluación).
 - [ ] Backend de HU-75, HU-44, HU-23 y HU-34, y el frontend de las 5 HU.
+=======
+- [ ] HU-74: activar, cerrar, cambiar régimen, editar periodo y reutilizar configuración (copiar secciones, estructuras y plan de evaluación).
+- [ ] Backend de HU-44, HU-23 y HU-34, y el frontend de las 5 HU. HU-75: historial de tutores y "Vigente desde".
+>>>>>>> Stashed changes
 - [ ] Confirmar con el colegio los 5 días entre el fin del periodo y la fecha límite de notas.
 - [ ] `estudiantes.estudiante` guarda el nivel y el grado como texto ("1.° grado"). Cuando Matrícula asigne secciones, se enlazará con `configuracion.grado`.
 - [ ] Los documentos requeridos de la matrícula (HU-21/22) no están en esta migración.
