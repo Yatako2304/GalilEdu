@@ -1,6 +1,5 @@
-import { DiaSemana, HorarioSeccion } from '@/types/api';
-
-import { BloqueHorario } from './bloque-horario';
+import { ScheduleBlock } from '@/components/ui/schedule-block';
+import { DiaSemana, HorarioSeccion, SesionClase } from '@/types/api';
 
 const DIAS: { key: DiaSemana; label: string }[] = [
   { key: 'LUNES', label: 'Lunes' },
@@ -17,6 +16,21 @@ export const formatHora = (hora: string) => {
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${String(m).padStart(2, '0')}${sufijo}`;
 };
+
+// Figma > Componentes > Bloque horario (Vista = Profesor/Coordinador): un curso, subgrupos u hora libre.
+const Sesion = ({ sesion }: { sesion?: SesionClase }) =>
+  !sesion || sesion.tipo === 'SIN_ASIGNAR' || sesion.cursos.length === 0 ? (
+    <ScheduleBlock type="empty" />
+  ) : (
+    <ScheduleBlock
+      type="assigned"
+      courses={sesion.cursos.map((c) => ({
+        name: c.curso,
+        teacher: c.docente,
+      }))}
+      room={sesion.cursos.map((c) => c.aula).join(' · ')}
+    />
+  );
 
 type MatrizHorariaProps = {
   horario: Pick<HorarioSeccion, 'bloques' | 'sesiones'>;
@@ -62,10 +76,9 @@ export const MatrizHoraria = ({ horario }: MatrizHorariaProps) => {
             {DIAS.map((dia) => (
               <div key={dia.key} role="cell" className="self-start">
                 {bloque.tipo === 'RECREO' ? (
-                  <BloqueHorario tipo="RECREO" />
+                  <ScheduleBlock type="break" />
                 ) : (
-                  <BloqueHorario
-                    tipo="CLASE"
+                  <Sesion
                     sesion={horario.sesiones.find(
                       (s) => s.bloqueId === bloque.id && s.dia === dia.key,
                     )}
