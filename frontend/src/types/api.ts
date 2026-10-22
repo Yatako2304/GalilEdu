@@ -523,6 +523,65 @@ export type SolicitudCopiaPlan = {
   origenGradoCodigo: string;
 };
 
+// ---------- Matrícula · consulta del apoderado (HU-27 / HU-30) ----------
+// Iguales a backend/.../matricula/aplicacion/DtosMatricula.java
+
+export type EstadoMatricula =
+  | 'SECCION_RESERVADA'
+  | 'EN_VALIDACION'
+  | 'PENDIENTE_PAGO'
+  | 'MATRICULADO'
+  | 'RETIRADO'
+  | 'ANULADA';
+
+export type HijoApoderado = {
+  id: string;
+  nombre: string;
+  grado: string;
+  estadoMatricula: EstadoMatricula | null;
+};
+
+export type PeriodoMatricula = {
+  anio: number;
+  inicio: string;
+  cierre: string;
+  estado: string;
+  abierto: boolean;
+};
+
+export type MatriculaActual = {
+  id: string;
+  estado: EstadoMatricula;
+  grado: string;
+  seccion: string | null;
+  codigo: string | null;
+  documentosRequeridos: number;
+  documentosEntregados: number;
+};
+
+export type ImpedimentoMatricula = {
+  tipo: 'PERIODO' | 'SIN_SECCION' | 'DOCUMENTOS' | 'DEUDA';
+  mensaje: string;
+};
+
+export type CuotaDeudaFamiliar = {
+  estudianteId: string;
+  estudiante: string;
+  concepto: string;
+  fechaVencimiento: string;
+  monto: number;
+};
+
+export type EstadoMatriculaApoderado = {
+  estudiante: { id: string; nombre: string; grado: string };
+  periodo: PeriodoMatricula;
+  matricula: MatriculaActual | null;
+  pasoActual: number;
+  puedeContinuar: boolean;
+  impedimentos: ImpedimentoMatricula[];
+  deuda: { total: number; cuotas: CuotaDeudaFamiliar[] };
+};
+
 // ---------- Pagos y pensiones (HU-37) ----------
 // Iguales a backend/.../pagos/aplicacion/DtosPagos.java
 
@@ -610,3 +669,19 @@ export type EstadoCuentaGeneral = {
 };
 
 export type RetiroRegistrado = { cuotasAnuladas: number };
+
+export type CuotaMatriculaDetalle = {
+  cuotaId: string;
+  compromisoId: string;
+  estudianteId: string;
+  anio: number;
+  concepto: string;
+  montoBase: number;
+  montoDescuento: number;
+  monto: number;
+  montoPagado: number;
+  fechaVencimiento: string;
+  estado: EstadoCuota;
+  fechaPago: string | null;
+  responsable: string;
+};

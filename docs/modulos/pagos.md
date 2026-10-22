@@ -1,7 +1,7 @@
 # Pagos y pensiones
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** 🚧 en desarrollo: HU-37 hecha (backend y pantallas P2, P8 y modal de retiro); HU-36 con backend (faltan las tarjetas de B6/B7); falta la iteración 2
+- **Estado:** 🚧 en desarrollo: HU-36 y HU-37 hechas; falta integrar la tarjeta de HU-36 al detalle de HU-24 y completar la iteración 2
 - **Última actualización:** 2026-10-20
 
 ## Alcance
@@ -71,7 +71,7 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 
 - [x] HU-37: generar, consultar y anular por retiro el cronograma de pensiones.
 - [x] HU-36 (backend): generar y consultar la cuota de matrícula.
-- [ ] HU-36 (front): tarjeta "Pago de matrícula" en B6/B7 del detalle de matrícula.
+- [x] HU-36 (front): tarjeta reutilizable "Pago de matrícula" de B6/B7; se abre con `?matriculaId=` hasta que HU-24 aporte el detalle administrativo.
 - [x] La pensión vence el último día de cada mes (diciembre, el 15), como en el tarifario; el "día 05" del cronograma del apoderado no se usa. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).
 - [ ] Pasarela de pagos real: hoy la orden solo guarda la referencia y el resultado; falta elegir el proveedor.
 - [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).
