@@ -17,6 +17,9 @@ type ModulePlaceholderProps = {
 
 // Pantalla temporal para rutas cuyo módulo aún no se implementa.
 // Reemplázala por el componente real del feature cuando lo construyas.
+// La carpeta, las HU y el enlace a Figma solo se ven en desarrollo: el usuario ve un aviso simple.
+const enDesarrollo = import.meta.env.DEV;
+
 export const ModulePlaceholder = ({
   feature,
   historias = [],
@@ -30,16 +33,18 @@ export const ModulePlaceholder = ({
       />
       <div>
         <p className="text-label-1 font-semibold text-content-primary">
-          Módulo en construcción
+          Esta sección estará disponible pronto.
         </p>
-        <p className="mt-1 text-body-3 text-content-quartiary">
-          Se implementará en{' '}
-          <code className="rounded bg-surface-tertiary px-1.5 py-0.5 text-body-4">
-            src/features/{feature}
-          </code>
-        </p>
+        {enDesarrollo && (
+          <p className="mt-1 text-body-3 text-content-quartiary">
+            Se implementará en{' '}
+            <code className="rounded bg-surface-tertiary px-1.5 py-0.5 text-body-4">
+              src/features/{feature}
+            </code>
+          </p>
+        )}
       </div>
-      {historias.length > 0 && (
+      {enDesarrollo && historias.length > 0 && (
         <div className="flex flex-wrap justify-center gap-2">
           {historias.map((hu) => (
             <Tag key={hu} color="info">
@@ -48,7 +53,7 @@ export const ModulePlaceholder = ({
           ))}
         </div>
       )}
-      {figmaNodeId && (
+      {enDesarrollo && figmaNodeId && (
         <a
           href={`${FIGMA_FILE}?node-id=${figmaNodeId.replace(':', '-')}`}
           target="_blank"

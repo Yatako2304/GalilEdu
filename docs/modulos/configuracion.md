@@ -1,7 +1,7 @@
 # Configuración del año escolar
 
 - **HU:** HU-74, HU-75, HU-23, HU-34, HU-44 (iteración 1)
-- **Estado:** 🚧 en curso: las tablas y los datos de prueba ya están; el backend de HU-74, HU-34, HU-23 y HU-44 está completo y el de HU-75 solo espera el historial de tutores; falta todo el frontend
+- **Estado:** 🚧 en curso: las tablas y los datos de prueba ya están; el backend de HU-74, HU-34, HU-23 y HU-44 está completo y el de HU-75 solo espera el historial de tutores; falta **todo el frontend** (la ruta `/app/administrativo/anio-escolar` sigue con `ModulePlaceholder`)
 - **Última actualización:** 2026-10-22
 
 ## Alcance
