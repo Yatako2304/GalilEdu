@@ -170,6 +170,24 @@ describe('Select y Textarea', () => {
     expect(etiqueta('Nivel')).not.toHaveClass('top-3');
   });
 
+  test('Textarea con placeholder propio: la etiqueta se queda arriba, sin estilos de reposo', () => {
+    rtlRender(<Textarea label="Descripción" placeholder="Qué desarrolla" />);
+
+    expect(etiqueta('Descripción').className).not.toContain(
+      'peer-placeholder-shown',
+    );
+  });
+
+  test('Textarea sin placeholder: la etiqueta descansa a la altura del relleno y cambia con foco y hover', () => {
+    rtlRender(<Textarea label="Descripción" />);
+
+    expect(etiqueta('Descripción')).toHaveClass(
+      'peer-placeholder-shown:top-4',
+      'peer-focus:text-content-accent-primary',
+      'peer-hover:text-content-tertiary-hover',
+    );
+  });
+
   test('Textarea: la etiqueta flota y el campo conserva su nombre accesible', () => {
     rtlRender(<Textarea label="Descripción" />);
 
@@ -178,7 +196,11 @@ describe('Select y Textarea', () => {
       ' ',
     );
     expect(etiqueta('Descripción')).toHaveClass('absolute');
-    // Mismo relleno vertical que el Text Field de Figma (12 px): el texto no queda pegado a la etiqueta.
-    expect(screen.getByLabelText('Descripción')).toHaveClass('py-3');
+    // Text Area de Figma (Large): relleno de 12/16 px y texto de 16 px, así el texto no queda pegado a la etiqueta.
+    expect(screen.getByLabelText('Descripción')).toHaveClass(
+      'px-3',
+      'py-4',
+      'text-label-1',
+    );
   });
 });
