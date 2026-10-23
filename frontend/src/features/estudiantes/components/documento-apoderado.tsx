@@ -69,7 +69,7 @@ export const DocumentoApoderado = ({
           aria-label="Tipo de documento del apoderado"
           value={tipo}
           onChange={(e) => setTipo(e.target.value)}
-          className="h-8 w-44 rounded-lg border border-stroke-primary bg-white px-2 text-body-4"
+          className="h-8 w-44 rounded-xl border border-stroke-primary bg-white px-2 text-body-4"
         >
           {TIPOS_DOCUMENTO_APODERADO.map((t) => (
             <option key={t} value={t}>

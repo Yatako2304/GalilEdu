@@ -59,7 +59,7 @@ export const DialogoConfirmacion = ({
   const { Icono, color } = ICONO[tipo];
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[448px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
+      <DialogContent className="max-w-[448px] gap-0 rounded-xl border-stroke-tertiary bg-white p-0">
         <div className="flex flex-col items-center gap-4 px-8 pb-6 pt-8 text-center">
           <IconBadge color={color} size="xl">
             <Icono aria-hidden="true" />

@@ -20,7 +20,7 @@ export const DialogoUsuarioRegistrado = ({
   onCerrar: () => void;
 }) => (
   <Dialog open={!!usuario} onOpenChange={(open) => !open && onCerrar()}>
-    <DialogContent className="max-w-[800px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
+    <DialogContent className="max-w-[800px] gap-0 rounded-xl border-stroke-tertiary bg-white p-0">
       {usuario && (
         <>
           <div className="flex flex-col items-center gap-3 px-8 pt-10 text-center">
@@ -35,7 +35,7 @@ export const DialogoUsuarioRegistrado = ({
             </DialogDescription>
           </div>
           <div className="flex flex-col gap-4 px-10 py-6">
-            <dl className="divide-y divide-stroke-tertiary rounded-[12px] border border-stroke-tertiary bg-surface-secondary px-5">
+            <dl className="divide-y divide-stroke-tertiary rounded-xl border border-stroke-tertiary bg-surface-secondary px-5">
               <div className="flex items-center justify-between py-3">
                 <dt className="flex items-center gap-2 text-body-3 text-content-secondary">
                   <Contact className="size-4" aria-hidden="true" /> Usuario
@@ -61,7 +61,7 @@ export const DialogoUsuarioRegistrado = ({
                 </dd>
               </div>
             </dl>
-            <div className="flex gap-3 rounded-[12px] bg-surface-accent-light px-4 py-3">
+            <div className="flex gap-3 rounded-xl bg-surface-accent-light px-4 py-3">
               <MailCheck
                 className="mt-0.5 size-4 shrink-0 text-content-accent-primary"
                 aria-hidden="true"

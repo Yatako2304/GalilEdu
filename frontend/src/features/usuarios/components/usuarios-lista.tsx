@@ -92,7 +92,7 @@ export const UsuariosLista = ({
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
             placeholder="Buscar por nombre o correo"
-            className="h-10 w-full rounded-lg border border-stroke-primary bg-white pl-9 pr-3 text-body-3 placeholder:text-content-placeholder focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100"
+            className="h-10 w-full rounded-xl border border-stroke-primary bg-white pl-9 pr-3 text-body-3 placeholder:text-content-placeholder focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100"
           />
         </label>
         <Select
@@ -210,7 +210,7 @@ const AccionesFila = ({
   const activo = usuario.estado === 'ACTIVO';
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
+      <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-xl text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
         <EllipsisVertical className="size-4" aria-hidden="true" />
         <span className="sr-only">Acciones de {usuario.nombre}</span>
       </DropdownMenuTrigger>

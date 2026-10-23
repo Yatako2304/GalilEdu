@@ -128,6 +128,11 @@ Los tokens vienen de Figma (*🗂️ DESIGN SYSTEM › Foundations*) y están en
 - **Colores primitivos:** `deep-blue-*`, `vibrant-blue-*`, `growth-green-*`, `warm-yellow-*`, `turquoise-*`, `slate-*`, `red-*`, `amber-*`.
 - **Semánticos:** `bg-surface-*`, `text-content-*`, `border-stroke-*` (ej. `bg-surface-accent-light`, `text-content-accent-primary`).
 - **Tipografía (Inter):** `text-h4`, `text-h6`, `text-label-1..3`, `text-body-1..4`, `text-caption-1..2`.
+- **Íconos:** solo `lucide-react`, con la [tabla de equivalencias de Material Icons → lucide](../docs/decisiones/2026-10-22-yatako-iconos-lucide.md#tabla-de-equivalencias).
+- **Íconos (color):** `text-icon-*` (`text-icon-primary`, `text-icon-tertiary`, `text-icon-accent-primary`…), de Figma › Semantics › `icon/*`. Usa estos, no `text-content-*`, para colorear íconos.
+- **Estados:** los colores con `-hover` y `-pressed` de Figma (`bg-surface-accent-primary-hover`, `text-content-accent-primary-hover`…). Si falta uno, agrégalo en `src/index.css` y `tailwind.config.cjs` con el valor de Figma › Semantics Tokens.
+- **Radios (Figma › Radius Tokens):** `rounded-sm` 2 px · `rounded-md` 4 · `rounded-lg` 8 · `rounded-xl` 12 · `rounded-2xl` 16 · `rounded-full`. **No es la escala de Tailwind por defecto:** `rounded-lg` es 8 px. Copia el número del nodo de Figma: campos, Select, Tooltip, Accordion y calendario usan 8; botones, tarjetas y modales 12; Stat Card 16.
+- **Plataforma:** sidebar de 240 px (`w-sidebar`), contenido de hasta 1200 px (`max-w-content`).
 - **Efectos:** `shadow-card` y `shadow-event` (Card-shadow y Event-shadow de Figma).
 - **Componentes:** todos los de la página Componentes de Figma están en `src/components/ui`; la tabla Figma → código está en [`docs/guias/componentes-ui.md`](../docs/guias/componentes-ui.md). Revísalos en Storybook (`npm run storybook`).
 - **Si agregas un tamaño de letra** en `tailwind.config.cjs`, regístralo también en `src/utils/cn.ts`; si no, `cn()` lo confunde con un color y borra el color del texto.

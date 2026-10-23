@@ -61,6 +61,7 @@ export const DialogoArea = ({
       guardando={guardar.isPending}
     >
       <form
+        noValidate
         id="form-area"
         className="space-y-4"
         onSubmit={form.handleSubmit((valores) =>
@@ -120,6 +121,7 @@ export const DialogoCompetencia = ({
       guardando={guardar.isPending}
     >
       <form
+        noValidate
         id="form-competencia"
         className="space-y-4"
         onSubmit={form.handleSubmit((valores) =>
@@ -193,6 +195,7 @@ export const DialogoCurso = ({ area, curso, onCerrar }: DialogoCursoProps) => {
       guardando={guardar.isPending}
     >
       <form
+        noValidate
         id="form-curso"
         className="space-y-4"
         onSubmit={form.handleSubmit((valores) =>

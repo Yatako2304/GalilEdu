@@ -63,7 +63,7 @@ export const DialogoCambiarEstado = ({
 
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && onCerrar()}>
-      <DialogContent className="max-w-[448px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
+      <DialogContent className="max-w-[448px] gap-0 rounded-xl border-stroke-tertiary bg-white p-0">
         <div className="flex flex-col gap-3 px-6 pt-6">
           <span
             className={cn(

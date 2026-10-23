@@ -64,7 +64,7 @@ export const Rating = ({
           aria-checked={i === value}
           aria-label={`${i} de ${max}`}
           onClick={() => onChange(i)}
-          className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus"
+          className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus"
         >
           {estrella(i)}
         </button>

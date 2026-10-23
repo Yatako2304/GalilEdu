@@ -152,7 +152,7 @@ export const AccordionFolder = ({
           aria-controls={id}
           disabled={disabled}
           onClick={cambiar}
-          className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus disabled:cursor-not-allowed"
+          className="flex min-w-0 flex-1 flex-col gap-0.5 rounded-md text-left outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus disabled:cursor-not-allowed"
         >
           <span className="text-h6 font-bold text-content-primary">
             {title}

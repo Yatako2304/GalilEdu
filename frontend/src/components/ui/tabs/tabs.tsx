@@ -37,7 +37,7 @@ const estilos = {
       'border-b border-stroke-primary text-content-tertiary hover:bg-surface-primary-hover hover:text-content-tertiary-hover',
   },
   pill: {
-    base: 'rounded-md text-center text-label-1 disabled:cursor-not-allowed disabled:text-content-placeholder',
+    base: 'rounded-lg text-center text-label-1 disabled:cursor-not-allowed disabled:text-content-placeholder',
     activa: 'bg-surface-accent-primary font-medium text-white',
     inactiva:
       'bg-surface-primary text-content-secondary hover:bg-surface-primary-hover hover:text-content-primary active:bg-surface-primary-pressed',

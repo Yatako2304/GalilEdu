@@ -78,6 +78,7 @@ export const DialogoDocentes = ({
         </div>
       ) : (
         <form
+          noValidate
           id="form-docentes"
           className="space-y-4"
           onSubmit={(e) => {
@@ -166,6 +167,7 @@ export const DialogoCopiarPlan = ({
         </p>
       ) : (
         <form
+          noValidate
           id="form-copiar-plan"
           className="space-y-4"
           onSubmit={(e) => {
@@ -189,7 +191,7 @@ export const DialogoCopiarPlan = ({
             onChange={(e) => setClave(e.target.value)}
           />
           {origen && (
-            <dl className="space-y-2 rounded-lg bg-surface-secondary px-4 py-3 text-body-3">
+            <dl className="space-y-2 rounded-xl bg-surface-secondary px-4 py-3 text-body-3">
               <div className="flex justify-between">
                 <dt className="text-content-secondary">Cursos</dt>
                 <dd className="font-medium text-content-primary">
@@ -214,7 +216,7 @@ export const DialogoCopiarPlan = ({
               </div>
             </dl>
           )}
-          <p className="flex items-center gap-3 rounded-lg border border-stroke-accent-primary bg-surface-accent-light px-4 py-3 text-body-3 text-content-primary">
+          <p className="flex items-center gap-3 rounded-xl border border-stroke-accent-primary bg-surface-accent-light px-4 py-3 text-body-3 text-content-primary">
             <ClipboardList
               className="size-5 shrink-0 text-content-accent-primary"
               aria-hidden="true"
@@ -244,7 +246,7 @@ export const DialogoQuitarCurso = ({
   const quitar = useQuitarCursoPlan(onCerrar);
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && onCerrar()}>
-      <DialogContent className="max-w-[448px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
+      <DialogContent className="max-w-[448px] gap-0 rounded-xl border-stroke-tertiary bg-white p-0">
         <div className="flex flex-col gap-3 px-6 pt-6">
           <IconBadge color="error">
             <Trash2 aria-hidden="true" />

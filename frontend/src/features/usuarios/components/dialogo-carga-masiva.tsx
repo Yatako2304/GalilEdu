@@ -108,7 +108,7 @@ export const DialogoCargaMasiva = ({
 
   return (
     <Dialog open={open} onOpenChange={(abierto) => !abierto && cerrar()}>
-      <DialogContent className="flex max-h-[92vh] max-w-[800px] flex-col gap-0 overflow-hidden rounded-[12px] border-stroke-tertiary bg-white p-0">
+      <DialogContent className="flex max-h-[92vh] max-w-[800px] flex-col gap-0 overflow-hidden rounded-xl border-stroke-tertiary bg-white p-0">
         <div className="border-b border-stroke-tertiary px-6 py-5">
           <DialogTitle className="text-h6 font-semibold text-content-primary">
             Carga masiva de usuarios
@@ -150,7 +150,7 @@ export const DialogoCargaMasiva = ({
                 onFile={elegir}
               />
 
-              <div className="rounded-[12px] border border-stroke-tertiary bg-surface-secondary px-5 py-4">
+              <div className="rounded-xl border border-stroke-tertiary bg-surface-secondary px-5 py-4">
                 <p className="mb-3 flex items-center gap-2 text-label-2 font-medium text-content-primary">
                   <Info className="size-4" aria-hidden="true" /> Columnas
                   requeridas
@@ -187,7 +187,7 @@ export const DialogoCargaMasiva = ({
               )}
 
               {validacion.errores.length > 0 && (
-                <div className="max-h-72 overflow-y-auto rounded-[12px] border border-stroke-tertiary">
+                <div className="max-h-72 overflow-y-auto rounded-xl border border-stroke-tertiary">
                   <table className="w-full text-body-3">
                     <thead className="sticky top-0 bg-surface-secondary">
                       <tr>
@@ -243,7 +243,7 @@ export const DialogoCargaMasiva = ({
                 </p>
               </div>
               <div className="grid w-full grid-cols-1 gap-4 text-left sm:grid-cols-2">
-                <div className="rounded-[12px] border border-stroke-success bg-surface-success-light p-4">
+                <div className="rounded-xl border border-stroke-success bg-surface-success-light p-4">
                   <p className="text-h4 font-semibold text-content-success">
                     {resultado.creados}
                   </p>
@@ -254,7 +254,7 @@ export const DialogoCargaMasiva = ({
                     Ya pueden ingresar a GalilEdu
                   </p>
                 </div>
-                <div className="rounded-[12px] border border-stroke-error bg-surface-error-light p-4">
+                <div className="rounded-xl border border-stroke-error bg-surface-error-light p-4">
                   <p className="text-h4 font-semibold text-content-error">
                     {resultado.errores.length}
                   </p>
