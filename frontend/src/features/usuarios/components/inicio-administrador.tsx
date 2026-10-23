@@ -1,7 +1,6 @@
 import {
   CalendarDays,
   ChevronRight,
-  FileSpreadsheet,
   UserPlus,
   UserRoundCog,
   Users,
@@ -23,7 +22,6 @@ type InicioAdministradorProps = {
   hrefUsuarios: string;
   hrefNuevoUsuario: string;
   hrefInactivos: string;
-  hrefCargaMasiva: string;
 };
 
 const Estadistica = ({
@@ -84,7 +82,6 @@ export const InicioAdministrador = ({
   hrefUsuarios,
   hrefNuevoUsuario,
   hrefInactivos,
-  hrefCargaMasiva,
 }: InicioAdministradorProps) => {
   const resumen = useResumenUsuarios();
 
@@ -199,7 +196,7 @@ export const InicioAdministrador = ({
         <h2 className="text-h6 font-semibold text-content-primary">
           Accesos rápidos
         </h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <AccesoRapido
             to={hrefUsuarios}
             icono={<Users className="size-4" aria-hidden="true" />}
@@ -211,12 +208,6 @@ export const InicioAdministrador = ({
             icono={<UserPlus className="size-4" aria-hidden="true" />}
             titulo="Nuevo usuario"
             descripcion="Crea una cuenta y asigna su rol"
-          />
-          <AccesoRapido
-            to={hrefCargaMasiva}
-            icono={<FileSpreadsheet className="size-4" aria-hidden="true" />}
-            titulo="Carga masiva"
-            descripcion="Registra varios usuarios con una plantilla"
           />
         </div>
       </section>
