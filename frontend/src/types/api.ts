@@ -92,9 +92,9 @@ export type UsuarioDetalle = {
   roles: ROLES[];
   personaId: string;
   persona: DatosPersona;
-  /** Solo si tiene el rol Apoderado. Pendiente en el backend: mientras no llegue, se muestra vacío. */
+  /** Solo si tiene el rol Apoderado; si no, viene vacío. */
   estudiantesACargo?: EstudianteACargo[];
-  /** Solo si tiene el rol Tutor: secciones del año escolar actual. Pendiente en el backend. */
+  /** Solo si tiene el rol Tutor: secciones activas del año escolar en curso (estado ACTIVO). */
   tutorDe?: SeccionTutoria[];
 };
 
@@ -265,6 +265,20 @@ export type DocumentoAdjunto = {
   tipo: string;
   nombreArchivo: string;
   subidoEn: string;
+};
+
+/** Qué pasa si se inscribe un estudiante con ese documento (GET /estudiantes/documentos). */
+export type DisponibilidadDocumento =
+  | 'LIBRE'
+  | 'REUTILIZABLE'
+  | 'ESTUDIANTE_ACTIVO'
+  | 'ESTUDIANTE_RETIRADO'
+  | 'OTRA_PERSONA';
+
+export type VerificacionDocumento = {
+  estado: DisponibilidadDocumento;
+  permitido: boolean;
+  mensaje: string | null;
 };
 
 export type PersonaEncontrada = {

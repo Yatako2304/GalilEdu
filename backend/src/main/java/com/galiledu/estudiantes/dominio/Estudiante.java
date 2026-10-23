@@ -196,6 +196,38 @@ public class Estudiante {
 		this.modoSalida = modoSalida;
 	}
 
+	/** Retiro del colegio ("Inactivar" en el listado). Se revierte con {@link #reactivar()}. */
+	public void retirar() {
+		estado = EstadoEstudiante.RETIRADO;
+	}
+
+	public void reactivar() {
+		estado = EstadoEstudiante.ACTIVO;
+	}
+
+	/** Borrado lógico: deja de aparecer en el listado, pero conserva su historial (matrículas, pagos). */
+	public void eliminar() {
+		eliminado = true;
+	}
+
+	/** Un estudiante eliminado vuelve a quedar activo cuando se lo inscribe de nuevo. */
+	public void restaurar() {
+		eliminado = false;
+		estado = EstadoEstudiante.ACTIVO;
+	}
+
+	/**
+	 * Borra la ficha médica, la familia, los contactos y los autorizados registrados antes, para reemplazarlos por
+	 * los de una nueva inscripción. Quien lo llame debe hacer {@code flush} antes de agregar los nuevos: las claves
+	 * únicas (padre, madre, responsable y la ficha) chocarían si el INSERT se ejecuta antes del DELETE.
+	 */
+	public void vaciarRegistro() {
+		vinculos.clear();
+		contactos.clear();
+		autorizados.clear();
+		fichaMedica = null;
+	}
+
 	public UUID getId() {
 		return id;
 	}

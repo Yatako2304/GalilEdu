@@ -11,6 +11,8 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 import com.galiledu.personas.aplicacion.DatosPersona;
+import com.galiledu.usuarios.aplicacion.VinculosUsuario.EstudianteACargo;
+import com.galiledu.usuarios.aplicacion.VinculosUsuario.SeccionTutoria;
 import com.galiledu.usuarios.dominio.EstadoUsuario;
 import com.galiledu.usuarios.dominio.Rol;
 import com.galiledu.usuarios.dominio.Usuario;
@@ -58,12 +60,18 @@ public final class Dtos {
 		}
 	}
 
+	/**
+	 * {@code estudiantesACargo} solo si tiene el rol Apoderado y {@code tutorDe} solo si tiene el rol Tutor; si no, van
+	 * vacíos.
+	 */
 	public record UsuarioDetalle(UUID id, String username, EstadoUsuario estado, Instant creadoEn,
-			Instant ultimoAcceso, List<Rol> roles, UUID personaId, DatosPersona persona) {
-		public static UsuarioDetalle de(Usuario u) {
+			Instant ultimoAcceso, List<Rol> roles, UUID personaId, DatosPersona persona,
+			List<EstudianteACargo> estudiantesACargo, List<SeccionTutoria> tutorDe) {
+		public static UsuarioDetalle de(Usuario u, List<EstudianteACargo> estudiantesACargo,
+				List<SeccionTutoria> tutorDe) {
 			return new UsuarioDetalle(u.getId(), u.getNombreUsuario(), u.getEstado(), u.getCreadoEn(),
 					u.getUltimoAcceso(), ordenar(u.getRoles()), u.getPersona().getId(),
-					DatosPersona.de(u.getPersona()));
+					DatosPersona.de(u.getPersona()), estudiantesACargo, tutorDe);
 		}
 	}
 

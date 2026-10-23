@@ -1,18 +1,17 @@
+import { cn } from '@/utils/cn';
+
 import { Alert } from '../alert';
 
+import type { Notification as DatosNotificacion } from './notifications-store';
+
 export type NotificationProps = {
-  notification: {
-    id: string;
-    type: 'info' | 'success' | 'warning' | 'error';
-    title: string;
-    message?: string;
-  };
+  notification: DatosNotificacion;
   onDismiss: (id: string) => void;
 };
 
-// Figma > Componentes > Toast: el mismo Alert con la X para cerrarlo.
+// Figma > Componentes > Toast: el mismo Alert con la X para cerrarlo. Aparece y se desvanece solo.
 export const Notification = ({
-  notification: { id, type, title, message },
+  notification: { id, type, title, message, saliendo },
   onDismiss,
 }: NotificationProps) => (
   <div className="flex w-full flex-col items-center space-y-4 sm:items-end">
@@ -21,7 +20,12 @@ export const Notification = ({
       title={title}
       aria-label={title}
       onClose={() => onDismiss(id)}
-      className="pointer-events-auto w-full max-w-[497px] shadow-card"
+      className={cn(
+        'pointer-events-auto w-full max-w-[497px] shadow-card duration-300',
+        saliendo
+          ? 'animate-out fade-out fill-mode-forwards'
+          : 'animate-in fade-in slide-in-from-top-2',
+      )}
     >
       {message}
     </Alert>

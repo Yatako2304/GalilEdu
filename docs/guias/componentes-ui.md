@@ -37,8 +37,9 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Tab v2, Tabs v2 | `Tabs variant="pill"` (`tabs`) | Cambiar de vista dentro de una pantalla. Pestañas no disponibles: `disabled` + `title: 'Disponible pronto'`. |
 | Stepper, Steps | `Stepper` (`stepper`) | Asistentes por pasos. `current` empieza en 1. |
 | Alert | `Alert` (`alert`) | Mensajes dentro de la pantalla: `info`, `success`, `warning`, `error`, `default`; botón opcional con `action`. |
-| Toast | `useNotifications().addNotification(...)` (`notifications`) | Avisos flotantes después de guardar. Por dentro es un `Alert` con `onClose`. |
+| Toast | `useNotifications().addNotification(...)` (`notifications`) | Avisos flotantes después de guardar. Por dentro es un `Alert` con `onClose`. Se desvanecen solos (éxito e info a los 5 s, aviso y error a los 7 s: `DURACION_NOTIFICACION`) y se ven como máximo 3; la X los cierra antes. |
 | Modal, Modal - CTA | `Dialog`, `ConfirmationDialog` (`dialog`) | Ventanas modales y confirmaciones. |
+| Modal de confirmación (guardar, desactivar, reactivar, eliminar) | `DialogoConfirmacion` (`dialog/dialogo-confirmacion`) | Confirmación controlada con ícono y textos propios; la usan Usuarios y Estudiantes. Se abre con `open` desde el menú de tres puntos de una fila. |
 | Dropdown Item, Dropdown Item List | `DropdownMenu` (`dropdown`) | Menú ⋮ de una fila. |
 | cell-table, cell-table-header | `Table` (`table`) | Tablas con columnas declarativas. |
 | Pagination, Count | `PaginationBar` (`table`) | "Mostrando 1-10 de 200" con flechas y números. |

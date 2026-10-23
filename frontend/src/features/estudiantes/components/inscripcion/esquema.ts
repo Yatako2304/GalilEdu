@@ -310,10 +310,108 @@ const estudianteSchema = z
     );
   });
 
+/**
+ * Largos y rangos de la ficha médica. Los largos son los de estudiantes.ficha_medica (V2); los mismos
+ * rangos están en el backend (DatosFichaMedica).
+ */
+export const LIMITES_FICHA = {
+  peso: { min: 5, max: 200, enteros: 3, decimales: 1 },
+  estatura: { min: 0.5, max: 2.5, enteros: 1, decimales: 2 },
+  fiebre: { enteros: 3, decimales: 1 },
+  texto: 200,
+  observaciones: 500,
+} as const;
+
+/** Número con el formato dado y punto como separador decimal; null si no lo cumple. */
+const numero = (
+  valor: string,
+  { enteros, decimales }: { enteros: number; decimales: number },
+) =>
+  new RegExp(`^\\d{1,${enteros}}(\\.\\d{1,${decimales}})?$`).test(valor.trim())
+    ? Number(valor.trim())
+    : null;
+
+/**
+ * Paso 2 (HU-7): todo es obligatorio salvo observaciones. Si tiene alergias, al menos una de las dos;
+ * si padece una enfermedad o toma un medicamento, "¿Cuál?" es obligatorio.
+ */
+const fichaMedicaSchema = z
+  .custom<InscripcionForm['fichaMedica']>()
+  .superRefine((m, ctx) => {
+    const exige = (path: string, valor: unknown, message: string) => {
+      if (vacio(valor)) ctx.addIssue({ code: 'custom', path: [path], message });
+    };
+    const rango = (
+      path: 'pesoKg' | 'estaturaM',
+      limites: (typeof LIMITES_FICHA)['peso' | 'estatura'],
+      vacioMsg: string,
+      rangoMsg: string,
+    ) => {
+      if (vacio(m[path])) return exige(path, m[path], vacioMsg);
+      const n = numero(m[path], limites);
+      if (n === null || n < limites.min || n > limites.max) {
+        ctx.addIssue({ code: 'custom', path: [path], message: rangoMsg });
+      }
+    };
+
+    exige('tipoSangre', m.tipoSangre, 'Selecciona el tipo de sangre');
+    rango(
+      'pesoKg',
+      LIMITES_FICHA.peso,
+      'Ingresa el peso',
+      'El peso debe estar entre 5 y 200 kg',
+    );
+    rango(
+      'estaturaM',
+      LIMITES_FICHA.estatura,
+      'Ingresa la estatura',
+      'La estatura debe estar entre 0.50 y 2.50 m',
+    );
+    exige('tipoSeguro', m.tipoSeguro, 'Selecciona el tipo de seguro');
+    if (
+      m.tieneAlergias === 'SI' &&
+      vacio(m.alergiasAlimentarias) &&
+      vacio(m.alergiasMedicamentosas)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['alergiasAlimentarias'],
+        message: 'Indica al menos una alergia (alimentaria o medicamentosa)',
+      });
+    }
+    if (vacio(m.fiebreMaxima)) {
+      exige(
+        'fiebreMaxima',
+        m.fiebreMaxima,
+        'Indica hasta cuántos grados de fiebre ha llegado',
+      );
+    } else if (numero(m.fiebreMaxima, LIMITES_FICHA.fiebre) === null) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['fiebreMaxima'],
+        message: 'Ingresa un número (ej. 39 o 39.5)',
+      });
+    }
+    if (m.tieneEnfermedad === 'SI') {
+      exige(
+        'enfermedadDetalle',
+        m.enfermedadDetalle,
+        'Indica cuál es la enfermedad',
+      );
+    }
+    if (m.tomaMedicamento === 'SI') {
+      exige(
+        'medicamentoDetalle',
+        m.medicamentoDetalle,
+        'Indica cuál es el medicamento',
+      );
+    }
+  });
+
 export const inscripcionSchema = z
   .object({
     estudiante: estudianteSchema,
-    fichaMedica: z.object({}).passthrough(),
+    fichaMedica: fichaMedicaSchema,
     padre: familiarSchema(false),
     madre: familiarSchema(false),
     incluirApoderado: z.boolean(),
@@ -414,18 +512,24 @@ export const aSolicitud = (f: InscripcionForm): SolicitudInscripcion => {
     },
     fichaMedica: {
       tipoSangre: texto(m.tipoSangre),
-      pesoKg: m.pesoKg ? Number(m.pesoKg) : null,
-      estaturaM: m.estaturaM ? Number(m.estaturaM) : null,
+      pesoKg: numero(m.pesoKg, LIMITES_FICHA.peso),
+      estaturaM: numero(m.estaturaM, LIMITES_FICHA.estatura),
       tipoSeguro: texto(m.tipoSeguro),
+      // Los detalles de una respuesta "No" no se envían aunque se hayan escrito antes.
       tieneAlergias: m.tieneAlergias === 'SI',
-      alergiasAlimentarias: texto(m.alergiasAlimentarias),
-      alergiasMedicamentosas: texto(m.alergiasMedicamentosas),
-      fiebreMaxima: texto(m.fiebreMaxima),
+      alergiasAlimentarias:
+        m.tieneAlergias === 'SI' ? texto(m.alergiasAlimentarias) : null,
+      alergiasMedicamentosas:
+        m.tieneAlergias === 'SI' ? texto(m.alergiasMedicamentosas) : null,
+      fiebreMaxima:
+        numero(m.fiebreMaxima, LIMITES_FICHA.fiebre)?.toString() ?? null,
       haConvulsionado: m.haConvulsionado === 'SI',
       tieneEnfermedad: m.tieneEnfermedad === 'SI',
-      enfermedadDetalle: texto(m.enfermedadDetalle),
+      enfermedadDetalle:
+        m.tieneEnfermedad === 'SI' ? texto(m.enfermedadDetalle) : null,
       tomaMedicamento: m.tomaMedicamento === 'SI',
-      medicamentoDetalle: texto(m.medicamentoDetalle),
+      medicamentoDetalle:
+        m.tomaMedicamento === 'SI' ? texto(m.medicamentoDetalle) : null,
       observaciones: texto(m.observaciones),
     },
     padre: familiar(f.padre),
