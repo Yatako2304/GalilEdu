@@ -29,4 +29,11 @@ public class ExcepcionNegocio extends RuntimeException {
 	public static ExcepcionNegocio invalido(String mensaje) {
 		return new ExcepcionNegocio(HttpStatus.BAD_REQUEST, mensaje);
 	}
+
+	/** Campo obligatorio: si el valor es null o un texto en blanco, responde 400 con el mensaje. */
+	public static void exigir(Object valor, String mensaje) {
+		if (valor == null || valor instanceof String texto && texto.isBlank()) {
+			throw invalido(mensaje);
+		}
+	}
 }

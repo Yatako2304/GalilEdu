@@ -18,6 +18,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DialogoConfirmacion } from '@/components/ui/dialog/dialogo-confirmacion';
 import { Switch } from '@/components/ui/form';
 import { Spinner } from '@/components/ui/spinner';
 import { ROLES } from '@/config/roles';
@@ -34,7 +35,6 @@ import {
 } from '../api/mutaciones';
 import { verificarDocumento } from '../api/verificar-documento';
 
-import { DialogoConfirmacion } from './dialogo-confirmacion';
 import { EstudiantesACargo, SeccionesTutor } from './vinculos-usuario';
 
 /**

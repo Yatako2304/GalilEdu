@@ -15,6 +15,7 @@ import {
   Pagina,
   PersonaEncontrada,
   SolicitudInscripcion,
+  VerificacionDocumento,
 } from '@/types/api';
 
 // Endpoints de backend/estudiantes/web/EstudianteController.java (HU-7).
@@ -80,6 +81,33 @@ export const useInscribir = (onSuccess: (r: ResultadoInscripcion) => void) => {
       queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
       queryClient.invalidateQueries({ queryKey: ['usuarios'] });
       onSuccess(r);
+    },
+  });
+};
+
+/**
+ * GET /estudiantes/documentos?documento= → paso 1 de la inscripción: ¿se puede inscribir un estudiante con
+ * este documento? Libre y eliminado sí (el eliminado se actualiza al registrar); activo, retirado u otra
+ * persona, no.
+ */
+export const verificarDocumentoEstudiante = (
+  documento: string,
+): Promise<VerificacionDocumento> =>
+  api.get('/estudiantes/documentos', { params: { documento } });
+
+export type AccionEstudiante = 'retirar' | 'reactivar' | 'eliminar';
+
+// POST /estudiantes/{id}/retirar ("Inactivar") · POST /estudiantes/{id}/reactivar · DELETE /estudiantes/{id}
+export const useCambiarEstadoEstudiante = (onSuccess?: () => void) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, accion }: { id: string; accion: AccionEstudiante }) =>
+      accion === 'eliminar'
+        ? api.delete(`/estudiantes/${id}`)
+        : api.post(`/estudiantes/${id}/${accion}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['estudiantes'] });
+      onSuccess?.();
     },
   });
 };

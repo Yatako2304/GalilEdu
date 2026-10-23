@@ -10,6 +10,7 @@ import {
 import * as React from 'react';
 
 import { Card } from '@/components/ui/card';
+import { DialogoConfirmacion } from '@/components/ui/dialog/dialogo-confirmacion';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +28,6 @@ import { formatDay } from '@/utils/format';
 import { useUsuarios } from '../api/get-usuarios';
 import { AccionEstado, useCambiarEstadoUsuario } from '../api/mutaciones';
 
-import { DialogoConfirmacion } from './dialogo-confirmacion';
 import { ModoDialogo, TEXTOS } from './dialogo-usuario';
 import { NOMBRE_ROL, RolesCelda } from './rol-tag';
 

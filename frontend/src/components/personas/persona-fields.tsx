@@ -17,6 +17,8 @@ import {
   soloLetras,
 } from '@/utils/restringir-entrada';
 
+import { LIMITES_PERSONA } from './limites-persona';
+
 type PersonaFieldsProps = {
   // El formulario contenedor puede tener cualquier forma; los campos viven en `prefix`.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -43,7 +45,12 @@ type PersonaFieldsProps = {
 
 /** DNI: solo 8 dígitos; carné de extranjería: letras y números, hasta 12 (CAHU6-6). */
 export const filtroDocumento = (tipo?: string) =>
-  tipo === 'DNI' ? soloDigitos(8) : soloAlfanumerico(12);
+  tipo === 'DNI'
+    ? soloDigitos(LIMITES_PERSONA.dni)
+    : soloAlfanumerico(LIMITES_PERSONA.carnet);
+
+export const largoDocumento = (tipo?: string) =>
+  tipo === 'DNI' ? LIMITES_PERSONA.dni : LIMITES_PERSONA.carnet;
 
 const obtenerError = (errors: FieldErrors | undefined, ruta: string) =>
   ruta
@@ -97,7 +104,7 @@ export const PersonaFields = ({
           <Input
             label="N.° de documento"
             inputMode={tipoDocumento === 'DNI' ? 'numeric' : 'text'}
-            maxLength={tipoDocumento === 'DNI' ? 8 : 12}
+            maxLength={largoDocumento(tipoDocumento)}
             {...filtrado('numeroDocumento', filtroDocumento(tipoDocumento))}
             disabled={disabled || esperaTipo}
           />
@@ -105,16 +112,16 @@ export const PersonaFields = ({
       )}
       <Input
         label="Apellido paterno"
-        {...filtrado('apellidoPaterno', soloLetras(80))}
+        {...filtrado('apellidoPaterno', soloLetras(LIMITES_PERSONA.apellido))}
       />
       <Input
         label="Apellido materno"
-        {...filtrado('apellidoMaterno', soloLetras(80))}
+        {...filtrado('apellidoMaterno', soloLetras(LIMITES_PERSONA.apellido))}
       />
       <Input
         label="Nombres"
         wrapperClassName="md:col-span-2"
-        {...filtrado('nombres', soloLetras(120))}
+        {...filtrado('nombres', soloLetras(LIMITES_PERSONA.nombres))}
       />
       <Input
         label="Fecha de nacimiento"
@@ -163,13 +170,13 @@ export const PersonaFields = ({
         label="Celular"
         inputMode="numeric"
         placeholder="987111222"
-        {...filtrado('celular', soloDigitos(9))}
+        {...filtrado('celular', soloDigitos(LIMITES_PERSONA.celular))}
       />
       <Input label="Correo electrónico" type="email" {...campo('correo')} />
       <Input
         label="Teléfono de casa"
         inputMode="numeric"
-        {...filtrado('telefonoCasa', soloDigitos(15))}
+        {...filtrado('telefonoCasa', soloDigitos(LIMITES_PERSONA.telefonoCasa))}
       />
       {!sinDatosLaborales && (
         <>

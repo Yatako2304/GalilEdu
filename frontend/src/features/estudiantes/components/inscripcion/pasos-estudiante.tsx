@@ -2,6 +2,11 @@ import { CircleCheck } from 'lucide-react';
 import * as React from 'react';
 import { UseFormReturn } from 'react-hook-form';
 
+import { LIMITES_PERSONA } from '@/components/personas/limites-persona';
+import {
+  filtroDocumento,
+  largoDocumento,
+} from '@/components/personas/persona-fields';
 import { Input, Select, Textarea } from '@/components/ui/form';
 import {
   DISTRITOS_LIMA,
@@ -26,16 +31,24 @@ import {
   provinciasDe,
 } from '@/config/ubigeo';
 import {
+  decimal,
   restringir,
-  soloAlfanumerico,
+  soloDecimal,
   soloDigitos,
   soloLetras,
 } from '@/utils/restringir-entrada';
 
 import { Grilla, SeccionPaso, SiNo, Subtitulo } from './campos';
-import { InscripcionForm, gradoSugerido } from './esquema';
+import { InscripcionForm, LIMITES_FICHA, gradoSugerido } from './esquema';
 
 type PasoProps = { form: UseFormReturn<InscripcionForm> };
+
+// Largos de las columnas de estudiantes.estudiante (V2). Los de la persona están en LIMITES_PERSONA.
+const LIMITES_ESTUDIANTE = {
+  referencia: 200,
+  discapacidad: 200,
+  colegio: 150,
+} as const;
 
 const opciones = (valores: string[]) =>
   valores.map((v) => ({ label: v, value: v }));
@@ -78,10 +91,7 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
       clearErrors(nombre);
     });
 
-  // DNI: solo 8 dígitos; carné de extranjería: letras y números, hasta 12 (CAHU7-6).
   const tipoDocumento = watch('estudiante.persona.tipoDocumento');
-  const filtroDocumento = (tipo: string) =>
-    tipo === 'DNI' ? soloDigitos(8) : soloAlfanumerico(12);
 
   return (
     <SeccionPaso
@@ -110,7 +120,7 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
             label="N.° de documento"
             disabled={!tipoDocumento}
             inputMode={tipoDocumento === 'DNI' ? 'numeric' : 'text'}
-            maxLength={tipoDocumento === 'DNI' ? 8 : 12}
+            maxLength={largoDocumento(tipoDocumento)}
             registration={restringir(
               register('estudiante.persona.numeroDocumento'),
               filtroDocumento(tipoDocumento),
@@ -121,28 +131,28 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
         <Grilla>
           <Input
             label="Apellido paterno"
-            maxLength={80}
+            maxLength={LIMITES_PERSONA.apellido}
             registration={restringir(
               register('estudiante.persona.apellidoPaterno'),
-              soloLetras(80),
+              soloLetras(LIMITES_PERSONA.apellido),
             )}
             error={errorPersona?.apellidoPaterno}
           />
           <Input
             label="Apellido materno (opcional)"
-            maxLength={80}
+            maxLength={LIMITES_PERSONA.apellido}
             registration={restringir(
               register('estudiante.persona.apellidoMaterno'),
-              soloLetras(80),
+              soloLetras(LIMITES_PERSONA.apellido),
             )}
             error={errorPersona?.apellidoMaterno}
           />
           <Input
             label="Nombres"
-            maxLength={120}
+            maxLength={LIMITES_PERSONA.nombres}
             registration={restringir(
               register('estudiante.persona.nombres'),
-              soloLetras(120),
+              soloLetras(LIMITES_PERSONA.nombres),
             )}
             error={errorPersona?.nombres}
           />
@@ -223,7 +233,7 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
         <Grilla>
           <Input
             label="Dirección"
-            maxLength={200}
+            maxLength={LIMITES_PERSONA.direccion}
             registration={register('estudiante.persona.direccion')}
             error={errorPersona?.direccion}
           />
@@ -236,16 +246,16 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
           />
           <Input
             label="Referencia (opcional)"
-            maxLength={200}
+            maxLength={LIMITES_ESTUDIANTE.referencia}
             registration={register('estudiante.referenciaDomicilio')}
           />
           <Input
             label="Teléfono de casa (opcional)"
             inputMode="numeric"
-            maxLength={9}
+            maxLength={LIMITES_PERSONA.telefonoCasa}
             registration={restringir(
               register('estudiante.persona.telefonoCasa'),
-              soloDigitos(9),
+              soloDigitos(LIMITES_PERSONA.telefonoCasa),
             )}
             error={errorPersona?.telefonoCasa}
           />
@@ -309,7 +319,7 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
         {watch('estudiante.tieneDiscapacidad') === 'SI' && (
           <Input
             label="¿Cuál?"
-            maxLength={200}
+            maxLength={LIMITES_ESTUDIANTE.discapacidad}
             registration={register('estudiante.discapacidadDetalle')}
             error={errores?.discapacidadDetalle}
           />
@@ -321,7 +331,7 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
         <Grilla columnas={2}>
           <Input
             label="Colegio de procedencia"
-            maxLength={150}
+            maxLength={LIMITES_ESTUDIANTE.colegio}
             registration={register('estudiante.colegioProcedencia')}
             error={errores?.colegioProcedencia}
           />
@@ -396,7 +406,13 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
 
 // Paso 2 · Figma > "Admin / Estudiantes | Inscripción | Paso 2 - Ficha médica"
 export const PasoFichaMedica = ({ form }: PasoProps) => {
-  const { register, watch } = form;
+  const { register, watch, formState } = form;
+  const errores = formState.errors.fichaMedica;
+  const [alergias, enfermedad, medicamento] = watch([
+    'fichaMedica.tieneAlergias',
+    'fichaMedica.tieneEnfermedad',
+    'fichaMedica.tomaMedicamento',
+  ]);
   return (
     <SeccionPaso
       titulo="Ficha médica del estudiante"
@@ -410,24 +426,32 @@ export const PasoFichaMedica = ({ form }: PasoProps) => {
             options={TIPOS_SANGRE}
             placeholder="Selecciona"
             registration={register('fichaMedica.tipoSangre')}
+            error={errores?.tipoSangre}
           />
           <Input
             label="Peso (kg)"
-            type="number"
-            step="0.1"
-            registration={register('fichaMedica.pesoKg')}
+            inputMode="decimal"
+            registration={decimal(
+              register('fichaMedica.pesoKg'),
+              LIMITES_FICHA.peso,
+            )}
+            error={errores?.pesoKg}
           />
           <Input
             label="Estatura (m)"
-            type="number"
-            step="0.01"
-            registration={register('fichaMedica.estaturaM')}
+            inputMode="decimal"
+            registration={decimal(
+              register('fichaMedica.estaturaM'),
+              LIMITES_FICHA.estatura,
+            )}
+            error={errores?.estaturaM}
           />
           <Select
             label="Tipo de seguro"
             options={TIPOS_SEGURO}
             placeholder="Selecciona"
             registration={register('fichaMedica.tipoSeguro')}
+            error={errores?.tipoSeguro}
           />
         </Grilla>
       </section>
@@ -438,14 +462,17 @@ export const PasoFichaMedica = ({ form }: PasoProps) => {
           pregunta="¿Tiene alergias?"
           registration={register('fichaMedica.tieneAlergias')}
         />
-        {watch('fichaMedica.tieneAlergias') === 'SI' && (
+        {alergias === 'SI' && (
           <Grilla columnas={2}>
             <Input
               label="Alergias alimentarias"
+              maxLength={LIMITES_FICHA.texto}
               registration={register('fichaMedica.alergiasAlimentarias')}
+              error={errores?.alergiasAlimentarias}
             />
             <Input
               label="Alergias medicamentosas"
+              maxLength={LIMITES_FICHA.texto}
               registration={register('fichaMedica.alergiasMedicamentosas')}
             />
           </Grilla>
@@ -457,7 +484,12 @@ export const PasoFichaMedica = ({ form }: PasoProps) => {
         <Grilla columnas={2}>
           <Input
             label="¿Hasta cuántos grados de fiebre ha llegado? (°C)"
-            registration={register('fichaMedica.fiebreMaxima')}
+            inputMode="decimal"
+            registration={restringir(
+              register('fichaMedica.fiebreMaxima'),
+              soloDecimal(LIMITES_FICHA.fiebre),
+            )}
+            error={errores?.fiebreMaxima}
           />
           <SiNo
             pregunta="¿Ha convulsionado?"
@@ -467,10 +499,13 @@ export const PasoFichaMedica = ({ form }: PasoProps) => {
             pregunta="¿Padece alguna enfermedad que el colegio deba conocer?"
             registration={register('fichaMedica.tieneEnfermedad')}
           />
-          {watch('fichaMedica.tieneEnfermedad') === 'SI' ? (
+          {/* "¿Cuál?" aparece recién con Sí (decisión del equipo; Figma lo muestra deshabilitado). */}
+          {enfermedad === 'SI' ? (
             <Input
               label="¿Cuál?"
+              maxLength={LIMITES_FICHA.texto}
               registration={register('fichaMedica.enfermedadDetalle')}
+              error={errores?.enfermedadDetalle}
             />
           ) : (
             <span />
@@ -479,10 +514,12 @@ export const PasoFichaMedica = ({ form }: PasoProps) => {
             pregunta="¿Toma algún medicamento a diario?"
             registration={register('fichaMedica.tomaMedicamento')}
           />
-          {watch('fichaMedica.tomaMedicamento') === 'SI' ? (
+          {medicamento === 'SI' ? (
             <Input
               label="¿Cuál?"
+              maxLength={LIMITES_FICHA.texto}
               registration={register('fichaMedica.medicamentoDetalle')}
+              error={errores?.medicamentoDetalle}
             />
           ) : (
             <span />
@@ -490,6 +527,7 @@ export const PasoFichaMedica = ({ form }: PasoProps) => {
         </Grilla>
         <Textarea
           label="Observaciones médicas (opcional)"
+          maxLength={LIMITES_FICHA.observaciones}
           registration={register('fichaMedica.observaciones')}
         />
         <div className="rounded-xl bg-surface-warning-light px-4 py-3 text-body-4 text-content-secondary">

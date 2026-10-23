@@ -36,6 +36,14 @@ const valida = (): InscripcionForm => {
   f.estudiante.gestionProcedencia = 'Privada';
   f.estudiante.nivel = 'PRIMARIA';
   f.estudiante.grado = 'PRI-6';
+  f.fichaMedica = {
+    ...f.fichaMedica,
+    tipoSangre: 'O+',
+    pesoKg: '22',
+    estaturaM: '1.18',
+    tipoSeguro: 'EsSalud',
+    fiebreMaxima: '39',
+  };
   f.padre.personaId = 'id-del-padre';
   f.padre.persona.numeroDocumento = '41234567';
   f.madre.persona = {
@@ -210,6 +218,95 @@ describe('inscripcionSchema (reglas de Figma)', () => {
     expect(mensajes(f)).toContain(
       'Registra al menos 2 contactos de emergencia',
     );
+  });
+});
+
+describe('Paso 2 · ficha médica', () => {
+  test('exige tipo de sangre, peso, estatura, seguro y fiebre máxima', () => {
+    const f = valida();
+    f.fichaMedica = inscripcionVacia().fichaMedica;
+    expect(mensajes(f)).toEqual([
+      'Selecciona el tipo de sangre',
+      'Ingresa el peso',
+      'Ingresa la estatura',
+      'Selecciona el tipo de seguro',
+      'Indica hasta cuántos grados de fiebre ha llegado',
+    ]);
+  });
+
+  test.each([
+    ['pesoKg', '4.9', 'El peso debe estar entre 5 y 200 kg'],
+    ['pesoKg', '200.5', 'El peso debe estar entre 5 y 200 kg'],
+    ['pesoKg', 'veinte', 'El peso debe estar entre 5 y 200 kg'],
+    ['estaturaM', '118', 'La estatura debe estar entre 0.50 y 2.50 m'],
+    ['estaturaM', '0.4', 'La estatura debe estar entre 0.50 y 2.50 m'],
+    ['fiebreMaxima', 'mucha', 'Ingresa un número (ej. 39 o 39.5)'],
+    ['fiebreMaxima', '39.55', 'Ingresa un número (ej. 39 o 39.5)'],
+  ] as const)('%s = "%s" → %s', (campo, valor, mensaje) => {
+    const f = valida();
+    f.fichaMedica[campo] = valor;
+    expect(mensajes(f)).toEqual([mensaje]);
+  });
+
+  test('acepta los extremos de cada rango con el formato ###.# y #.##', () => {
+    const f = valida();
+    f.fichaMedica.pesoKg = '200.0';
+    f.fichaMedica.estaturaM = '0.50';
+    f.fichaMedica.fiebreMaxima = '39.5';
+    expect(mensajes(f)).toEqual([]);
+    const s = aSolicitud(f).fichaMedica;
+    expect(s).toMatchObject({
+      pesoKg: 200,
+      estaturaM: 0.5,
+      fiebreMaxima: '39.5',
+    });
+  });
+
+  test.each([
+    ['pesoKg', '22,5', 'El peso debe estar entre 5 y 200 kg'],
+    ['pesoKg', '22.55', 'El peso debe estar entre 5 y 200 kg'],
+    ['estaturaM', '1,18', 'La estatura debe estar entre 0.50 y 2.50 m'],
+    ['estaturaM', '1.185', 'La estatura debe estar entre 0.50 y 2.50 m'],
+    ['fiebreMaxima', '39,5', 'Ingresa un número (ej. 39 o 39.5)'],
+  ] as const)(
+    'el separador decimal es el punto: %s = "%s" no vale',
+    (campo, valor, mensaje) => {
+      const f = valida();
+      f.fichaMedica[campo] = valor;
+      expect(mensajes(f)).toEqual([mensaje]);
+    },
+  );
+
+  test('con alergias, al menos una de las dos', () => {
+    const f = valida();
+    f.fichaMedica.tieneAlergias = 'SI';
+    expect(mensajes(f)).toEqual([
+      'Indica al menos una alergia (alimentaria o medicamentosa)',
+    ]);
+    f.fichaMedica.alergiasMedicamentosas = 'Penicilina';
+    expect(mensajes(f)).toEqual([]);
+  });
+
+  test('si padece una enfermedad o toma un medicamento, "¿Cuál?" es obligatorio', () => {
+    const f = valida();
+    f.fichaMedica.tieneEnfermedad = 'SI';
+    f.fichaMedica.tomaMedicamento = 'SI';
+    expect(mensajes(f)).toEqual([
+      'Indica cuál es la enfermedad',
+      'Indica cuál es el medicamento',
+    ]);
+  });
+
+  test('los detalles de una respuesta "No" no se envían', () => {
+    const f = valida();
+    f.fichaMedica.alergiasAlimentarias = 'Maní';
+    f.fichaMedica.enfermedadDetalle = 'Asma';
+    f.fichaMedica.medicamentoDetalle = 'Salbutamol';
+    expect(aSolicitud(f).fichaMedica).toMatchObject({
+      alergiasAlimentarias: null,
+      enfermedadDetalle: null,
+      medicamentoDetalle: null,
+    });
   });
 });
 

@@ -1,15 +1,61 @@
-import { Search } from 'lucide-react';
+import {
+  EllipsisVertical,
+  Eye,
+  Search,
+  Trash2,
+  UserCheck,
+  UserX,
+} from 'lucide-react';
 import * as React from 'react';
+import { useNavigate } from 'react-router';
 
 import { Card } from '@/components/ui/card';
+import { DialogoConfirmacion } from '@/components/ui/dialog/dialogo-confirmacion';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown';
 import { Select } from '@/components/ui/form';
 import { Link } from '@/components/ui/link';
 import { Spinner } from '@/components/ui/spinner';
 import { PaginationBar, Table } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
-import { EstadoEstudiante } from '@/types/api';
+import { EstadoEstudiante, EstudianteResumen } from '@/types/api';
 
-import { useEstudiantes } from '../api/estudiantes';
+import {
+  AccionEstudiante,
+  useCambiarEstadoEstudiante,
+  useEstudiantes,
+} from '../api/estudiantes';
+
+// Textos de los modales de confirmación (mismo formato que Usuarios).
+const TEXTOS: Record<
+  AccionEstudiante,
+  (nombre: string) => { titulo: string; descripcion: string }
+> = {
+  retirar: (nombre) => ({
+    titulo: `¿Inactivar a ${nombre}?`,
+    descripcion:
+      'Quedará retirado y no se podrá inscribir de nuevo mientras siga inactivo. Puedes reactivarlo cuando quieras.',
+  }),
+  reactivar: (nombre) => ({
+    titulo: `¿Reactivar a ${nombre}?`,
+    descripcion: 'Volverá a figurar como activo en el colegio.',
+  }),
+  eliminar: (nombre) => ({
+    titulo: `¿Eliminar a ${nombre}?`,
+    descripcion:
+      'Dejará de aparecer en el listado. Si se inscribe de nuevo con el mismo documento, sus datos se actualizarán con la nueva inscripción.',
+  }),
+};
+
+const TIPO_DIALOGO = {
+  retirar: 'desactivar',
+  reactivar: 'reactivar',
+  eliminar: 'eliminar',
+} as const;
 
 const ESTADOS: Record<
   EstadoEstudiante,
@@ -51,6 +97,12 @@ export const EstudiantesLista = ({
 
   const estudiantes = useEstudiantes({ q, estado, page });
 
+  const [accion, setAccion] = React.useState<{
+    estudiante: EstudianteResumen;
+    tipo: AccionEstudiante;
+  } | null>(null);
+  const cambiarEstado = useCambiarEstadoEstudiante(() => setAccion(null));
+
   return (
     <>
       <div className="flex flex-wrap gap-3">
@@ -73,6 +125,7 @@ export const EstudiantesLista = ({
             { label: 'Estado: Todos', value: '' },
             { label: 'Inscrito', value: 'INSCRITO' },
             { label: 'Matriculado', value: 'MATRICULADO' },
+            { label: 'Retirado', value: 'RETIRADO' },
           ]}
           value={estado}
           onChange={(e) => {
@@ -132,6 +185,19 @@ export const EstudiantesLista = ({
                   ),
                 },
                 { title: 'Responsable', field: 'responsable' },
+                {
+                  title: '',
+                  field: 'id',
+                  Cell: ({ entry }) => (
+                    <AccionesFila
+                      estudiante={entry}
+                      hrefFicha={hrefFicha}
+                      onAccion={(tipo) =>
+                        setAccion({ estudiante: entry, tipo })
+                      }
+                    />
+                  ),
+                },
               ]}
             />
             {estudiantes.data && estudiantes.data.meta.total > 0 && (
@@ -143,6 +209,66 @@ export const EstudiantesLista = ({
           </>
         )}
       </Card>
+
+      {accion && (
+        <DialogoConfirmacion
+          open
+          onOpenChange={(open) => !open && setAccion(null)}
+          tipo={TIPO_DIALOGO[accion.tipo]}
+          cargando={cambiarEstado.isPending}
+          textoConfirmar={accion.tipo === 'eliminar' ? 'Eliminar' : 'Confirmar'}
+          {...TEXTOS[accion.tipo](accion.estudiante.nombreCompleto)}
+          onConfirmar={() =>
+            cambiarEstado.mutate({
+              id: accion.estudiante.id,
+              accion: accion.tipo,
+            })
+          }
+        />
+      )}
     </>
+  );
+};
+
+// Los tres puntos de cada fila, como en Usuarios: Ver, Inactivar o Reactivar, y Eliminar.
+const AccionesFila = ({
+  estudiante,
+  hrefFicha,
+  onAccion,
+}: {
+  estudiante: EstudianteResumen;
+  hrefFicha: (id: string) => string;
+  onAccion: (tipo: AccionEstudiante) => void;
+}) => {
+  const navigate = useNavigate();
+  const retirado = estudiante.estado === 'RETIRADO';
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-xl text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
+        <EllipsisVertical className="size-4" aria-hidden="true" />
+        <span className="sr-only">Acciones de {estudiante.nombreCompleto}</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-40">
+        <DropdownMenuItem onClick={() => navigate(hrefFicha(estudiante.id))}>
+          <Eye className="mr-2 size-4" aria-hidden="true" /> Ver
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onAccion(retirado ? 'reactivar' : 'retirar')}
+        >
+          {retirado ? (
+            <UserCheck className="mr-2 size-4" aria-hidden="true" />
+          ) : (
+            <UserX className="mr-2 size-4" aria-hidden="true" />
+          )}
+          {retirado ? 'Reactivar' : 'Inactivar'}
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => onAccion('eliminar')}
+          className="text-content-error focus:text-content-error"
+        >
+          <Trash2 className="mr-2 size-4" aria-hidden="true" /> Eliminar
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };

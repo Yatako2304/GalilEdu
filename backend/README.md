@@ -64,8 +64,8 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/usuarios?q=&rol=&estado=&page=&size=` | Administrador | Lista paginada `{data, meta}` |
 | GET | `/usuarios/resumen` | Administrador | Datos del Inicio del administrador |
 | GET | `/usuarios/roles` | Administrador | Roles asignables |
-| GET / PUT | `/usuarios/{id}` | Administrador | Detalle / edición (persona + roles) |
-| POST | `/usuarios` | Administrador | Alta; devuelve usuario generado (la contraseña va por correo) |
+| GET / PUT | `/usuarios/{id}` | Administrador | Detalle / edición (persona + roles). El detalle trae `estudiantesACargo` (Apoderado) y `tutorDe` (Tutor, año escolar en curso). Mismas reglas que el alta; conserva Apoderado, Tutor y Estudiante si ya los tiene |
+| POST | `/usuarios` | Administrador | Alta; devuelve usuario generado (la contraseña va por correo). Exige todos los datos personales salvo apellido materno, teléfono de casa y exalumno (CAHU6); no acepta los roles Apoderado, Tutor ni Estudiante |
 | POST | `/usuarios/{id}/desactivar` · `/reactivar` | Administrador | HU-12 |
 | DELETE | `/usuarios/{id}` | Administrador | Borrado lógico |
 | GET | `/usuarios/carga-masiva/plantilla` | Administrador | Plantilla `.xlsx` de la carga masiva (HU-8) |
@@ -74,7 +74,11 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/estudiantes?q=&estado=&page=` | Admin, Personal adm. | Lista de estudiantes. `estado`: INSCRITO, MATRICULADO o RETIRADO (se calcula desde la matrícula) |
 | GET | `/estudiantes/{id}` | Admin, Personal adm. | Ficha (datos, ficha médica, familia, contactos, hermanos) |
 | GET | `/estudiantes/personas?documento=` | Admin, Personal adm. | Busca padre/madre/apoderado ya registrado (404 = persona nueva). `cuentaEliminada` indica si su usuario está eliminado |
-| POST | `/estudiantes/inscripciones` | Admin, Personal adm. | Registra la inscripción completa (5 pasos). El grado va como código del catálogo: `gradoCodigo` = `PRI-1`…`PRI-6`, `SEC-1`…`SEC-5` |
+| GET | `/estudiantes/documentos?documento=` | Admin, Personal adm. | Paso 1: ¿se puede inscribir un estudiante con ese documento? `estado`: `LIBRE` y `REUTILIZABLE` (eliminado) sí; `ESTUDIANTE_ACTIVO`, `ESTUDIANTE_RETIRADO` y `OTRA_PERSONA` no (`permitido`, `mensaje`) |
+| POST | `/estudiantes/inscripciones` | Admin, Personal adm. | Registra la inscripción completa (5 pasos). El grado va como código del catálogo: `gradoCodigo` = `PRI-1`…`PRI-6`, `SEC-1`…`SEC-5`. Con el documento de un estudiante **eliminado** no crea uno nuevo: lo restaura (mismo id) y reemplaza sus datos, ficha médica, familia, contactos y autorizados por los de la inscripción; con uno activo o retirado responde 409 |
+| POST | `/estudiantes/{id}/retirar` | Admin, Personal adm. | "Inactivar": pasa a RETIRADO (409 si ya lo está). 204 |
+| POST | `/estudiantes/{id}/reactivar` | Admin, Personal adm. | Quita el retiro (409 si no está retirado). 204 |
+| DELETE | `/estudiantes/{id}` | Admin, Personal adm. | Borrado lógico: deja de salir en el listado y en la ficha, y conserva su historial. 204 |
 | POST | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Sube o reemplaza el documento del apoderado (multipart: `tipo`, `archivo`; PDF/JPG/PNG ≤ 5 MB) |
 | GET | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Descarga ese documento |
 | GET | `/areas/resumen` | Personal adm. | Áreas, competencias y cursos activos de los registrados, y el año escolar activo (CI-14) |
