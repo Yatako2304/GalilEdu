@@ -74,6 +74,18 @@ const authConfig = {
 export const { useUser, useLogin, useLogout, AuthLoader } =
   configureAuth(authConfig);
 
+/**
+ * Solo se vuelve a pantallas internas de la app ("/app/..."). Un redirectTo con otra forma
+ * (otro dominio, "//sitio", "javascript:") se ignora y se va al inicio del rol.
+ */
+export const destinoSeguro = (redirectTo: string | null) =>
+  redirectTo &&
+  redirectTo.startsWith('/app/') &&
+  !redirectTo.includes('//') &&
+  !redirectTo.includes('\\')
+    ? redirectTo
+    : null;
+
 export const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const user = useUser();
   const location = useLocation();

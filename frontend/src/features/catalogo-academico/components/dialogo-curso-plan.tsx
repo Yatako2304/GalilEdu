@@ -86,7 +86,11 @@ export const DialogoCursoPlan = ({
   const [cursoId, setCursoId] = React.useState('');
   const [horas, setHoras] = React.useState('');
   const [filas, setFilas] = React.useState<Fila[]>([]);
-  const [error, setError] = React.useState<string | null>(null);
+  // Errores por campo: se muestran en el estado de error del Text Field / Select de Figma.
+  const [errores, setErrores] = React.useState<{
+    curso?: string;
+    horas?: string;
+  }>({});
 
   // Al abrir "configurar", parte de lo guardado.
   React.useEffect(() => {
@@ -129,10 +133,15 @@ export const DialogoCursoPlan = ({
   const guardar = (e: React.FormEvent) => {
     e.preventDefault();
     const horasNumero = Number(horas);
-    if (agregando && !cursoId) return setError('Elige el curso.');
-    if (!Number.isInteger(horasNumero) || horasNumero < 1 || horasNumero > 20)
-      return setError('Las horas semanales van de 1 a 20.');
-    setError(null);
+    const nuevos = {
+      curso: agregando && !cursoId ? 'Elige el curso.' : undefined,
+      horas:
+        !Number.isInteger(horasNumero) || horasNumero < 1 || horasNumero > 20
+          ? 'Las horas semanales van de 1 a 20.'
+          : undefined,
+    };
+    setErrores(nuevos);
+    if (nuevos.curso || nuevos.horas) return;
     const competencias: SolicitudCompetenciaPlan[] = filas
       .filter((f) => f.seleccionada)
       .map(({ competenciaId, escala, reglaNota, consolidacion }) => ({
@@ -194,12 +203,22 @@ export const DialogoCursoPlan = ({
           <Spinner />
         </div>
       ) : (
-        <form id="form-curso-plan" className="space-y-5" onSubmit={guardar}>
+        <form
+          id="form-curso-plan"
+          noValidate
+          className="space-y-5"
+          onSubmit={guardar}
+        >
           <div className="flex flex-wrap items-start gap-4">
             {agregando && (
               <Select
                 label="Curso *"
                 wrapperClassName="min-w-64 flex-1"
+                error={
+                  errores.curso
+                    ? { type: 'validate', message: errores.curso }
+                    : undefined
+                }
                 placeholder="Elige un curso"
                 options={(disponibles.data ?? []).map((c) => ({
                   label: `${c.nombre} · ${c.area}`,
@@ -212,9 +231,12 @@ export const DialogoCursoPlan = ({
             )}
             <Input
               type="number"
-              min={1}
-              max={20}
               label="Horas semanales *"
+              error={
+                errores.horas
+                  ? { type: 'validate', message: errores.horas }
+                  : undefined
+              }
               wrapperClassName="w-44"
               value={horas}
               onChange={(e) => setHoras(e.target.value)}
@@ -307,11 +329,6 @@ export const DialogoCursoPlan = ({
               </table>
             )}
           </div>
-          {error && (
-            <p role="alert" className="text-body-4 text-content-error">
-              {error}
-            </p>
-          )}
         </form>
       )}
     </DialogoCatalogo>

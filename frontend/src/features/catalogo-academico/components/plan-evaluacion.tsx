@@ -195,7 +195,7 @@ const Chip = ({
     aria-pressed={activo}
     onClick={onClick}
     className={cn(
-      'rounded-md border px-3 py-1 text-body-4 transition-colors',
+      'rounded-lg border px-3 py-1 text-body-4 transition-colors',
       activo
         ? 'border-transparent bg-deep-blue-800 text-white'
         : 'border-stroke-accent-primary bg-white text-content-accent-secondary hover:bg-surface-accent-light',
@@ -406,7 +406,7 @@ const AccionesCursoPlan = ({
   onModal: (m: Modal) => void;
 }) => (
   <DropdownMenu>
-    <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
+    <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-xl text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
       <EllipsisVertical className="size-4" aria-hidden="true" />
       <span className="sr-only">Acciones de {curso.curso}</span>
     </DropdownMenuTrigger>

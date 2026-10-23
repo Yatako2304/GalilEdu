@@ -18,7 +18,7 @@ export const RecuperarContrasenaForm = () => {
       <div className="space-y-6">
         <p
           role="status"
-          className="rounded-lg bg-surface-success-light p-4 text-body-3 text-content-success"
+          className="rounded-xl bg-surface-success-light p-4 text-body-3 text-content-success"
         >
           {recuperar.data.message}
         </p>

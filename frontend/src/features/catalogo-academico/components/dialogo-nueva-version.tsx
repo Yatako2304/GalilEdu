@@ -40,7 +40,7 @@ const valoresIniciales = (
 });
 
 const campoNota =
-  'h-9 w-20 rounded-lg border border-stroke-primary bg-white px-3 text-body-3 focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100 read-only:bg-surface-tertiary read-only:text-content-quartiary';
+  'h-9 w-20 rounded-xl border border-stroke-primary bg-white px-3 text-body-3 focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100 read-only:bg-surface-tertiary read-only:text-content-quartiary';
 
 type DialogoNuevaVersionProps = {
   vigente: TablaConversionDetalle | undefined;
@@ -77,6 +77,7 @@ export const DialogoNuevaVersion = ({
       className="max-w-[760px]"
     >
       <form
+        noValidate
         id="form-nueva-version"
         className="space-y-5"
         onSubmit={form.handleSubmit((valores) =>

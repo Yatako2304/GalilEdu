@@ -68,7 +68,7 @@ export const DialogoUsuario = ({
 
   return (
     <Dialog open={!!estado} onOpenChange={(open) => !open && onCerrar()}>
-      <DialogContent className="flex max-h-[92vh] max-w-[800px] flex-col gap-0 overflow-hidden rounded-[12px] border-stroke-tertiary bg-white p-0">
+      <DialogContent className="flex max-h-[92vh] max-w-[800px] flex-col gap-0 overflow-hidden rounded-xl border-stroke-tertiary bg-white p-0">
         {estado &&
           (cargando ? (
             <div className="flex h-60 items-center justify-center">
@@ -169,12 +169,13 @@ const FormularioUsuario = ({
       </div>
 
       <form
+        noValidate
         id="form-usuario"
         onSubmit={enviar}
         className="flex-1 space-y-6 overflow-y-auto p-6"
       >
         {usuario && (
-          <div className="flex items-center justify-between gap-4 rounded-[12px] border border-stroke-tertiary bg-surface-secondary px-4 py-3">
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-stroke-tertiary bg-surface-secondary px-4 py-3">
             <div>
               <p className="text-label-2 font-medium text-content-primary">
                 {activo ? 'Cuenta activa' : 'Cuenta inactiva'}

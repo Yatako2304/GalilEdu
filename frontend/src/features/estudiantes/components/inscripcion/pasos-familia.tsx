@@ -151,7 +151,7 @@ const TarjetaFamiliar = ({
           </div>
 
           {f.personaId ? (
-            <div className="rounded-[12px] bg-surface-success-light px-4 py-3 text-body-4 text-content-secondary">
+            <div className="rounded-xl bg-surface-success-light px-4 py-3 text-body-4 text-content-secondary">
               <Tag color="success" size="sm" className="mr-2">
                 Ya registrado
               </Tag>
@@ -162,7 +162,7 @@ const TarjetaFamiliar = ({
             </div>
           ) : (
             buscado && (
-              <div className="rounded-[12px] bg-surface-accent-light px-4 py-3 text-body-4 text-content-secondary">
+              <div className="rounded-xl bg-surface-accent-light px-4 py-3 text-body-4 text-content-secondary">
                 <Tag color="primary" size="sm" className="mr-2">
                   Persona nueva
                 </Tag>
@@ -515,7 +515,7 @@ export const PasoContactos = ({ form }: PasoProps) => {
             </Button>
           </div>
         )}
-        <div className="rounded-[12px] bg-surface-secondary px-4 py-3 text-body-4 text-content-secondary">
+        <div className="rounded-xl bg-surface-secondary px-4 py-3 text-body-4 text-content-secondary">
           <strong className="text-content-primary">
             Si alguien no autorizado recoge al estudiante,
           </strong>{' '}

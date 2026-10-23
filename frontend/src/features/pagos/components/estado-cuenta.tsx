@@ -44,7 +44,7 @@ const AccionesFila = ({
   onRetiro: () => void;
 }) => (
   <DropdownMenu>
-    <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
+    <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-xl text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
       <EllipsisVertical className="size-4" aria-hidden="true" />
       <span className="sr-only">Acciones de {alumno.nombre}</span>
     </DropdownMenuTrigger>
@@ -157,7 +157,7 @@ export const EstadoCuenta = () => {
             onChange={(ev) => setTexto(ev.target.value)}
             placeholder="Buscar alumno por nombre o DNI"
             aria-label="Buscar alumno por nombre o DNI"
-            className="h-10 w-full rounded-lg border border-stroke-primary bg-white pl-9 pr-3 text-body-3 placeholder:text-content-placeholder focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100"
+            className="h-10 w-full rounded-xl border border-stroke-primary bg-white pl-9 pr-3 text-body-3 placeholder:text-content-placeholder focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100"
           />
         </div>
 

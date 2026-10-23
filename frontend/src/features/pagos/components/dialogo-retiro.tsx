@@ -25,9 +25,9 @@ export const DialogoRetiro = ({
   cargando,
 }: DialogoRetiroProps) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className="max-w-[448px] gap-0 rounded-[12px] border-stroke-tertiary bg-white p-0">
+    <DialogContent className="max-w-[448px] gap-0 rounded-xl border-stroke-tertiary bg-white p-0">
       <div className="flex flex-col items-center gap-4 px-8 pb-6 pt-8 text-center">
-        <span className="inline-flex size-11 items-center justify-center rounded-[12px] bg-surface-warning-light text-content-primary">
+        <span className="inline-flex size-11 items-center justify-center rounded-xl bg-surface-warning-light text-content-primary">
           <LogOut className="size-5" aria-hidden="true" />
         </span>
         <DialogTitle className="text-h6 font-semibold text-content-primary">

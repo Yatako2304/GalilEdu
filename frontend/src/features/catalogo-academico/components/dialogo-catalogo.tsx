@@ -41,7 +41,7 @@ export const DialogoCatalogo = ({
   <Dialog open={open} onOpenChange={(abierto) => !abierto && onCerrar()}>
     <DialogContent
       className={cn(
-        'max-h-[92vh] max-w-[520px] gap-0 overflow-y-auto rounded-[12px] border-stroke-tertiary bg-white p-0',
+        'max-h-[92vh] max-w-[520px] gap-0 overflow-y-auto rounded-xl border-stroke-tertiary bg-white p-0',
         className,
       )}
     >

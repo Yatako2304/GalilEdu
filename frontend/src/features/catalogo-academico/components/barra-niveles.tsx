@@ -33,7 +33,7 @@ export const BarraNiveles = ({ niveles }: { niveles: Rango[] }) => {
   return (
     <div>
       <div
-        className="flex h-11 overflow-hidden rounded-lg"
+        className="flex h-11 overflow-hidden rounded-xl"
         role="img"
         aria-label={tramos
           .map((t) => `${t.nivel} de ${t.notaDesde} a ${t.notaHasta}`)
