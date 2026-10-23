@@ -70,12 +70,12 @@ export const EtiquetaFlotante = ({
 }) => (
   <span
     className={cn(
-      'pointer-events-none absolute left-2 top-[-7px] bg-white px-2 text-label-3 font-normal transition-all',
+      'pointer-events-none absolute left-2 top-[-7px] whitespace-nowrap bg-white px-2 text-label-3 font-normal transition-all',
       reposo === true &&
-        'left-2.5 top-3 bg-transparent px-0 text-body-3 text-content-placeholder',
+        'left-2.5 top-3 max-w-[calc(100%-1.25rem)] truncate bg-transparent px-0 text-body-3 text-content-placeholder',
       reposo === 'segun-campo' && [
-        'peer-placeholder-shown:left-2.5 peer-placeholder-shown:top-3 peer-placeholder-shown:bg-transparent peer-placeholder-shown:px-0 peer-placeholder-shown:text-body-3 peer-placeholder-shown:text-content-placeholder',
-        'peer-focus:left-2 peer-focus:top-[-7px] peer-focus:bg-white peer-focus:px-2 peer-focus:text-label-3 peer-focus:text-content-tertiary',
+        'peer-placeholder-shown:left-2.5 peer-placeholder-shown:top-3 peer-placeholder-shown:max-w-[calc(100%-1.25rem)] peer-placeholder-shown:truncate peer-placeholder-shown:bg-transparent peer-placeholder-shown:px-0 peer-placeholder-shown:text-body-3 peer-placeholder-shown:text-content-placeholder',
+        'peer-focus:left-2 peer-focus:top-[-7px] peer-focus:max-w-none peer-focus:overflow-visible peer-focus:bg-white peer-focus:px-2 peer-focus:text-label-3 peer-focus:text-content-tertiary',
       ],
       error ? 'text-content-error' : 'text-content-tertiary',
       className,

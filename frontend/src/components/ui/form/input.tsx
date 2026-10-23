@@ -84,9 +84,12 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {label && (
               <EtiquetaFlotante
                 error={!!error}
-                // Con un placeholder propio o un adorno al inicio ("S/") la etiqueta se queda arriba: abajo taparía a uno u otro.
+                // Con un placeholder propio, un adorno al inicio ("S/") o `type="time"` (el navegador siempre dibuja
+                // "--:--") la etiqueta se queda arriba: abajo taparía a uno u otro.
                 reposo={
-                  props.placeholder || startAdornment ? false : 'segun-campo'
+                  props.placeholder || startAdornment || type === 'time'
+                    ? false
+                    : 'segun-campo'
                 }
               >
                 {label}
