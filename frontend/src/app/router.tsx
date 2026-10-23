@@ -114,6 +114,20 @@ export const createAppRouter = (queryClient: QueryClient) =>
               () => import('./routes/app/administrativo/matricula'),
             ],
             [
+              paths.app.administrativo.periodoMatriculaNuevo.path,
+              () =>
+                import('./routes/app/administrativo/periodo-matricula-nuevo'),
+            ],
+            [
+              paths.app.administrativo.periodoMatricula.path,
+              () => import('./routes/app/administrativo/periodo-matricula'),
+            ],
+            [
+              paths.app.administrativo.periodoMatriculaEditar.path,
+              () =>
+                import('./routes/app/administrativo/periodo-matricula-editar'),
+            ],
+            [
               paths.app.administrativo.pensiones.path,
               () => import('./routes/app/administrativo/pensiones'),
             ],

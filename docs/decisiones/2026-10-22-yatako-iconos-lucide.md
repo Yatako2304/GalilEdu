@@ -45,7 +45,9 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `file_upload` / `cloud_upload` | `Upload` / `CloudUpload` | Subir archivo, dropzone |
 | `attach_file` | `Paperclip` | Adjuntar documento |
 | `folder` | `Folder` | Accordion v2 |
-| `event` / `calendar_today` | `CalendarDays` | Fechas, Horarios |
+| `event` / `calendar_today` / `calendar_month` | `CalendarDays` | Fechas, Horarios, Periodo de matrícula |
+| `event_available` | `CalendarCheck` | Año escolar en curso |
+| `event_edit` | `CalendarClock` | Modal Editar periodo |
 | `star` | `Star` | Rating, Calificaciones |
 | `mail` | `Mail` | Correo |
 | `phone` | `Phone` | Teléfono |
@@ -57,6 +59,13 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `category` | `Layers` | KPI "Áreas activas" |
 | `menu_book` | `BookOpen` | KPI "Cursos activos" |
 | `more_vert` | `EllipsisVertical` | Menú ⋮ de una fila |
+| `settings` | `Settings` | "Ver configuración" de la tarjeta del periodo vigente |
+| `description` | `FileText` | Documentos requeridos |
+| `payments` | `Banknote` | Monto de matrícula |
+| `error` (círculo con !) | `CircleAlert` | Requisito pendiente de "Antes de activar el año" |
+| `lock` | `Lock` | "Cerrar año" |
+| `arrow_forward` | `ArrowRight` | "Ver detalle" |
+| `swap_horiz` | `ArrowLeftRight` | "Cambiar régimen" |
 | `view_sidebar` | `PanelLeft` | Ocultar o mostrar el menú lateral |
 
 ## Notas para quien siga
