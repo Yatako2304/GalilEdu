@@ -26,7 +26,7 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Figma | Código | Para qué |
 | --- | --- | --- |
 | Button, Button icon | `Button` (`button`) | Acciones. Variantes `primary`, `secondary`, `primary-light`, `tertiary`, `error`, `error-light`; tamaños `lg`, `md`, `sm`. |
-| Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. Con react-hook-form pasa `registration={register('campo')}`. |
+| Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. Con react-hook-form pasa `registration={register('campo')}`. `Textarea` con `maxLength` y `showCount` muestra el contador "12/100". |
 | Tag Field | `TagField` (`form`) | Campo que acumula etiquetas (Enter o coma). Úsalo con `<Controller>`. |
 | Checkbox, Checkbox Label | `Checkbox` (`form`) | Casilla con etiqueta y ayuda opcionales. |
 | Radio Buttons, Radio Label | `Radio` (`form`) | Opción única; mismo `name` en el grupo. |
@@ -44,7 +44,7 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Pagination, Count | `PaginationBar` (`table`) | "Mostrando 1-10 de 200" con flechas y números. |
 | Informative Tag | `Tag` (`tag`) | Etiqueta de solo lectura: `primary`, `info`, `success`, `warning`, `error`, `neutral`. |
 | Status | `Status` (`tag`) | Punto + "Activo" / "Inactivo". |
-| Selectable Tag(s) | `SelectableTag` (`tag`) | Etiqueta que se marca (filtros). Con `onRemove` muestra la X para quitarla. |
+| Selectable Tag(s) | `SelectableTag` (`tag`) | Etiqueta que se marca (filtros). Con `onRemove` muestra la X para quitarla. Con `readOnly` (y `shape="circle"`, `size="md"`) es la pastilla de estado de una tabla ("Programado", "Abierto", "Cerrado"): un `<span>`, no un botón. |
 | Stat Card | `StatCard` (`stat-card`) | Indicador (KPI) con ícono, valor y etiqueta. |
 | Shortcut Card | `ShortcutCard` (`shortcut-card`) | Acceso rápido a un módulo en los inicios. Recibe la ruta en `to`. |
 | Progreso (CI-01 · "Avance del año escolar") | `ProgressBar` (`progress-bar`) | Barra de avance con etiqueta y porcentaje. `value` va de 0 a 100. |

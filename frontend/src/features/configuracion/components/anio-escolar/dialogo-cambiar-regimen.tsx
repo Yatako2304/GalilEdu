@@ -33,7 +33,7 @@ export const DialogoCambiarRegimen = ({
   anio,
 }: DialogoCambiarRegimenProps) => (
   <Dialog open={abierto} onOpenChange={(open) => !open && onCerrar()}>
-    <DialogContent className="flex max-h-[92vh] max-w-[560px] flex-col gap-0 overflow-hidden rounded-[12px] border-stroke-tertiary bg-white p-0">
+    <DialogContent className="flex max-h-[92vh] max-w-[560px] flex-col gap-0 overflow-hidden rounded-xl border-stroke-tertiary bg-white p-0">
       <FormularioRegimen anio={anio} onCerrar={onCerrar} />
     </DialogContent>
   </Dialog>

@@ -2,10 +2,12 @@ import * as React from 'react';
 
 import { cn } from '@/utils/cn';
 
-import { IconBadge } from '../icon-badge';
+import { IconBadge, IconBadgeProps } from '../icon-badge';
 
 export type StatCardProps = {
   icon: React.ReactNode;
+  /** Color del cuadro del ícono (Figma: cada indicador de la pantalla 13 usa uno distinto). */
+  iconColor?: IconBadgeProps['color'];
   /** Valor principal (Figma: "1,248"). */
   value: React.ReactNode;
   label: React.ReactNode;
@@ -24,6 +26,7 @@ const tonos = {
 // Figma > Componentes > Stat Card: tarjeta de indicador (KPI) para los inicios y resúmenes.
 export const StatCard = ({
   icon,
+  iconColor,
   value,
   label,
   trend,
@@ -36,7 +39,7 @@ export const StatCard = ({
       className,
     )}
   >
-    <IconBadge shape="square" aria-hidden="true">
+    <IconBadge shape="square" color={iconColor} aria-hidden="true">
       {icon}
     </IconBadge>
     <p className="text-[28px] font-bold leading-normal text-content-primary">

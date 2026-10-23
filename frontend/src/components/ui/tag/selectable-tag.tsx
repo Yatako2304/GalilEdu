@@ -79,12 +79,27 @@ const tagVariants = cva(
   },
 );
 
+// Relleno claro de la pastilla informativa (`readOnly`): es el que Figma dibuja en los estados de una tabla.
+const RELLENO_INFORMATIVO: Record<SelectableTagColor, string> = {
+  primary: 'bg-surface-accent-light',
+  info: 'bg-vibrant-blue-50',
+  error: 'bg-surface-error-light',
+  success: 'bg-surface-success-light',
+  warning: 'bg-surface-warning-light',
+};
+
 export type SelectableTagProps = Omit<
   React.ButtonHTMLAttributes<HTMLButtonElement>,
   'color'
 > & {
   color?: SelectableTagColor;
   selected?: boolean;
+  /**
+   * Solo informativa, con la forma de pastilla de Figma (estado "Programado", "Abierto", "Cerrado" de una tabla).
+   * Se dibuja como un `<span>`: no es un botón ni se puede marcar. Para el resto de las etiquetas informativas
+   * usa `Tag`.
+   */
+  readOnly?: boolean;
   size?: 'lg' | 'md' | 'sm';
   shape?: 'square' | 'circle';
   /** Ícono a la izquierda (Figma: IconPosition = Left). */
@@ -100,6 +115,7 @@ export type SelectableTagProps = Omit<
 export const SelectableTag = ({
   color,
   selected = false,
+  readOnly = false,
   size,
   shape,
   icon,
@@ -108,13 +124,21 @@ export const SelectableTag = ({
   children,
   ...props
 }: SelectableTagProps) => {
-  const clases = cn(tagVariants({ color, selected, size, shape }), className);
+  const clases = cn(
+    tagVariants({ color, selected: readOnly ? false : selected, size, shape }),
+    readOnly && RELLENO_INFORMATIVO[color ?? 'primary'],
+    className,
+  );
   const contenido = (
     <>
       {icon && <span aria-hidden="true">{icon}</span>}
       {children}
     </>
   );
+
+  if (readOnly) {
+    return <span className={clases}>{contenido}</span>;
+  }
 
   if (onRemove) {
     return (

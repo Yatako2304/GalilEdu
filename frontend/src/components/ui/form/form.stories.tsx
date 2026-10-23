@@ -1,4 +1,5 @@
 import { Meta, StoryObj } from '@storybook/react';
+import * as React from 'react';
 import { z } from 'zod';
 
 import { Button } from '../button';
@@ -84,4 +85,26 @@ export const AsFormDrawer: Story = {
       <MyForm hideSubmit />
     </FormDrawer>
   ),
+};
+
+const ConContador = () => {
+  const [descripcion, setDescripcion] = React.useState(
+    'Ficha de matrícula completada con los campos correspondientes y firma del apoderado',
+  );
+  return (
+    <div className="w-96">
+      <Textarea
+        label="Descripción del documento (opcional)"
+        maxLength={100}
+        showCount
+        value={descripcion}
+        onChange={(e) => setDescripcion(e.target.value)}
+      />
+    </div>
+  );
+};
+
+// Figma > Componentes > Text Area con contador de caracteres ("0/100").
+export const TextareaConContador: Story = {
+  render: () => <ConContador />,
 };

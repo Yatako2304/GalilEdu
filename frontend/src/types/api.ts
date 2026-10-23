@@ -818,3 +818,118 @@ export type RequisitosAnio = {
   obligatorios: Requisito[];
   recomendados: Requisito[];
 };
+
+// ---------- Configuración · Periodo de matrícula (HU-23) ----------
+// Backend: configuracion/aplicacion/DtosPeriodoMatricula.java. Las fechas llegan como yyyy-mm-dd, las horas como
+// HH:mm:ss y `inicio`/`cierre` del listado como instantes UTC (ISO). `PeriodoMatricula` es el de P4 (apoderado).
+
+/** Lo calcula el backend con su reloj: PROGRAMADO, ABIERTO o CERRADO. */
+export type EstadoVisiblePeriodoMatricula =
+  'PROGRAMADO' | 'ABIERTO' | 'CERRADO';
+
+/** Fila del listado de la pantalla 13. `vigente`: es el periodo que devuelve /vigente. */
+export type FilaPeriodoMatricula = {
+  id: string;
+  nombre: string;
+  anioEscolarId: string;
+  anio: number;
+  inicio: string;
+  cierre: string;
+  matriculas: number;
+  estado: EstadoVisiblePeriodoMatricula;
+  vigente: boolean;
+};
+
+/** Tarjeta "Vigente": el periodo ABIERTO ahora o, si no hay, el próximo PROGRAMADO. */
+export type PeriodoMatriculaVigente = {
+  id: string;
+  anioEscolarId: string;
+  anio: number;
+  nombre: string;
+  inicio: string;
+  cierre: string;
+  estado: EstadoVisiblePeriodoMatricula;
+  bloquearPorMorosidad: boolean;
+  permitirExtemporanea: boolean;
+  vacantesTotales: number;
+  matriculasRegistradas: number;
+};
+
+/** Años PLANIFICADO o ACTIVO que aún no tienen periodo de matrícula. */
+export type AnioDisponibleMatricula = {
+  id: string;
+  anio: number;
+  estado: EstadoAnioEscolar;
+};
+
+/** Fila de "Vacantes por grado y sección". `tutor` es null si la sección no lo tiene. */
+export type SeccionVacante = {
+  seccionId: string;
+  etiqueta: string;
+  gradoCodigo: string;
+  gradoNombre: string;
+  tutor: string | null;
+  capacidad: number;
+  alumnosOcupanVacante: number;
+};
+
+export type DocumentoRequeridoVista = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  orden: number;
+  tienePlantilla: boolean;
+  plantillaNombreArchivo: string | null;
+  tieneEntregas: boolean;
+};
+
+/**
+ * El formulario de la pantalla 13: vacío (GET /nuevo), para editar o en solo lectura (GET /{id}). `id`, `estado`,
+ * las fechas, las horas y `diasDelPeriodo` son null mientras el periodo no existe. `montoMatricula` es null si
+ * `tarifarioConfirmado` es false.
+ */
+export type FormularioPeriodoMatricula = {
+  id: string | null;
+  anioEscolarId: string;
+  anio: number;
+  titulo: string;
+  estado: EstadoVisiblePeriodoMatricula | null;
+  editable: boolean;
+  eliminable: boolean;
+  fechaInicio: string | null;
+  horaInicio: string | null;
+  fechaCierre: string | null;
+  horaCierre: string | null;
+  diasDelPeriodo: number | null;
+  montoMatricula: number | null;
+  tarifarioConfirmado: boolean;
+  vacantesTotales: number;
+  matriculasRegistradas: number;
+  cantidadSecciones: number;
+  resumenSecciones: string;
+  bloquearPorMorosidad: boolean;
+  permitirExtemporanea: boolean;
+  secciones: SeccionVacante[];
+  documentos: DocumentoRequeridoVista[];
+};
+
+export type VacanteSolicitud = { seccionId: string; capacidad: number };
+
+/** `id` va solo en un documento que ya existe (al editar); uno nuevo no lo lleva. */
+export type DocumentoSolicitud = {
+  id?: string | null;
+  nombre: string;
+  descripcion?: string | null;
+};
+
+/** "Guardar configuración" (POST) y editar (PUT). Fechas y horas son de Lima: "2026-12-01" y "10:00". */
+export type SolicitudPeriodoMatricula = {
+  /** Solo al crear: un periodo no cambia de año. */
+  anioEscolarId?: string | null;
+  fechaInicio: string;
+  horaInicio: string;
+  fechaCierre: string;
+  horaCierre: string;
+  vacantes: VacanteSolicitud[];
+  documentos: DocumentoSolicitud[];
+};

@@ -12,22 +12,25 @@ type FieldWrapperProps = {
   className?: string;
   children: React.ReactNode;
   error?: FieldError | undefined;
+  /** Va entre el campo y su mensaje de ayuda o error, fuera de la etiqueta (por ejemplo, el contador de Textarea). */
+  afterField?: React.ReactNode;
 };
 
 export type FieldWrapperPassThroughProps = Omit<
   FieldWrapperProps,
-  'className' | 'children'
+  'className' | 'children' | 'afterField'
 >;
 
 // Figma > Componentes > Text Field: label (12px) + campo + mensaje de ayuda/error.
 export const FieldWrapper = (props: FieldWrapperProps) => {
-  const { label, hint, error, children, className } = props;
+  const { label, hint, error, children, className, afterField } = props;
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       <Label>
         {label && <span className="mb-1 block">{label}</span>}
         {children}
       </Label>
+      {afterField}
       {error?.message ? (
         <Error errorMessage={error.message} />
       ) : (

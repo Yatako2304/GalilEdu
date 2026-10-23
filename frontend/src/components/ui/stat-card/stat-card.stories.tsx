@@ -22,3 +22,14 @@ export const ConVariacion: Story = { args: { trend: '+4.2%' } };
 export const VariacionNegativa: Story = {
   args: { trend: '-1.3%', trendTone: 'error' },
 };
+
+// Cada indicador puede llevar el color de ícono que le da Figma.
+export const ColoresDeIcono: Story = {
+  render: (args) => (
+    <div className="flex flex-wrap gap-3">
+      {(['accent', 'turquoise', 'warning', 'success'] as const).map((color) => (
+        <StatCard key={color} {...args} iconColor={color} />
+      ))}
+    </div>
+  ),
+};
