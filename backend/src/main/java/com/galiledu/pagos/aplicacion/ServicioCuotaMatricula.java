@@ -49,9 +49,12 @@ public class ServicioCuotaMatricula {
 			throw ExcepcionNegocio.conflicto(
 					"La cuota de matrícula se genera mientras la matrícula está en proceso de confirmación.");
 		}
-		// RF-78: monto y vencimiento del tarifario del año escolar de la matrícula.
+		// RF-78: monto y vencimiento del tarifario vigente (CONFIRMADO en HU-34) del año escolar de la matrícula.
 		Tarifario tarifario = consultas.tarifario(m.anioEscolarId())
 				.orElseThrow(() -> ExcepcionNegocio.conflicto("No hay tarifario para el año " + m.anio() + "."));
+		if (!"CONFIRMADO".equals(tarifario.estado())) {
+			throw ExcepcionNegocio.conflicto("El tarifario " + m.anio() + " aún no está confirmado.");
+		}
 
 		CompromisoPago compromiso = compromisos.findByMatriculaId(matriculaId)
 				.or(() -> compromisos.findByEstudianteIdAndAnioEscolarId(m.estudianteId(), m.anioEscolarId()))
