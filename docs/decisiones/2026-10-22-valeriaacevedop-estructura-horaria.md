@@ -3,7 +3,7 @@
 - **Autor:** valeriaacevedop
 - **Fecha:** 2026-10-22
 - **HU / tarea:** HU-44 (Figma: "CI-12 · Estructura horaria" y "Modal - Nueva estructura horaria")
-- **Estado:** en progreso (backend terminado; falta el frontend)
+- **Estado:** terminado (el frontend está en [la entrada del 2026-10-23](2026-10-23-valeriaacevedop-frontend-estructura-horaria.md))
 
 ## Qué hice
 
@@ -75,7 +75,7 @@ Backend de las estructuras horarias de un año escolar: listar, ver el detalle c
 - [ ] **(b) Configuración de Jackson.** Acepta números con decimales (5.5 pasa a 5, 45.5 a 45), números escritos como texto (`"6"`) y notación científica (1e2 pasa a 100), y acepta claves duplicadas en el JSON (gana la última). **Propuesta:** desactivar la coerción de decimales y de textos a número y activar la detección estricta de claves duplicadas en Jackson. Los nombres exactos de las opciones dependen de la versión (Spring Boot 4.1.1 usa Jackson 3) y no los verifiqué. Es configuración compartida.
 - [ ] **(c) No hay límite de tamaño del cuerpo en el servidor.** Un código de 10 MB se lee entero en memoria y recién entonces se rechaza por largo. **Propuesta:** limitar el tamaño de la petición en el servidor o en un filtro.
 - [ ] Comunicar al grupo la interpretación de la decisión 1 ("un único bloque horario" como "una principal por nivel").
-- [ ] Frontend: CI-12 y el modal, con las diferencias con Figma (el modal no tiene Nivel ni "Estructura principal"; CI-12 no marca cuál es la principal ni dibuja Editar y Eliminar; "+ Nueva" debe quedar deshabilitado con el año activo). Y `frontend/src/types/api.ts`.
+- [x] Frontend: CI-12 y el modal, con las diferencias con Figma (el modal no tiene Nivel ni "Estructura principal"; CI-12 no marca cuál es la principal ni dibuja Editar y Eliminar; "+ Nueva" debe quedar deshabilitado con el año activo). Y `frontend/src/types/api.ts`. Hecho: ver [la entrada del frontend](2026-10-23-valeriaacevedop-frontend-estructura-horaria.md).
 - [ ] La activación del año no exige una principal por nivel: solo cuenta cuántas estructuras hay. Un año puede activarse con una estructura de un solo nivel. Se dejó como estaba.
 - [ ] HU-45 (Horarios): antes de permitir editar o eliminar una estructura, Horarios debe validar que no haya cursos asignados a sus bloques.
 
