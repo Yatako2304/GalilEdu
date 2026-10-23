@@ -2,7 +2,7 @@
 
 - **HU:** HU-24, 27, 30 (iteración 1) · HU-28, 29, 31, 32 (2) · HU-25, 26, 33, 71, 72 (3)
 - **Estado:** 🚧 en desarrollo: HU-27 y HU-30 completas; falta HU-24
-- **Última actualización:** 2026-10-22
+- **Última actualización:** 2026-10-23
 
 ## Alcance
 
@@ -31,30 +31,31 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `GET /matricula/
 
 ## Pantallas (Figma)
 
-| Pantalla | Frame en Figma |
-| --- | --- |
-| Matrículas del periodo | Personal Administrativo › "A3 · Matrícula 2027 › Matrículas del periodo (HU-24, HU-71)" |
-| Detalle / validar | "A5 · Detalle — Sección reservada", "A6 · Modal Completar matrícula", modal "¿Aprobar documentación?" |
-| Pendiente de pago / Matriculado | "B6 · Detalle — Pendiente de pago (HU-36, HU-31)", "B7 · Detalle — Matriculado (HU-31, HU-37)" |
-| Cambiar sección | modales "Cambiar sección" y "¿Cambiar sección?" |
-| Apoderado | Apoderado › "Matrícula 2027" (consulta de periodo, grado, sección, estado y progreso, HU-27) y "HU-28" a "HU-32" (documentos, deuda, pago y confirmación) |
+| Pantalla                        | Frame en Figma                                                                                                                                            |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Matrículas del periodo          | Personal Administrativo › "A3 · Matrícula 2027 › Matrículas del periodo (HU-24, HU-71)"                                                                   |
+| Detalle / validar               | "A5 · Detalle — Sección reservada", "A6 · Modal Completar matrícula", modal "¿Aprobar documentación?"                                                     |
+| Pendiente de pago / Matriculado | "B6 · Detalle — Pendiente de pago (HU-36, HU-31)", "B7 · Detalle — Matriculado (HU-31, HU-37)"                                                            |
+| Cambiar sección                 | modales "Cambiar sección" y "¿Cambiar sección?"                                                                                                           |
+| Apoderado                       | Apoderado › "Matrícula 2027" (consulta de periodo, grado, sección, estado y progreso, HU-27) y "HU-28" a "HU-32" (documentos, deuda, pago y confirmación) |
 
 ## Base de datos
 
 - **Esquema:** `matricula` · **Migraciones:** `V4` (periodo de matrícula) y `V5__matricula_y_pagos.sql`
 
-| Tabla | Para qué |
-| --- | --- |
-| `matricula.periodo_matricula` | Fechas y reglas del periodo (V4). |
-| `matricula.documento_requerido` | Documentos que pide el periodo, con plantilla opcional para descargar (HU-21/22, HU-28). |
-| `matricula.matricula` | Una por estudiante y año. Guarda grado, sección, NUEVO/CONTINUADOR, estado, código, si fue extemporánea y su motivo (HU-25), la fecha de confirmación (RF-68) y el retiro. |
-| `matricula.documento_matricula` | Archivo firmado de cada documento requerido: PDF, JPG o PNG de hasta 10 MB. Estado EN_REVISION, APROBADO u OBSERVADO; una observación es obligatoria si está OBSERVADO. |
-| `matricula.cambio_seccion` | Historial de cambios de sección (HU-26). |
-| `matricula.correlativo_matricula` | Último número de código por año. |
+| Tabla                             | Para qué                                                                                                                                                                   |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `matricula.periodo_matricula`     | Fechas y reglas del periodo (V4).                                                                                                                                          |
+| `matricula.documento_requerido`   | Documentos que pide el periodo, con plantilla opcional para descargar (HU-21/22, HU-28).                                                                                   |
+| `matricula.matricula`             | Una por estudiante y año. Guarda grado, sección, NUEVO/CONTINUADOR, estado, código, si fue extemporánea y su motivo (HU-25), la fecha de confirmación (RF-68) y el retiro. |
+| `matricula.documento_matricula`   | Archivo firmado de cada documento requerido: PDF, JPG o PNG de hasta 10 MB. Estado EN_REVISION, APROBADO u OBSERVADO; una observación es obligatoria si está OBSERVADO.    |
+| `matricula.cambio_seccion`        | Historial de cambios de sección (HU-26).                                                                                                                                   |
+| `matricula.correlativo_matricula` | Último número de código por año.                                                                                                                                           |
 
 Desde una matrícula se llega a: el estudiante (`estudiantes.estudiante`) y su apoderado (`estudiantes.vinculo_familiar` con `es_responsable_matricula`), el año, el grado y la sección (`configuracion.*`), y el compromiso de pago (`pagos.compromiso_pago.matricula_id`).
 
 **Datos de prueba:** Luis Paredes (`U20260003`) tiene dos hijos:
+
 - **Sofía:** MATRICULADO en 4.° A de 2026, con el código `MAT-2026-0001`.
 - **Mateo:** SECCION_RESERVADA en 1.° A de 2027.
 
@@ -66,6 +67,7 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 - **Sofía y Mateo tienen situaciones diferentes en 2027:** Mateo tiene una sección reservada en 1.° A; Sofía está matriculada en 4.° A de 2026, pero no tiene una matrícula creada para 2027, por lo que en el periodo consultado aparece pendiente de asignación.
 - **La deuda se valida por familia (HU-30):** la pensión vencida de S/ 600 pertenece a Sofía. Al consultar a Mateo, la matrícula también queda bloqueada porque el periodo tiene `bloquear_por_morosidad`; la interfaz aclara que Mateo no tiene deuda propia y que el impedimento proviene de Sofía. Al consultar a Sofía, la misma deuda se muestra como propia.
 - **HU-36 tiene un acceso temporal:** como el listado y detalle administrativo de HU-24 aún no existen, la tarjeta "Pago de matrícula" se prueba pasando `matriculaId` en la URL. Cuando HU-24 esté disponible, la misma tarjeta debe integrarse en su detalle.
+- **Flujo visual administrativo disponible:** se añadieron las pantallas de apoyo A3, A5, B6 y B7 para poder navegar desde el periodo hasta cada estado de matrícula. El listado, los documentos y los datos personales son estáticos; no implementan HU-24, HU-25, HU-26, HU-28, HU-29, HU-31 ni HU-32. Sus acciones permanecen desactivadas. Solo las tarjetas ya entregadas de HU-36 y HU-37 consultan la API.
 - **HU-37 solo corresponde a estudiantes matriculados:** Sofía tiene el cronograma 2026 de los datos de prueba. Mateo todavía está en `SECCION_RESERVADA`, así que no debe tener pensiones generadas hasta completar la matrícula.
 - **Figma es la fuente visual; la API es la fuente de los datos:** textos, jerarquía y componentes siguen los frames indicados arriba. Año, fechas, grado, sección, deuda, montos y estados se muestran desde el backend.
 
@@ -113,13 +115,14 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 ### HU-36 · Generación de la cuota de matrícula
 
 1. Cierra la sesión del apoderado e inicia como personal administrativo con `U20260002`.
-2. Para probar la matrícula 2027 de Mateo, abre:
-   `http://localhost:3000/app/administrativo/matricula?matriculaId=50000000-0000-0000-0000-000000000002`
-3. Si la cuota todavía no existe, comprueba que aparece el botón **Generar cuota de matrícula** y presiónalo.
-4. Comprueba que la tarjeta muestra el concepto, **S/ 450.00**, estado pendiente, vencimiento y responsable de la generación.
-5. Recarga la página: debe mostrarse la misma cuota y no debe ofrecer crear una duplicada.
-6. Para comprobar una matrícula histórica pagada, abre:
-   `http://localhost:3000/app/administrativo/matricula?matriculaId=50000000-0000-0000-0000-000000000001`
+2. En **Configuración → Periodos de matrícula**, abre el periodo 2027 y pulsa **Ver matrículas**.
+3. En la fila de **Mateo Paredes**, abre el menú `⋮` y selecciona **Ver detalle**. También puedes abrir directamente:
+   `http://localhost:3000/app/administrativo/matricula/detalle/50000000-0000-0000-0000-000000000002`
+4. Si la cuota todavía no existe, comprueba que aparece el botón **Generar cuota de matrícula** y presiónalo.
+5. Comprueba que la tarjeta muestra el concepto, **S/ 450.00**, estado pendiente, vencimiento y responsable de la generación.
+6. Recarga la página: debe mostrarse la misma cuota y no debe ofrecer crear una duplicada.
+7. Para comprobar una matrícula histórica pagada, abre el detalle de **Sofía Paredes** desde el mismo listado o usa:
+   `http://localhost:3000/app/administrativo/matricula/detalle/50000000-0000-0000-0000-000000000001`
 
 **Resultado esperado:** la primera URL permite generar o consultar la cuota de Mateo; la segunda muestra la cuota pagada de Sofía con sus datos de pago. Si Mateo ya muestra una cuota al entrar, fue generada en una prueba anterior; para repetir el estado inicial se necesita restaurar una base de datos limpia.
 
