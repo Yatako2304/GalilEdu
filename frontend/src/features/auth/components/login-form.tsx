@@ -52,7 +52,6 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
             <Input
               label="Usuario"
               autoComplete="username"
-              placeholder="U20260001"
               error={formState.errors['username']}
               registration={register('username')}
             />
