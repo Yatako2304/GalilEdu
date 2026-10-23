@@ -1,14 +1,21 @@
 import * as React from 'react';
 
 import { Head } from '../seo';
+import { Link } from '../ui/link';
 
 import { SidebarToggle } from './dashboard-layout';
+
+/** Un tramo de las migas de pan: texto, o texto con enlace para volver a ese nivel (Figma: Item de la miga). */
+export type Miga = string | { label: string; to: string };
 
 type ContentLayoutProps = {
   children: React.ReactNode;
   title: string;
-  /** Migas de pan; por defecto solo el título (Figma: "Item" sobre el título). */
-  breadcrumbs?: string[];
+  /**
+   * Migas de pan; por defecto solo el título (Figma: "Item" sobre el título). El último tramo es la página actual y
+   * nunca lleva enlace.
+   */
+  breadcrumbs?: Miga[];
   subtitle?: string;
   /** Etiqueta de estado junto al título. */
   titleTag?: React.ReactNode;
@@ -35,22 +42,36 @@ export const ContentLayout = ({
           <SidebarToggle />
           <span className="h-4 w-px bg-stroke-secondary" aria-hidden="true" />
           <nav aria-label="Ruta" className="truncate text-body-4">
-            {crumbs.map((crumb, index) => (
-              <span key={crumb + index}>
-                {index > 0 && (
-                  <span className="mx-1 text-content-placeholder">/</span>
-                )}
-                <span
-                  className={
-                    index === crumbs.length - 1
-                      ? 'text-content-primary'
-                      : 'text-content-quartiary'
-                  }
-                >
-                  {crumb}
+            {crumbs.map((crumb, index) => {
+              const etiqueta = typeof crumb === 'string' ? crumb : crumb.label;
+              const esUltimo = index === crumbs.length - 1;
+              return (
+                <span key={etiqueta + index}>
+                  {index > 0 && (
+                    <span className="mx-1 text-content-placeholder">/</span>
+                  )}
+                  {typeof crumb !== 'string' && !esUltimo ? (
+                    <Link
+                      to={crumb.to}
+                      className="text-content-quartiary hover:text-content-primary hover:underline"
+                    >
+                      {etiqueta}
+                    </Link>
+                  ) : (
+                    <span
+                      className={
+                        esUltimo
+                          ? 'text-content-primary'
+                          : 'text-content-quartiary'
+                      }
+                      aria-current={esUltimo ? 'page' : undefined}
+                    >
+                      {etiqueta}
+                    </span>
+                  )}
                 </span>
-              </span>
-            ))}
+              );
+            })}
           </nav>
         </div>
 

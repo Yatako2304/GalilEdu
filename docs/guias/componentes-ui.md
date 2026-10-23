@@ -47,6 +47,7 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Selectable Tag(s) | `SelectableTag` (`tag`) | Etiqueta que se marca (filtros). Con `onRemove` muestra la X para quitarla. |
 | Stat Card | `StatCard` (`stat-card`) | Indicador (KPI) con ícono, valor y etiqueta. |
 | Shortcut Card | `ShortcutCard` (`shortcut-card`) | Acceso rápido a un módulo en los inicios. Recibe la ruta en `to`. |
+| Progreso (CI-01 · "Avance del año escolar") | `ProgressBar` (`progress-bar`) | Barra de avance con etiqueta y porcentaje. `value` va de 0 a 100. |
 | Ícono en círculo o cuadrado (modales, estados vacíos, Stat Card) | `IconBadge` (`icon-badge`) | Colores `accent`, `success`, `warning`, `error`, `neutral`; tamaños `sm` (número), `md`, `lg`, `xl`. |
 | Files, Files_v2, Files - date / time | `FileItem`, `FileIcon`, `fechaArchivo`, `horaArchivo` (`files`) | Archivo con ícono por tipo, dato secundario y acciones. Para el historial usa `version="Versión 1"`. |
 | Upload Dropzone | `UploadDropzone` (`files`) | Zona para arrastrar o elegir un archivo. La validación (formato, tamaño) la hace tu pantalla y pasa el mensaje en `error`. |

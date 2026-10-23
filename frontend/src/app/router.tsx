@@ -126,6 +126,10 @@ export const createAppRouter = (queryClient: QueryClient) =>
               () => import('./routes/app/administrativo/anio-escolar'),
             ],
             [
+              paths.app.administrativo.anioEscolarDetalle.path,
+              () => import('./routes/app/administrativo/anio-escolar-detalle'),
+            ],
+            [
               paths.app.administrativo.competencias.path,
               () => import('./routes/app/administrativo/competencias'),
             ],
