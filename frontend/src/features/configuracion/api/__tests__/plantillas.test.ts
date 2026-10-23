@@ -12,6 +12,8 @@ import {
   subirPlantillas,
 } from '../plantillas';
 
+import '../../__tests__/polyfill-blob';
+
 // Plantillas de los documentos requeridos (HU-23): se suben después de guardar el periodo.
 
 const API = `${env.API_URL}/configuracion/periodos-matricula/periodo-1/documentos`;
@@ -78,8 +80,9 @@ describe('emparejarPlantillas', () => {
   });
 });
 
-// Bajo jsdom, MSW recibe el FormData como "[object FormData]", así que su cuerpo multipart no se puede leer ahí.
-// Lo que se envía se comprueba en la llamada a axios; el navegador arma el multipart con ese FormData.
+// Bajo jsdom, MSW recibe el FormData como "[object FormData]" en Node 24 (y en Node 20 solo con el parche de Blob),
+// así que su cuerpo multipart no se puede leer ahí en las dos versiones. Lo que se envía se comprueba en la llamada a
+// axios; el navegador arma el multipart con ese FormData.
 test('subirPlantilla envía el archivo en la parte "archivo"', async () => {
   const respuesta = documentoVista('doc-1', 'Ficha', true);
   const post = vi.spyOn(api, 'post').mockResolvedValueOnce(respuesta);
@@ -99,12 +102,7 @@ test('subirPlantilla envía el archivo en la parte "archivo"', async () => {
   const archivo = (datos as FormData).get('archivo') as File;
   expect(archivo.name).toBe('ficha.csv');
   expect(archivo.type).toBe('text/csv');
-  const contenido = await new Promise<string>((resolver) => {
-    const lector = new FileReader();
-    lector.onload = () => resolver(String(lector.result));
-    lector.readAsText(archivo);
-  });
-  expect(contenido).toBe('nombre,dni\nAna,1\n');
+  expect(await archivo.text()).toBe('nombre,dni\nAna,1\n');
   expect(documento).toEqual(respuesta);
   post.mockRestore();
 });

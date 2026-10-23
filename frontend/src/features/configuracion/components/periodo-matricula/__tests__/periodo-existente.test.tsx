@@ -16,6 +16,8 @@ import { PeriodoExistente } from '../periodo-existente';
 
 import { API, detalle2027 } from './datos';
 
+import '../../../__tests__/polyfill-blob';
+
 // Figma > Personal Administrativo > pantalla 13 > "Ver" un periodo y edición de un periodo PROGRAMADO (HU-23)
 
 // Navegar de verdad en jsdom rompe el router de la prueba: se sustituyen `useNavigate` y `Navigate` y se comprueba el

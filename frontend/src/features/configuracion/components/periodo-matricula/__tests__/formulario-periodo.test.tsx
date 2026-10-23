@@ -16,6 +16,8 @@ import { FormularioPeriodo } from '../formulario-periodo';
 
 import { API } from './datos';
 
+import '../../../__tests__/polyfill-blob';
+
 // Figma > Personal Administrativo > pantalla 13 > "Nuevo periodo de matrícula" (HU-23)
 
 // Navegar de verdad en jsdom rompe el router de la prueba: se sustituye `useNavigate` y se comprueba el destino.
