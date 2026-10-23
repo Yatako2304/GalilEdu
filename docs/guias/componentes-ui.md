@@ -26,13 +26,13 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Figma | Código | Para qué |
 | --- | --- | --- |
 | Button, Button icon | `Button` (`button`) | Acciones. Variantes `primary`, `secondary`, `primary-light`, `tertiary`, `error`, `error-light`; tamaños `lg`, `md`, `sm`. |
-| Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. Con react-hook-form pasa `registration={register('campo')}`. |
+| Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. Con react-hook-form pasa `registration={register('campo')}`. En `Input` (también con `type="date"`), `Select`, `Textarea` y `DatePicker` la etiqueta flota sobre el borde superior, como en Figma: descansa dentro si el campo está vacío, sin foco y sin `placeholder`, y sube al enfocar, escribir, elegir o si hay `placeholder`. Así los campos de una misma fila quedan alineados. Las opciones de `Select` admiten `disabled`. |
 | Tag Field | `TagField` (`form`) | Campo que acumula etiquetas (Enter o coma). Úsalo con `<Controller>`. |
 | Checkbox, Checkbox Label | `Checkbox` (`form`) | Casilla con etiqueta y ayuda opcionales. |
 | Radio Buttons, Radio Label | `Radio` (`form`) | Opción única; mismo `name` en el grupo. |
 | Radio Card, Checkbox Card | `RadioCard`, `CheckboxCard` (`form`) | Opciones grandes en tarjeta, con ícono opcional. |
 | Switch | `Switch` (`form`) | Activar o desactivar. |
-| Date picker, Picker Cell / Months / Years | `DatePicker`, `Calendar` (`date-picker`) | Fechas en formato `YYYY-MM-DD` (el del backend). `DatePicker` es el campo con el calendario desplegable; úsalo con `<Controller>`. |
+| Date picker, Picker Cell / Months / Years | `DatePicker`, `Calendar` (`date-picker`) | Fechas en formato `YYYY-MM-DD` (el del backend). `DatePicker` es el campo con el calendario desplegable; úsalo con `<Controller>`. Con `size="sm"` el calendario es más compacto (título y celdas más pequeños; no está en Figma): úsalo en modales con varios campos. |
 | Tab, Tabs | `Tabs variant="underline"` (`tabs`) | Secciones de una ficha. |
 | Tab v2, Tabs v2 | `Tabs variant="pill"` (`tabs`) | Cambiar de vista dentro de una pantalla. Pestañas no disponibles: `disabled` + `title: 'Disponible pronto'`. |
 | Stepper, Steps | `Stepper` (`stepper`) | Asistentes por pasos. `current` empieza en 1. |

@@ -21,7 +21,7 @@ export const Notification = ({
       title={title}
       aria-label={title}
       onClose={() => onDismiss(id)}
-      className="pointer-events-auto w-full max-w-[497px] shadow-card"
+      className="pointer-events-auto w-full max-w-[497px] shadow-card-elevation"
     >
       {message}
     </Alert>

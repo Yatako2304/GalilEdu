@@ -16,10 +16,12 @@ const Demo = ({
   min,
   max,
   conError,
+  size,
 }: {
   min?: string;
   max?: string;
   conError?: boolean;
+  size?: 'md' | 'sm';
 }) => {
   const [fecha, setFecha] = React.useState<string | null>('2026-03-15');
   return (
@@ -30,6 +32,7 @@ const Demo = ({
         onChange={setFecha}
         min={min}
         max={max}
+        size={size}
         error={
           conError
             ? { type: 'required', message: 'Elige una fecha' }
@@ -50,4 +53,6 @@ export const ConLimites: Story = {
   render: () => <Demo min="2026-03-05" max="2026-03-25" />,
 };
 export const ConError: Story = { render: () => <Demo conError /> };
+// Compacto (no está en Figma): para modales con varios campos, donde el calendario de Figma queda muy grande.
+export const Compacto: Story = { render: () => <Demo size="sm" /> };
 export const SoloCalendario: Story = { render: () => <DemoCalendario /> };

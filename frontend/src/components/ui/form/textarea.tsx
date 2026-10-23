@@ -4,6 +4,7 @@ import { UseFormRegisterReturn } from 'react-hook-form';
 import { cn } from '@/utils/cn';
 
 import {
+  EtiquetaFlotante,
   FieldWrapper,
   FieldWrapperPassThroughProps,
   fieldClassName,
@@ -19,18 +20,30 @@ export type TextareaProps = React.TextareaHTMLAttributes<HTMLTextAreaElement> &
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, hint, error, registration, ...props }, ref) => {
     return (
-      <FieldWrapper label={label} hint={hint} error={error}>
-        <textarea
-          className={cn(
-            fieldClassName(!!error),
-            'min-h-[96px] py-2',
-            className,
+      <FieldWrapper hint={hint} error={error}>
+        <div className="relative">
+          <textarea
+            className={cn(
+              fieldClassName(!!error),
+              'peer min-h-[96px] py-3',
+              className,
+            )}
+            aria-invalid={!!error}
+            // Sin placeholder propio se usa un espacio: `placeholder-shown` indica que el campo está vacío.
+            placeholder={label && !props.placeholder ? ' ' : undefined}
+            ref={ref}
+            {...registration}
+            {...props}
+          />
+          {label && (
+            <EtiquetaFlotante
+              error={!!error}
+              reposo={props.placeholder ? false : 'segun-campo'}
+            >
+              {label}
+            </EtiquetaFlotante>
           )}
-          aria-invalid={!!error}
-          ref={ref}
-          {...registration}
-          {...props}
-        />
+        </div>
       </FieldWrapper>
     );
   },
