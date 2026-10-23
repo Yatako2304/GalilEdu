@@ -98,6 +98,25 @@ FLYWAY_LOCATIONS=classpath:db/migration
 | Ver credenciales enviadas (sin SMTP) | `cd /opt/galiledu && docker compose --env-file deploy/.env logs backend \| grep Credenciales` |
 | Copia de la BD | `cd /opt/galiledu && docker compose --env-file deploy/.env exec db pg_dump -U galiledu galiledu > respaldo.sql` |
 
+## Conectarse a la base de datos (DBeaver)
+
+La base no está abierta a internet: escucha en `127.0.0.1:5432` **del servidor**. Se entra con un túnel SSH, con el lab encendido.
+
+1. Contraseña de la base (una vez, en el servidor): `sudo grep DB_PASSWORD /opt/galiledu/deploy/.env`
+2. En DBeaver: **Nueva conexión → PostgreSQL**.
+
+| Pestaña | Campo | Valor |
+| --- | --- | --- |
+| SSH (marca *Use SSH Tunnel*) | Host / Port | IP del servidor / `22` |
+| | User Name | `ubuntu` |
+| | Authentication | *Public Key*, con tu `labsuser.pem` |
+| Main | Host / Port | `localhost` / `5432` |
+| | Database | `galiledu` |
+| | Username | `galiledu` |
+| | Password | la del paso 1 |
+
+Son los datos reales del despliegue: lo que se cambie o borre ahí se ve en la página. Saca una copia (tabla de arriba) antes de modificar algo a mano.
+
 ## Problemas frecuentes
 
 | Síntoma | Causa y solución |
@@ -106,3 +125,4 @@ FLYWAY_LOCATIONS=classpath:db/migration
 | La página no carga | El lab o el EC2 está apagado, o falta abrir el puerto 80 en el security group. |
 | La compilación se queda sin memoria | Usa `t3.medium`, o confirma que el swap existe (`swapon --show`). |
 | "Despliegue omitido: falta configurar los secretos" | Normal hasta hacer el paso 3. |
+| DBeaver no conecta a la base | Lab apagado, o falta el túnel SSH: en *Main* el host es `localhost`, no la IP del servidor. |

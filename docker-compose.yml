@@ -4,7 +4,8 @@
 #
 #   Internet :80 ──► frontend (nginx) ──/api──► backend (Spring Boot) ──► db (PostgreSQL 18)
 #
-# Solo el puerto 80 queda expuesto; backend y base de datos no son accesibles desde fuera.
+# Solo el puerto 80 queda expuesto; backend y base de datos no son accesibles desde fuera
+# (la base escucha en 127.0.0.1:5432 del servidor, para entrar por túnel SSH).
 
 services:
   db:
@@ -17,6 +18,10 @@ services:
     volumes:
       # Los datos sobreviven aunque se apague el servidor o se reconstruyan los contenedores.
       - datos_postgres:/var/lib/postgresql
+    ports:
+      # Solo dentro del servidor (127.0.0.1): desde internet sigue cerrada. Para DBeaver se entra con un
+      # túnel SSH (docs/guias/despliegue.md > "Conectarse a la base de datos").
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U galiledu -d galiledu"]
       interval: 5s
