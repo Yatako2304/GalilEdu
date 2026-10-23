@@ -21,9 +21,8 @@ import {
 } from '@/components/ui/dropdown';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { Spinner } from '@/components/ui/spinner';
-import { StatCard } from '@/components/ui/stat-card';
 import { Table } from '@/components/ui/table';
-import { Status, Tag } from '@/components/ui/tag';
+import { Tag } from '@/components/ui/tag';
 import {
   AreaDetalle,
   AreaResumen,
@@ -91,7 +90,7 @@ export const PlanCurricular = () => {
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
               placeholder="Buscar área"
-              className="h-10 w-full rounded-lg border border-stroke-primary bg-white pl-9 pr-3 text-body-3 placeholder:text-content-placeholder focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100"
+              className="h-10 w-full rounded-xl border border-stroke-primary bg-white pl-9 pr-3 text-body-3 placeholder:text-content-placeholder focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100"
             />
           </label>
           {areas.isLoading ? (
@@ -196,14 +195,20 @@ const ResumenTarjetas = () => {
   return (
     <div className="grid gap-4 sm:grid-cols-3">
       {tarjetas.map(({ Icono, titulo, valor, detalle }) => (
-        <StatCard
-          key={titulo}
-          icon={<Icono />}
-          value={valor ?? '—'}
-          label={titulo}
-          trend={detalle}
-          trendTone="neutral"
-        />
+        // Figma CI-14 > "KPI": tarjeta compacta propia de esta pantalla (no es el Stat Card del catálogo).
+        <Card key={titulo} className="flex flex-col gap-1.5 px-5 py-4">
+          <p className="flex items-center gap-1.5 text-body-4 text-content-tertiary">
+            <Icono
+              className="size-[18px] text-icon-tertiary"
+              aria-hidden="true"
+            />
+            {titulo}
+          </p>
+          <p className="text-h6 font-semibold text-content-primary">
+            {valor ?? '—'}
+          </p>
+          <p className="text-body-4 text-content-tertiary">{detalle}</p>
+        </Card>
       ))}
     </div>
   );
@@ -223,7 +228,7 @@ const FilaArea = ({
     onClick={onElegir}
     aria-current={seleccionada}
     className={cn(
-      'flex w-full items-center justify-between gap-2 rounded-lg border px-4 py-3 text-left transition-colors',
+      'flex w-full items-center justify-between gap-2 rounded-xl border px-4 py-3 text-left transition-colors',
       seleccionada
         ? 'border-stroke-accent-primary bg-surface-accent-light'
         : 'border-stroke-tertiary bg-white hover:bg-surface-secondary',
@@ -280,7 +285,7 @@ const DetalleArea = ({
           )}
         </div>
         <div className="flex shrink-0 gap-2">
-          {/* Figma CI-14: "Editar área" en azul y "Desactivar" con borde. */}
+          {/* Figma CI-14: "Editar área" en azul y "Desactivar" en gris (Button tertiary). */}
           <Button
             size="sm"
             variant="secondary"
@@ -291,7 +296,7 @@ const DetalleArea = ({
           </Button>
           <Button
             size="sm"
-            variant="primary-light"
+            variant="tertiary"
             icon={
               activa ? (
                 <CircleOff className="size-4" />
@@ -381,7 +386,13 @@ const DetalleArea = ({
                 title: 'Estado',
                 field: 'estado',
                 Cell: ({ entry }) => (
-                  <Status active={entry.estado === 'ACTIVO'} />
+                  // Figma CI-14: Informative Tag verde o gris.
+                  <Tag
+                    size="sm"
+                    color={entry.estado === 'ACTIVO' ? 'success' : 'neutral'}
+                  >
+                    {entry.estado === 'ACTIVO' ? 'Activo' : 'Inactivo'}
+                  </Tag>
                 ),
               },
               {
@@ -425,7 +436,7 @@ const EncabezadoSeccion = ({
     </div>
     <Button
       size="sm"
-      variant="primary-light"
+      variant="tertiary"
       icon={<CirclePlus className="size-4" />}
       disabled={deshabilitado}
       title={deshabilitado ? 'Reactiva el área para agregar' : undefined}
@@ -449,8 +460,10 @@ const FilaCompetencia = ({
 }) => {
   const activa = competencia.estado === 'ACTIVA';
   return (
-    <li className="flex items-start gap-3 rounded-lg border border-stroke-tertiary px-4 py-3">
-      <IconBadge size="sm">{numero}</IconBadge>
+    <li className="flex items-start gap-3 rounded-xl border border-stroke-tertiary px-4 py-3">
+      <IconBadge size="sm" shape="square">
+        {numero}
+      </IconBadge>
       <div className="min-w-0 flex-1">
         <p
           className={cn(
@@ -475,7 +488,7 @@ const FilaCompetencia = ({
         <button
           type="button"
           onClick={onEditar}
-          className="inline-flex size-8 items-center justify-center rounded-lg border border-stroke-tertiary text-content-secondary hover:bg-surface-tertiary"
+          className="inline-flex size-8 items-center justify-center rounded-xl border border-stroke-tertiary text-content-secondary hover:bg-surface-tertiary"
         >
           <Pencil className="size-4" aria-hidden="true" />
           <span className="sr-only">Editar {competencia.nombre}</span>
@@ -491,7 +504,7 @@ const FilaCompetencia = ({
             })
           }
           className={cn(
-            'inline-flex size-8 items-center justify-center rounded-lg',
+            'inline-flex size-8 items-center justify-center rounded-xl',
             activa
               ? 'bg-surface-error-light text-content-error'
               : 'bg-surface-success-light text-content-success',
@@ -523,7 +536,7 @@ const AccionesCurso = ({
   const activo = curso.estado === 'ACTIVO';
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
+      <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-xl text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
         <EllipsisVertical className="size-4" aria-hidden="true" />
         <span className="sr-only">Acciones de {curso.nombre}</span>
       </DropdownMenuTrigger>

@@ -1,4 +1,4 @@
-import { CircleAlert, Info } from 'lucide-react';
+import { Info, OctagonAlert } from 'lucide-react';
 import * as React from 'react';
 import { useEffect } from 'react';
 
@@ -59,10 +59,16 @@ export const ConfirmationDialog = ({
           <DialogTitle className="flex items-center gap-2">
             {' '}
             {icon === 'danger' && (
-              <CircleAlert className="size-6 text-red-600" aria-hidden="true" />
+              <OctagonAlert
+                className="size-6 text-icon-error-primary"
+                aria-hidden="true"
+              />
             )}
             {icon === 'info' && (
-              <Info className="size-6 text-blue-600" aria-hidden="true" />
+              <Info
+                className="size-6 text-icon-accent-secondary"
+                aria-hidden="true"
+              />
             )}
             {title}
           </DialogTitle>

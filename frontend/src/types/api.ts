@@ -305,6 +305,10 @@ export type HorarioSeccion = {
     grado: number;
     letra: string;
     tutor: string;
+    // Figma HU-50/51 los muestra; el contrato del backend aún no existe (Horarios, iteración 2).
+    nivel?: 'PRIMARIA' | 'SECUNDARIA';
+    tutorCelular?: string;
+    tutorCorreo?: string;
   };
   estudiante?: {
     id: string;

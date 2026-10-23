@@ -10,6 +10,11 @@ export default defineConfig({
   plugins: [react(), viteTsconfigPaths()],
   server: {
     port: 3000,
+    // Igual que nginx en producción: /api va al backend. Con VITE_APP_API_URL=/api el navegador
+    // habla con un solo origen (sin CORS ni bloqueos de cookies de terceros, p. ej. Brave).
+    proxy: {
+      '/api': process.env.BACKEND_URL ?? 'http://localhost:8080',
+    },
   },
   preview: {
     port: 3000,

@@ -1,9 +1,11 @@
+import { Mail, Phone } from 'lucide-react';
 import * as React from 'react';
 
 import { Avatar } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input, Select } from '@/components/ui/form';
+import { Select } from '@/components/ui/form';
 import { Spinner } from '@/components/ui/spinner';
+import { Tag } from '@/components/ui/tag';
 
 import { useMiHorario } from '../api/get-mi-horario';
 
@@ -38,6 +40,7 @@ export const MiHorario = () => {
   }
 
   const { seccion, estudiante } = horario;
+  const grado = `${seccion.grado}.°${seccion.nivel ? ` de ${seccion.nivel === 'PRIMARIA' ? 'primaria' : 'secundaria'}` : ''}`;
 
   return (
     <>
@@ -50,27 +53,57 @@ export const MiHorario = () => {
                 {estudiante.nombreCompleto}
               </p>
               <p className="mt-1 text-body-4 text-content-tertiary">
-                {seccion.grado} ° {seccion.letra}
+                {grado} · {seccion.letra}
               </p>
             </div>
           </CardContent>
         </Card>
       )}
 
+      {/* Figma HU-50/51 > "Datos del horario": año, grado y sección, y la tarjeta del tutor. */}
       <Card>
         <CardHeader>
-          <CardTitle>Datos del Horario</CardTitle>
+          <CardTitle>Datos del horario</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-6 pb-6 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent className="flex flex-wrap items-center gap-6 pb-6">
           <Select
             label="Año académico"
+            wrapperClassName="w-40"
             value={anio}
             onChange={(event) => setAnio(Number(event.target.value))}
             options={ANIOS.map((value) => ({ label: value, value }))}
           />
-          <Input label="Grado" value={seccion.grado} disabled readOnly />
-          <Input label="Sección" value={seccion.letra} disabled readOnly />
-          <Input label="Tutor" value={seccion.tutor} disabled readOnly />
+          <div className="border-l border-stroke-tertiary pl-6">
+            <p className="text-body-4 text-content-tertiary">Grado y sección</p>
+            <p className="mt-1 text-label-2 font-semibold text-content-primary">
+              {grado} · Sección {seccion.letra}
+            </p>
+          </div>
+          <div className="flex items-center gap-3 border-l border-stroke-tertiary pl-6">
+            <Avatar name={seccion.tutor} />
+            <div>
+              <p className="flex items-center gap-2 text-label-2 font-medium text-content-primary">
+                {seccion.tutor}
+                <Tag size="sm">Tutor(a)</Tag>
+              </p>
+              {(seccion.tutorCelular || seccion.tutorCorreo) && (
+                <p className="mt-1 flex flex-wrap gap-x-4 text-body-4 text-content-tertiary">
+                  {seccion.tutorCelular && (
+                    <span className="inline-flex items-center gap-1">
+                      <Phone className="size-3.5" aria-hidden="true" />
+                      {seccion.tutorCelular}
+                    </span>
+                  )}
+                  {seccion.tutorCorreo && (
+                    <span className="inline-flex items-center gap-1">
+                      <Mail className="size-3.5" aria-hidden="true" />
+                      {seccion.tutorCorreo}
+                    </span>
+                  )}
+                </p>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 

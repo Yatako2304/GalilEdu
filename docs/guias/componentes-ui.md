@@ -13,6 +13,13 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 3. **Si a un componente le falta una variante de Figma, agrégala al componente**, no la sobrescribas con `className` en tu pantalla. `className` es para el espacio alrededor (margen, ancho), no para cambiar colores ni tamaños.
 4. **Textos de Figma.** Los componentes traen los textos fijos de Figma ("Arrastra y suelta tu archivo aquí", "Asignar"…). Los textos de tu pantalla también salen de su frame; si no existen, sigue el punto 5 de [convenciones.md](convenciones.md).
 5. **Revísalos en Storybook** antes de usarlos: `npm run storybook` dentro de `frontend/`.
+6. **Radios, colores de íconos y estados** salen de Figma › Foundations; la tabla está en [`frontend/README.md`](../../frontend/README.md#6-design-system). Ojo: `rounded-lg` es 8 px, no 12.
+7. **Íconos:** Figma usa *Material Icons*, pero el código usa **solo `lucide-react`** (no se cambia de librería). Para cada ícono de Figma usa el de la [tabla de equivalencias](../decisiones/2026-10-22-yatako-iconos-lucide.md#tabla-de-equivalencias) y coloréalo con `text-icon-*`. Si falta uno, agrégalo a la tabla en tu PR.
+8. **Si una pantalla de Figma dibuja algo distinto al componente del catálogo**, manda la pantalla. Por ejemplo, CI-14 (Competencias) tiene tarjetas KPI propias en vez del Stat Card. Anótalo en la ficha del módulo para que diseño lo unifique.
+9. **Errores de formulario: nunca los globos del navegador.** Se usa el estado *Error* del Text Field / Select de Figma: borde rojo y mensaje en rojo debajo del campo.
+   - Todo `<form>` lleva `noValidate` (el componente `Form` ya lo trae). Sin eso, `type="email"`, `required`, `min` o `max` muestran el globo nativo, que no se puede estilizar y cambia según el navegador.
+   - Valida con el esquema zod (o al enviar) y pasa el mensaje al campo con `error` (`<Input error={...} />`, `<Select error={...} />`). Con react-hook-form: `error={formState.errors.campo}`.
+   - Un error que no es de un campo (por ejemplo, "Ya existe un curso con ese nombre" del backend) va en un `Alert type="error"` dentro del modal o en la notificación, no como texto suelto.
 
 ## Catálogo
 

@@ -19,7 +19,7 @@ const iconBadgeVariants = cva(
       },
       shape: {
         circle: 'rounded-full',
-        square: 'rounded-md',
+        square: 'rounded-lg',
       },
       size: {
         sm: 'size-6 text-caption-1 font-semibold [&_svg]:size-3.5',

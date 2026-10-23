@@ -49,16 +49,49 @@ export const api = Axios.create({
   baseURL: env.API_URL,
 });
 
+// Consulta la sesión sin pasar por los interceptores de `api` (para no volver a entrar aquí).
+const sesionVencida = async () => {
+  try {
+    await Axios.get(`${env.API_URL}/auth/me`, {
+      withCredentials: true,
+      headers: tokenStorage.get()
+        ? { Authorization: `Bearer ${tokenStorage.get()}` }
+        : undefined,
+    });
+    return false;
+  } catch (e) {
+    return Axios.isAxiosError(e) && e.response?.status === 401;
+  }
+};
+
 api.interceptors.request.use(authRequestInterceptor);
 api.interceptors.response.use(
   (response) => {
     return response.data;
   },
-  (error) => {
+  async (error) => {
     const status = error.response?.status;
     const isSessionCheck = error.config?.url === '/auth/me';
     // El login muestra su error debajo del formulario (Figma), no como notificación.
     const isLogin = error.config?.url === '/auth/login';
+
+    if (
+      status === 401 &&
+      !isSessionCheck &&
+      !isLogin &&
+      !window.location.pathname.startsWith('/auth')
+    ) {
+      // Antes de sacar al usuario se confirma que la sesión venció de verdad. Si /auth/me sigue
+      // respondiendo, el 401 vino de un endpoint puntual: mandarlo al login lo regresaría a la
+      // misma pantalla y entraría en bucle (pasó con Horario del apoderado).
+      if (await sesionVencida()) {
+        tokenStorage.clear();
+        window.location.href = paths.auth.login.getHref(
+          window.location.pathname,
+        );
+        return Promise.reject(error);
+      }
+    }
 
     if (!isSessionCheck && !isLogin) {
       const message = error.response?.data?.message || error.message;
@@ -67,15 +100,6 @@ api.interceptors.response.use(
         title: 'Error',
         message,
       });
-    }
-
-    if (
-      status === 401 &&
-      !isSessionCheck &&
-      !window.location.pathname.startsWith('/auth')
-    ) {
-      tokenStorage.clear();
-      window.location.href = paths.auth.login.getHref(window.location.pathname);
     }
 
     return Promise.reject(error);

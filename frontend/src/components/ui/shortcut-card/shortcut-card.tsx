@@ -42,7 +42,7 @@ export const ShortcutCard = ({
         {title}
       </span>
       {description && (
-        <span className="truncate text-[12px] text-content-tertiary">
+        <span className="line-clamp-2 text-[12px] text-content-tertiary">
           {description}
         </span>
       )}

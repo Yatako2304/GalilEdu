@@ -16,7 +16,7 @@ export type AlertType = 'default' | 'success' | 'warning' | 'error' | 'info';
 // Figma > Componentes > Alert y Toast (Type = Default, Success, Warning, Error, Info).
 // El Toast es el mismo Alert con la X para cerrarlo (`onClose`).
 const alertVariants = cva(
-  'flex items-center gap-2 rounded-md border-2 px-0.5 py-3',
+  'flex items-center gap-2 rounded-lg border-2 px-0.5 py-3',
   {
     variants: {
       type: {
@@ -82,7 +82,7 @@ export const Alert = ({
         type="button"
         onClick={onClose}
         aria-label="Cerrar"
-        className="mr-1 inline-flex shrink-0 rounded-lg p-2 text-content-tertiary outline-none hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-stroke-focus"
+        className="mr-1 inline-flex shrink-0 rounded-xl p-2 text-content-tertiary outline-none hover:bg-black/5 focus-visible:ring-2 focus-visible:ring-stroke-focus"
       >
         <X className="size-4" aria-hidden="true" />
       </button>

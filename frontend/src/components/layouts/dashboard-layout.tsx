@@ -48,7 +48,7 @@ export const SidebarToggle = () => {
     <button
       type="button"
       onClick={toggle}
-      className="inline-flex size-8 items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-tertiary"
+      className="inline-flex size-8 items-center justify-center rounded-xl text-content-tertiary hover:bg-surface-tertiary"
     >
       <PanelLeft className="size-4" aria-hidden="true" />
       <span className="sr-only">Mostrar u ocultar menú</span>
@@ -121,7 +121,7 @@ const RoleSwitcher = ({
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-body-4 text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
+      <DropdownMenuTrigger className="flex w-full items-center justify-between rounded-xl px-3 py-2 text-body-4 text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
         {label}
         <ChevronDown className="size-4" aria-hidden="true" />
         <span className="sr-only">Cambiar de rol</span>
@@ -167,7 +167,7 @@ const NavSections = ({
             title={collapsed ? item.label : undefined}
             className={({ isActive }) =>
               cn(
-                'flex h-10 items-center gap-3 rounded-lg px-3 text-label-2 font-medium text-content-secondary transition-colors hover:bg-surface-tertiary',
+                'flex h-10 items-center gap-3 rounded-xl px-3 text-label-2 font-medium text-content-secondary transition-colors hover:bg-surface-tertiary',
                 isActive &&
                   'bg-surface-accent-light font-semibold text-content-accent-primary hover:bg-deep-blue-100',
                 collapsed && 'justify-center px-0',
@@ -192,9 +192,10 @@ const SidebarBody = ({
 }) => {
   const user = useUser();
   const activeRole = useActiveRole();
-  const navigate = useNavigate();
+  // Al salir se recarga la página en el login (sin "volver a"): así se descarta todo lo que quedó en
+  // memoria (caché de consultas, notificaciones) y quien entre después no ve datos del usuario anterior.
   const logout = useLogout({
-    onSuccess: () => navigate(paths.auth.login.getHref()),
+    onSuccess: () => window.location.replace(paths.auth.login.getHref()),
   });
 
   if (!user.data || !activeRole) return null;
@@ -253,7 +254,7 @@ const SidebarBody = ({
         <button
           type="button"
           onClick={() => logout.mutate({})}
-          className="inline-flex size-8 items-center justify-center rounded-lg text-content-tertiary hover:bg-surface-tertiary"
+          className="inline-flex size-8 items-center justify-center rounded-xl text-content-tertiary hover:bg-surface-tertiary"
         >
           <LogOut className="size-4" aria-hidden="true" />
           <span className="sr-only">Cerrar sesión</span>

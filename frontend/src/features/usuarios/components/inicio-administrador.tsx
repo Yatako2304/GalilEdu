@@ -1,7 +1,6 @@
 import {
   CalendarDays,
   ChevronRight,
-  FileSpreadsheet,
   UserPlus,
   UserRoundCog,
   Users,
@@ -23,7 +22,6 @@ type InicioAdministradorProps = {
   hrefUsuarios: string;
   hrefNuevoUsuario: string;
   hrefInactivos: string;
-  hrefCargaMasiva: string;
 };
 
 const Estadistica = ({
@@ -38,7 +36,7 @@ const Estadistica = ({
   pista?: React.ReactNode;
 }) => (
   <Card className="flex flex-col gap-3 p-5">
-    <span className="inline-flex size-9 items-center justify-center rounded-lg bg-surface-accent-light text-content-accent-primary">
+    <span className="inline-flex size-9 items-center justify-center rounded-xl bg-surface-accent-light text-content-accent-primary">
       {icono}
     </span>
     <p className="text-h4 font-semibold text-content-primary">{valor}</p>
@@ -64,9 +62,9 @@ const AccesoRapido = ({
 }) => (
   <Link
     to={to}
-    className="flex items-center gap-3 rounded-[12px] border border-stroke-tertiary bg-white p-4 text-content-primary no-underline transition-colors hover:bg-surface-secondary hover:no-underline"
+    className="flex items-center gap-3 rounded-xl border border-stroke-tertiary bg-white p-4 text-content-primary no-underline transition-colors hover:bg-surface-secondary hover:no-underline"
   >
-    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-tertiary text-content-tertiary">
+    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface-tertiary text-content-tertiary">
       {icono}
     </span>
     <span className="min-w-0 flex-1">
@@ -84,7 +82,6 @@ export const InicioAdministrador = ({
   hrefUsuarios,
   hrefNuevoUsuario,
   hrefInactivos,
-  hrefCargaMasiva,
 }: InicioAdministradorProps) => {
   const resumen = useResumenUsuarios();
 
@@ -199,7 +196,7 @@ export const InicioAdministrador = ({
         <h2 className="text-h6 font-semibold text-content-primary">
           Accesos rápidos
         </h2>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <AccesoRapido
             to={hrefUsuarios}
             icono={<Users className="size-4" aria-hidden="true" />}
@@ -211,12 +208,6 @@ export const InicioAdministrador = ({
             icono={<UserPlus className="size-4" aria-hidden="true" />}
             titulo="Nuevo usuario"
             descripcion="Crea una cuenta y asigna su rol"
-          />
-          <AccesoRapido
-            to={hrefCargaMasiva}
-            icono={<FileSpreadsheet className="size-4" aria-hidden="true" />}
-            titulo="Carga masiva"
-            descripcion="Registra varios usuarios con una plantilla"
           />
         </div>
       </section>

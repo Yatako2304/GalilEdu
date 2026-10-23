@@ -9,7 +9,7 @@ import { FileIcon, tipoDeArchivo } from './file-item';
 
 // Figma > Componentes > Upload Dropzone (State = Default, Hover, Error, Uploaded · Size = Large, Medium, Small)
 const zonaVariants = cva(
-  'relative flex w-full flex-col items-center justify-center overflow-hidden rounded-lg border-2 border-dashed bg-cover bg-center text-center transition-colors',
+  'relative flex w-full flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed bg-cover bg-center text-center transition-colors',
   {
     variants: {
       size: {
@@ -114,7 +114,7 @@ export const UploadDropzone = ({
               type="button"
               onClick={elegir}
               disabled={disabled}
-              className="rounded-sm p-0.5 text-label-3 font-medium text-content-accent-primary hover:underline disabled:opacity-50"
+              className="rounded-md p-0.5 text-label-3 font-medium text-content-accent-primary hover:underline disabled:opacity-50"
             >
               Cambiar Archivo
             </button>
@@ -145,7 +145,7 @@ export const UploadDropzone = ({
               onClick={elegir}
               disabled={disabled}
               className={cn(
-                'inline-flex items-center justify-center gap-1.5 rounded-md px-6 py-3 text-label-2 font-medium transition-colors disabled:opacity-50',
+                'inline-flex items-center justify-center gap-1.5 rounded-lg px-6 py-3 text-label-2 font-medium transition-colors disabled:opacity-50',
                 error
                   ? 'bg-surface-error-light text-content-error'
                   : 'bg-surface-accent-light text-content-accent-secondary hover:bg-surface-accent-light-hover hover:text-vibrant-blue-600',

@@ -9,9 +9,14 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
  * Todas las respuestas de error tienen la forma { "message": "...", "errores": { campo: mensaje } }.
@@ -43,6 +48,29 @@ public class ManejadorErrores {
 	@ExceptionHandler(HttpMessageNotReadableException.class)
 	ResponseEntity<ErrorApi> cuerpoIlegible(HttpMessageNotReadableException e) {
 		return ResponseEntity.badRequest().body(ErrorApi.de("La solicitud tiene un formato inválido"));
+	}
+
+	// Sin estos, una ruta que no existe o un id mal escrito en la URL respondían 500 ("error inesperado").
+	@ExceptionHandler(NoResourceFoundException.class)
+	ResponseEntity<ErrorApi> rutaInexistente(NoResourceFoundException e) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorApi.de("No encontramos lo que buscas."));
+	}
+
+	@ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+	ResponseEntity<ErrorApi> metodoNoPermitido(HttpRequestMethodNotSupportedException e) {
+		return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
+				.body(ErrorApi.de("La solicitud tiene un formato inválido"));
+	}
+
+	@ExceptionHandler({MethodArgumentTypeMismatchException.class, MissingServletRequestParameterException.class})
+	ResponseEntity<ErrorApi> parametroInvalido(Exception e) {
+		return ResponseEntity.badRequest().body(ErrorApi.de("La solicitud tiene un formato inválido"));
+	}
+
+	@ExceptionHandler(MaxUploadSizeExceededException.class)
+	ResponseEntity<ErrorApi> archivoGrande(MaxUploadSizeExceededException e) {
+		return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+				.body(ErrorApi.de("El archivo supera el tamaño máximo permitido."));
 	}
 
 	@ExceptionHandler(AccessDeniedException.class)

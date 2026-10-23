@@ -37,6 +37,9 @@ export const horarioSeccion5A: HorarioSeccion = {
     grado: 5,
     letra: 'A',
     tutor: 'Lucía Ayala Prado',
+    nivel: 'SECUNDARIA',
+    tutorCelular: '987 456 123',
+    tutorCorreo: 'lucia.ayala@galiledu.edu.pe',
   },
   estudiante: {
     id: 'est-1',
