@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -28,6 +29,7 @@ import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.FichaEstudiante;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.InscripcionRegistrada;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.PersonaEncontrada;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.SolicitudInscripcion;
+import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.VerificacionDocumento;
 import com.galiledu.estudiantes.aplicacion.ServicioDocumentosApoderado;
 import com.galiledu.estudiantes.aplicacion.ServicioEstudiantes;
 import com.galiledu.estudiantes.dominio.DocumentoVinculo;
@@ -64,6 +66,35 @@ public class EstudianteController {
 	@ResponseStatus(HttpStatus.CREATED)
 	public InscripcionRegistrada inscribir(@Valid @RequestBody SolicitudInscripcion solicitud) {
 		return servicio.inscribir(solicitud);
+	}
+
+	/**
+	 * GET /api/estudiantes/documentos?documento=78945612 → si se puede inscribir a un estudiante con ese documento
+	 * (paso 1). Libre y eliminado se permiten; activo, retirado u otra persona, no.
+	 */
+	@GetMapping("/documentos")
+	public VerificacionDocumento verificarDocumento(@RequestParam String documento) {
+		return servicio.verificarDocumento(documento);
+	}
+
+	/** POST /api/estudiantes/{id}/retirar: "Inactivar" en el listado. */
+	@PostMapping("/{id}/retirar")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void retirar(@PathVariable UUID id) {
+		servicio.retirar(id);
+	}
+
+	@PostMapping("/{id}/reactivar")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void reactivar(@PathVariable UUID id) {
+		servicio.reactivar(id);
+	}
+
+	/** DELETE /api/estudiantes/{id}: borrado lógico (conserva su historial). */
+	@DeleteMapping("/{id}")
+	@ResponseStatus(HttpStatus.NO_CONTENT)
+	public void eliminar(@PathVariable UUID id) {
+		servicio.eliminar(id);
 	}
 
 	/** GET /api/estudiantes/personas?documento=41234567 → datos de la persona si ya existe (404 si no). */

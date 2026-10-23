@@ -2,7 +2,7 @@
 
 - **HU:** HU-7 (iteración 1)
 - **Estado:** 🚧 hecha; falta una prueba manual completa desde la pantalla
-- **Última actualización:** 2026-10-22
+- **Última actualización:** 2026-10-23
 
 ## Alcance
 
@@ -39,13 +39,13 @@ En Notion, HU-7 está en "Seguridad" como "registro de estudiante con apoderado"
 
 ## API
 
-Ver [backend/README.md](../../backend/README.md#api-prefijo-api): `/estudiantes`, `/estudiantes/{id}`, `/estudiantes/personas?documento=`, `/estudiantes/inscripciones`, `/estudiantes/{id}/apoderado/documento`.
+Ver [backend/README.md](../../backend/README.md#api-prefijo-api): `/estudiantes`, `/estudiantes/{id}`, `/estudiantes/documentos?documento=`, `/estudiantes/personas?documento=`, `/estudiantes/inscripciones`, `/estudiantes/{id}/retirar`, `/estudiantes/{id}/reactivar`, `DELETE /estudiantes/{id}`, `/estudiantes/{id}/apoderado/documento`.
 
 ## Código
 
 - Backend: `backend/src/main/java/com/galiledu/estudiantes/`
 - Frontend: `frontend/src/features/estudiantes/` (pasos en `components/inscripcion/`)
-- Pruebas: `InscripcionIT`; `inscripcion/__tests__/esquema.test.ts`
+- Pruebas: `InscripcionIT`, `EstadoEstudianteIT`; `inscripcion/__tests__/esquema.test.ts`, `inscripcion-wizard.test.tsx`, `estudiantes-lista.test.tsx`
 
 ## Paso 1 según Figma
 
@@ -58,14 +58,39 @@ El Paso 1 sigue el frame "Admin / Estudiantes | Inscripción | Paso 1 - Estudian
 - **Nacionalidad** (Paso 1) solo ofrece Peruana y Extranjera; en padres, apoderados y usuarios sigue la lista completa de `NACIONALIDADES`.
 - **Sin valores por defecto:** ningún campo del Paso 1 arranca con valor, salvo "¿Tiene alguna discapacidad?" (No). El grado sugerido por la fecha de nacimiento solo se muestra como aviso: no completa Nivel ni Grado.
 - **Celular** no se pide al estudiante (Figma no lo tiene); **Correo** es opcional.
-- **Obligatorios:** todo el Paso 1, salvo Apellido materno, Referencia, Teléfono de casa, Correo electrónico, Segunda lengua y Autoidentificación étnica (llevan "(opcional)"). "¿Cuál?" es obligatorio cuando la discapacidad es Sí. La regla vive en `estudianteSchema` de `esquema.ts` y se aplica al presionar "Siguiente"; el backend aún no exige estos campos.
-- **Qué se puede escribir** (`utils/restringir-entrada.ts`): teléfono de casa solo números (hasta 9); DNI solo números (8) y carné de extranjería letras y números (12); apellidos, nombres y provincia escrita solo letras (con tildes y ñ), espacios, apóstrofo y guion. Aplica también al pegar texto. En los demás pasos (contactos, responsable, padres) aún no se aplica.
+- **Obligatorios:** todo el Paso 1, salvo Apellido materno, Referencia, Teléfono de casa, Correo electrónico, Segunda lengua y Autoidentificación étnica (llevan "(opcional)"). "¿Cuál?" es obligatorio cuando la discapacidad es Sí. La regla vive en `estudianteSchema` de `esquema.ts` y se aplica al presionar "Siguiente". El backend exige lo mismo al registrar (`ServicioEstudiantes.exigirPaso1`) con los mismos mensajes, rechaza departamento, provincia o distrito de nacimiento si el país no es Perú, solo acepta la nacionalidad Peruana o Extranjera, guarda el detalle de discapacidad solo si la respuesta es Sí y limita cada texto al largo de su columna (`DatosEstudiante`).
+- **Qué se puede escribir** (`utils/restringir-entrada.ts`): teléfono de casa solo números (hasta 15, como la base de datos); DNI solo números (8) y carné de extranjería letras y números (12); apellidos, nombres y provincia escrita solo letras (con tildes y ñ), espacios, apóstrofo y guion. Aplica también al pegar texto. Los largos salen de `components/personas/limites-persona.ts`, compartido con Nuevo usuario. En los demás pasos (contactos, responsable, padres) aún no se aplica.
 - **Campos opcionales con lista** (Segunda lengua, Autoidentificación étnica) se pueden volver a dejar en "Selecciona"; se guardan como `null`.
 - **Diferencia con Figma:** el campo "¿Cuál?" de discapacidad aparece al elegir Sí aunque Figma no lo dibuja.
 - Figma muestra "Administrador" en el selector de rol del sidebar de esta pantalla, pero es del Personal administrativo: es un error del diseño; la app muestra "Personal administrativo".
 
+## Paso 2 según Figma
+
+Frame "Admin / Estudiantes | Inscripción | Paso 2 - Ficha médica". Las reglas están en `fichaMedicaSchema` (`esquema.ts`) y, con los mismos mensajes, en `ServicioEstudiantes.exigirPaso2` y `DatosFichaMedica` del backend.
+
+- **Obligatorios:** tipo de sangre, peso, estatura, tipo de seguro y "¿Hasta cuántos grados de fiebre ha llegado?". Solo las observaciones son opcionales.
+- **Formato y rangos** (`LIMITES_FICHA`): peso `###.#` de 5 a 200 kg y estatura `#.##` de 0.50 a 2.50 m. Solo se pueden escribir números y el punto como separador decimal (`decimal()` de `utils/restringir-entrada.ts`): si sobran enteros el punto se pone solo ("118" → "1.18") y al salir del campo se completan los decimales ("22" → "22.0"). La fiebre es un número sin rango con hasta 1 decimal (39 o 39.5), con el mismo filtro pero sin completar.
+- **Sí/No** (alergias, convulsiones, enfermedad, medicamento) empiezan en "No", por decisión del equipo.
+- **Alergias:** con "Sí" aparecen alimentarias y medicamentosas; al menos una debe tener contenido.
+- **Enfermedad y medicamento diario:** su "¿Cuál?" aparece recién con "Sí" y entonces es obligatorio. **Diferencia con Figma**, por decisión del equipo: Figma lo muestra deshabilitado con "No".
+- Los detalles de una respuesta "No" no se envían ni se guardan aunque se hubieran escrito antes.
+
+## Documento repetido y estado del estudiante
+
+- **Sin avisos al pasar al Paso 2:** si el documento es de un estudiante eliminado, se sigue sin ningún mensaje; reutilizar su registro es interno.
+- **Los mensajes no dicen de quién es el documento:** "El documento ya existe" (estudiante activo u otra persona); si es de un estudiante retirado, se añade que lo reactive desde el listado.
+
+- **Se revisa en el paso 1**, al pulsar "Siguiente" (`GET /estudiantes/documentos`), no al registrar. El aviso sale bajo "N.° de documento" y no deja pasar al paso 2.
+- **Libre:** se inscribe normal. **Activo:** no se puede inscribir de nuevo. **Retirado (inactivo):** tampoco; primero hay que reactivarlo. **Eliminado:** sí se puede; al registrar la inscripción el mismo registro (mismo id, con su historial de matrículas y pagos) vuelve a quedar activo y sus datos, ficha médica, familia, contactos y autorizados se reemplazan por los nuevos (`ServicioEstudiantes.estudianteParaInscribir`). Si el documento es de otra persona que no es estudiante (padre, apoderado, usuario) también se rechaza, sin trato especial.
+- **Estados:** "inactivo" es `RETIRADO` (`estudiantes.estudiante.estado`, V7); "eliminado" es el borrado lógico `eliminado`. El listado no muestra eliminados.
+- **Listado:** cada fila tiene los tres puntos, como en Usuarios: **Ver** (ficha), **Inactivar** o **Reactivar**, y **Eliminar**, los dos con confirmación. El filtro de estado incluye **Retirado**.
+- Retirar o eliminar al estudiante no cambia por ahora sus matrículas ni sus pagos.
+
 ## Pendientes
 
 - [ ] Prueba manual de los 5 pasos desde la pantalla.
-- [ ] "Editar datos" e "Iniciar matrícula" desde la ficha (dependen de Matrícula).
+- [ ] **Editar** un estudiante desde el menú de tres puntos (hoy el menú tiene Ver, Inactivar/Reactivar y Eliminar).
+- [x] Reglas del servidor del paso 1: obligatorios, solo letras en nombres y apellidos, solo números en teléfono, correo con extensión y coherencia del lugar de nacimiento.
+- [ ] El backend no revisa que los valores de las listas (lengua, gestión, forma de ingreso…) ni el año académico (año en curso o siguiente) sean los del catálogo del frontend.
+- [ ] "Iniciar matrícula" desde la ficha (depende de Matrícula).
 - [x] Documento que acredita al apoderado (carta poder, resolución de tutela…): se adjunta en el paso 3 y se ve o reemplaza desde la ficha. PDF, JPG o PNG de hasta 5 MB.

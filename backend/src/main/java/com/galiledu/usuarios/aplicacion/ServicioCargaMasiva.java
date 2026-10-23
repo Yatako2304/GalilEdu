@@ -78,7 +78,7 @@ public class ServicioCargaMasiva {
 				continue;
 			}
 			try {
-				usuarios.crear(fila.solicitud());
+				usuarios.crearDesdeCarga(fila.solicitud());
 				creados++;
 			} catch (ExcepcionNegocio e) {
 				errores.add(new ErrorFila(fila.numero(), e.getMessage()));

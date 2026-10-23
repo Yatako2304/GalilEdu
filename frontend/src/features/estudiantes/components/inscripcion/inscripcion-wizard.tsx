@@ -7,7 +7,11 @@ import { Input, Radio } from '@/components/ui/form';
 import { Stepper } from '@/components/ui/stepper';
 import { nombreGrado } from '@/config/catalogos';
 
-import { ResultadoInscripcion, useInscribir } from '../../api/estudiantes';
+import {
+  ResultadoInscripcion,
+  useInscribir,
+  verificarDocumentoEstudiante,
+} from '../../api/estudiantes';
 
 import { Casilla, SeccionPaso } from './campos';
 import {
@@ -202,15 +206,44 @@ export const InscripcionWizard = ({
 
   const subir = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
+  const [verificando, setVerificando] = React.useState(false);
+
+  /**
+   * Paso 1: el documento se revisa antes de seguir, no al registrar. Un estudiante activo o retirado (inactivo)
+   * no se puede inscribir de nuevo; uno eliminado sí, y sus datos se actualizan al final.
+   */
+  const documentoDisponible = async () => {
+    setVerificando(true);
+    try {
+      const v = await verificarDocumentoEstudiante(
+        form.getValues('estudiante.persona.numeroDocumento'),
+      );
+      if (!v.permitido) {
+        form.setError(
+          'estudiante.persona.numeroDocumento',
+          { type: 'manual', message: v.mensaje ?? 'El documento ya existe' },
+          { shouldFocus: true },
+        );
+        return false;
+      }
+      // Un estudiante eliminado se reutiliza en silencio: quien inscribe no ve esa lógica.
+      return true;
+    } catch {
+      // El error de red o del servidor ya se muestra como notificación (api-client).
+      return false;
+    } finally {
+      setVerificando(false);
+    }
+  };
+
   const siguiente = async () => {
     const campos = CAMPOS_POR_PASO[
       paso
     ] as unknown as (keyof InscripcionForm)[];
     const ok = await form.trigger(campos, { shouldFocus: true });
-    if (ok) {
-      setPaso((p) => p + 1);
-      subir();
-    }
+    if (!ok || (paso === 0 && !(await documentoDisponible()))) return;
+    setPaso((p) => p + 1);
+    subir();
   };
 
   const registrar = () => {
@@ -268,7 +301,11 @@ export const InscripcionWizard = ({
             </Button>
           )}
           {paso < PASOS.length - 1 ? (
-            <Button variant="secondary" onClick={siguiente}>
+            <Button
+              variant="secondary"
+              onClick={siguiente}
+              isLoading={verificando}
+            >
               {SIGUIENTE[paso]}
             </Button>
           ) : (

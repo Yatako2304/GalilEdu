@@ -1,6 +1,7 @@
 package com.galiledu.estudiantes.infraestructura;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,8 @@ import com.galiledu.estudiantes.dominio.Estudiante;
 
 public interface EstudianteRepositorio extends JpaRepository<Estudiante, UUID>, JpaSpecificationExecutor<Estudiante> {
 	boolean existsByPersonaId(UUID personaId);
+
+	Optional<Estudiante> findByPersonaId(UUID personaId);
 
 	/** Estudiantes vinculados a una persona (padre, madre o apoderado): sirve para detectar hermanos. */
 	@Query("""

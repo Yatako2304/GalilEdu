@@ -44,10 +44,22 @@ describe('personaSchema (RF-12)', () => {
     ).toBe(false);
   });
 
-  test('nombres y apellidos no aceptan números', () => {
+  test('nombres y apellidos solo aceptan letras, espacios, apóstrofo y guion', () => {
     expect(
       errores(personaSchema.safeParse({ ...base(), nombres: 'Jorge 2' })),
-    ).toContain('Los nombres no pueden contener números');
+    ).toContain('Los nombres solo pueden contener letras');
+    expect(
+      errores(
+        personaSchema.safeParse({ ...base(), apellidoPaterno: 'Pérez@' }),
+      ),
+    ).toContain('El apellido solo puede contener letras');
+    expect(
+      personaSchema.safeParse({
+        ...base(),
+        nombres: 'María José',
+        apellidoPaterno: "D'Ángelo-Núñez",
+      }).success,
+    ).toBe(true);
   });
 
   test('normaliza el celular "987 111 222" y valida 9 dígitos', () => {

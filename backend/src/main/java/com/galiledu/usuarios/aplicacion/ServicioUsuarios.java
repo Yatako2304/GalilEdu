@@ -1,11 +1,14 @@
 package com.galiledu.usuarios.aplicacion;
 
+import static com.galiledu.compartido.web.ExcepcionNegocio.exigir;
+
 import java.time.Year;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.compartido.web.Pagina;
+import com.galiledu.personas.aplicacion.DatosPersona;
 import com.galiledu.personas.aplicacion.ServicioPersonas;
 import com.galiledu.personas.dominio.Persona;
 import com.galiledu.usuarios.aplicacion.Dtos.AccesoReciente;
@@ -45,20 +49,27 @@ import com.galiledu.usuarios.infraestructura.UsuarioRepositorio;
 @Service
 public class ServicioUsuarios {
 	private static final ZoneId LIMA = ZoneId.of("America/Lima");
+	/** Roles que no se asignan desde el formulario de usuario, con el motivo que se muestra. */
+	private static final Map<Rol, String> ROLES_AUTOMATICOS = Map.of(
+			Rol.APODERADO, "se asigna al inscribir a un estudiante",
+			Rol.TUTOR, "se asigna al designarlo tutor de una sección",
+			Rol.ESTUDIANTE, "no se asigna en esta iteración");
 
 	private final UsuarioRepositorio usuarios;
 	private final ServicioPersonas personas;
 	private final CorrelativoUsuarios correlativo;
 	private final PasswordEncoder contrasenas;
 	private final NotificadorCredenciales notificador;
+	private final VinculosUsuario vinculos;
 
 	public ServicioUsuarios(UsuarioRepositorio usuarios, ServicioPersonas personas, CorrelativoUsuarios correlativo,
-			PasswordEncoder contrasenas, NotificadorCredenciales notificador) {
+			PasswordEncoder contrasenas, NotificadorCredenciales notificador, VinculosUsuario vinculos) {
 		this.usuarios = usuarios;
 		this.personas = personas;
 		this.correlativo = correlativo;
 		this.contrasenas = contrasenas;
 		this.notificador = notificador;
+		this.vinculos = vinculos;
 	}
 
 	@Transactional(readOnly = true)
@@ -95,21 +106,38 @@ public class ServicioUsuarios {
 
 	@Transactional(readOnly = true)
 	public UsuarioDetalle detalle(UUID id) {
-		return UsuarioDetalle.de(obtener(id));
+		return detalleDe(obtener(id));
 	}
 
-	/** HU-6: crea persona + cuenta, genera usuario y contraseña y los envía por correo (RF-15, RF-16, RF-17). */
+	/**
+	 * HU-6: crea persona + cuenta, genera usuario y contraseña y los envía por correo (RF-15, RF-16, RF-17). Exige los
+	 * datos del formulario "Nuevo usuario" (CAHU6) y solo los roles que se asignan desde ahí.
+	 */
 	@Transactional
 	public UsuarioCreado crear(SolicitudUsuario solicitud) {
+		exigirDatosUsuario(solicitud.persona());
+		return alta(solicitud, rolesDelFormulario(EnumSet.noneOf(Rol.class), solicitud.roles()));
+	}
+
+	/**
+	 * Alta de la carga masiva (HU-8): solo exige correo y celular, sin las reglas de {@link #crear}. La carga masiva
+	 * está oculta y no se contempla en esta iteración.
+	 */
+	@Transactional
+	UsuarioCreado crearDesdeCarga(SolicitudUsuario solicitud) {
 		exigirContacto(solicitud);
+		return alta(solicitud, EnumSet.copyOf(solicitud.roles()));
+	}
+
+	private UsuarioCreado alta(SolicitudUsuario solicitud, Set<Rol> roles) {
 		Optional<Usuario> eliminado = personas.buscarPorDocumento(solicitud.persona().numeroDocumento())
 				.flatMap(p -> usuarios.findByPersonaId(p.getId()))
 				.filter(Usuario::isEliminado);
 		if (eliminado.isPresent()) {
-			return restaurar(eliminado.get(), solicitud);
+			return restaurar(eliminado.get(), solicitud.persona(), roles);
 		}
 		Persona persona = personas.crear(solicitud.persona());
-		var creado = crearCuenta(persona, EnumSet.copyOf(solicitud.roles()));
+		var creado = crearCuenta(persona, roles);
 		return new UsuarioCreado(creado.getId(), creado.getNombreUsuario(), persona.getCorreo(), creado.getEstado());
 	}
 
@@ -157,11 +185,12 @@ public class ServicioUsuarios {
 	/** HU-9: edición de datos personales y roles (RF-22, RF-23). */
 	@Transactional
 	public UsuarioDetalle actualizar(UUID id, SolicitudUsuario solicitud) {
-		exigirContacto(solicitud);
+		exigirDatosUsuario(solicitud.persona());
 		Usuario usuario = obtener(id);
+		Set<Rol> roles = rolesDelFormulario(usuario.getRoles(), solicitud.roles());
 		personas.actualizar(usuario.getPersona(), solicitud.persona());
-		usuario.reemplazarRoles(EnumSet.copyOf(solicitud.roles()));
-		return UsuarioDetalle.de(usuario);
+		usuario.reemplazarRoles(roles);
+		return detalleDe(usuario);
 	}
 
 	/** HU-12: el usuario ya no puede iniciar sesión, pero se conserva su información. */
@@ -170,14 +199,14 @@ public class ServicioUsuarios {
 		evitarSobreSiMismo(id, solicitante, "desactivar");
 		Usuario usuario = obtener(id);
 		usuario.desactivar();
-		return UsuarioDetalle.de(usuario);
+		return detalleDe(usuario);
 	}
 
 	@Transactional
 	public UsuarioDetalle reactivar(UUID id) {
 		Usuario usuario = obtener(id);
 		usuario.reactivar();
-		return UsuarioDetalle.de(usuario);
+		return detalleDe(usuario);
 	}
 
 	/** "Eliminar" de Figma: borrado lógico. La cuenta deja de listarse y no puede iniciar sesión. */
@@ -194,10 +223,10 @@ public class ServicioUsuarios {
 	 * Registrar de nuevo el documento de un usuario eliminado: se actualizan sus datos y se reactiva la misma cuenta
 	 * (mismo código de usuario) con roles y contraseña nuevos. Para quien registra es un alta normal.
 	 */
-	private UsuarioCreado restaurar(Usuario usuario, SolicitudUsuario solicitud) {
-		Persona persona = personas.actualizar(usuario.getPersona(), solicitud.persona());
+	private UsuarioCreado restaurar(Usuario usuario, DatosPersona datos, Set<Rol> roles) {
+		Persona persona = personas.actualizar(usuario.getPersona(), datos);
 		String contrasena = GeneradorCredenciales.contrasena();
-		usuario.restaurar(contrasenas.encode(contrasena), EnumSet.copyOf(solicitud.roles()));
+		usuario.restaurar(contrasenas.encode(contrasena), roles);
 		notificador.enviar(persona.getCorreo(), persona.getNombres(), usuario.getNombreUsuario(), contrasena);
 		return new UsuarioCreado(usuario.getId(), usuario.getNombreUsuario(), persona.getCorreo(), usuario.getEstado());
 	}
@@ -229,6 +258,13 @@ public class ServicioUsuarios {
 		return new ResumenUsuarios(todos.size(), activos, todos.size() - activos, ultimo, porRol, inactivos);
 	}
 
+	/** Detalle con los estudiantes a cargo (si es Apoderado) y las secciones de tutoría (si es Tutor). */
+	private UsuarioDetalle detalleDe(Usuario u) {
+		return UsuarioDetalle.de(u,
+				u.getRoles().contains(Rol.APODERADO) ? vinculos.estudiantesACargo(u.getPersona().getId()) : List.of(),
+				u.getRoles().contains(Rol.TUTOR) ? vinculos.tutorDe(u.getId()) : List.of());
+	}
+
 	private Usuario obtener(UUID id) {
 		return usuarios.findById(id)
 				.filter(u -> !u.isEliminado())
@@ -236,13 +272,44 @@ public class ServicioUsuarios {
 	}
 
 	private static void exigirContacto(SolicitudUsuario solicitud) {
-		var p = solicitud.persona();
-		if (p.correo() == null || p.correo().isBlank()) {
-			throw ExcepcionNegocio.invalido("Ingresa el correo electrónico");
+		exigir(solicitud.persona().correo(), "Ingresa el correo electrónico");
+		exigir(solicitud.persona().celular(), "Ingresa el celular");
+	}
+
+	/**
+	 * Datos obligatorios de una persona con cuenta (CAHU6, igual que personaUsuarioSchema del frontend): todo salvo
+	 * apellido materno, teléfono de casa y exalumno. El formato de cada dato lo valida {@link DatosPersona}.
+	 */
+	private static void exigirDatosUsuario(DatosPersona p) {
+		exigir(p.fechaNacimiento(), "Ingresa la fecha de nacimiento");
+		exigir(p.nacionalidad(), "Selecciona la nacionalidad");
+		exigir(p.lugarNacimiento(), "Selecciona el país de nacimiento");
+		exigir(p.sexo(), "Selecciona el sexo");
+		exigir(p.estadoCivil(), "Selecciona el estado civil");
+		exigir(p.gradoInstruccion(), "Selecciona el grado de instrucción");
+		exigir(p.celular(), "Ingresa el celular");
+		exigir(p.correo(), "Ingresa el correo electrónico");
+		exigir(p.profesion(), "Ingresa la profesión u ocupación");
+		exigir(p.centroTrabajo(), "Ingresa el centro de trabajo");
+		exigir(p.cargo(), "Ingresa el cargo");
+		exigir(p.distrito(), "Selecciona el distrito");
+		exigir(p.direccion(), "Ingresa la dirección");
+	}
+
+	/**
+	 * Roles que se guardan desde el formulario. Apoderado, Tutor y Estudiante no se asignan ahí (CAHU6-33 y 34): no se
+	 * pueden agregar, y los que el usuario ya tiene se conservan aunque no vengan en la solicitud.
+	 */
+	private static Set<Rol> rolesDelFormulario(Set<Rol> actuales, Set<Rol> pedidos) {
+		Set<Rol> roles = EnumSet.noneOf(Rol.class);
+		for (Rol rol : pedidos) {
+			if (ROLES_AUTOMATICOS.containsKey(rol) && !actuales.contains(rol)) {
+				throw ExcepcionNegocio.invalido("El rol " + rol.nombre() + " " + ROLES_AUTOMATICOS.get(rol));
+			}
+			roles.add(rol);
 		}
-		if (p.celular() == null || p.celular().isBlank()) {
-			throw ExcepcionNegocio.invalido("Ingresa el celular");
-		}
+		actuales.stream().filter(ROLES_AUTOMATICOS::containsKey).forEach(roles::add);
+		return roles;
 	}
 
 	private static void evitarSobreSiMismo(UUID id, UUID solicitante, String accion) {
