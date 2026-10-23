@@ -38,7 +38,7 @@ const Estadistica = ({
   pista?: React.ReactNode;
 }) => (
   <Card className="flex flex-col gap-3 p-5">
-    <span className="inline-flex size-9 items-center justify-center rounded-lg bg-surface-accent-light text-content-accent-primary">
+    <span className="inline-flex size-9 items-center justify-center rounded-xl bg-surface-accent-light text-content-accent-primary">
       {icono}
     </span>
     <p className="text-h4 font-semibold text-content-primary">{valor}</p>
@@ -64,9 +64,9 @@ const AccesoRapido = ({
 }) => (
   <Link
     to={to}
-    className="flex items-center gap-3 rounded-[12px] border border-stroke-tertiary bg-white p-4 text-content-primary no-underline transition-colors hover:bg-surface-secondary hover:no-underline"
+    className="flex items-center gap-3 rounded-xl border border-stroke-tertiary bg-white p-4 text-content-primary no-underline transition-colors hover:bg-surface-secondary hover:no-underline"
   >
-    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-surface-tertiary text-content-tertiary">
+    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface-tertiary text-content-tertiary">
       {icono}
     </span>
     <span className="min-w-0 flex-1">

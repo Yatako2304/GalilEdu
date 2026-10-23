@@ -109,7 +109,7 @@ export const EscalaCalificacion = () => {
             {otras.map((t) => (
               <li
                 key={t.id}
-                className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-stroke-tertiary px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-stroke-tertiary px-4 py-3"
               >
                 <span className="text-body-3 text-content-primary">
                   Desde el {fecha(t.vigenteDesde)}

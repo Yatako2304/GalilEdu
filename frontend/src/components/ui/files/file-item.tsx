@@ -94,7 +94,7 @@ export const FileItem = ({
 }: FileItemProps) => (
   <div
     className={cn(
-      'flex items-center gap-3 rounded-md bg-surface-secondary',
+      'flex items-center gap-3 rounded-lg bg-surface-secondary',
       version === undefined ? 'p-3' : 'p-2',
       className,
     )}

@@ -128,7 +128,7 @@ const SelectorEstudiante = ({
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="flex min-w-0 items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus"
+          className="flex min-w-0 items-center gap-3 rounded-xl text-left outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus"
           aria-label="Seleccionar estudiante"
         >
           <Avatar name={elegido?.nombre ?? ''} />
@@ -148,7 +148,7 @@ const SelectorEstudiante = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-[min(360px,calc(100vw-32px))] rounded-[12px] border-stroke-tertiary bg-white p-2"
+        className="w-[min(360px,calc(100vw-32px))] rounded-xl border-stroke-tertiary bg-white p-2"
       >
         <DropdownMenuLabel className="px-3 py-2 text-caption-1 font-medium uppercase tracking-wide text-content-quartiary">
           Estudiantes a tu cargo ({hijos.length})
@@ -160,7 +160,7 @@ const SelectorEstudiante = ({
             <DropdownMenuItem
               key={hijo.id}
               onSelect={() => onElegir(hijo.id)}
-              className="gap-3 rounded-lg p-3 focus:bg-surface-secondary"
+              className="gap-3 rounded-xl p-3 focus:bg-surface-secondary"
             >
               <Avatar name={hijo.nombre} size="sm" />
               <span className="min-w-0 flex-1">

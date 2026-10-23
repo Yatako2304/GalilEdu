@@ -38,7 +38,7 @@ const Titulo = ({
   <p className="flex items-center gap-2">
     <span
       className={cn(
-        'size-2 shrink-0 rounded-[2px]',
+        'size-2 shrink-0 rounded-sm',
         warning ? 'bg-amber-600' : 'bg-deep-blue-700',
       )}
       aria-hidden="true"

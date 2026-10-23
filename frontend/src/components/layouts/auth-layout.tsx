@@ -33,7 +33,7 @@ export const AuthLayout = ({ children, title, description }: LayoutProps) => {
       <Head title={title} />
       <div className="flex min-h-screen bg-white">
         <div className="hidden p-6 lg:block lg:w-[47%]">
-          <div className="h-full rounded-[12px] bg-gradient-to-br from-vibrant-blue-500 to-vibrant-blue-600" />
+          <div className="h-full rounded-xl bg-gradient-to-br from-vibrant-blue-500 to-vibrant-blue-600" />
         </div>
 
         <div className="flex flex-1 items-center justify-center px-4 py-12">

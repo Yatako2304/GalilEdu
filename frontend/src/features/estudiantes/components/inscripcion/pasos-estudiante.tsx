@@ -180,7 +180,7 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
           />
         </Grilla>
         {sugerido && (
-          <div className="flex gap-3 rounded-[12px] border border-stroke-success bg-surface-success-light px-4 py-3">
+          <div className="flex gap-3 rounded-xl border border-stroke-success bg-surface-success-light px-4 py-3">
             <CircleCheck
               className="mt-0.5 size-5 shrink-0 text-content-success"
               aria-hidden="true"
@@ -300,7 +300,7 @@ export const PasoFichaMedica = ({ form }: PasoProps) => {
           label="Observaciones médicas (opcional)"
           registration={register('fichaMedica.observaciones')}
         />
-        <div className="rounded-[12px] bg-surface-warning-light px-4 py-3 text-body-4 text-content-secondary">
+        <div className="rounded-xl bg-surface-warning-light px-4 py-3 text-body-4 text-content-secondary">
           <strong className="text-content-primary">
             Información sensible.
           </strong>{' '}

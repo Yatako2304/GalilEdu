@@ -57,6 +57,41 @@
     --stroke-warning-primary: #f59e0b;
     --stroke-warning-secondary: #fde68a;
 
+    /* Estados e íconos (Figma > Semantics Tokens) */
+    --bg-secondary-hover: #f1f5f9;
+    --bg-tertiary-hover: #e2e8f0;
+    --bg-accent-light-pressed: #a1bdf6;
+    --bg-accent-primary-solid-hover: #031124;
+    --bg-accent-primary-solid-pressed: #031124;
+    --bg-accent-secondary-solid-hover: #195fcb;
+    --bg-accent-secondary-solid-pressed: #124aa1;
+    --bg-error-light-hover: #fee2e2;
+    --bg-error-solid-hover: #dc2626;
+    --bg-error-solid-pressed: #b91c1c;
+    --bg-success-light-hover: #92f4a0;
+    --bg-warning-light-hover: #fef3c7;
+    --bg-rating-solid: #fbbf24;
+    --text-accent-primary-hover: #143661;
+    --text-accent-secondary-hover: #195fcb;
+    --text-error-secondary: #f87171;
+    --text-success-secondary: #3fa34d;
+    --icon-primary: #0f172a;
+    --icon-primary-hover: #1e293b;
+    --icon-secondary: #334155;
+    --icon-tertiary: #475569;
+    --icon-disabled: #64748b;
+    --icon-disabled-alt: #94a3b8;
+    --icon-placeholder: #64748b;
+    --icon-white: #ffffff;
+    --icon-accent-primary: #1d4980;
+    --icon-accent-secondary: #1f6feb;
+    --icon-error-primary: #dc2626;
+    --icon-error-secondary: #f87171;
+    --icon-success-primary: #2c7736;
+    --icon-success-secondary: #3fa34d;
+    --icon-warning-primary: #d97706;
+    --icon-info-primary: #0f5b5e;
+
     /* ---- Alias shadcn (componentes base de bulletproof-react) ---- */
     --background: 210 40% 98%; /* slate-50 */
     --foreground: 222 47% 11%; /* slate-900 */
