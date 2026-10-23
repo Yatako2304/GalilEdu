@@ -8,9 +8,9 @@
 export const MATRICULAS_DEL_PERIODO_DISPONIBLE = false;
 
 /**
- * P19 "Tarifario y calendario" (HU-34): `paths.app.administrativo.tarifario`. Al activarla, registrar la ruta en el
- * router y habilitar el botón "Configuración" de la pantalla de Pensiones.
+ * P19 "Tarifario y calendario" (HU-34): `paths.app.administrativo.tarifario`. Ya existe y está registrada en el router;
+ * la constante queda para poder probar el enlace deshabilitado.
  */
-export const TARIFARIO_DISPONIBLE = false;
+export const TARIFARIO_DISPONIBLE = true;
 
 export const TEXTO_DISPONIBLE_PRONTO = 'Disponible pronto';

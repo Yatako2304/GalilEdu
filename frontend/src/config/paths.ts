@@ -87,8 +87,12 @@ export const paths = {
           `${ADMINISTRATIVO}/matricula/periodos/${periodoId}/matriculas`,
       },
       pensiones: route(ADMINISTRATIVO, 'pensiones'),
-      // P19 · Tarifario (HU-34): aún no existe ni está registrada en el router.
-      tarifario: route(ADMINISTRATIVO, 'pensiones/configuracion'),
+      // P19 · Tarifario y calendario (HU-34). Con `anioEscolarId` abre ese año; sin él, el que se está preparando.
+      tarifario: {
+        path: 'pensiones/configuracion',
+        getHref: (anioEscolarId?: string) =>
+          `${ADMINISTRATIVO}/pensiones/configuracion${anioEscolarId ? `?anioEscolarId=${anioEscolarId}` : ''}`,
+      },
       compromisoPago: {
         path: 'pensiones/:estudianteId',
         getHref: (estudianteId: string) =>

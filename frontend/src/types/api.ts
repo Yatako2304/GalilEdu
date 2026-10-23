@@ -933,3 +933,68 @@ export type SolicitudPeriodoMatricula = {
   vacantes: VacanteSolicitud[];
   documentos: DocumentoSolicitud[];
 };
+
+// ---------- Configuración · Tarifario y calendario (HU-34) ----------
+// Backend: configuracion/aplicacion/DtosConfiguracion.java (`TarifarioVista`, `SolicitudTarifario`). Los montos y los
+// porcentajes llegan como número; las fechas, como yyyy-mm-dd.
+
+/** EN_CONFIGURACION: el año aún no tiene tarifario confirmado (o es una propuesta); CONFIRMADO: Pagos ya lo puede usar. */
+export type EstadoTarifario = 'EN_CONFIGURACION' | 'CONFIRMADO';
+
+/** Tabla "Conceptos y montos". Los montos son null en una propuesta sin tarifario del año anterior. */
+export type ConceptosTarifario = {
+  montoCuotaIngreso: number | null;
+  montoMatricula: number | null;
+  vencimientoMatricula: string;
+  montoPension: number | null;
+  cantidadCuotas: number;
+};
+
+/** "Política de morosidad". */
+export type MorosidadTarifario = {
+  diasGracia: number | null;
+  recargoPorcentaje: number | null;
+  topeRecargoPorcentaje: number | null;
+};
+
+export type CuotaTarifarioVista = {
+  numero: number;
+  nombre: string;
+  fechaVencimiento: string;
+  monto: number | null;
+};
+
+/** "Calendario de cuotas"; `totalPensiones` es null mientras no hay monto de pensión. */
+export type CalendarioTarifario = {
+  cuotas: CuotaTarifarioVista[];
+  totalPensiones: number | null;
+};
+
+/**
+ * P19 de un año. Con `existe = false` es una propuesta que el backend no guardó (valores del año anterior o vacíos y
+ * el calendario generado con las fechas del año). `soloLectura` (año CERRADO, o tarifario CONFIRMADO con compromisos
+ * de pago) y su `motivoSoloLectura` los calcula el backend. `calendarioDesactualizado`: las fechas del año cambiaron
+ * después de confirmar y el calendario guardado ya no coincide con ellas.
+ */
+export type TarifarioVista = {
+  anioEscolarId: string;
+  anio: number;
+  existe: boolean;
+  estado: EstadoTarifario;
+  soloLectura: boolean;
+  motivoSoloLectura: string | null;
+  calendarioDesactualizado: boolean;
+  conceptos: ConceptosTarifario;
+  morosidad: MorosidadTarifario;
+  calendario: CalendarioTarifario;
+};
+
+/** "Confirmar tarifario". La cuota de ingreso es opcional; el calendario y el vencimiento los genera el backend. */
+export type SolicitudTarifario = {
+  montoCuotaIngreso: number | null;
+  montoMatricula: number;
+  montoPension: number;
+  diasGracia: number;
+  recargoPorcentaje: number;
+  topeRecargoPorcentaje: number;
+};

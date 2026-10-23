@@ -810,7 +810,7 @@ describe('año sin tarifario confirmado', () => {
     ).not.toBeInTheDocument();
   });
 
-  test('con la pantalla disponible, el aviso enlaza al tarifario', async () => {
+  test('con la pantalla disponible, el aviso enlaza al tarifario de ese año', async () => {
     enlaces.TARIFARIO_DISPONIBLE = true;
     sinTarifario();
     await mostrar();
@@ -818,7 +818,10 @@ describe('año sin tarifario confirmado', () => {
 
     expect(
       screen.getByRole('link', { name: 'Ir al tarifario' }),
-    ).toHaveAttribute('href', '/app/administrativo/pensiones/configuracion');
+    ).toHaveAttribute(
+      'href',
+      '/app/administrativo/pensiones/configuracion?anioEscolarId=anio-2027',
+    );
   });
 });
 
@@ -836,7 +839,7 @@ describe('"Ver tarifario completo"', () => {
     expect(boton).toHaveAccessibleDescription('Disponible pronto');
   });
 
-  test('con P19 disponible es un enlace', async () => {
+  test('con P19 disponible es un enlace al tarifario de ese año', async () => {
     enlaces.TARIFARIO_DISPONIBLE = true;
     servir();
     await mostrar();
@@ -844,6 +847,9 @@ describe('"Ver tarifario completo"', () => {
 
     expect(
       screen.getByRole('link', { name: 'Ver tarifario completo' }),
-    ).toHaveAttribute('href', '/app/administrativo/pensiones/configuracion');
+    ).toHaveAttribute(
+      'href',
+      '/app/administrativo/pensiones/configuracion?anioEscolarId=anio-2027',
+    );
   });
 });

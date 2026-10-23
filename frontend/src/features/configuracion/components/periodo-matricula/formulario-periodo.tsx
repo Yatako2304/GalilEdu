@@ -283,6 +283,7 @@ export const FormularioPeriodo = ({
         <div className="flex flex-col gap-6">
           <TarjetaMonto
             anio={datos?.anio ?? null}
+            anioEscolarId={datos?.anioEscolarId ?? null}
             monto={datos?.montoMatricula ?? null}
             tarifarioConfirmado={datos?.tarifarioConfirmado ?? true}
           />

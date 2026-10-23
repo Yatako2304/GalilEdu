@@ -13,13 +13,22 @@ import { soles } from './formato';
 const EnlaceTarifario = ({
   texto,
   variant,
+  anioEscolarId,
 }: {
   texto: string;
   variant: 'outline' | 'secondary';
+  /** Abre el tarifario de este año. */
+  anioEscolarId: string | null;
 }) =>
   TARIFARIO_DISPONIBLE ? (
     <Button asChild variant={variant} size="sm">
-      <Link to={paths.app.administrativo.tarifario.getHref()}>{texto}</Link>
+      <Link
+        to={paths.app.administrativo.tarifario.getHref(
+          anioEscolarId ?? undefined,
+        )}
+      >
+        {texto}
+      </Link>
     </Button>
   ) : (
     <Tooltip content={TEXTO_DISPONIBLE_PRONTO} side="bottom" align="end">
@@ -32,6 +41,8 @@ const EnlaceTarifario = ({
 type TarjetaMontoProps = {
   /** Año elegido; null mientras no se elige. */
   anio: number | null;
+  /** Id del año elegido: los enlaces abren el tarifario de ese año. */
+  anioEscolarId: string | null;
   /** null si el año no tiene tarifario confirmado o aún no se elige. */
   monto: number | null;
   tarifarioConfirmado: boolean;
@@ -41,6 +52,7 @@ type TarjetaMontoProps = {
 // edita. Sin tarifario confirmado no se puede habilitar la matrícula (el backend responde 409).
 export const TarjetaMonto = ({
   anio,
+  anioEscolarId,
   monto,
   tarifarioConfirmado,
 }: TarjetaMontoProps) => (
@@ -59,7 +71,13 @@ export const TarjetaMonto = ({
       <Alert
         type="warning"
         title={`Confirma el tarifario ${anio} antes de habilitar la matrícula.`}
-        action={<EnlaceTarifario texto="Ir al tarifario" variant="secondary" />}
+        action={
+          <EnlaceTarifario
+            texto="Ir al tarifario"
+            variant="secondary"
+            anioEscolarId={anioEscolarId}
+          />
+        }
       />
     ) : (
       <>
@@ -70,7 +88,11 @@ export const TarjetaMonto = ({
           </span>
         </p>
         <div>
-          <EnlaceTarifario texto="Ver tarifario completo" variant="outline" />
+          <EnlaceTarifario
+            texto="Ver tarifario completo"
+            variant="outline"
+            anioEscolarId={anioEscolarId}
+          />
         </div>
       </>
     )}
