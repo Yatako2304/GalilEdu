@@ -2,11 +2,11 @@
 
 - **HU:** HU-1, HU-6, HU-9, HU-12 (iteración 1) · HU-8, HU-10 (2) · HU-3, HU-4, HU-5 (3)
 - **Estado:** 🚧 en desarrollo
-- **Última actualización:** 2026-10-19
+- **Última actualización:** 2026-10-22
 
 ## Alcance
 
-Inicio de sesión de todos los roles y gestión de cuentas por el Administrador. Un usuario puede tener **varios roles** y elige el activo en el menú lateral. Las cuentas no se borran: "Eliminar" es un borrado lógico. El **estudiante** tiene su propia cuenta, que se crea al quedar matriculado; es el usuario con la misma persona que el estudiante (V7, ver [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md)).
+Inicio de sesión de todos los roles y gestión de cuentas por el Administrador. Un usuario puede tener **varios roles** y elige el activo en el menú lateral. Las cuentas no se borran: "Eliminar" es un borrado lógico. El **estudiante no tiene cuenta**: el rol Estudiante existe en el catálogo, pero es un "could have" y no se crea ni se desarrolla en esta iteración (ver [decisión](../decisiones/2026-10-19-yatako-usuarios-y-acceso.md)).
 
 ## Historias de usuario
 
@@ -16,7 +16,7 @@ Inicio de sesión de todos los roles y gestión de cuentas por el Administrador.
 | HU-6 | Registro de usuario con rol | ✅ | Usuario `U{año}{0001}` y contraseña aleatoria (RF-15, RF-16) enviada por correo (RF-17; sin SMTP va al log). |
 | HU-9 | Edición de datos personales | ✅ | Misma validación y control de duplicados (RF-22, RF-23). |
 | HU-12 | Desactivación de usuario | ✅ | También reactivación y "Eliminar" (borrado lógico). |
-| HU-8 | Carga masiva desde Excel/CSV | ✅ | Modal de 3 pasos de Figma: plantilla .xlsx, validación por fila sin crear nada, creación de las filas válidas y descarga del detalle de errores (CSV). Mismas reglas que HU-6; varios roles separados por coma; máx. 10 MB y 1000 filas. Diferencia con Figma: el resumen tiene un solo botón "Finalizar" (Figma muestra "Cancelar/Guardar", pero en ese punto los usuarios ya están creados). |
+| HU-8 | Carga masiva desde Excel/CSV | ⏸️ | **Oculta en la interfaz** (es un "could have"): se quitaron el botón de Usuarios, el acceso rápido del Inicio y `?carga=1`. El modal (`dialogo-carga-masiva.tsx`), `api/carga-masiva.ts` y los endpoints `/usuarios/carga-masiva` siguen en el código; para reactivarla basta volver a montar el modal en `app/routes/app/admin/usuarios.tsx` y su acceso rápido en `inicio-administrador.tsx`. Cómo funciona: modal de 3 pasos de Figma: plantilla .xlsx, validación por fila sin crear nada, creación de las filas válidas y descarga del detalle de errores (CSV). Mismas reglas que HU-6; varios roles separados por coma; máx. 10 MB y 1000 filas. Diferencia con Figma: el resumen tiene un solo botón "Finalizar" (Figma muestra "Cancelar/Guardar", pero en ese punto los usuarios ya están creados). |
 | HU-10 | Cambio de rol | ✅* | Ya se puede desde "Editar usuario"; falta revisar si requiere pantalla propia. |
 | HU-4, HU-5 | Recuperar / cambiar contraseña | ⏳ | Pantallas en Figma › Autenticación. |
 | HU-3 | Inicio de sesión con Google | ⏳ | |
@@ -29,7 +29,7 @@ Inicio de sesión de todos los roles y gestión de cuentas por el Administrador.
 | Inicio del administrador | Administrador › "00 · Home — Administrador" | `/app/admin` |
 | Lista de usuarios | Administrador › "Admin / Usuarios \| HU-6 \| HU-7 \| HU-8 - grilla" | `/app/admin/usuarios` |
 | Nuevo / editar usuario, confirmaciones, "Usuario registrado" | Administrador › modales "Nuevo Usuario", "Editar usuario"… | modales en `/app/admin/usuarios` |
-| Carga masiva (3 pasos) | Administrador › modales "Carga masiva de usuarios" | `/app/admin/usuarios?carga=1` |
+| Carga masiva (3 pasos) · *oculta* | Administrador › modales "Carga masiva de usuarios" | sin acceso desde la interfaz (antes `/app/admin/usuarios?carga=1`) |
 
 ## Base de datos
 

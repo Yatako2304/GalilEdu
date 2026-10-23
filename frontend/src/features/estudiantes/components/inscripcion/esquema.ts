@@ -5,6 +5,7 @@ import {
   personaSchema,
   personaVacia,
 } from '@/components/personas/persona-schema';
+import { PAIS_CON_UBIGEO } from '@/config/ubigeo';
 import {
   DatosPersona,
   ModoSalida,
@@ -101,28 +102,31 @@ const familiarVacio = (sexo: 'MASCULINO' | 'FEMENINO' | ''): FamiliarForm => ({
   relacionDetalle: '',
 });
 
-const anioSiguiente = new Date().getFullYear() + 1;
-
 export const inscripcionVacia = (): InscripcionForm => ({
   estudiante: {
-    persona: personaVacia(),
-    paisNacimiento: 'Perú',
-    departamentoNacimiento: 'Lima',
-    provinciaNacimiento: 'Lima',
+    // Ningún campo del Paso 1 trae valor por defecto (salvo "¿Tiene alguna discapacidad?": No).
+    persona: {
+      ...personaVacia(),
+      tipoDocumento: '' as unknown as PersonaFormValues['tipoDocumento'],
+      nacionalidad: '',
+    },
+    paisNacimiento: '',
+    departamentoNacimiento: '',
+    provinciaNacimiento: '',
     distritoNacimiento: '',
     referenciaDomicilio: '',
     tieneInternet: '',
-    lenguaMaterna: 'Castellano',
+    lenguaMaterna: '',
     segundaLengua: '',
     autoidentificacionEtnica: '',
     tieneDiscapacidad: 'NO',
     discapacidadDetalle: '',
     colegioProcedencia: '',
     gestionProcedencia: '',
-    anioAcademico: String(anioSiguiente),
+    anioAcademico: '',
     nivel: '',
     grado: '',
-    formaIngreso: 'Edad normativa',
+    formaIngreso: '',
   },
   fichaMedica: {
     tipoSangre: '',
@@ -186,14 +190,125 @@ const familiarSchema = (opcional: boolean) =>
     }
   });
 
+const vacio = (v: unknown) => typeof v !== 'string' || v.trim() === '';
+
+/**
+ * Paso 1 (HU-7): todo es obligatorio salvo apellido materno, correo, referencia, teléfono de casa, segunda
+ * lengua y autoidentificación étnica. "¿Cuál?" de discapacidad es obligatorio cuando la respuesta es Sí.
+ */
 const estudianteSchema = z
   .object({
-    persona: personaSchema,
-    anioAcademico: z.string().min(1, 'Indica el año académico'),
+    persona: z.custom<PersonaFormValues>(),
+    anioAcademico: z.string().min(1, 'Selecciona el año académico'),
     nivel: z.string().min(1, 'Indica el nivel'),
     grado: z.string().min(1, 'Indica el grado'),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((e, ctx) => {
+    const datos = e as unknown as InscripcionForm['estudiante'];
+    const exige = (
+      path: (string | number)[],
+      valor: unknown,
+      message: string,
+    ) => {
+      if (vacio(valor)) ctx.addIssue({ code: 'custom', path, message });
+    };
+    const p = datos.persona;
+
+    // Se valida aparte: si el tipo de documento está vacío, zod cortaría las demás reglas del paso.
+    const personaValida = personaSchema.safeParse(p);
+    if (!personaValida.success) {
+      personaValida.error.issues.forEach((i) =>
+        ctx.addIssue({ ...i, path: ['persona', ...i.path] }),
+      );
+    }
+
+    exige(['persona', 'sexo'], p.sexo, 'Selecciona el sexo');
+    exige(
+      ['persona', 'nacionalidad'],
+      p.nacionalidad,
+      'Selecciona la nacionalidad',
+    );
+    exige(['persona', 'direccion'], p.direccion, 'Ingresa la dirección');
+    exige(['persona', 'distrito'], p.distrito, 'Selecciona el distrito');
+
+    if (vacio(p.fechaNacimiento)) {
+      exige(
+        ['persona', 'fechaNacimiento'],
+        p.fechaNacimiento,
+        'Ingresa la fecha de nacimiento',
+      );
+    } else if (
+      new Date(`${p.fechaNacimiento}T00:00:00`).getTime() >=
+      new Date().setHours(0, 0, 0, 0)
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['persona', 'fechaNacimiento'],
+        message: 'La fecha de nacimiento debe ser pasada',
+      });
+    }
+
+    if (p.telefonoCasa && !/^[0-9]+$/.test(p.telefonoCasa)) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['persona', 'telefonoCasa'],
+        message: 'El teléfono solo puede tener números',
+      });
+    }
+
+    exige(['paisNacimiento'], datos.paisNacimiento, 'Selecciona el país');
+    // Departamento, provincia y distrito solo aplican a los nacidos en el Perú.
+    if (datos.paisNacimiento === PAIS_CON_UBIGEO) {
+      exige(
+        ['departamentoNacimiento'],
+        datos.departamentoNacimiento,
+        'Selecciona el departamento',
+      );
+      exige(
+        ['provinciaNacimiento'],
+        datos.provinciaNacimiento,
+        'Selecciona la provincia',
+      );
+      exige(
+        ['distritoNacimiento'],
+        datos.distritoNacimiento,
+        'Selecciona el distrito',
+      );
+    }
+    exige(
+      ['tieneInternet'],
+      datos.tieneInternet,
+      'Selecciona si tiene acceso a internet / dispositivo',
+    );
+    exige(
+      ['lenguaMaterna'],
+      datos.lenguaMaterna,
+      'Selecciona la lengua materna',
+    );
+    if (datos.tieneDiscapacidad === 'SI') {
+      exige(
+        ['discapacidadDetalle'],
+        datos.discapacidadDetalle,
+        'Indica cuál es la discapacidad',
+      );
+    }
+    exige(
+      ['colegioProcedencia'],
+      datos.colegioProcedencia,
+      'Ingresa el colegio de procedencia',
+    );
+    exige(
+      ['gestionProcedencia'],
+      datos.gestionProcedencia,
+      'Selecciona la gestión',
+    );
+    exige(
+      ['formaIngreso'],
+      datos.formaIngreso,
+      'Selecciona la forma de ingreso',
+    );
+  });
 
 export const inscripcionSchema = z
   .object({

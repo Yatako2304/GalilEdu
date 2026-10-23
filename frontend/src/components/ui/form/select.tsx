@@ -19,6 +19,8 @@ type SelectFieldProps = FieldWrapperPassThroughProps &
   Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'children'> & {
     options: SelectOption[];
     placeholder?: string;
+    /** Campo opcional: agrega el placeholder como primera opción para poder volver a "sin valor". */
+    vaciable?: boolean;
     className?: string;
     wrapperClassName?: string;
     registration?: Partial<UseFormRegisterReturn>;
@@ -46,12 +48,18 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
       className,
       wrapperClassName,
       placeholder,
+      vaciable,
       registration,
       disabled,
       ...props
     },
     ref,
   ) => {
+    // En la lista visible, "sin valor" va primero y es elegible; el valor vacío no es una opción real.
+    const items: SelectOption[] =
+      vaciable && placeholder
+        ? [{ label: placeholder, value: '' }, ...options]
+        : options;
     const nativo = React.useRef<HTMLSelectElement | null>(null);
     const contenedor = React.useRef<HTMLDivElement>(null);
     const lista = React.useRef<HTMLUListElement>(null);
@@ -88,7 +96,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
 
     const abrir = () => {
       if (disabled) return;
-      const i = options.findIndex((o) => String(o.value) === valor);
+      const i = items.findIndex((o) => String(o.value) === valor);
       setActivo(i < 0 ? 0 : i);
       setAbierto(true);
     };
@@ -114,13 +122,13 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
       }
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setActivo((i) => Math.min(i + 1, options.length - 1));
+        setActivo((i) => Math.min(i + 1, items.length - 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setActivo((i) => Math.max(i - 1, 0));
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        if (options[activo]) elegir(options[activo]);
+        if (items[activo]) elegir(items[activo]);
       } else if (e.key === 'Escape' || e.key === 'Tab') {
         setAbierto(false);
       }
@@ -144,7 +152,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
             ref={unirRefs(ref, nativo, registration?.ref)}
           >
             {placeholder && (
-              <option value="" disabled>
+              <option value="" disabled={!vaciable}>
                 {placeholder}
               </option>
             )}
@@ -189,7 +197,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
               role="listbox"
               className="absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-stroke-secondary bg-surface-primary p-1 shadow-card"
             >
-              {options.map((opcion, i) => {
+              {items.map((opcion, i) => {
                 const seleccionada = String(opcion.value) === valor;
                 return (
                   // El teclado se maneja en el botón (patrón listbox con aria-activedescendant).
