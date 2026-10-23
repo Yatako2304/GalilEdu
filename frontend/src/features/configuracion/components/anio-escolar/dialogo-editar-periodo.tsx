@@ -35,7 +35,10 @@ export const DialogoEditarPeriodo = ({
   onCerrar,
 }: DialogoEditarPeriodoProps) => (
   <Dialog open onOpenChange={(open) => !open && onCerrar()}>
-    <DialogContent className="flex max-h-[92vh] max-w-[560px] flex-col gap-0 overflow-hidden rounded-[12px] border-stroke-tertiary bg-white p-0">
+    {/* Con ventanas altas el modal no recorta ni desplaza: el calendario desplegable flota sobre su borde en vez de
+        agrandar el cuerpo. Por debajo de 800 px de alto vuelve a recortar y desplazar, para que los botones siempre
+        se alcancen. */}
+    <DialogContent className="flex max-h-[92vh] max-w-[560px] flex-col gap-0 overflow-visible rounded-xl border-stroke-tertiary bg-white p-0 [@media(max-height:800px)]:overflow-hidden">
       <FormularioPeriodo periodo={periodo} anio={anio} onCerrar={onCerrar} />
     </DialogContent>
   </Dialog>
@@ -87,7 +90,7 @@ const FormularioPeriodo = ({
       )}
       className="flex min-h-0 flex-1 flex-col"
     >
-      <div className="flex-1 space-y-5 overflow-y-auto p-6">
+      <div className="flex-1 space-y-5 p-6 [@media(max-height:800px)]:overflow-y-auto">
         <div className="space-y-3">
           <IconBadge color="accent" size="lg" aria-hidden="true">
             <CalendarClock />
@@ -124,6 +127,7 @@ const FormularioPeriodo = ({
             name="fechaInicio"
             render={({ field }) => (
               <DatePicker
+                size="sm"
                 label="Fecha de inicio *"
                 value={field.value}
                 onChange={field.onChange}
@@ -142,6 +146,7 @@ const FormularioPeriodo = ({
             name="fechaFin"
             render={({ field }) => (
               <DatePicker
+                size="sm"
                 label="Fecha de fin *"
                 value={field.value}
                 onChange={field.onChange}
@@ -162,6 +167,7 @@ const FormularioPeriodo = ({
           name="fechaLimiteNotas"
           render={({ field }) => (
             <DatePicker
+              size="sm"
               label="Fecha límite para registrar notas *"
               value={field.value}
               onChange={field.onChange}

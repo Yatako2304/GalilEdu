@@ -41,6 +41,13 @@ const servirRequisitos = () =>
     ),
   );
 
+const servirSecciones = (anioId: string) =>
+  server.use(
+    http.get(`${API}/configuracion/anios-escolares/${anioId}/secciones`, () =>
+      HttpResponse.json([]),
+    ),
+  );
+
 const mostrar = async (anio: AnioEscolarDetalle) =>
   renderApp(<ContenidoAnio anio={anio} />, {
     user: await createUser({ roles: [ROLES.PERSONAL_ADMINISTRATIVO] }),
@@ -64,6 +71,7 @@ test('muestra las tres pestañas con sus contadores y abre en Periodos', async (
 });
 
 test('cada pestaña muestra el contenido de su pantalla de Figma', async () => {
+  servirSecciones('anio-2026');
   await mostrar(anio2026);
 
   await userEvent.click(screen.getByRole('tab', { name: 'Secciones (23)' }));
@@ -71,10 +79,9 @@ test('cada pestaña muestra el contenido de su pantalla de Figma', async () => {
     'aria-selected',
     'true',
   );
-  expect(screen.getByText('HU-75')).toBeInTheDocument();
   expect(
-    screen.getByRole('link', { name: /Ver diseño en Figma/ }),
-  ).toHaveAttribute('href', expect.stringContaining('849-9225'));
+    await screen.findByRole('heading', { name: 'Secciones por grado' }),
+  ).toBeInTheDocument();
   expect(
     screen.queryByRole('heading', { name: 'Periodos académicos' }),
   ).not.toBeInTheDocument();
@@ -83,7 +90,9 @@ test('cada pestaña muestra el contenido de su pantalla de Figma', async () => {
     screen.getByRole('tab', { name: 'Estructura horaria (2)' }),
   );
   expect(screen.getByText('HU-44')).toBeInTheDocument();
-  expect(screen.queryByText('HU-75')).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole('heading', { name: 'Secciones por grado' }),
+  ).not.toBeInTheDocument();
   expect(
     screen.getByRole('link', { name: /Ver diseño en Figma/ }),
   ).toHaveAttribute('href', expect.stringContaining('850-10152'));
@@ -105,6 +114,7 @@ test('año ACTIVO: sin la tarjeta de requisitos, y sin pedirlos', async () => {
 
 test('año PLANIFICADO: muestra los requisitos sobre las pestañas y "Revisar" cambia de pestaña', async () => {
   servirRequisitos();
+  servirSecciones('anio-2027');
   await mostrar(anio2027);
 
   expect(
@@ -122,7 +132,9 @@ test('año PLANIFICADO: muestra los requisitos sobre las pestañas y "Revisar" c
     'aria-selected',
     'true',
   );
-  expect(screen.getByText('HU-75')).toBeInTheDocument();
+  expect(
+    await screen.findByRole('heading', { name: 'Secciones por grado' }),
+  ).toBeInTheDocument();
 
   await userEvent.click(
     screen.getByRole('button', {
