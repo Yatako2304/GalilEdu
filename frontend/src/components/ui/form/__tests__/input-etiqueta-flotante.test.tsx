@@ -1,5 +1,5 @@
 import { DatePicker } from '@/components/ui/date-picker';
-import { rtlRender, screen, userEvent } from '@/testing/test-utils';
+import { rtlRender, screen, userEvent, within } from '@/testing/test-utils';
 
 import { Input } from '../input';
 import { Select } from '../select';
@@ -53,6 +53,25 @@ test('sin placeholder propio la etiqueta puede descansar dentro del campo', () =
 
   expect(etiqueta('Usuario').className).toContain(
     'peer-placeholder-shown:top-3',
+  );
+});
+
+// Un adorno al inicio (el "S/" de un monto) ocupa el lugar donde descansaría la etiqueta.
+test('con un adorno al inicio la etiqueta se queda arriba para no taparlo', () => {
+  rtlRender(<Input label="Monto (S/)" startAdornment="S/" />);
+
+  expect(etiqueta('Monto (S/)').className).not.toContain(
+    'peer-placeholder-shown',
+  );
+});
+
+// En reposo la etiqueta está dentro del campo: sin fondo propio, para que no se vea un parche blanco en un campo deshabilitado.
+test('en reposo la etiqueta no tiene fondo blanco y al enfocar lo recupera', () => {
+  rtlRender(<Input label="N.º de documento" disabled />);
+
+  expect(etiqueta('N.º de documento')).toHaveClass(
+    'peer-placeholder-shown:bg-transparent',
+    'peer-focus:bg-white',
   );
 });
 
@@ -186,6 +205,34 @@ describe('Select y Textarea', () => {
       'peer-focus:text-content-accent-primary',
       'peer-hover:text-content-tertiary-hover',
     );
+  });
+
+  test('Select vaciable con placeholder: la etiqueta queda arriba y "Selecciona" se ve como opción', async () => {
+    rtlRender(
+      <Select
+        label="Sexo"
+        placeholder="Selecciona"
+        vaciable
+        options={[{ label: 'Femenino', value: 'F' }]}
+      />,
+    );
+
+    expect(etiqueta('Sexo')).not.toHaveClass('top-3');
+    await userEvent.click(screen.getByRole('combobox', { expanded: false }));
+    expect(
+      within(screen.getByRole('listbox'))
+        .getAllByRole('option')
+        .map((o) => o.textContent?.trim()),
+    ).toEqual(['Selecciona', 'Femenino']);
+  });
+
+  test('Textarea con contador: sigue mostrando "n/máximo" con la etiqueta flotante', async () => {
+    rtlRender(<Textarea label="Descripción" maxLength={50} showCount />);
+
+    await userEvent.type(screen.getByLabelText('Descripción'), 'Hola');
+
+    expect(screen.getByText('4/50')).toBeInTheDocument();
+    expect(etiqueta('Descripción')).toHaveClass('absolute');
   });
 
   test('Textarea: la etiqueta flota y el campo conserva su nombre accesible', () => {

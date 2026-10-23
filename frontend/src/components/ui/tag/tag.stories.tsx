@@ -70,3 +70,20 @@ const DemoSeleccionables = () => {
 };
 
 export const Seleccionables: Story = { render: () => <DemoSeleccionables /> };
+
+// Figma > Componentes > Selectable Tag usado como estado de una tabla ("Programado", "Abierto", "Cerrado").
+export const EstadosEnPastilla: Story = {
+  render: () => (
+    <div className="flex flex-wrap items-center gap-2">
+      <SelectableTag readOnly shape="circle" size="md" color="warning">
+        Programado
+      </SelectableTag>
+      <SelectableTag readOnly shape="circle" size="md" color="success">
+        Abierto
+      </SelectableTag>
+      <SelectableTag readOnly shape="circle" size="md" color="primary">
+        Cerrado
+      </SelectableTag>
+    </div>
+  ),
+};

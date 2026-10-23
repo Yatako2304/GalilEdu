@@ -1,14 +1,22 @@
 import * as React from 'react';
 import { z } from 'zod';
 
-import { rtlRender, screen, userEvent, within } from '@/testing/test-utils';
+import {
+  rtlRender,
+  screen,
+  userEvent,
+  waitFor,
+  within,
+} from '@/testing/test-utils';
 
 import { Accordion } from '../accordion';
 import { Calendar, DatePicker } from '../date-picker';
-import { Form, Input, Select, TagField } from '../form';
+import { Form, Input, Select, TagField, Textarea } from '../form';
 import { ProgressBar } from '../progress-bar';
 import { Rating } from '../rating';
+import { StatCard } from '../stat-card';
 import { Tabs } from '../tabs';
+import { SelectableTag } from '../tag';
 
 test('Tabs: el clic y las flechas cambian de pestaña y saltan las deshabilitadas', async () => {
   const cambiar = vi.fn();
@@ -201,4 +209,199 @@ test('ProgressBar: sin etiqueta visible conserva el nombre accesible', () => {
     screen.getByRole('progressbar', { name: 'Avance' }),
   ).toBeInTheDocument();
   expect(screen.queryByText('30 %')).not.toBeInTheDocument();
+});
+
+test('SelectableTag readOnly: es una pastilla informativa, no un botón, con el relleno claro de Figma', () => {
+  rtlRender(
+    <>
+      <SelectableTag readOnly shape="circle" size="md" color="warning">
+        Programado
+      </SelectableTag>
+      <SelectableTag readOnly shape="circle" size="md" color="success">
+        Abierto
+      </SelectableTag>
+      <SelectableTag readOnly shape="circle" size="md" color="primary">
+        Cerrado
+      </SelectableTag>
+    </>,
+  );
+
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  expect(screen.getByText('Programado')).toHaveClass(
+    'rounded-full',
+    'border-stroke-warning',
+    'text-content-warning',
+    'bg-surface-warning-light',
+  );
+  expect(screen.getByText('Abierto')).toHaveClass(
+    'border-stroke-success',
+    'bg-surface-success-light',
+  );
+  expect(screen.getByText('Cerrado')).toHaveClass(
+    'border-stroke-accent-primary',
+    'bg-surface-accent-light',
+  );
+});
+
+test('SelectableTag readOnly ignora "selected": sigue siendo informativa', () => {
+  rtlRender(
+    <SelectableTag readOnly selected color="warning">
+      Programado
+    </SelectableTag>,
+  );
+
+  expect(screen.getByText('Programado')).toHaveClass(
+    'bg-surface-warning-light',
+  );
+  expect(screen.getByText('Programado')).not.toHaveClass('text-white');
+});
+
+test('SelectableTag sin readOnly sigue siendo un botón que se marca', async () => {
+  const marcar = vi.fn();
+  rtlRender(<SelectableTag onClick={marcar}>Filtro</SelectableTag>);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Filtro' }));
+
+  expect(marcar).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole('button', { name: 'Filtro' })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
+});
+
+test('Textarea con showCount: el contador sigue al valor de un campo controlado', () => {
+  const { rerender } = rtlRender(
+    <Textarea
+      label="Descripción"
+      maxLength={100}
+      showCount
+      value="Ficha"
+      onChange={() => {}}
+    />,
+  );
+  expect(screen.getByText('5/100')).toBeInTheDocument();
+
+  rerender(
+    <Textarea
+      label="Descripción"
+      maxLength={100}
+      showCount
+      value="Ficha de matrícula"
+      onChange={() => {}}
+    />,
+  );
+  expect(screen.getByText('18/100')).toBeInTheDocument();
+});
+
+test('Input con startAdornment: muestra el prefijo dentro del campo, sin ensuciar su nombre ni su valor', async () => {
+  rtlRender(
+    <>
+      <Input label="Monto" type="number" startAdornment="S/" />
+      <Input label="Sin prefijo" />
+    </>,
+  );
+
+  // El prefijo es decorativo: no entra en el nombre accesible, que sigue siendo la etiqueta.
+  const monto = screen.getByRole('spinbutton', { name: 'Monto' });
+  await userEvent.type(monto, '450');
+
+  expect(screen.getByText('S/')).toBeInTheDocument();
+  expect(monto).toHaveValue(450);
+  expect(monto).toHaveClass('pl-10');
+  expect(screen.getByText('S/')).toHaveClass('pointer-events-none');
+  expect(screen.getByRole('textbox', { name: 'Sin prefijo' })).not.toHaveClass(
+    'pl-10',
+  );
+});
+
+test('Input con startAdornment y endAdornment a la vez deja lugar a los dos lados', () => {
+  rtlRender(
+    <Input
+      label="Clave"
+      startAdornment="S/"
+      endAdornment={<button type="button">Ver</button>}
+    />,
+  );
+
+  expect(screen.getByRole('textbox', { name: /Clave/ })).toHaveClass(
+    'pl-10',
+    'pr-10',
+  );
+  expect(screen.getByRole('button', { name: 'Ver' })).toBeInTheDocument();
+});
+
+test('Textarea con showCount: en un campo no controlado cuenta lo que se escribe y respeta maxLength', async () => {
+  rtlRender(<Textarea label="Descripción" maxLength={5} showCount />);
+
+  expect(screen.getByText('0/5')).toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText('Descripción'), 'abcdefgh');
+
+  expect(screen.getByText('5/5')).toBeInTheDocument();
+  expect(screen.getByLabelText('Descripción')).toHaveValue('abcde');
+});
+
+test('Textarea: sin showCount o sin maxLength no muestra contador, y llama a su onChange', async () => {
+  const cambiar = vi.fn();
+  rtlRender(
+    <>
+      <Textarea label="Uno" maxLength={10} onChange={cambiar} />
+      <Textarea label="Dos" showCount />
+    </>,
+  );
+
+  await userEvent.type(screen.getByLabelText('Uno'), 'hola');
+
+  expect(cambiar).toHaveBeenCalledTimes(4);
+  expect(screen.queryByText(/\/10$/)).not.toBeInTheDocument();
+  expect(screen.queryByText(/^\d+\/\d+$/)).not.toBeInTheDocument();
+});
+
+test('Textarea con react-hook-form: el contador cuenta y el valor llega al formulario', async () => {
+  const enviar = vi.fn();
+  rtlRender(
+    <Form onSubmit={enviar} schema={z.object({ descripcion: z.string() })}>
+      {({ register }) => (
+        <>
+          <Textarea
+            label="Descripción"
+            maxLength={100}
+            showCount
+            registration={register('descripcion')}
+          />
+          <button type="submit">Guardar</button>
+        </>
+      )}
+    </Form>,
+  );
+
+  await userEvent.type(screen.getByLabelText('Descripción'), 'Con firma');
+  expect(screen.getByText('9/100')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+  await waitFor(() =>
+    expect(enviar).toHaveBeenCalledWith(
+      { descripcion: 'Con firma' },
+      expect.anything(),
+    ),
+  );
+});
+
+test('StatCard: iconColor cambia el color del cuadro del ícono y, sin él, conserva el de siempre', () => {
+  rtlRender(
+    <>
+      <StatCard
+        icon={<i>Ícono con color</i>}
+        iconColor="turquoise"
+        value="60"
+        label="Con color"
+      />
+      <StatCard icon={<i>Ícono sin color</i>} value="3" label="Sin color" />
+    </>,
+  );
+
+  const conColor = screen.getByText('Ícono con color').parentElement;
+  expect(conColor).toHaveClass('bg-turquoise-50', 'text-turquoise-600');
+  expect(screen.getByText('Ícono sin color').parentElement).not.toHaveClass(
+    'bg-turquoise-50',
+  );
 });

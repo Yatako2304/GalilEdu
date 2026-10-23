@@ -16,6 +16,6 @@ test('la capa de avisos queda por encima de la de los modales', () => {
   );
 
   const avisos = document.querySelector('[aria-live="assertive"]');
-  expect(avisos).toHaveClass('z-[60]');
+  expect(avisos).toHaveClass('z-[100]');
   expect(document.querySelector('[role="dialog"]')).toHaveClass('z-50');
 });

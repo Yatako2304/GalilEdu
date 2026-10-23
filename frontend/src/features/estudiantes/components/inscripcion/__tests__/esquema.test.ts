@@ -13,11 +13,27 @@ const valida = (): InscripcionForm => {
   const f = inscripcionVacia();
   f.estudiante.persona = {
     ...f.estudiante.persona,
+    tipoDocumento: 'DNI',
+    nacionalidad: 'Peruana',
     numeroDocumento: '78945612',
     apellidoPaterno: 'Quispe',
+    apellidoMaterno: 'Rojas',
     nombres: 'Mateo',
+    sexo: 'MASCULINO',
     fechaNacimiento: '2015-05-10',
+    direccion: 'Av. La Marina 1234',
+    distrito: 'San Miguel',
   };
+  f.estudiante.paisNacimiento = 'Perú';
+  f.estudiante.departamentoNacimiento = 'Lima';
+  f.estudiante.provinciaNacimiento = 'Lima';
+  f.estudiante.distritoNacimiento = 'San Miguel';
+  f.estudiante.lenguaMaterna = 'Castellano';
+  f.estudiante.formaIngreso = 'Edad normativa';
+  f.estudiante.anioAcademico = '2027';
+  f.estudiante.tieneInternet = 'SI';
+  f.estudiante.colegioProcedencia = 'I.E.I. Mis Pequeños Pasos';
+  f.estudiante.gestionProcedencia = 'Privada';
   f.estudiante.nivel = 'PRIMARIA';
   f.estudiante.grado = 'PRI-6';
   f.padre.personaId = 'id-del-padre';
@@ -71,6 +87,106 @@ describe('gradoSugerido (edad al 31 de marzo del año académico)', () => {
 describe('inscripcionSchema (reglas de Figma)', () => {
   test('una inscripción completa es válida', () => {
     expect(mensajes(valida())).toEqual([]);
+  });
+
+  test('ningún campo del Paso 1 trae valor por defecto, salvo la discapacidad (No)', () => {
+    const e = inscripcionVacia().estudiante;
+    const { tieneDiscapacidad, ...resto } = e;
+    expect(tieneDiscapacidad).toBe('NO');
+    const conValor = Object.entries({ ...resto, ...resto.persona })
+      .filter(([k, v]) => typeof v === 'string' && v !== '' && k !== 'persona')
+      .map(([k]) => k);
+    expect(conValor).toEqual([]);
+  });
+
+  test('si nace fuera del Perú no se piden departamento, provincia ni distrito', () => {
+    const f = valida();
+    Object.assign(f.estudiante, {
+      paisNacimiento: 'Chile',
+      departamentoNacimiento: '',
+      provinciaNacimiento: '',
+      distritoNacimiento: '',
+    });
+    expect(mensajes(f)).toEqual([]);
+    expect(aSolicitud(f).estudiante).toMatchObject({
+      paisNacimiento: 'Chile',
+      departamentoNacimiento: null,
+      provinciaNacimiento: null,
+      distritoNacimiento: null,
+    });
+  });
+
+  test('si nace en el Perú, departamento, provincia y distrito son obligatorios', () => {
+    const f = valida();
+    Object.assign(f.estudiante, {
+      departamentoNacimiento: '',
+      provinciaNacimiento: '',
+      distritoNacimiento: '',
+    });
+    expect(mensajes(f)).toEqual(
+      expect.arrayContaining([
+        'Selecciona el departamento',
+        'Selecciona la provincia',
+        'Selecciona el distrito',
+      ]),
+    );
+  });
+
+  test('el tipo de documento vacío no oculta los demás errores del paso', () => {
+    const m = mensajes(inscripcionVacia());
+    expect(m).toContain('Selecciona el tipo de documento');
+    expect(m).toContain('Ingresa el apellido paterno');
+    expect(m).toContain('Selecciona el país');
+    expect(m).toContain('Selecciona la nacionalidad');
+    expect(m).toContain('Selecciona la lengua materna');
+    expect(m).toContain('Selecciona el año académico');
+    expect(m).toContain('Selecciona la forma de ingreso');
+  });
+
+  test('el Paso 1 exige todos los campos salvo correo, referencia, teléfono, segunda lengua y etnia', () => {
+    const f = inscripcionVacia();
+    const m = mensajes(f);
+    [
+      'Ingresa el número de documento',
+      'Ingresa el apellido paterno',
+      'Ingresa los nombres',
+      'Selecciona el sexo',
+      'Ingresa la fecha de nacimiento',
+      'Ingresa la dirección',
+      'Selecciona el distrito',
+      'Selecciona si tiene acceso a internet / dispositivo',
+      'Ingresa el colegio de procedencia',
+      'Selecciona la gestión',
+      'Indica el nivel',
+      'Indica el grado',
+    ].forEach((mensaje) => expect(m).toContain(mensaje));
+  });
+
+  test('apellido materno, referencia, teléfono de casa, correo, segunda lengua y etnia son opcionales', () => {
+    const f = valida();
+    f.estudiante.persona.apellidoMaterno = '';
+    Object.assign(f.estudiante, {
+      referenciaDomicilio: '',
+      segundaLengua: '',
+      autoidentificacionEtnica: '',
+    });
+    Object.assign(f.estudiante.persona, { telefonoCasa: '', correo: '' });
+    expect(mensajes(f)).toEqual([]);
+  });
+
+  test('si tiene discapacidad, "¿Cuál?" es obligatorio', () => {
+    const f = valida();
+    f.estudiante.tieneDiscapacidad = 'SI';
+    f.estudiante.discapacidadDetalle = '';
+    expect(mensajes(f)).toContain('Indica cuál es la discapacidad');
+    f.estudiante.discapacidadDetalle = 'Visual';
+    expect(mensajes(f)).toEqual([]);
+  });
+
+  test('la fecha de nacimiento debe ser pasada', () => {
+    const f = valida();
+    f.estudiante.persona.fechaNacimiento = '2999-01-01';
+    expect(mensajes(f)).toContain('La fecha de nacimiento debe ser pasada');
   });
 
   test('sin padre ni madre exige un apoderado', () => {

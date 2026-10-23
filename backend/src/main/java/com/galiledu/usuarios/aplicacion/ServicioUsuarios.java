@@ -7,6 +7,7 @@ import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -101,6 +102,12 @@ public class ServicioUsuarios {
 	@Transactional
 	public UsuarioCreado crear(SolicitudUsuario solicitud) {
 		exigirContacto(solicitud);
+		Optional<Usuario> eliminado = personas.buscarPorDocumento(solicitud.persona().numeroDocumento())
+				.flatMap(p -> usuarios.findByPersonaId(p.getId()))
+				.filter(Usuario::isEliminado);
+		if (eliminado.isPresent()) {
+			return restaurar(eliminado.get(), solicitud);
+		}
 		Persona persona = personas.crear(solicitud.persona());
 		var creado = crearCuenta(persona, EnumSet.copyOf(solicitud.roles()));
 		return new UsuarioCreado(creado.getId(), creado.getNombreUsuario(), persona.getCorreo(), creado.getEstado());
@@ -142,6 +149,11 @@ public class ServicioUsuarios {
 		return usuarios.existsByPersonaId(personaId);
 	}
 
+	/** Si la persona tiene una cuenta eliminada (al registrar de nuevo su documento, se reactiva). */
+	public boolean cuentaEliminada(UUID personaId) {
+		return usuarios.findByPersonaId(personaId).map(Usuario::isEliminado).orElse(false);
+	}
+
 	/** HU-9: edición de datos personales y roles (RF-22, RF-23). */
 	@Transactional
 	public UsuarioDetalle actualizar(UUID id, SolicitudUsuario solicitud) {
@@ -172,7 +184,22 @@ public class ServicioUsuarios {
 	@Transactional
 	public void eliminar(UUID id, UUID solicitante) {
 		evitarSobreSiMismo(id, solicitante, "eliminar");
-		obtener(id).eliminar();
+		Usuario usuario = obtener(id);
+		usuario.eliminar();
+		// Libera el correo para que pueda usarse en otro registro (el correo es único entre personas).
+		usuario.getPersona().setCorreo(null);
+	}
+
+	/**
+	 * Registrar de nuevo el documento de un usuario eliminado: se actualizan sus datos y se reactiva la misma cuenta
+	 * (mismo código de usuario) con roles y contraseña nuevos. Para quien registra es un alta normal.
+	 */
+	private UsuarioCreado restaurar(Usuario usuario, SolicitudUsuario solicitud) {
+		Persona persona = personas.actualizar(usuario.getPersona(), solicitud.persona());
+		String contrasena = GeneradorCredenciales.contrasena();
+		usuario.restaurar(contrasenas.encode(contrasena), EnumSet.copyOf(solicitud.roles()));
+		notificador.enviar(persona.getCorreo(), persona.getNombres(), usuario.getNombreUsuario(), contrasena);
+		return new UsuarioCreado(usuario.getId(), usuario.getNombreUsuario(), persona.getCorreo(), usuario.getEstado());
 	}
 
 	@Transactional(readOnly = true)

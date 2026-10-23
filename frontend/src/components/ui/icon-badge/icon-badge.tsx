@@ -13,6 +13,7 @@ const iconBadgeVariants = cva(
         'accent-secondary':
           'bg-surface-accent-light text-content-accent-secondary',
         success: 'bg-surface-success-light text-content-success',
+        turquoise: 'bg-turquoise-50 text-turquoise-600',
         warning: 'bg-surface-warning-light text-content-warning',
         error: 'bg-surface-error-light text-content-error',
         neutral: 'bg-surface-tertiary text-content-quartiary',

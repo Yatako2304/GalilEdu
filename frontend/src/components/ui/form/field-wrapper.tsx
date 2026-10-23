@@ -12,22 +12,25 @@ type FieldWrapperProps = {
   className?: string;
   children: React.ReactNode;
   error?: FieldError | undefined;
+  /** Va entre el campo y su mensaje de ayuda o error, fuera de la etiqueta (por ejemplo, el contador de Textarea). */
+  afterField?: React.ReactNode;
 };
 
 export type FieldWrapperPassThroughProps = Omit<
   FieldWrapperProps,
-  'className' | 'children'
+  'className' | 'children' | 'afterField'
 >;
 
 // Figma > Componentes > Text Field: label (12px) + campo + mensaje de ayuda/error.
 export const FieldWrapper = (props: FieldWrapperProps) => {
-  const { label, hint, error, children, className } = props;
+  const { label, hint, error, children, className, afterField } = props;
   return (
     <div className={cn('flex flex-col gap-1', className)}>
       <Label>
         {label && <span className="mb-1 block">{label}</span>}
         {children}
       </Label>
+      {afterField}
       {error?.message ? (
         <Error errorMessage={error.message} />
       ) : (
@@ -69,10 +72,10 @@ export const EtiquetaFlotante = ({
     className={cn(
       'pointer-events-none absolute left-2 top-[-7px] bg-white px-2 text-label-3 font-normal transition-all',
       reposo === true &&
-        'left-2.5 top-3 px-0 text-body-3 text-content-placeholder',
+        'left-2.5 top-3 bg-transparent px-0 text-body-3 text-content-placeholder',
       reposo === 'segun-campo' && [
-        'peer-placeholder-shown:left-2.5 peer-placeholder-shown:top-3 peer-placeholder-shown:px-0 peer-placeholder-shown:text-body-3 peer-placeholder-shown:text-content-placeholder',
-        'peer-focus:left-2 peer-focus:top-[-7px] peer-focus:px-2 peer-focus:text-label-3 peer-focus:text-content-tertiary',
+        'peer-placeholder-shown:left-2.5 peer-placeholder-shown:top-3 peer-placeholder-shown:bg-transparent peer-placeholder-shown:px-0 peer-placeholder-shown:text-body-3 peer-placeholder-shown:text-content-placeholder',
+        'peer-focus:left-2 peer-focus:top-[-7px] peer-focus:bg-white peer-focus:px-2 peer-focus:text-label-3 peer-focus:text-content-tertiary',
       ],
       error ? 'text-content-error' : 'text-content-tertiary',
       className,

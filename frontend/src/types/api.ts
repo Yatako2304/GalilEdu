@@ -92,6 +92,35 @@ export type UsuarioDetalle = {
   roles: ROLES[];
   personaId: string;
   persona: DatosPersona;
+  /** Solo si tiene el rol Apoderado. Pendiente en el backend: mientras no llegue, se muestra vacío. */
+  estudiantesACargo?: EstudianteACargo[];
+  /** Solo si tiene el rol Tutor: secciones del año escolar actual. Pendiente en el backend. */
+  tutorDe?: SeccionTutoria[];
+};
+
+/** Estudiante del que la persona es padre, madre o apoderado, con los datos del vínculo de su inscripción. */
+export type EstudianteACargo = {
+  estudianteId: string;
+  nombreCompleto: string;
+  documento: string;
+  grado: string;
+  anioAcademico: number;
+  estado: EstadoEstudiante;
+  parentesco: Parentesco;
+  /** Solo si el parentesco es APODERADO ("Tío(a)", "Otro: …"). */
+  relacion: string | null;
+  viveConEstudiante: boolean;
+  tienePatriaPotestad: boolean;
+  esResponsable: boolean;
+  /** Documento que acredita al apoderado (carta poder…), si se adjuntó. */
+  acreditacion: DocumentoAdjunto | null;
+};
+
+export type SeccionTutoria = {
+  seccionId: string;
+  /** Ej.: "3.° de primaria A". */
+  seccion: string;
+  cargo: 'TUTOR' | 'COTUTOR';
 };
 
 export type SolicitudUsuario = {
@@ -242,6 +271,8 @@ export type PersonaEncontrada = {
   personaId: string;
   persona: DatosPersona;
   tieneCuenta: boolean;
+  /** Su cuenta de usuario está eliminada: en "Nuevo usuario" se puede volver a registrar. */
+  cuentaEliminada: boolean;
   estudiantesACargo: string[];
 };
 
@@ -866,4 +897,184 @@ export type DocenteElegible = {
   id: string;
   nombre: string;
   esTutorEsteAnio: boolean;
+};
+
+// ---------- Configuración · Periodo de matrícula (HU-23) ----------
+// Backend: configuracion/aplicacion/DtosPeriodoMatricula.java. Las fechas llegan como yyyy-mm-dd, las horas como
+// HH:mm:ss y `inicio`/`cierre` del listado como instantes UTC (ISO). `PeriodoMatricula` es el de P4 (apoderado).
+
+/** Lo calcula el backend con su reloj: PROGRAMADO, ABIERTO o CERRADO. */
+export type EstadoVisiblePeriodoMatricula =
+  'PROGRAMADO' | 'ABIERTO' | 'CERRADO';
+
+/** Fila del listado de la pantalla 13. `vigente`: es el periodo que devuelve /vigente. */
+export type FilaPeriodoMatricula = {
+  id: string;
+  nombre: string;
+  anioEscolarId: string;
+  anio: number;
+  inicio: string;
+  cierre: string;
+  matriculas: number;
+  estado: EstadoVisiblePeriodoMatricula;
+  vigente: boolean;
+};
+
+/** Tarjeta "Vigente": el periodo ABIERTO ahora o, si no hay, el próximo PROGRAMADO. */
+export type PeriodoMatriculaVigente = {
+  id: string;
+  anioEscolarId: string;
+  anio: number;
+  nombre: string;
+  inicio: string;
+  cierre: string;
+  estado: EstadoVisiblePeriodoMatricula;
+  bloquearPorMorosidad: boolean;
+  permitirExtemporanea: boolean;
+  vacantesTotales: number;
+  matriculasRegistradas: number;
+};
+
+/** Años PLANIFICADO o ACTIVO que aún no tienen periodo de matrícula. */
+export type AnioDisponibleMatricula = {
+  id: string;
+  anio: number;
+  estado: EstadoAnioEscolar;
+};
+
+/** Fila de "Vacantes por grado y sección". `tutor` es null si la sección no lo tiene. */
+export type SeccionVacante = {
+  seccionId: string;
+  etiqueta: string;
+  gradoCodigo: string;
+  gradoNombre: string;
+  tutor: string | null;
+  capacidad: number;
+  alumnosOcupanVacante: number;
+};
+
+export type DocumentoRequeridoVista = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  orden: number;
+  tienePlantilla: boolean;
+  plantillaNombreArchivo: string | null;
+  tieneEntregas: boolean;
+};
+
+/**
+ * El formulario de la pantalla 13: vacío (GET /nuevo), para editar o en solo lectura (GET /{id}). `id`, `estado`,
+ * las fechas, las horas y `diasDelPeriodo` son null mientras el periodo no existe. `montoMatricula` es null si
+ * `tarifarioConfirmado` es false.
+ */
+export type FormularioPeriodoMatricula = {
+  id: string | null;
+  anioEscolarId: string;
+  anio: number;
+  titulo: string;
+  estado: EstadoVisiblePeriodoMatricula | null;
+  editable: boolean;
+  eliminable: boolean;
+  fechaInicio: string | null;
+  horaInicio: string | null;
+  fechaCierre: string | null;
+  horaCierre: string | null;
+  diasDelPeriodo: number | null;
+  montoMatricula: number | null;
+  tarifarioConfirmado: boolean;
+  vacantesTotales: number;
+  matriculasRegistradas: number;
+  cantidadSecciones: number;
+  resumenSecciones: string;
+  bloquearPorMorosidad: boolean;
+  permitirExtemporanea: boolean;
+  secciones: SeccionVacante[];
+  documentos: DocumentoRequeridoVista[];
+};
+
+export type VacanteSolicitud = { seccionId: string; capacidad: number };
+
+/** `id` va solo en un documento que ya existe (al editar); uno nuevo no lo lleva. */
+export type DocumentoSolicitud = {
+  id?: string | null;
+  nombre: string;
+  descripcion?: string | null;
+};
+
+/** "Guardar configuración" (POST) y editar (PUT). Fechas y horas son de Lima: "2026-12-01" y "10:00". */
+export type SolicitudPeriodoMatricula = {
+  /** Solo al crear: un periodo no cambia de año. */
+  anioEscolarId?: string | null;
+  fechaInicio: string;
+  horaInicio: string;
+  fechaCierre: string;
+  horaCierre: string;
+  vacantes: VacanteSolicitud[];
+  documentos: DocumentoSolicitud[];
+};
+
+// ---------- Configuración · Tarifario y calendario (HU-34) ----------
+// Backend: configuracion/aplicacion/DtosConfiguracion.java (`TarifarioVista`, `SolicitudTarifario`). Los montos y los
+// porcentajes llegan como número; las fechas, como yyyy-mm-dd.
+
+/** EN_CONFIGURACION: el año aún no tiene tarifario confirmado (o es una propuesta); CONFIRMADO: Pagos ya lo puede usar. */
+export type EstadoTarifario = 'EN_CONFIGURACION' | 'CONFIRMADO';
+
+/** Tabla "Conceptos y montos". Los montos son null en una propuesta sin tarifario del año anterior. */
+export type ConceptosTarifario = {
+  montoCuotaIngreso: number | null;
+  montoMatricula: number | null;
+  vencimientoMatricula: string;
+  montoPension: number | null;
+  cantidadCuotas: number;
+};
+
+/** "Política de morosidad". */
+export type MorosidadTarifario = {
+  diasGracia: number | null;
+  recargoPorcentaje: number | null;
+  topeRecargoPorcentaje: number | null;
+};
+
+export type CuotaTarifarioVista = {
+  numero: number;
+  nombre: string;
+  fechaVencimiento: string;
+  monto: number | null;
+};
+
+/** "Calendario de cuotas"; `totalPensiones` es null mientras no hay monto de pensión. */
+export type CalendarioTarifario = {
+  cuotas: CuotaTarifarioVista[];
+  totalPensiones: number | null;
+};
+
+/**
+ * P19 de un año. Con `existe = false` es una propuesta que el backend no guardó (valores del año anterior o vacíos y
+ * el calendario generado con las fechas del año). `soloLectura` (año CERRADO, o tarifario CONFIRMADO con compromisos
+ * de pago) y su `motivoSoloLectura` los calcula el backend. `calendarioDesactualizado`: las fechas del año cambiaron
+ * después de confirmar y el calendario guardado ya no coincide con ellas.
+ */
+export type TarifarioVista = {
+  anioEscolarId: string;
+  anio: number;
+  existe: boolean;
+  estado: EstadoTarifario;
+  soloLectura: boolean;
+  motivoSoloLectura: string | null;
+  calendarioDesactualizado: boolean;
+  conceptos: ConceptosTarifario;
+  morosidad: MorosidadTarifario;
+  calendario: CalendarioTarifario;
+};
+
+/** "Confirmar tarifario". La cuota de ingreso es opcional; el calendario y el vencimiento los genera el backend. */
+export type SolicitudTarifario = {
+  montoCuotaIngreso: number | null;
+  montoMatricula: number;
+  montoPension: number;
+  diasGracia: number;
+  recargoPorcentaje: number;
+  topeRecargoPorcentaje: number;
 };

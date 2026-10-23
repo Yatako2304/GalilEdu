@@ -65,7 +65,34 @@ export const paths = {
         getHref: (id: string) => `${ADMINISTRATIVO}/estudiantes/${id}`,
       },
       matricula: route(ADMINISTRATIVO, 'matricula'),
+      // Periodos de matrícula (HU-23). El listado es la propia ruta `matricula`, sin `?matriculaId=`.
+      periodoMatriculaNuevo: {
+        path: 'matricula/periodos/nuevo',
+        getHref: () => `${ADMINISTRATIVO}/matricula/periodos/nuevo`,
+      },
+      periodoMatricula: {
+        path: 'matricula/periodos/:periodoId',
+        getHref: (periodoId: string) =>
+          `${ADMINISTRATIVO}/matricula/periodos/${periodoId}`,
+      },
+      periodoMatriculaEditar: {
+        path: 'matricula/periodos/:periodoId/editar',
+        getHref: (periodoId: string) =>
+          `${ADMINISTRATIVO}/matricula/periodos/${periodoId}/editar`,
+      },
+      // A3 de Matrícula (HU-24, HU-71): aún no existe ni está registrada en el router.
+      matriculasDelPeriodo: {
+        path: 'matricula/periodos/:periodoId/matriculas',
+        getHref: (periodoId: string) =>
+          `${ADMINISTRATIVO}/matricula/periodos/${periodoId}/matriculas`,
+      },
       pensiones: route(ADMINISTRATIVO, 'pensiones'),
+      // P19 · Tarifario y calendario (HU-34). Con `anioEscolarId` abre ese año; sin él, el que se está preparando.
+      tarifario: {
+        path: 'pensiones/configuracion',
+        getHref: (anioEscolarId?: string) =>
+          `${ADMINISTRATIVO}/pensiones/configuracion${anioEscolarId ? `?anioEscolarId=${anioEscolarId}` : ''}`,
+      },
       compromisoPago: {
         path: 'pensiones/:estudianteId',
         getHref: (estudianteId: string) =>

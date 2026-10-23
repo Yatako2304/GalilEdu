@@ -216,7 +216,8 @@ public class ServicioEstudiantes {
 		var aCargo = estudiantes.vinculadosA(p.getId()).stream()
 				.map(e -> e.getPersona().nombreCompleto() + " (" + e.gradoDescriptivo() + ")")
 				.toList();
-		return new PersonaEncontrada(p.getId(), DatosPersona.de(p), usuarios.tieneCuenta(p.getId()), aCargo);
+		return new PersonaEncontrada(p.getId(), DatosPersona.de(p), usuarios.tieneCuenta(p.getId()),
+				usuarios.cuentaEliminada(p.getId()), aCargo);
 	}
 
 	private VinculoFamiliar vinculo(Parentesco parentesco, DatosFamiliar d) {
