@@ -1,5 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { UserCheck } from 'lucide-react';
+import { Lock, UserCheck } from 'lucide-react';
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -32,8 +32,21 @@ import {
   useCambiarEstadoUsuario,
   useCrearUsuario,
 } from '../api/mutaciones';
+import { verificarDocumento } from '../api/verificar-documento';
 
 import { DialogoConfirmacion } from './dialogo-confirmacion';
+import { EstudiantesACargo, SeccionesTutor } from './vinculos-usuario';
+
+/**
+ * Roles que no se asignan desde aquí: Apoderado se asigna al inscribir a un estudiante y Tutor al
+ * designarlo tutor de una sección (CAHU6-33 y 34). Se muestran, pero solo de vista.
+ */
+const ROLES_SOLO_LECTURA: ROLES[] = [ROLES.APODERADO, ROLES.TUTOR];
+
+const MOTIVO_SOLO_LECTURA: Partial<Record<ROLES, string>> = {
+  [ROLES.APODERADO]: 'Se asigna al inscribir a un estudiante',
+  [ROLES.TUTOR]: 'Se asigna al designarlo tutor de una sección',
+};
 
 const esquema = z.object({
   persona: personaUsuarioSchema,
@@ -111,7 +124,15 @@ const FormularioUsuario = ({
     resolver: zodResolver(esquema) as any,
     defaultValues: usuario
       ? { persona: personaAFormulario(usuario.persona), roles: usuario.roles }
-      : { persona: personaVacia(), roles: [] },
+      : // Como en la inscripción: ningún campo trae valor por defecto (CAHU6-15).
+        {
+          persona: {
+            ...personaVacia(),
+            tipoDocumento: '' as unknown as PersonaFormValues['tipoDocumento'],
+            nacionalidad: '',
+          },
+          roles: [],
+        },
   });
   const rolesElegidos = form.watch('roles');
 
@@ -125,7 +146,39 @@ const FormularioUsuario = ({
   });
   const cambiarEstado = useCambiarEstadoUsuario(() => setConfirmar(null));
 
-  const enviar = form.handleSubmit((valores) => {
+  const [verificando, setVerificando] = React.useState(false);
+
+  /**
+   * El documento repetido se marca debajo del campo junto con los demás errores, no como notificación
+   * al guardar. Si el documento no cambió al editar, no se consulta.
+   */
+  const documentoRepetido = () => {
+    const { tipoDocumento, numeroDocumento } = form.getValues('persona');
+    if (usuario && numeroDocumento.trim() === usuario.persona.numeroDocumento) {
+      return Promise.resolve(null);
+    }
+    return verificarDocumento(tipoDocumento, numeroDocumento, modo === 'crear');
+  };
+
+  const enviar = async (evento?: React.BaseSyntheticEvent) => {
+    evento?.preventDefault();
+    setVerificando(true);
+    const repetido = documentoRepetido();
+    let valores: Valores | null = null;
+    await form.handleSubmit((v) => {
+      valores = v;
+    })(evento);
+    const error = await repetido;
+    setVerificando(false);
+    if (error) {
+      form.setError(
+        'persona.numeroDocumento',
+        { type: 'repetido', message: error },
+        { shouldFocus: !!valores },
+      );
+      return;
+    }
+    if (!valores) return;
     if (modo === 'editar') {
       setConfirmar({ tipo: 'guardar', datos: valores });
       return;
@@ -135,9 +188,10 @@ const FormularioUsuario = ({
       persona: datos.persona as DatosPersona,
       roles: datos.roles,
     });
-  });
+  };
 
   const alternarRol = (rol: ROLES) => {
+    if (ROLES_SOLO_LECTURA.includes(rol)) return;
     const actuales = form.getValues('roles');
     form.setValue(
       'roles',
@@ -208,6 +262,14 @@ const FormularioUsuario = ({
             errors={form.formState.errors}
             prefix="persona"
             disabled={soloLectura}
+            conPaisDeNacimiento
+            tipoDocumento={form.watch('persona.tipoDocumento')}
+            onTipoDocumentoChange={(filtrar) =>
+              form.setValue(
+                'persona.numeroDocumento',
+                filtrar(form.getValues('persona.numeroDocumento')),
+              )
+            }
           />
         </section>
 
@@ -218,20 +280,27 @@ const FormularioUsuario = ({
           <div className="flex flex-wrap gap-2">
             {(roles.data ?? []).map((rol) => {
               const elegido = rolesElegidos.includes(rol.codigo);
+              const bloqueado = ROLES_SOLO_LECTURA.includes(rol.codigo);
               return (
                 <button
                   key={rol.codigo}
                   type="button"
-                  disabled={soloLectura}
+                  disabled={soloLectura || bloqueado}
                   aria-pressed={elegido}
+                  title={MOTIVO_SOLO_LECTURA[rol.codigo]}
                   onClick={() => alternarRol(rol.codigo)}
                   className={cn(
-                    'rounded-full border px-3 py-1 text-body-4 transition-colors disabled:cursor-default',
+                    'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-body-4 transition-colors disabled:cursor-default',
                     elegido
                       ? 'border-transparent bg-deep-blue-800 text-white'
-                      : 'border-stroke-accent-primary bg-white text-content-accent-secondary hover:bg-surface-accent-light',
+                      : 'border-stroke-accent-primary bg-white text-content-accent-secondary',
+                    !elegido && !bloqueado && 'hover:bg-surface-accent-light',
+                    bloqueado &&
+                      !soloLectura &&
+                      'cursor-not-allowed opacity-60',
                   )}
                 >
+                  {bloqueado && <Lock className="size-3" aria-hidden="true" />}
                   {rol.nombre}
                 </button>
               );
@@ -243,6 +312,13 @@ const FormularioUsuario = ({
             </p>
           )}
         </section>
+
+        {usuario?.roles.includes(ROLES.APODERADO) && (
+          <EstudiantesACargo estudiantes={usuario.estudiantesACargo} />
+        )}
+        {usuario?.roles.includes(ROLES.TUTOR) && (
+          <SeccionesTutor secciones={usuario.tutorDe} />
+        )}
       </form>
 
       <div className="flex items-center justify-between gap-3 border-t border-stroke-tertiary px-6 py-4">
@@ -265,7 +341,7 @@ const FormularioUsuario = ({
             <Button
               type="submit"
               form="form-usuario"
-              isLoading={crear.isPending}
+              isLoading={crear.isPending || verificando}
             >
               Guardar
             </Button>

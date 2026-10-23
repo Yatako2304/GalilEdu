@@ -96,9 +96,12 @@ public final class DtosEstudiantes {
 			int anioAcademico, SituacionEstudiante estado, String responsable) {
 	}
 
-	/** Respuesta de "Buscar por documento" del paso 3. */
+	/**
+	 * Respuesta de "Buscar por documento" del paso 3. {@code cuentaEliminada}: su cuenta de usuario está
+	 * eliminada; "Nuevo usuario" la usa para dejar volver a registrar ese documento.
+	 */
 	public record PersonaEncontrada(UUID personaId, DatosPersona persona, boolean tieneCuenta,
-			List<String> estudiantesACargo) {
+			boolean cuentaEliminada, List<String> estudiantesACargo) {
 	}
 
 	public record FichaEstudiante(UUID id, SituacionEstudiante estado, String grado, int anioAcademico,
