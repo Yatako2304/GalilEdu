@@ -63,16 +63,19 @@ export const Grilla = ({
 export const SiNo = ({
   pregunta,
   registration,
+  orden = ['SI', 'NO'],
 }: {
   pregunta: string;
   registration: UseFormRegisterReturn;
+  /** Orden de los radios; Figma lo cambia según la pantalla (ej. "No, Sí" en discapacidad). */
+  orden?: readonly ['SI', 'NO'] | readonly ['NO', 'SI'];
 }) => (
   <fieldset className="flex flex-col gap-2">
     <legend className="mb-1 text-body-4 text-content-secondary">
       {pregunta}
     </legend>
     <div className="flex gap-6">
-      {(['SI', 'NO'] as const).map((v) => (
+      {orden.map((v) => (
         <Radio
           key={v}
           value={v}
