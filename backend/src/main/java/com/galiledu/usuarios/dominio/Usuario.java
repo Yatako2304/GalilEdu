@@ -131,6 +131,19 @@ public class Usuario {
 		estado = EstadoUsuario.INACTIVO;
 	}
 
+	/**
+	 * Vuelve a activar una cuenta eliminada cuando se registra otra vez a la misma persona (mismo documento):
+	 * conserva su código de usuario e historial, con contraseña y roles nuevos.
+	 */
+	public void restaurar(String contrasenaHash, Set<Rol> nuevosRoles) {
+		eliminado = false;
+		estado = EstadoUsuario.ACTIVO;
+		intentosFallidos = 0;
+		bloqueadoHasta = null;
+		this.contrasenaHash = contrasenaHash;
+		reemplazarRoles(nuevosRoles);
+	}
+
 	public void agregarRol(Rol rol) {
 		roles.add(rol);
 	}

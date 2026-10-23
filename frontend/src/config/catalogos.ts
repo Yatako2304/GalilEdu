@@ -32,16 +32,8 @@ export const GRADOS_INSTRUCCION = opciones([
   'Posgrado',
 ]);
 
-export const NACIONALIDADES = opciones([
-  'Peruana',
-  'Venezolana',
-  'Colombiana',
-  'Argentina',
-  'Chilena',
-  'Ecuatoriana',
-  'Boliviana',
-  'Otra',
-]);
+/** Igual que en la inscripción del estudiante (HU-7): solo se distingue entre peruano y extranjero. */
+export const NACIONALIDADES = opciones(['Peruana', 'Extranjera']);
 
 /** Paso 1 de la inscripción: solo se distingue entre peruano y extranjero. */
 export const NACIONALIDADES_ESTUDIANTE = opciones(['Peruana', 'Extranjera']);

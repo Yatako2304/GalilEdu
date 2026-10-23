@@ -6,9 +6,16 @@ import {
   ESTADOS_CIVILES,
   GRADOS_INSTRUCCION,
   NACIONALIDADES,
+  PAISES,
   SEXOS,
   TIPOS_DOCUMENTO,
 } from '@/config/catalogos';
+import {
+  restringir,
+  soloAlfanumerico,
+  soloDigitos,
+  soloLetras,
+} from '@/utils/restringir-entrada';
 
 type PersonaFieldsProps = {
   // El formulario contenedor puede tener cualquier forma; los campos viven en `prefix`.
@@ -23,7 +30,20 @@ type PersonaFieldsProps = {
   sinDatosLaborales?: boolean;
   /** Oculta el documento (cuando se muestra aparte, ej. con botón "Buscar"). */
   sinDocumento?: boolean;
+  /** Tipo de documento elegido: con DNI solo se escriben 8 dígitos; si no, hasta 12 letras y números. */
+  tipoDocumento?: string;
+  /**
+   * Se llama al cambiar el tipo de documento, con el número ya filtrado para el tipo nuevo
+   * (igual que la inscripción). Si se pasa, el número queda deshabilitado hasta elegir el tipo.
+   */
+  onTipoDocumentoChange?: (numeroFiltrado: (numero: string) => string) => void;
+  /** Formulario de usuario: "Lugar de nacimiento" se pide como "País de nacimiento" con la lista de países. */
+  conPaisDeNacimiento?: boolean;
 };
+
+/** DNI: solo 8 dígitos; carné de extranjería: letras y números, hasta 12 (CAHU6-6). */
+export const filtroDocumento = (tipo?: string) =>
+  tipo === 'DNI' ? soloDigitos(8) : soloAlfanumerico(12);
 
 const obtenerError = (errors: FieldErrors | undefined, ruta: string) =>
   ruta
@@ -39,12 +59,23 @@ export const PersonaFields = ({
   disabled,
   sinDatosLaborales,
   sinDocumento,
+  tipoDocumento,
+  onTipoDocumentoChange,
+  conPaisDeNacimiento,
 }: PersonaFieldsProps) => {
   const campo = (nombre: string) => ({
     registration: register(`${prefix}.${nombre}`),
     error: obtenerError(errors, `${prefix}.${nombre}`),
     disabled,
   });
+
+  // Los campos no dejan escribir caracteres no permitidos (CAHU6-6, 10, 12, 21 y 24).
+  const filtrado = (nombre: string, filtro: (valor: string) => string) => {
+    const base = campo(nombre);
+    return { ...base, registration: restringir(base.registration, filtro) };
+  };
+  const tipoCampo = campo('tipoDocumento');
+  const esperaTipo = !!onTipoDocumentoChange && !tipoDocumento;
 
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -53,21 +84,37 @@ export const PersonaFields = ({
           <Select
             label="Tipo de documento"
             options={TIPOS_DOCUMENTO}
-            {...campo('tipoDocumento')}
+            placeholder="Selecciona"
+            {...tipoCampo}
+            registration={{
+              ...tipoCampo.registration,
+              onChange: (evento) => {
+                onTipoDocumentoChange?.(filtroDocumento(evento.target.value));
+                return tipoCampo.registration.onChange(evento);
+              },
+            }}
           />
           <Input
             label="N.° de documento"
-            inputMode="numeric"
-            {...campo('numeroDocumento')}
+            inputMode={tipoDocumento === 'DNI' ? 'numeric' : 'text'}
+            maxLength={tipoDocumento === 'DNI' ? 8 : 12}
+            {...filtrado('numeroDocumento', filtroDocumento(tipoDocumento))}
+            disabled={disabled || esperaTipo}
           />
         </>
       )}
-      <Input label="Apellido paterno" {...campo('apellidoPaterno')} />
-      <Input label="Apellido materno" {...campo('apellidoMaterno')} />
+      <Input
+        label="Apellido paterno"
+        {...filtrado('apellidoPaterno', soloLetras(80))}
+      />
+      <Input
+        label="Apellido materno"
+        {...filtrado('apellidoMaterno', soloLetras(80))}
+      />
       <Input
         label="Nombres"
         wrapperClassName="md:col-span-2"
-        {...campo('nombres')}
+        {...filtrado('nombres', soloLetras(120))}
       />
       <Input
         label="Fecha de nacimiento"
@@ -80,7 +127,16 @@ export const PersonaFields = ({
         placeholder="Selecciona"
         {...campo('nacionalidad')}
       />
-      <Input label="Lugar de nacimiento" {...campo('lugarNacimiento')} />
+      {conPaisDeNacimiento ? (
+        <Select
+          label="País de nacimiento"
+          options={PAISES}
+          placeholder="Selecciona"
+          {...campo('lugarNacimiento')}
+        />
+      ) : (
+        <Input label="Lugar de nacimiento" {...campo('lugarNacimiento')} />
+      )}
       <Select
         label="Sexo"
         options={SEXOS}
@@ -105,12 +161,16 @@ export const PersonaFields = ({
       )}
       <Input
         label="Celular"
-        inputMode="tel"
-        placeholder="987 111 222"
-        {...campo('celular')}
+        inputMode="numeric"
+        placeholder="987111222"
+        {...filtrado('celular', soloDigitos(9))}
       />
       <Input label="Correo electrónico" type="email" {...campo('correo')} />
-      <Input label="Teléfono de casa" {...campo('telefonoCasa')} />
+      <Input
+        label="Teléfono de casa"
+        inputMode="numeric"
+        {...filtrado('telefonoCasa', soloDigitos(15))}
+      />
       {!sinDatosLaborales && (
         <>
           <Input label="Profesión u ocupación" {...campo('profesion')} />

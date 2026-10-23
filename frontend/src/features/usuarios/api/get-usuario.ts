@@ -14,6 +14,17 @@ export const useUsuario = (id: string | null) =>
     enabled: !!id,
   });
 
+// GET /estudiantes/{id}/apoderado/documento: abre en otra pestaña el documento que acredita al apoderado.
+export const abrirDocumentoAcreditacion = async (estudianteId: string) => {
+  const archivo: Blob = await api.get(
+    `/estudiantes/${estudianteId}/apoderado/documento`,
+    { responseType: 'blob' },
+  );
+  const url = URL.createObjectURL(archivo);
+  window.open(url, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+};
+
 // GET /usuarios/resumen (Inicio del administrador)
 export const getResumenUsuariosQueryOptions = () =>
   queryOptions({

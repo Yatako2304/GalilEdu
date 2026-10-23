@@ -92,6 +92,35 @@ export type UsuarioDetalle = {
   roles: ROLES[];
   personaId: string;
   persona: DatosPersona;
+  /** Solo si tiene el rol Apoderado. Pendiente en el backend: mientras no llegue, se muestra vacío. */
+  estudiantesACargo?: EstudianteACargo[];
+  /** Solo si tiene el rol Tutor: secciones del año escolar actual. Pendiente en el backend. */
+  tutorDe?: SeccionTutoria[];
+};
+
+/** Estudiante del que la persona es padre, madre o apoderado, con los datos del vínculo de su inscripción. */
+export type EstudianteACargo = {
+  estudianteId: string;
+  nombreCompleto: string;
+  documento: string;
+  grado: string;
+  anioAcademico: number;
+  estado: EstadoEstudiante;
+  parentesco: Parentesco;
+  /** Solo si el parentesco es APODERADO ("Tío(a)", "Otro: …"). */
+  relacion: string | null;
+  viveConEstudiante: boolean;
+  tienePatriaPotestad: boolean;
+  esResponsable: boolean;
+  /** Documento que acredita al apoderado (carta poder…), si se adjuntó. */
+  acreditacion: DocumentoAdjunto | null;
+};
+
+export type SeccionTutoria = {
+  seccionId: string;
+  /** Ej.: "3.° de primaria A". */
+  seccion: string;
+  cargo: 'TUTOR' | 'COTUTOR';
 };
 
 export type SolicitudUsuario = {
@@ -242,6 +271,8 @@ export type PersonaEncontrada = {
   personaId: string;
   persona: DatosPersona;
   tieneCuenta: boolean;
+  /** Su cuenta de usuario está eliminada: en "Nuevo usuario" se puede volver a registrar. */
+  cuentaEliminada: boolean;
   estudiantesACargo: string[];
 };
 

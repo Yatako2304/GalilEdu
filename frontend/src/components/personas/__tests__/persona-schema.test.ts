@@ -59,21 +59,121 @@ describe('personaSchema (RF-12)', () => {
   });
 });
 
-describe('personaUsuarioSchema (HU-6: la cuenta necesita correo y celular)', () => {
-  test('exige correo y celular', () => {
-    const r = personaUsuarioSchema.safeParse(base());
+describe('personaUsuarioSchema (HU-6, criterios CAHU6-*)', () => {
+  const completo = () => ({
+    ...base(),
+    fechaNacimiento: '1990-04-12',
+    nacionalidad: 'Peruana',
+    lugarNacimiento: 'Perú',
+    sexo: 'FEMENINO' as const,
+    estadoCivil: 'Soltero(a)',
+    gradoInstruccion: 'Superior universitaria',
+    celular: '987111222',
+    correo: 'jorge.quispe@gmail.com',
+    profesion: 'Contador',
+    centroTrabajo: 'Galiledu',
+    cargo: 'Docente',
+    distrito: 'San Miguel',
+    direccion: 'Av. La Marina 123',
+  });
+
+  test('acepta los datos completos', () => {
+    expect(personaUsuarioSchema.safeParse(completo()).success).toBe(true);
+  });
+
+  test('exige todos los campos salvo apellido materno, teléfono de casa y exalumno', () => {
+    const r = personaUsuarioSchema.safeParse({
+      ...personaVacia(),
+      tipoDocumento: '',
+      nacionalidad: '',
+    });
     expect(errores(r)).toEqual(
       expect.arrayContaining([
+        'Selecciona el tipo de documento',
+        'Ingresa el número de documento',
+        'Ingresa el apellido paterno',
+        'Ingresa los nombres',
+        'Ingresa la fecha de nacimiento',
+        'Selecciona la nacionalidad',
+        'Selecciona el país de nacimiento',
+        'Selecciona el sexo',
+        'Selecciona el estado civil',
+        'Selecciona el grado de instrucción',
         'Ingresa el celular',
         'Ingresa el correo electrónico',
+        'Ingresa la profesión u ocupación',
+        'Ingresa el centro de trabajo',
+        'Ingresa el cargo',
+        'Selecciona el distrito',
+        'Ingresa la dirección',
+      ]),
+    );
+    expect(errores(r)).not.toContain('Ingresa el apellido materno');
+  });
+
+  test('muestra el error del DNI aunque falten otros campos', () => {
+    const r = personaUsuarioSchema.safeParse({
+      ...personaVacia(),
+      numeroDocumento: '3',
+    });
+    expect(errores(r)).toEqual(
+      expect.arrayContaining([
+        'El DNI debe tener 8 dígitos',
+        'Ingresa el apellido paterno',
       ]),
     );
   });
 
+  test('apellido materno y teléfono de casa son opcionales', () => {
+    const r = personaUsuarioSchema.safeParse({
+      ...completo(),
+      apellidoMaterno: '',
+      telefonoCasa: '',
+    });
+    expect(r.success).toBe(true);
+  });
+
+  test('la fecha de nacimiento debe ser pasada', () => {
+    const manana = new Date(Date.now() + 86_400_000).toLocaleDateString(
+      'en-CA',
+    );
+    expect(
+      errores(
+        personaUsuarioSchema.safeParse({
+          ...completo(),
+          fechaNacimiento: manana,
+        }),
+      ),
+    ).toContain('La fecha de nacimiento debe ser pasada');
+  });
+
+  test.each([
+    'anagmail.com',
+    'ana@@gmail.com',
+    '@gmail.com',
+    'ana@',
+    'ana@gmail',
+    'ana perez@gmail.com',
+  ])('rechaza el correo inválido %s', (correo) => {
+    expect(
+      errores(personaUsuarioSchema.safeParse({ ...completo(), correo })),
+    ).toContain('Ingresa un correo válido');
+  });
+
+  test('el teléfono de casa solo acepta números', () => {
+    expect(
+      errores(
+        personaUsuarioSchema.safeParse({
+          ...completo(),
+          telefonoCasa: '01-452',
+        }),
+      ),
+    ).toContain('El teléfono de casa solo puede contener números');
+  });
+
   test('guarda el correo en minúsculas', () => {
     const r = personaUsuarioSchema.safeParse({
-      ...base(),
-      celular: '987111222',
+      ...completo(),
       correo: 'Jorge.Quispe@Gmail.com',
     });
     expect(r.success && r.data.correo).toBe('jorge.quispe@gmail.com');
