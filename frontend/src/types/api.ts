@@ -1092,3 +1092,123 @@ export type SolicitudTarifario = {
   recargoPorcentaje: number;
   topeRecargoPorcentaje: number;
 };
+
+// ---------- Configuración · Estructura horaria (HU-44) ----------
+// Backend: configuracion/aplicacion/DtosEstructurasHorarias.java. Las horas viajan como "HH:mm". Los días se guardan por
+// su código de 3 letras (el `DiaSemana` de Horarios, más arriba, es otro: de LUNES a VIERNES).
+
+/** Día lectivo de una estructura horaria: LUN a SAB. */
+export type DiaLectivo = 'LUN' | 'MAR' | 'MIE' | 'JUE' | 'VIE' | 'SAB';
+
+/** Un receso del formulario: después de qué bloque va y cuánto dura. */
+export type SolicitudReceso = { despuesDeBloque: number; duracionMin: number };
+
+/**
+ * Cuerpo de crear ("Modal - Nueva estructura horaria"). El nivel y `esPrincipal` no están en Figma pero la BD los exige.
+ * La primera estructura de un nivel nace principal aunque `esPrincipal` sea false.
+ */
+export type SolicitudEstructuraHoraria = {
+  codigo: string;
+  descripcion: string | null;
+  nivel: Nivel;
+  esPrincipal: boolean;
+  diasLectivos: DiaLectivo[];
+  horaEntrada: string;
+  bloquesPorDia: number;
+  duracionBloqueMin: number;
+  recesos: SolicitudReceso[];
+};
+
+/**
+ * El mismo cuerpo de crear, pero con el formulario a medio llenar: la vista previa lo acepta así (lo que falta se toma
+ * como 0 o vacío) y responde con la lista de errores en vez de un 400.
+ */
+export type SolicitudVistaPrevia = {
+  codigo: string | null;
+  descripcion: string | null;
+  nivel: Nivel | null;
+  esPrincipal: boolean | null;
+  diasLectivos: DiaLectivo[];
+  horaEntrada: string | null;
+  bloquesPorDia: number | null;
+  duracionBloqueMin: number | null;
+  recesos: { despuesDeBloque: number | null; duracionMin: number | null }[];
+};
+
+/**
+ * Cuerpo de editar: lo mismo que crear, sin `nivel` (no se cambia). `esPrincipal` es opcional: ausente conserva la
+ * marca, true marca esta como principal y false sobre la principal da 409. Los recesos reemplazan a los anteriores.
+ */
+export type SolicitudEdicionEstructuraHoraria = {
+  codigo: string;
+  descripcion: string | null;
+  esPrincipal?: boolean;
+  diasLectivos: DiaLectivo[];
+  horaEntrada: string;
+  bloquesPorDia: number;
+  duracionBloqueMin: number;
+  recesos: SolicitudReceso[];
+};
+
+/** Un receso guardado. */
+export type RecesoResumen = { despuesDeBloque: number; duracionMin: number };
+
+/** Tarjeta de la lista de CI-12. `esPrincipal` marca la que se usa para su nivel. */
+export type EstructuraHorariaResumen = {
+  id: string;
+  codigo: string;
+  descripcion: string | null;
+  nivel: Nivel;
+  esPrincipal: boolean;
+  diasLectivos: DiaLectivo[];
+  horaEntrada: string;
+  horaSalida: string;
+  bloquesPorDia: number;
+  duracionBloqueMin: number;
+  recesos: RecesoResumen[];
+  bloquesPorSemana: number;
+};
+
+/** La lista de CI-12. `anioModificable` es true solo con el año PLANIFICADO: si no, "+ Nueva", Editar y Eliminar. */
+export type EstructurasHorariasDelAnio = {
+  anioModificable: boolean;
+  estructuras: EstructuraHorariaResumen[];
+};
+
+/** Una fila de la jornada: BLOQUE (con su número) o RECESO (sin número), con inicio, fin y duración. */
+export type FilaJornadaResumen = {
+  tipo: 'BLOQUE' | 'RECESO';
+  numero: number | null;
+  inicio: string;
+  fin: string;
+  duracionMin: number;
+};
+
+/** CI-12 · Jornada semanal: la tarjeta más la jornada de un día (igual cada día lectivo), calculada y no guardada. */
+export type DetalleEstructuraHoraria = EstructuraHorariaResumen & {
+  anioModificable: boolean;
+  jornada: FilaJornadaResumen[];
+};
+
+/** Respuesta de crear y editar: la estructura guardada y las advertencias para el usuario (lista vacía si no hay). */
+export type EstructuraGuardada = {
+  estructura: DetalleEstructuraHoraria;
+  advertencias: string[];
+};
+
+/** La jornada calculada de la vista previa. */
+export type JornadaCalculada = {
+  filas: FilaJornadaResumen[];
+  horaSalida: string;
+  bloquesPorSemana: number;
+};
+
+/**
+ * "Vista previa de la jornada" del modal. `errores` trae todos los problemas del formulario. `jornada` viene aunque
+ * pase de las 18:00 (para mostrar la salida real) y es null si faltan datos para calcularla.
+ */
+export type VistaPreviaJornada = {
+  valida: boolean;
+  errores: string[];
+  jornada: JornadaCalculada | null;
+};
