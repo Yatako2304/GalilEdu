@@ -134,6 +134,14 @@ export const createAppRouter = (
                 import('./routes/app/administrativo/periodo-matricula-editar'),
             ],
             [
+              paths.app.administrativo.matriculasDelPeriodo.path,
+              () => import('./routes/app/administrativo/matriculas-periodo'),
+            ],
+            [
+              paths.app.administrativo.matriculaDetalle.path,
+              () => import('./routes/app/administrativo/matricula-detalle'),
+            ],
+            [
               paths.app.administrativo.pensiones.path,
               () => import('./routes/app/administrativo/pensiones'),
             ],
