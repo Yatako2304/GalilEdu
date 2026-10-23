@@ -5,6 +5,7 @@ import { UseFormRegisterReturn } from 'react-hook-form';
 import { cn } from '@/utils/cn';
 
 import {
+  EtiquetaFlotante,
   FieldWrapper,
   FieldWrapperPassThroughProps,
   fieldClassName,
@@ -13,6 +14,8 @@ import {
 export type SelectOption = {
   label: React.ReactNode;
   value: string | number;
+  /** Se ve, pero no se puede elegir (por ejemplo, un docente que ya es tutor de otra sección). */
+  disabled?: boolean;
 };
 
 type SelectFieldProps = FieldWrapperPassThroughProps &
@@ -102,6 +105,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
     };
 
     const elegir = (opcion: SelectOption) => {
+      if (opcion.disabled) return;
       const select = nativo.current;
       if (select) {
         select.value = String(opcion.value);
@@ -110,6 +114,14 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
         setValor(select.value);
       }
       setAbierto(false);
+    };
+
+    // La opción habilitada más cercana en esa dirección; si no hay, se queda donde está.
+    const vecina = (desde: number, paso: 1 | -1) => {
+      for (let i = desde + paso; i >= 0 && i < items.length; i += paso) {
+        if (!items[i].disabled) return i;
+      }
+      return desde;
     };
 
     const alTeclear = (e: React.KeyboardEvent) => {
@@ -122,10 +134,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
       }
       if (e.key === 'ArrowDown') {
         e.preventDefault();
-        setActivo((i) => Math.min(i + 1, items.length - 1));
+        setActivo((i) => vecina(i, 1));
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
-        setActivo((i) => Math.max(i - 1, 0));
+        setActivo((i) => vecina(i, -1));
       } else if (e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
         if (items[activo]) elegir(items[activo]);
@@ -135,12 +147,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
     };
 
     return (
-      <FieldWrapper
-        label={label}
-        hint={hint}
-        error={error}
-        className={wrapperClassName}
-      >
+      <FieldWrapper hint={hint} error={error} className={wrapperClassName}>
         <div ref={contenedor} className="relative">
           <select
             tabIndex={-1}
@@ -156,8 +163,8 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
                 {placeholder}
               </option>
             )}
-            {options.map(({ label, value }) => (
-              <option key={String(value)} value={value}>
+            {options.map(({ label, value, disabled }) => (
+              <option key={String(value)} value={value} disabled={disabled}>
                 {label}
               </option>
             ))}
@@ -183,6 +190,15 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
           >
             <span className="truncate">{elegido?.label ?? placeholder}</span>
           </button>
+          {label && (
+            // Sin elegir nada, cerrado y sin placeholder, la etiqueta descansa dentro como el placeholder.
+            <EtiquetaFlotante
+              error={!!error}
+              reposo={!elegido && !abierto && !placeholder}
+            >
+              {label}
+            </EtiquetaFlotante>
+          )}
           <ChevronDown
             className={cn(
               'pointer-events-none absolute right-3 top-[22px] size-4 -translate-y-1/2 text-content-tertiary transition-transform',
@@ -195,7 +211,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
               ref={lista}
               id={id}
               role="listbox"
-              className="absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-stroke-secondary bg-surface-primary p-1 shadow-card"
+              className="absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-stroke-secondary bg-surface-primary p-1 shadow-card-elevation"
             >
               {items.map((opcion, i) => {
                 const seleccionada = String(opcion.value) === valor;
@@ -207,13 +223,18 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
                     id={`${id}-${i}`}
                     role="option"
                     aria-selected={seleccionada}
+                    aria-disabled={opcion.disabled || undefined}
                     data-indice={i}
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => elegir(opcion)}
-                    onMouseEnter={() => setActivo(i)}
+                    onMouseEnter={() => !opcion.disabled && setActivo(i)}
                     className={cn(
-                      'flex cursor-pointer items-center gap-2 rounded px-2 py-3 text-label-2 text-content-secondary',
+                      'flex items-center gap-2 rounded px-2 py-3 text-label-2 text-content-secondary',
+                      opcion.disabled
+                        ? 'cursor-not-allowed text-content-disabled-alt'
+                        : 'cursor-pointer',
                       i === activo &&
+                        !opcion.disabled &&
                         'bg-surface-primary-hover text-content-primary',
                     )}
                   >

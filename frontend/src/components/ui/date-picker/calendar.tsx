@@ -37,6 +37,35 @@ const FORMATO = 'YYYY-MM-DD';
 
 type Vista = 'dias' | 'meses' | 'anios';
 
+/** `md` es el Date picker de Figma. `sm` es una versión compacta (no está en Figma) para modales con varios campos. */
+export type CalendarSize = 'md' | 'sm';
+
+// Cada tamaño con sus clases completas (Tailwind solo genera clases escritas enteras).
+const TAMANOS = {
+  md: {
+    caja: 'gap-2 p-6',
+    titulo: 'text-h6',
+    flecha: 'p-2',
+    iconoFlecha: 'size-6',
+    iconoTitulo: 'size-5',
+    cuadricula: 'gap-x-5 gap-y-2',
+    celda: 'size-8',
+    opcion: 'w-20 p-2',
+    anios: 'h-[168px] w-[280px]',
+  },
+  sm: {
+    caja: 'gap-1 p-4',
+    titulo: 'text-label-1',
+    flecha: 'p-1',
+    iconoFlecha: 'size-5',
+    iconoTitulo: 'size-4',
+    cuadricula: 'gap-x-3 gap-y-1',
+    celda: 'size-7',
+    opcion: 'w-16 p-1.5',
+    anios: 'h-[140px] w-[220px]',
+  },
+} as const;
+
 export type CalendarProps = {
   /** Fecha elegida en formato YYYY-MM-DD. */
   value?: string | null;
@@ -44,6 +73,8 @@ export type CalendarProps = {
   /** Fechas límite (YYYY-MM-DD); fuera de ese rango los días quedan deshabilitados. */
   min?: string;
   max?: string;
+  /** Tamaño: `md` (Figma, por defecto) o `sm` (compacto). */
+  size?: CalendarSize;
   className?: string;
 };
 
@@ -54,6 +85,7 @@ const Celda = ({
   hoy,
   fueraDeMes,
   deshabilitado,
+  tamano,
   onClick,
 }: {
   dia: Dayjs;
@@ -61,6 +93,7 @@ const Celda = ({
   hoy: boolean;
   fueraDeMes: boolean;
   deshabilitado: boolean;
+  tamano: string;
   onClick: () => void;
 }) => (
   <button
@@ -70,7 +103,8 @@ const Celda = ({
     aria-pressed={seleccionado}
     aria-label={dia.format('D/MM/YYYY')}
     className={cn(
-      'inline-flex size-8 items-center justify-center rounded-full text-label-3 outline-none transition-colors',
+      'inline-flex items-center justify-center rounded-full text-label-3 outline-none transition-colors',
+      tamano,
       'focus-visible:border focus-visible:border-stroke-primary',
       seleccionado
         ? 'bg-surface-accent-primary font-medium text-white'
@@ -91,11 +125,13 @@ const Celda = ({
 const Opcion = ({
   activa,
   deshabilitada,
+  tamano,
   onClick,
   children,
 }: {
   activa: boolean;
   deshabilitada?: boolean;
+  tamano: string;
   onClick: () => void;
   children: React.ReactNode;
 }) => (
@@ -105,7 +141,8 @@ const Opcion = ({
     disabled={deshabilitada}
     aria-pressed={activa}
     className={cn(
-      'w-20 rounded-lg p-2 text-center text-label-2 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-stroke-focus',
+      'rounded-lg text-center text-label-2 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-stroke-focus',
+      tamano,
       activa
         ? 'bg-surface-accent-primary text-white'
         : 'text-content-primary hover:bg-surface-accent-light',
@@ -118,10 +155,12 @@ const Opcion = ({
 
 const BotonFlecha = ({
   etiqueta,
+  tamano,
   onClick,
   children,
 }: {
   etiqueta: string;
+  tamano: string;
   onClick: () => void;
   children: React.ReactNode;
 }) => (
@@ -129,7 +168,10 @@ const BotonFlecha = ({
     type="button"
     onClick={onClick}
     aria-label={etiqueta}
-    className="inline-flex rounded-lg p-2 text-content-accent-primary outline-none hover:bg-surface-accent-light focus-visible:ring-2 focus-visible:ring-stroke-focus"
+    className={cn(
+      'inline-flex rounded-lg text-content-accent-primary outline-none hover:bg-surface-accent-light focus-visible:ring-2 focus-visible:ring-stroke-focus',
+      tamano,
+    )}
   >
     {children}
   </button>
@@ -141,8 +183,10 @@ export const Calendar = ({
   onChange,
   min,
   max,
+  size = 'md',
   className,
 }: CalendarProps) => {
+  const t = TAMANOS[size];
   const elegida = value ? dayjs(value) : null;
   const [mes, setMes] = React.useState<Dayjs>(
     (elegida ?? dayjs()).startOf('month'),
@@ -175,7 +219,9 @@ export const Calendar = ({
   return (
     <div
       className={cn(
-        'flex w-fit flex-col items-center gap-2 rounded-lg border-b border-stroke-primary bg-surface-primary p-6 shadow-card',
+        // Card-shadow de Figma.
+        'flex w-fit flex-col items-center rounded-lg border-b border-stroke-primary bg-surface-primary shadow-card-elevation',
+        t.caja,
         className,
       )}
     >
@@ -184,30 +230,38 @@ export const Calendar = ({
           <div className="flex w-full items-center gap-2">
             <BotonFlecha
               etiqueta="Mes anterior"
+              tamano={t.flecha}
               onClick={() => setMes(mes.subtract(1, 'month'))}
             >
-              <ChevronLeft className="size-6" aria-hidden="true" />
+              <ChevronLeft className={t.iconoFlecha} aria-hidden="true" />
             </BotonFlecha>
             <button
               type="button"
               onClick={() => setVista('meses')}
-              className="mx-auto inline-flex items-center gap-3 rounded-lg p-2 text-h6 text-content-secondary outline-none hover:bg-surface-accent-light focus-visible:ring-2 focus-visible:ring-stroke-focus"
+              className={cn(
+                'mx-auto inline-flex items-center gap-3 rounded-lg p-2 text-content-secondary outline-none hover:bg-surface-accent-light focus-visible:ring-2 focus-visible:ring-stroke-focus',
+                t.titulo,
+              )}
             >
               {MESES[mes.month()]} {mes.year()}
-              <ChevronDown className="size-5" aria-hidden="true" />
+              <ChevronDown className={t.iconoTitulo} aria-hidden="true" />
             </button>
             <BotonFlecha
               etiqueta="Mes siguiente"
+              tamano={t.flecha}
               onClick={() => setMes(mes.add(1, 'month'))}
             >
-              <ChevronRight className="size-6" aria-hidden="true" />
+              <ChevronRight className={t.iconoFlecha} aria-hidden="true" />
             </BotonFlecha>
           </div>
-          <div className="grid grid-cols-7 gap-x-5 gap-y-2">
+          <div className={cn('grid grid-cols-7', t.cuadricula)}>
             {DIAS.map((d) => (
               <span
                 key={d}
-                className="inline-flex size-8 items-center justify-center text-label-3 font-medium text-content-primary"
+                className={cn(
+                  'inline-flex items-center justify-center text-label-3 font-medium text-content-primary',
+                  t.celda,
+                )}
               >
                 {d}
               </span>
@@ -216,6 +270,7 @@ export const Calendar = ({
               <Celda
                 key={d.format(FORMATO)}
                 dia={d}
+                tamano={t.celda}
                 seleccionado={!!elegida && d.isSame(elegida, 'day')}
                 hoy={d.isSame(dayjs(), 'day')}
                 fueraDeMes={d.month() !== mes.month()}
@@ -235,15 +290,19 @@ export const Calendar = ({
           <button
             type="button"
             onClick={() => setVista('anios')}
-            className="inline-flex items-center gap-3 self-start rounded-lg p-2 text-h6 text-content-secondary outline-none hover:bg-surface-accent-light focus-visible:ring-2 focus-visible:ring-stroke-focus"
+            className={cn(
+              'inline-flex items-center gap-3 self-start rounded-lg p-2 text-content-secondary outline-none hover:bg-surface-accent-light focus-visible:ring-2 focus-visible:ring-stroke-focus',
+              t.titulo,
+            )}
           >
             {mes.year()}
-            <ChevronDown className="size-5" aria-hidden="true" />
+            <ChevronDown className={t.iconoTitulo} aria-hidden="true" />
           </button>
-          <div className="grid grid-cols-3 gap-x-5 gap-y-2">
+          <div className={cn('grid grid-cols-3', t.cuadricula)}>
             {MESES_CORTOS.map((m, i) => (
               <Opcion
                 key={m}
+                tamano={t.opcion}
                 activa={!!elegida && elegida.isSame(mes.month(i), 'month')}
                 deshabilitada={fueraDeRango(mes.month(i), 'month')}
                 onClick={() => {
@@ -261,11 +320,15 @@ export const Calendar = ({
       {vista === 'anios' && (
         <div
           ref={listaAnios}
-          className="flex h-[168px] w-[280px] flex-col items-center gap-2 overflow-y-auto pr-2 [scrollbar-color:theme(colors.slate.700)_theme(colors.slate.200)] [scrollbar-width:thin]"
+          className={cn(
+            'flex flex-col items-center gap-2 overflow-y-auto pr-2 [scrollbar-color:theme(colors.slate.700)_theme(colors.slate.200)] [scrollbar-width:thin]',
+            t.anios,
+          )}
         >
           {anios.map((a) => (
             <Opcion
               key={a}
+              tamano={t.opcion}
               activa={a === anioActual}
               deshabilitada={fueraDeRango(mes.year(a), 'year')}
               onClick={() => {

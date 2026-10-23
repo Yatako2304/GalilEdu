@@ -26,13 +26,13 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Figma | Código | Para qué |
 | --- | --- | --- |
 | Button, Button icon | `Button` (`button`) | Acciones. Variantes `primary`, `secondary`, `primary-light`, `tertiary`, `error`, `error-light`; tamaños `lg`, `md`, `sm`. |
-| Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. `Input` acepta `startAdornment` (texto o ícono corto al inicio, como el "S/" de un monto) y `endAdornment` (al final). Con react-hook-form pasa `registration={register('campo')}`. En un `Select` opcional agrega `vaciable` (con `placeholder`): "Selecciona" pasa a ser una opción elegible para volver a dejar el campo sin valor (`''`). `Textarea` con `maxLength` y `showCount` muestra el contador "12/100". |
+| Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. `Input` acepta `startAdornment` (texto o ícono corto al inicio, como el "S/" de un monto) y `endAdornment` (al final). Con react-hook-form pasa `registration={register('campo')}`. En un `Select` opcional agrega `vaciable` (con `placeholder`): "Selecciona" pasa a ser una opción elegible para volver a dejar el campo sin valor (`''`). `Textarea` con `maxLength` y `showCount` muestra el contador "12/100". En `Input` (también con `type="date"`), `Select`, `Textarea` y `DatePicker` la etiqueta flota sobre el borde superior, como en Figma: descansa dentro si el campo está vacío, sin foco y sin `placeholder`, y sube al enfocar, escribir, elegir o si hay `placeholder` o `startAdornment`. Así los campos de una misma fila quedan alineados. Las opciones de `Select` admiten `disabled`. |
 | Tag Field | `TagField` (`form`) | Campo que acumula etiquetas (Enter o coma). Úsalo con `<Controller>`. |
 | Checkbox, Checkbox Label | `Checkbox` (`form`) | Casilla con etiqueta y ayuda opcionales. |
 | Radio Buttons, Radio Label | `Radio` (`form`) | Opción única; mismo `name` en el grupo. |
 | Radio Card, Checkbox Card | `RadioCard`, `CheckboxCard` (`form`) | Opciones grandes en tarjeta, con ícono opcional. |
 | Switch | `Switch` (`form`) | Activar o desactivar. |
-| Date picker, Picker Cell / Months / Years | `DatePicker`, `Calendar` (`date-picker`) | Fechas en formato `YYYY-MM-DD` (el del backend). `DatePicker` es el campo con el calendario desplegable; úsalo con `<Controller>`. |
+| Date picker, Picker Cell / Months / Years | `DatePicker`, `Calendar` (`date-picker`) | Fechas en formato `YYYY-MM-DD` (el del backend). `DatePicker` es el campo con el calendario desplegable; úsalo con `<Controller>`. Con `size="sm"` el calendario es más compacto (título y celdas más pequeños; no está en Figma): úsalo en modales con varios campos. |
 | Tab, Tabs | `Tabs variant="underline"` (`tabs`) | Secciones de una ficha. |
 | Tab v2, Tabs v2 | `Tabs variant="pill"` (`tabs`) | Cambiar de vista dentro de una pantalla. Pestañas no disponibles: `disabled` + `title: 'Disponible pronto'`. |
 | Stepper, Steps | `Stepper` (`stepper`) | Asistentes por pasos. `current` empieza en 1. |
@@ -61,3 +61,21 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Spinner | `Spinner` (`spinner`) | Cargando. |
 
 Los nombres de los componentes base (`Button`, `Dialog`, `Table`…) vienen en inglés de la plantilla original; los nuevos siguen el mismo idioma para que el catálogo sea uniforme. Las props y los textos que ve el usuario sí van en español.
+
+## Pendientes de componentes
+
+Cada feature armó hoy su propio marco de modal. Antes de crear otro, conviene decidir en equipo qué se sube a `components/ui`. Qué hay hoy y qué se propone:
+
+- **Confirmaciones (hay cuatro implementaciones).**
+  - `ConfirmationDialog` (`components/ui/dialog`): solo se abre con su propio botón (`triggerButton`); lo usa `acciones-anio.tsx`.
+  - `DialogoConfirmacion` (`features/usuarios`): se controla desde fuera (`open` y `onOpenChange`) y usa `IconBadge` con color según el tipo.
+  - `DialogoRetiro` (`features/pagos`) y `DialogoEliminarSeccion` (`features/configuracion`): propias.
+  - Propuesta: un `ModalConfirmacion` compartido, controlable, a partir de `DialogoConfirmacion`, y migrar las demás.
+- **Marco de modal con formulario (ícono, título, descripción, cuerpo, pie con Cancelar y acción).** Existe como `DialogoCatalogo` (`features/catalogo-academico`, con el botón `submit` enlazado por `formId`) y repetido a mano en los modales de Configuración (año, periodo, régimen y secciones), Usuarios y Pagos. Cambian detalles: radio del borde, relleno, recorte con poca altura (`max-height`) y el color de Cancelar (`tertiary` en Configuración y Usuarios, `primary-light` en Catálogo). Figma dibuja Cancelar en `tertiary`. Propuesta: un `ModalFormulario` compartido a partir de `DialogoCatalogo`.
+- **`BotonSeccion` (`features/configuracion`):** botón que, bloqueado, se ve deshabilitado, no dispara el clic y muestra un tooltip con el motivo. `acciones-anio.tsx` hace algo parecido a mano. Subirlo cuando un segundo feature lo necesite.
+- **`NombreRecortado` (en `secciones-tabla.tsx`):** texto con puntos suspensivos y `title` con el nombre completo. Igual: subirlo cuando haga falta en otro lugar.
+- **Fila de grupo de `Table`:** `Table` solo pinta filas de datos; CI-09 arma la fila de grupo (grado, conteo y botón) con las piezas de la tabla.
+- **Text Area:** solo está el tamaño Large de Figma; faltan Medium y Small (prop `size`) y el ícono de redimensionar (hoy se ve el del navegador).
+- **Etiqueta flotante:** los colores de foco y hover (`accent-primary` y `tertiary-hover`) están solo en el Text Area; falta revisar si el Text Field de Figma los usa igual.
+- **`Select` sin opciones:** muestra una barra en blanco; debería decir "No hay opciones" o similar.
+- **Íconos:** `supervisor_account` (modal "Asignar tutor") usa `UserCog`; falta agregarlo a la [tabla de equivalencias](../decisiones/2026-10-22-yatako-iconos-lucide.md).
