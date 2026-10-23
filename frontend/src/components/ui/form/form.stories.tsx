@@ -58,6 +58,15 @@ const MyForm = ({ hideSubmit = false }: { hideSubmit?: boolean }) => {
   );
 };
 
+const MontoConPrefijo = () => (
+  <Input
+    label="Monto de la pensión"
+    type="number"
+    startAdornment="S/"
+    defaultValue={620}
+  />
+);
+
 const meta: Meta = {
   component: MyForm,
 };
@@ -68,6 +77,10 @@ type Story = StoryObj<typeof MyForm>;
 
 export const Default: Story = {
   render: () => <MyForm />,
+};
+
+export const ConPrefijo: Story = {
+  render: () => <MontoConPrefijo />,
 };
 
 export const AsFormDrawer: Story = {

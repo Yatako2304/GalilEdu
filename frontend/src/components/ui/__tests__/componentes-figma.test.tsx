@@ -293,6 +293,43 @@ test('Textarea con showCount: el contador sigue al valor de un campo controlado'
   expect(screen.getByText('18/100')).toBeInTheDocument();
 });
 
+test('Input con startAdornment: muestra el prefijo dentro del campo, sin ensuciar su nombre ni su valor', async () => {
+  rtlRender(
+    <>
+      <Input label="Monto" type="number" startAdornment="S/" />
+      <Input label="Sin prefijo" />
+    </>,
+  );
+
+  // El prefijo es decorativo: no entra en el nombre accesible, que sigue siendo la etiqueta.
+  const monto = screen.getByRole('spinbutton', { name: 'Monto' });
+  await userEvent.type(monto, '450');
+
+  expect(screen.getByText('S/')).toBeInTheDocument();
+  expect(monto).toHaveValue(450);
+  expect(monto).toHaveClass('pl-10');
+  expect(screen.getByText('S/')).toHaveClass('pointer-events-none');
+  expect(screen.getByRole('textbox', { name: 'Sin prefijo' })).not.toHaveClass(
+    'pl-10',
+  );
+});
+
+test('Input con startAdornment y endAdornment a la vez deja lugar a los dos lados', () => {
+  rtlRender(
+    <Input
+      label="Clave"
+      startAdornment="S/"
+      endAdornment={<button type="button">Ver</button>}
+    />,
+  );
+
+  expect(screen.getByRole('textbox', { name: /Clave/ })).toHaveClass(
+    'pl-10',
+    'pr-10',
+  );
+  expect(screen.getByRole('button', { name: 'Ver' })).toBeInTheDocument();
+});
+
 test('Textarea con showCount: en un campo no controlado cuenta lo que se escribe y respeta maxLength', async () => {
   rtlRender(<Textarea label="Descripción" maxLength={5} showCount />);
 

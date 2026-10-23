@@ -48,8 +48,14 @@ const roleRoutes = (
   ],
 });
 
-export const createAppRouter = (queryClient: QueryClient) =>
-  createBrowserRouter([
+/** `crear` permite probar las rutas con un router en memoria; la app usa el del navegador. */
+export const createAppRouter = (
+  queryClient: QueryClient,
+  crear: (
+    rutas: RouteObject[],
+  ) => ReturnType<typeof createBrowserRouter> = createBrowserRouter,
+) =>
+  crear([
     {
       path: paths.home.path,
       lazy: () => import('./routes/landing').then(convert(queryClient)),
@@ -130,6 +136,11 @@ export const createAppRouter = (queryClient: QueryClient) =>
             [
               paths.app.administrativo.pensiones.path,
               () => import('./routes/app/administrativo/pensiones'),
+            ],
+            [
+              paths.app.administrativo.tarifario.path,
+              () =>
+                import('./routes/app/administrativo/pensiones-configuracion'),
             ],
             [
               paths.app.administrativo.compromisoPago.path,

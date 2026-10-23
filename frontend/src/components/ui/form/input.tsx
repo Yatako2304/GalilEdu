@@ -18,6 +18,12 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> &
     registration?: Partial<UseFormRegisterReturn>;
     /** Ícono o botón al final del campo (ej. mostrar contraseña). */
     endAdornment?: React.ReactNode;
+    /**
+     * Texto o ícono corto al inicio del campo (Figma: el "S/" de un monto). Es decorativo: no recibe clics y queda
+     * fuera del nombre accesible del campo (el campo va dentro de su etiqueta), así que lo que importe para quien usa
+     * un lector de pantalla debe ir en la etiqueta, por ejemplo "Monto (S/)".
+     */
+    startAdornment?: React.ReactNode;
   };
 
 const Input = React.forwardRef<HTMLInputElement, InputProps>(
@@ -31,6 +37,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       error,
       registration,
       endAdornment,
+      startAdornment,
       ...props
     },
     ref,
@@ -58,6 +65,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                 fieldClassName(!!error),
                 'h-11',
                 endAdornment && 'pr-10',
+                startAdornment && 'pl-10',
                 className,
               )}
               aria-invalid={!!error}
@@ -65,6 +73,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               {...registration}
               {...props}
             />
+            {startAdornment && (
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-label-2 text-content-tertiary"
+              >
+                {startAdornment}
+              </div>
+            )}
             {endAdornment && (
               <div className="absolute inset-y-0 right-0 flex items-center pr-3">
                 {endAdornment}

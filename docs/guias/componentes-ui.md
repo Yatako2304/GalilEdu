@@ -26,7 +26,7 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Figma | Código | Para qué |
 | --- | --- | --- |
 | Button, Button icon | `Button` (`button`) | Acciones. Variantes `primary`, `secondary`, `primary-light`, `tertiary`, `error`, `error-light`; tamaños `lg`, `md`, `sm`. |
-| Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. Con react-hook-form pasa `registration={register('campo')}`. En un `Select` opcional agrega `vaciable` (con `placeholder`): "Selecciona" pasa a ser una opción elegible para volver a dejar el campo sin valor (`''`). `Textarea` con `maxLength` y `showCount` muestra el contador "12/100". |
+| Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. `Input` acepta `startAdornment` (texto o ícono corto al inicio, como el "S/" de un monto) y `endAdornment` (al final). Con react-hook-form pasa `registration={register('campo')}`. En un `Select` opcional agrega `vaciable` (con `placeholder`): "Selecciona" pasa a ser una opción elegible para volver a dejar el campo sin valor (`''`). `Textarea` con `maxLength` y `showCount` muestra el contador "12/100". |
 | Tag Field | `TagField` (`form`) | Campo que acumula etiquetas (Enter o coma). Úsalo con `<Controller>`. |
 | Checkbox, Checkbox Label | `Checkbox` (`form`) | Casilla con etiqueta y ayuda opcionales. |
 | Radio Buttons, Radio Label | `Radio` (`form`) | Opción única; mismo `name` en el grupo. |
