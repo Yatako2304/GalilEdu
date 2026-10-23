@@ -685,3 +685,132 @@ export type CuotaMatriculaDetalle = {
   fechaPago: string | null;
   responsable: string;
 };
+
+// ---------- Configuración · Año escolar (HU-74) ----------
+// Backend: configuracion/aplicacion/DtosConfiguracion.java. Las fechas llegan como yyyy-mm-dd.
+
+export type Regimen = 'BIMESTRAL' | 'TRIMESTRAL';
+export type EstadoPeriodo = 'PLANIFICADO' | 'EN_CURSO' | 'CERRADO';
+
+export type SolicitudAnioEscolar = {
+  anio: number;
+  fechaInicio: string;
+  fechaFin: string;
+  regimen: Regimen;
+};
+
+export type SolicitudEdicionAnio = {
+  fechaInicio: string;
+  fechaFin: string;
+};
+
+export type SolicitudRegimen = { regimen: Regimen };
+
+export type SolicitudPeriodo = {
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  fechaLimiteNotas: string;
+};
+
+/** Fila del listado CI-01. */
+export type AnioEscolarResumen = {
+  id: string;
+  anio: number;
+  fechaInicio: string;
+  fechaFin: string;
+  regimen: Regimen;
+  cantidadPeriodos: number;
+  seccionesActivas: number;
+  estructurasHorarias: number;
+  estado: EstadoAnioEscolar;
+};
+
+/** Fila de la tabla de periodos. `estado` se calcula en el backend con las fechas y el estado del año. */
+export type PeriodoDetalle = {
+  id: string;
+  numero: number;
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  fechaLimiteNotas: string;
+  duracionSemanas: number;
+  estado: EstadoPeriodo;
+  registroNotasAbierto: boolean;
+};
+
+export type AnioEscolarDetalle = {
+  id: string;
+  anio: number;
+  fechaInicio: string;
+  fechaFin: string;
+  regimen: Regimen;
+  estado: EstadoAnioEscolar;
+  cantidadSecciones: number;
+  cantidadEstructuras: number;
+  periodos: PeriodoDetalle[];
+};
+
+export type PeriodoEnCurso = {
+  id: string;
+  numero: number;
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  fechaLimiteNotas: string;
+  diasParaLimiteNotas: number;
+};
+
+export type PeriodoNotasAbiertas = {
+  id: string;
+  numero: number;
+  nombre: string;
+  fechaFin: string;
+  fechaLimiteNotas: string;
+  diasParaLimiteNotas: number;
+};
+
+export type ProximoPeriodo = {
+  id: string;
+  numero: number;
+  nombre: string;
+  fechaInicio: string;
+};
+
+/** Tarjeta "Año escolar en curso" de CI-01. Los tres periodos pueden ser null. */
+export type AnioEscolarActual = {
+  id: string;
+  anio: number;
+  fechaInicio: string;
+  fechaFin: string;
+  regimen: Regimen;
+  periodoEnCurso: PeriodoEnCurso | null;
+  periodoNotasAbiertas: PeriodoNotasAbiertas | null;
+  proximoPeriodo: ProximoPeriodo | null;
+  seccionesActivas: number;
+  alumnosMatriculados: number;
+  estructurasHorarias: number;
+  codigosEstructuras: string[];
+  avance: number;
+};
+
+export type CodigoRequisito =
+  | 'PERIODOS'
+  | 'SECCIONES'
+  | 'ESTRUCTURA_HORARIA'
+  | 'TUTORES'
+  | 'PLAN_EVALUACION';
+
+export type Requisito = {
+  codigo: CodigoRequisito;
+  texto: string;
+  cumplido: boolean;
+  detalle: string;
+};
+
+/** Tarjeta "Antes de activar el año" de CI-06. */
+export type RequisitosAnio = {
+  puedeActivar: boolean;
+  obligatorios: Requisito[];
+  recomendados: Requisito[];
+};

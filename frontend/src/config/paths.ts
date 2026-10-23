@@ -72,6 +72,10 @@ export const paths = {
           `${ADMINISTRATIVO}/pensiones/${estudianteId}`,
       },
       anioEscolar: route(ADMINISTRATIVO, 'anio-escolar'),
+      anioEscolarDetalle: {
+        path: 'anio-escolar/:anioId',
+        getHref: (anioId: string) => `${ADMINISTRATIVO}/anio-escolar/${anioId}`,
+      },
       competencias: route(ADMINISTRATIVO, 'competencias'),
       ambientes: route(ADMINISTRATIVO, 'ambientes'),
     },

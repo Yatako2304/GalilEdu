@@ -6,6 +6,7 @@ import { rtlRender, screen, userEvent, within } from '@/testing/test-utils';
 import { Accordion } from '../accordion';
 import { Calendar, DatePicker } from '../date-picker';
 import { Form, Input, Select, TagField } from '../form';
+import { ProgressBar } from '../progress-bar';
 import { Rating } from '../rating';
 import { Tabs } from '../tabs';
 
@@ -165,4 +166,39 @@ test('Input type="date": usa el calendario de Figma y el formulario recibe la fe
 
   expect(enviar).toHaveBeenCalledTimes(1);
   expect(enviar.mock.calls[0][0].fecha).toMatch(/^\d{4}-\d{2}-15$/);
+});
+
+test('ProgressBar: muestra el porcentaje, expone el valor y lo limita entre 0 y 100', () => {
+  const { rerender } = rtlRender(
+    <ProgressBar value={74} label="Avance del año escolar" />,
+  );
+
+  const barra = screen.getByRole('progressbar', {
+    name: 'Avance del año escolar',
+  });
+  // aria-valuenow es un atributo ARIA de un div: la regla lo confunde con el `value` de un campo.
+  // eslint-disable-next-line jest-dom/prefer-to-have-value
+  expect(barra).toHaveAttribute('aria-valuenow', '74');
+  expect(screen.getByText('74 %')).toBeInTheDocument();
+  expect(barra.firstElementChild).toHaveStyle({ width: '74%' });
+
+  rerender(<ProgressBar value={140} label="Avance del año escolar" />);
+  // eslint-disable-next-line jest-dom/prefer-to-have-value
+  expect(screen.getByRole('progressbar')).toHaveAttribute(
+    'aria-valuenow',
+    '100',
+  );
+
+  rerender(<ProgressBar value={-5} label="Avance del año escolar" />);
+  // eslint-disable-next-line jest-dom/prefer-to-have-value
+  expect(screen.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '0');
+});
+
+test('ProgressBar: sin etiqueta visible conserva el nombre accesible', () => {
+  rtlRender(<ProgressBar value={30} label="Avance" showLabel={false} />);
+
+  expect(
+    screen.getByRole('progressbar', { name: 'Avance' }),
+  ).toBeInTheDocument();
+  expect(screen.queryByText('30 %')).not.toBeInTheDocument();
 });

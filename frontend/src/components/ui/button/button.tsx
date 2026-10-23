@@ -10,7 +10,7 @@ import { Spinner } from '../spinner';
 // Type:  Primary | Secondary | Primary-Light | Tertiary | Error | Error-Light
 // Size:  Large (46px) | Medium (44px) | Small (32px) · radius 12px
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[12px] font-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus focus-visible:ring-offset-2 disabled:pointer-events-none disabled:border-transparent disabled:bg-surface-disabled disabled:text-content-disabled',
+  'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-[12px] font-normal transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus focus-visible:ring-offset-2 disabled:pointer-events-none disabled:border-transparent disabled:bg-surface-disabled disabled:text-content-disabled aria-disabled:pointer-events-none aria-disabled:border-transparent aria-disabled:bg-surface-disabled aria-disabled:text-content-disabled',
   {
     variants: {
       variant: {
