@@ -60,7 +60,10 @@ export const DialogoAnio = ({
   onGuardado,
 }: DialogoAnioProps) => (
   <Dialog open={abierto} onOpenChange={(open) => !open && onCerrar()}>
-    <DialogContent className="flex max-h-[92vh] max-w-[600px] flex-col gap-0 overflow-hidden rounded-xl border-stroke-tertiary bg-white p-0">
+    {/* Con ventanas altas el modal no recorta ni desplaza: el calendario desplegable flota sobre su borde en vez de
+        agrandar el cuerpo. Por debajo de 700 px de alto vuelve a recortar y desplazar, para que los botones siempre
+        se alcancen. */}
+    <DialogContent className="flex max-h-[92vh] max-w-[600px] flex-col gap-0 overflow-visible rounded-xl border-stroke-tertiary bg-white p-0 [@media(max-height:700px)]:overflow-hidden">
       <FormularioAnio
         modo={modo}
         anio={anio}
@@ -144,7 +147,7 @@ const FormularioAnio = ({
 
   return (
     <form onSubmit={enviar} noValidate className="flex min-h-0 flex-1 flex-col">
-      <div className="flex-1 space-y-5 overflow-y-auto p-6">
+      <div className="flex-1 space-y-5 p-6 [@media(max-height:700px)]:overflow-y-auto">
         <div className="space-y-3">
           <IconBadge color="accent" size="lg" aria-hidden="true">
             <CalendarDays />
@@ -178,6 +181,7 @@ const FormularioAnio = ({
             name="fechaInicio"
             render={({ field }) => (
               <DatePicker
+                size="sm"
                 label="Fecha de inicio de clases *"
                 value={field.value}
                 onChange={(fecha) => {
@@ -193,6 +197,7 @@ const FormularioAnio = ({
             name="fechaFin"
             render={({ field }) => (
               <DatePicker
+                size="sm"
                 label="Fecha de fin de clases *"
                 value={field.value}
                 onChange={(fecha) => {

@@ -5,7 +5,7 @@
  * A3 "Matrículas del periodo" de Matrícula (HU-24, HU-71): `paths.app.administrativo.matriculasDelPeriodo`.
  * Al activarla, registrar la ruta en el router.
  */
-export const MATRICULAS_DEL_PERIODO_DISPONIBLE = false;
+export const MATRICULAS_DEL_PERIODO_DISPONIBLE = true;
 
 /**
  * P19 "Tarifario y calendario" (HU-34): `paths.app.administrativo.tarifario`. Ya existe y está registrada en el router;

@@ -50,3 +50,37 @@ export const fieldClassName = (hasError?: boolean) =>
     'disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-content-tertiary',
     hasError ? 'border-stroke-error' : 'border-stroke-primary',
   );
+
+/**
+ * Figma > Componentes > Text Field: la etiqueta (12 px) corta el borde superior del campo. `reposo` dice si descansa
+ * dentro del campo, como si fuera el placeholder: `'segun-campo'` lo decide el CSS (el campo debe ser `peer` y tener
+ * `placeholder-shown`), `true` la deja dentro y `false` la deja arriba (por ejemplo, si el campo muestra un placeholder
+ * propio y la etiqueta lo taparía).
+ */
+export const EtiquetaFlotante = ({
+  error,
+  reposo,
+  className,
+  children,
+}: {
+  error?: boolean;
+  reposo: boolean | 'segun-campo';
+  className?: string;
+  children: React.ReactNode;
+}) => (
+  <span
+    className={cn(
+      'pointer-events-none absolute left-2 top-[-7px] bg-white px-2 text-label-3 font-normal transition-all',
+      reposo === true &&
+        'left-2.5 top-3 bg-transparent px-0 text-body-3 text-content-placeholder',
+      reposo === 'segun-campo' && [
+        'peer-placeholder-shown:left-2.5 peer-placeholder-shown:top-3 peer-placeholder-shown:bg-transparent peer-placeholder-shown:px-0 peer-placeholder-shown:text-body-3 peer-placeholder-shown:text-content-placeholder',
+        'peer-focus:left-2 peer-focus:top-[-7px] peer-focus:bg-white peer-focus:px-2 peer-focus:text-label-3 peer-focus:text-content-tertiary',
+      ],
+      error ? 'text-content-error' : 'text-content-tertiary',
+      className,
+    )}
+  >
+    {children}
+  </span>
+);

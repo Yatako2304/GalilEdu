@@ -80,11 +80,16 @@ export const paths = {
         getHref: (periodoId: string) =>
           `${ADMINISTRATIVO}/matricula/periodos/${periodoId}/editar`,
       },
-      // A3 de Matrícula (HU-24, HU-71): aún no existe ni está registrada en el router.
+      // A3 de Matrícula: maqueta navegable para acceder a las HU ya implementadas.
       matriculasDelPeriodo: {
         path: 'matricula/periodos/:periodoId/matriculas',
         getHref: (periodoId: string) =>
           `${ADMINISTRATIVO}/matricula/periodos/${periodoId}/matriculas`,
+      },
+      matriculaDetalle: {
+        path: 'matricula/detalle/:matriculaId',
+        getHref: (matriculaId: string) =>
+          `${ADMINISTRATIVO}/matricula/detalle/${matriculaId}`,
       },
       pensiones: route(ADMINISTRATIVO, 'pensiones'),
       // P19 · Tarifario y calendario (HU-34). Con `anioEscolarId` abre ese año; sin él, el que se está preparando.

@@ -3,7 +3,7 @@
 - **Autor:** valeriaacevedop
 - **Fecha:** 2026-10-22
 - **HU / tarea:** HU-75 (también deja listo `listarSeccionesActivasConVacantes` para HU-23)
-- **Estado:** en progreso
+- **Estado:** terminado como MVP (el frontend está en [la entrada del 2026-10-23](2026-10-23-valeriaacevedop-frontend-secciones.md))
 
 ## Qué hice
 
@@ -20,8 +20,8 @@ Backend de las secciones de cada grado en un año escolar: listar por grado, cre
 
 ## Decisiones y por qué
 
-- **Decisión:** el historial de tutoría y el "Vigente desde" quedan fuera de este PR; irán en un PR 2 con la migración V9.
-  **Por qué:** necesitan tablas nuevas. Separarlos mantiene este PR sin migraciones y revisable. Mientras tanto la sección guarda solo el tutor y el cotutor actuales.
+- **Decisión:** HU-75 es un MVP: el historial de tutoría y el "Vigente desde" quedan **fuera del MVP (acordado)**, no son deuda de la HU. Si se retoman, irán con la migración V9.
+  **Por qué:** necesitan tablas nuevas. Mantener el MVP sin migraciones lo hace revisable y suficiente para las pantallas. La sección guarda solo el tutor y el cotutor actuales.
   **Alternativas descartadas:** meter la migración y el historial en este mismo PR.
 
 - **Decisión:** `configuracion` lee las matrículas y los docentes con SQL de solo lectura, detrás de las interfaces `MatriculasDeSecciones` y `DirectorioDocentes`.
@@ -38,8 +38,8 @@ Backend de las secciones de cada grado en un año escolar: listar por grado, cre
 
 ## Pendientes / problemas conocidos
 
-- [ ] PR 2: historial de tutoría y "Vigente desde" (migración V9).
-- [ ] Frontend de CI-09 y los modales "Nueva sección" y "Asignar tutor".
+- [x] Historial de tutoría y "Vigente desde" (migración V9): fuera del MVP (acordado).
+- [x] Frontend de CI-09 y los modales "Nueva sección" y "Asignar tutor".
 - [ ] Avisar al equipo de Académico de que eliminar una sección borra en cascada sus asignaciones de docentes por curso (`academico.docente_seccion`). Inactivar no borra nada.
 - [ ] Cuando Matrícula y Usuarios ofrezcan un servicio, reemplazar `MatriculasDeSeccionesSql` y `DirectorioDocentesSql`.
 - [ ] El manejador de errores compartido responde 500 ante un UUID mal escrito en un parámetro (por ejemplo `?anioEscolarId=abc`). Solo se cubrió el parámetro ausente en `tutores-disponibles`.

@@ -23,8 +23,8 @@ module.exports = {
     },
     extend: {
       boxShadow: {
-        // Effects (Figma): Card-shadow y Event-shadow
-        card: '2px 4px 4px 0 rgba(0, 0, 0, 0.05)',
+        // Effects (Figma): Card-shadow y Event-shadow. No se llama `card`: chocaría con el color `card` y `shadow-card` saldría blanca.
+        'card-elevation': '2px 4px 4px 0 rgba(0, 0, 0, 0.05)',
         event: '0 0 8px 0 rgba(0, 0, 0, 0.25)',
       },
       fontFamily: {

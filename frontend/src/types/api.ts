@@ -864,6 +864,55 @@ export type RequisitosAnio = {
   recomendados: Requisito[];
 };
 
+// ---------- Configuración · Secciones por grado y tutores (HU-75) ----------
+// Backend: configuracion/aplicacion/DtosSecciones.java.
+
+export type EstadoSeccion = 'ACTIVA' | 'INACTIVA';
+
+/** Modal "Nueva sección": el año va en la ruta. El nombre se guarda en mayúsculas. */
+export type SolicitudSeccion = {
+  gradoCodigo: string;
+  nombre: string;
+  capacidadMaxima: number;
+};
+
+/** Cambiar la capacidad de una sección (de 1 a 45). */
+export type SolicitudCapacidad = { capacidadMaxima: number };
+
+/** Modal "Asignar tutor": el tutor es obligatorio y el cotutor opcional (null lo quita). */
+export type SolicitudTutores = { tutorId: string; cotutorId: string | null };
+
+/** Fila de CI-09. `tutor` y `cotutor` son los nombres; son null si la sección no los tiene. */
+export type SeccionResumen = {
+  id: string;
+  gradoCodigo: string;
+  nombre: string;
+  capacidadMaxima: number;
+  alumnosOcupanVacante: number;
+  tutorId: string | null;
+  tutor: string | null;
+  cotutorId: string | null;
+  cotutor: string | null;
+  estado: EstadoSeccion;
+};
+
+/** Un grupo de CI-09: el grado, cuántas secciones activas tiene y sus secciones (vacío si no tiene). */
+export type GradoConSecciones = {
+  codigo: string;
+  nombre: string;
+  nivel: Nivel;
+  numero: number;
+  cantidadSeccionesActivas: number;
+  secciones: SeccionResumen[];
+};
+
+/** Docente que puede ser tutor o cotutor; `esTutorEsteAnio` marca a quien ya es tutor de una sección activa del año. */
+export type DocenteElegible = {
+  id: string;
+  nombre: string;
+  esTutorEsteAnio: boolean;
+};
+
 // ---------- Configuración · Periodo de matrícula (HU-23) ----------
 // Backend: configuracion/aplicacion/DtosPeriodoMatricula.java. Las fechas llegan como yyyy-mm-dd, las horas como
 // HH:mm:ss y `inicio`/`cierre` del listado como instantes UTC (ISO). `PeriodoMatricula` es el de P4 (apoderado).

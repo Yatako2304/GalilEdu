@@ -5,9 +5,13 @@ import { type FieldError, type UseFormRegisterReturn } from 'react-hook-form';
 
 import { cn } from '@/utils/cn';
 
-import { FieldWrapper, fieldClassName } from '../form/field-wrapper';
+import {
+  EtiquetaFlotante,
+  FieldWrapper,
+  fieldClassName,
+} from '../form/field-wrapper';
 
-import { Calendar } from './calendar';
+import { Calendar, type CalendarSize } from './calendar';
 
 type CampoFechaProps = {
   /** Fecha en formato YYYY-MM-DD (el mismo que guarda el backend). */
@@ -19,6 +23,10 @@ type CampoFechaProps = {
   disabled?: boolean;
   invalid?: boolean;
   onBlur?: () => void;
+  /** Tamaño del calendario desplegable: `md` (Figma, por defecto) o `sm` (compacto, para modales). */
+  size?: CalendarSize;
+  /** Etiqueta flotante, como la del Text Field. Descansa dentro si no hay fecha, el campo está cerrado y no hay placeholder. */
+  label?: string;
 };
 
 // Botón con la fecha elegida + el calendario de Figma desplegable.
@@ -27,12 +35,18 @@ const CampoFecha = ({
   onChange,
   min,
   max,
-  placeholder = 'DD/MM/AAAA',
+  placeholder: placeholderPropio,
   disabled = false,
   invalid = false,
   onBlur,
+  size,
+  label,
 }: CampoFechaProps) => {
   const [abierto, setAbierto] = React.useState(false);
+  // Con etiqueta y sin placeholder propio, el campo vacío no muestra "DD/MM/AAAA": la etiqueta ocupa su lugar. El texto
+  // sigue ahí (transparente) para no cambiar el nombre accesible del botón.
+  const etiquetaDescansa = !!label && !value && !abierto && !placeholderPropio;
+  const placeholder = placeholderPropio ?? 'DD/MM/AAAA';
   const contenedor = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -66,7 +80,10 @@ const CampoFecha = ({
           fieldClassName(invalid),
           'flex h-11 items-center justify-between text-left',
           abierto && 'border-stroke-focus ring-2 ring-deep-blue-100',
-          !value && 'text-content-placeholder',
+          !value &&
+            (etiquetaDescansa
+              ? 'text-transparent'
+              : 'text-content-placeholder'),
         )}
       >
         {value ? dayjs(value).format('DD/MM/YYYY') : placeholder}
@@ -75,16 +92,22 @@ const CampoFecha = ({
           aria-hidden="true"
         />
       </button>
+      {label && (
+        <EtiquetaFlotante error={invalid} reposo={etiquetaDescansa}>
+          {label}
+        </EtiquetaFlotante>
+      )}
       {abierto && (
         <div
           role="dialog"
           aria-label="Elegir fecha"
-          className="absolute left-0 top-full z-50 mt-1"
+          className="absolute left-0 top-full z-50 mt-1 w-max"
         >
           <Calendar
             value={value}
             min={min}
             max={max}
+            size={size}
             onChange={(fecha) => {
               onChange(fecha);
               setAbierto(false);
@@ -112,8 +135,8 @@ export const DatePicker = ({
   className,
   ...campo
 }: DatePickerProps) => (
-  <FieldWrapper label={label} hint={hint} error={error} className={className}>
-    <CampoFecha {...campo} invalid={!!error} />
+  <FieldWrapper hint={hint} error={error} className={className}>
+    <CampoFecha {...campo} label={label} invalid={!!error} />
   </FieldWrapper>
 );
 
@@ -125,6 +148,8 @@ const asignarValor = Object.getOwnPropertyDescriptor(
 export type DateInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   registration?: Partial<UseFormRegisterReturn>;
   invalid?: boolean;
+  /** Etiqueta flotante del campo (la misma que la de los demás campos de texto). */
+  label?: string;
 };
 
 /**
@@ -134,7 +159,7 @@ export type DateInputProps = React.InputHTMLAttributes<HTMLInputElement> & {
  */
 export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
   (
-    { registration, invalid, disabled, min, max, placeholder, ...props },
+    { registration, invalid, disabled, min, max, placeholder, label, ...props },
     ref,
   ) => {
     const nativo = React.useRef<HTMLInputElement | null>(null);
@@ -179,6 +204,7 @@ export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
           min={min === undefined ? undefined : String(min)}
           max={max === undefined ? undefined : String(max)}
           placeholder={placeholder}
+          label={label}
           disabled={disabled}
           invalid={invalid}
           onChange={(fecha) => {

@@ -6,6 +6,7 @@ import { cn } from '@/utils/cn';
 import { DateInput } from '../date-picker/date-picker';
 
 import {
+  EtiquetaFlotante,
   FieldWrapper,
   FieldWrapperPassThroughProps,
   fieldClassName,
@@ -42,17 +43,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     },
     ref,
   ) => {
+    const esFecha = type === 'date';
     return (
-      <FieldWrapper
-        label={label}
-        hint={hint}
-        error={error}
-        className={wrapperClassName}
-      >
-        {type === 'date' ? (
+      <FieldWrapper hint={hint} error={error} className={wrapperClassName}>
+        {esFecha ? (
           // Figma > Componentes > Date picker en vez del calendario nativo del navegador.
           <DateInput
             ref={ref}
+            label={label}
             registration={registration}
             invalid={!!error}
             {...props}
@@ -63,12 +61,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               type={type}
               className={cn(
                 fieldClassName(!!error),
-                'h-11',
+                'peer h-11',
                 endAdornment && 'pr-10',
                 startAdornment && 'pl-10',
                 className,
               )}
               aria-invalid={!!error}
+              // Sin placeholder propio se usa un espacio: `placeholder-shown` indica que el campo está vacío.
+              placeholder={label && !props.placeholder ? ' ' : undefined}
               ref={ref}
               {...registration}
               {...props}
@@ -80,6 +80,17 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               >
                 {startAdornment}
               </div>
+            )}
+            {label && (
+              <EtiquetaFlotante
+                error={!!error}
+                // Con un placeholder propio o un adorno al inicio ("S/") la etiqueta se queda arriba: abajo taparía a uno u otro.
+                reposo={
+                  props.placeholder || startAdornment ? false : 'segun-campo'
+                }
+              >
+                {label}
+              </EtiquetaFlotante>
             )}
             {endAdornment && (
               <div className="absolute inset-y-0 right-0 flex items-center pr-3">

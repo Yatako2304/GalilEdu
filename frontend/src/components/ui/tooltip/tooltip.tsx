@@ -85,7 +85,7 @@ export const Tooltip = ({
         id={id}
         role="tooltip"
         className={cn(
-          'pointer-events-none invisible absolute z-50 flex flex-col gap-2 rounded-lg border border-stroke-secondary bg-surface-primary p-3 opacity-0 shadow-card transition-opacity',
+          'pointer-events-none invisible absolute z-50 flex flex-col gap-2 rounded-lg border border-stroke-secondary bg-surface-primary p-3 opacity-0 shadow-card-elevation transition-opacity',
           'group-focus-within/tooltip:visible group-focus-within/tooltip:opacity-100 group-hover/tooltip:visible group-hover/tooltip:opacity-100',
           grande ? 'w-56' : 'whitespace-nowrap',
           posicion[side][align],

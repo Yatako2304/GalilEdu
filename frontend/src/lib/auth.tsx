@@ -2,6 +2,7 @@ import { configureAuth } from 'react-query-auth';
 import { Navigate, useLocation } from 'react-router';
 import { z } from 'zod';
 
+import { env } from '@/config/env';
 import { paths } from '@/config/paths';
 import { AuthResponse, User } from '@/types/api';
 
@@ -21,7 +22,9 @@ const getUser = async (): Promise<User | null> => {
 
 const logout = async (): Promise<void> => {
   try {
-    await api.post('/auth/logout');
+    // El backend real usa JWT sin sesión: cerrar sesión consiste en borrar el token local.
+    // MSW sí mantiene una cookie simulada y necesita su endpoint para eliminarla.
+    if (env.ENABLE_API_MOCKING) await api.post('/auth/logout');
   } finally {
     tokenStorage.clear();
   }

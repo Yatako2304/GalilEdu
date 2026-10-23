@@ -21,7 +21,7 @@ export const Notification = ({
       aria-label={title}
       onClose={() => onDismiss(id)}
       className={cn(
-        'pointer-events-auto w-full max-w-[497px] shadow-card duration-300',
+        'pointer-events-auto w-full max-w-[497px] shadow-card-elevation duration-300',
         saliendo
           ? 'animate-out fade-out fill-mode-forwards'
           : 'animate-in fade-in slide-in-from-top-2',
