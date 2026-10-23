@@ -1,10 +1,9 @@
-import { CirclePlus, Upload } from 'lucide-react';
+import { CirclePlus } from 'lucide-react';
 import * as React from 'react';
 import { useSearchParams } from 'react-router';
 
 import { ContentLayout } from '@/components/layouts';
 import { Button } from '@/components/ui/button';
-import { DialogoCargaMasiva } from '@/features/usuarios/components/dialogo-carga-masiva';
 import {
   DialogoUsuario,
   ModoDialogo,
@@ -19,12 +18,9 @@ const AdminUsuariosRoute = () => {
   const [dialogo, setDialogo] = React.useState<ModoDialogo | null>(
     searchParams.get('nuevo') ? { modo: 'crear' } : null,
   );
-  const [cargaMasiva, setCargaMasiva] = React.useState(
-    searchParams.has('carga'),
-  );
   const [creado, setCreado] = React.useState<UsuarioCreado | null>(null);
 
-  /** Quita ?nuevo=1 / ?carga=1 (accesos rápidos del Inicio) al cerrar el modal. */
+  /** Quita ?nuevo=1 (acceso rápido del Inicio) al cerrar el modal. */
   const limpiarParametro = (nombre: string) => {
     if (searchParams.has(nombre)) {
       searchParams.delete(nombre);
@@ -42,21 +38,12 @@ const AdminUsuariosRoute = () => {
       title="Usuarios"
       subtitle="Administra las cuentas de los usuarios del sistema: crea nuevos usuarios, asigna roles y activa o desactiva su acceso."
       actions={
-        <>
-          <Button
-            variant="primary-light"
-            icon={<Upload className="size-4" />}
-            onClick={() => setCargaMasiva(true)}
-          >
-            Carga masiva
-          </Button>
-          <Button
-            icon={<CirclePlus className="size-4" />}
-            onClick={() => setDialogo({ modo: 'crear' })}
-          >
-            Nuevo usuario
-          </Button>
-        </>
+        <Button
+          icon={<CirclePlus className="size-4" />}
+          onClick={() => setDialogo({ modo: 'crear' })}
+        >
+          Nuevo usuario
+        </Button>
       }
     >
       <UsuariosLista
@@ -67,13 +54,6 @@ const AdminUsuariosRoute = () => {
       <DialogoUsuarioRegistrado
         usuario={creado}
         onCerrar={() => setCreado(null)}
-      />
-      <DialogoCargaMasiva
-        open={cargaMasiva}
-        onCerrar={() => {
-          setCargaMasiva(false);
-          limpiarParametro('carga');
-        }}
       />
     </ContentLayout>
   );
