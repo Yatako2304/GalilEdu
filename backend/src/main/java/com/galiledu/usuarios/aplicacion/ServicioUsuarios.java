@@ -161,15 +161,42 @@ public class ServicioUsuarios {
 		return usuario;
 	}
 
-	/** Agrega un rol a la cuenta de la persona; si no tiene cuenta, la crea. Devuelve la cuenta. */
+	/**
+	 * Agrega un rol a la cuenta de la persona; si no tiene cuenta, la crea. Si estaba inactiva (por ejemplo, dejó de
+	 * ser responsable de matrícula y vuelve a serlo), se reactiva. Devuelve la cuenta.
+	 */
 	@Transactional
 	public Usuario asegurarRol(Persona persona, Rol rol) {
 		return usuarios.findByPersonaId(persona.getId())
 				.map(u -> {
 					u.agregarRol(rol);
+					if (!u.isEliminado() && u.getEstado() == EstadoUsuario.INACTIVO) {
+						u.reactivar();
+					}
 					return u;
 				})
 				.orElseGet(() -> crearCuenta(persona, EnumSet.of(rol)));
+	}
+
+	/**
+	 * Al cambiar el correo de una persona con cuenta: la cuenta usa el correo de la persona, así que se le genera
+	 * una contraseña nueva y se envía al correo nuevo junto con su código de usuario.
+	 */
+	@Transactional
+	public void reenviarCredenciales(Persona persona) {
+		usuarios.findByPersonaId(persona.getId())
+				.filter(u -> !u.isEliminado())
+				.ifPresent(u -> {
+					String contrasena = GeneradorCredenciales.contrasena();
+					u.reemplazarContrasena(contrasenas.encode(contrasena));
+					notificador.enviar(persona.getCorreo(), persona.getNombres(), u.getNombreUsuario(), contrasena);
+				});
+	}
+
+	/** La cuenta de la persona queda inactiva (no puede iniciar sesión), si tiene una. */
+	@Transactional
+	public void desactivarCuentaDe(UUID personaId) {
+		usuarios.findByPersonaId(personaId).filter(u -> !u.isEliminado()).ifPresent(Usuario::desactivar);
 	}
 
 	@Transactional(readOnly = true)

@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import {
   PersonaFormValues,
+  personaAFormulario,
   personaSchema,
   personaUsuarioSchema,
   personaVacia,
@@ -9,7 +10,9 @@ import {
 } from '@/components/personas/persona-schema';
 import { PAIS_CON_UBIGEO } from '@/config/ubigeo';
 import {
+  DatosFamiliar,
   DatosPersona,
+  EdicionEstudiante,
   ModoSalida,
   Parentesco,
   SolicitudInscripcion,
@@ -88,6 +91,8 @@ export type InscripcionForm = {
   verificado: boolean;
   /** Documento que acredita al apoderado. Se sube después de registrar la inscripción. */
   documentoApoderado: { tipo: string; archivo: File | null };
+  /** "Editar": los familiares ya registrados se pueden corregir, así que también se validan. */
+  editando: boolean;
 };
 
 const familiarVacio = (sexo: 'MASCULINO' | 'FEMENINO' | ''): FamiliarForm => ({
@@ -170,13 +175,24 @@ export const inscripcionVacia = (): InscripcionForm => ({
   celularResponsable: '',
   verificado: false,
   documentoApoderado: { tipo: '', archivo: null },
+  editando: false,
 });
+
+/** Relación del apoderado con el estudiante (Figma). Una relación guardada que no está aquí es "Otro". */
+export const RELACIONES_APODERADO = [
+  'Abuelo(a)',
+  'Tío(a)',
+  'Hermano(a)',
+  'Amigo(a) de la familia',
+  'Tutor legal',
+  'Otro',
+];
 
 /** Un familiar cuenta como registrado si no está marcado "no registra" y tiene documento. */
 export const registra = (f: FamiliarForm) =>
   !f.noRegistra && (!!f.personaId || !!f.persona.numeroDocumento);
 
-const familiarSchema = (opcional: boolean) =>
+const familiarSchema = (opcional: boolean, editando = false) =>
   z.custom<FamiliarForm>().superRefine((f, ctx) => {
     if (f.noRegistra) {
       if (!opcional && !f.motivo) {
@@ -188,8 +204,8 @@ const familiarSchema = (opcional: boolean) =>
       }
       return;
     }
-    if (f.personaId) return;
-    // Persona nueva: mismos obligatorios que un usuario (CAHU6-2), porque el responsable tendrá cuenta.
+    if (f.personaId && !editando) return;
+    // Persona nueva (o ya registrada, al editar): mismos obligatorios que un usuario (CAHU6-2), porque el responsable tendrá cuenta.
     const r = personaUsuarioSchema.safeParse(f.persona);
     if (!r.success) {
       r.error.issues.forEach((i) =>
@@ -420,8 +436,10 @@ export const inscripcionSchema = z
   .object({
     estudiante: estudianteSchema,
     fichaMedica: fichaMedicaSchema,
-    padre: familiarSchema(false),
-    madre: familiarSchema(false),
+    // Padre y madre se validan abajo, donde se sabe si se está editando.
+    padre: z.custom<FamiliarForm>(),
+    madre: z.custom<FamiliarForm>(),
+    editando: z.boolean(),
     incluirApoderado: z.boolean(),
     apoderado: z.custom<FamiliarForm>(),
     // Paso 4: nombre, relación y celular obligatorios; teléfono fijo opcional (solo números).
@@ -487,8 +505,16 @@ export const inscripcionSchema = z
   })
   .superRefine((v, ctx) => {
     const f = v as unknown as InscripcionForm;
+    (['padre', 'madre'] as const).forEach((clave) => {
+      const r = familiarSchema(false, f.editando).safeParse(f[clave]);
+      if (!r.success) {
+        r.error.issues.forEach((i) =>
+          ctx.addIssue({ ...i, path: [clave, ...i.path] }),
+        );
+      }
+    });
     if (f.incluirApoderado) {
-      const r = familiarSchema(true).safeParse(f.apoderado);
+      const r = familiarSchema(true, f.editando).safeParse(f.apoderado);
       if (!r.success) {
         r.error.issues.forEach((i) =>
           ctx.addIssue({ ...i, path: ['apoderado', ...i.path] }),
@@ -543,7 +569,7 @@ const siNo = (v: string) => (v === '' ? null : v === 'SI');
 const persona = (p: PersonaFormValues) =>
   personaSchema.parse(p) as DatosPersona;
 
-const familiar = (f: FamiliarForm) =>
+const familiar = (f: FamiliarForm, editando: boolean) =>
   !registra(f)
     ? {
         noRegistra: true,
@@ -553,7 +579,8 @@ const familiar = (f: FamiliarForm) =>
     : {
         noRegistra: false,
         personaId: f.personaId,
-        persona: f.personaId ? null : persona(f.persona),
+        // Al inscribir, un familiar ya registrado solo se vincula; al editar se envían sus datos corregidos.
+        persona: f.personaId && !editando ? null : persona(f.persona),
         viveConEstudiante: f.viveConEstudiante,
         tienePatriaPotestad: f.tienePatriaPotestad,
         relacion:
@@ -606,9 +633,9 @@ export const aSolicitud = (f: InscripcionForm): SolicitudInscripcion => {
         m.tomaMedicamento === 'SI' ? texto(m.medicamentoDetalle) : null,
       observaciones: texto(m.observaciones),
     },
-    padre: familiar(f.padre),
-    madre: familiar(f.madre),
-    apoderado: f.incluirApoderado ? familiar(f.apoderado) : null,
+    padre: familiar(f.padre, f.editando),
+    madre: familiar(f.madre, f.editando),
+    apoderado: f.incluirApoderado ? familiar(f.apoderado, f.editando) : null,
     contactos: f.contactos.map((c) => ({
       nombreCompleto: c.nombreCompleto.trim(),
       parentesco: c.parentesco.trim(),
@@ -678,4 +705,119 @@ export const validarDocumento = (archivo: File): string | null => {
     return 'El documento no puede pesar más de 5 MB';
   }
   return null;
+};
+
+const siNoForm = (v?: boolean | null): 'SI' | 'NO' => (v ? 'SI' : 'NO');
+const textoForm = (v?: string | null) => v ?? '';
+/** Número guardado → texto con el formato del campo (peso ###.#, estatura #.##). */
+const decimalForm = (v: number | null | undefined, decimales: number) =>
+  v === null || v === undefined ? '' : v.toFixed(decimales);
+
+const familiarDesde = (
+  d: DatosFamiliar | null,
+  tieneCuenta: boolean,
+  vacio: FamiliarForm,
+): FamiliarForm => {
+  if (!d || d.noRegistra) {
+    return {
+      ...vacio,
+      noRegistra: !!d?.noRegistra,
+      motivo: textoForm(d?.motivo),
+      observacion: textoForm(d?.observacion),
+    };
+  }
+  const relacion = textoForm(d.relacion);
+  const conocida = relacion === '' || RELACIONES_APODERADO.includes(relacion);
+  return {
+    ...vacio,
+    personaId: d.personaId ?? null,
+    tieneCuenta,
+    persona: d.persona ? personaAFormulario(d.persona) : vacio.persona,
+    viveConEstudiante: !!d.viveConEstudiante,
+    tienePatriaPotestad: !!d.tienePatriaPotestad,
+    relacion: conocida ? relacion : 'Otro',
+    relacionDetalle: conocida ? '' : relacion,
+  };
+};
+
+/**
+ * "Editar": convierte la inscripción guardada (GET /estudiantes/{id}/edicion) al formulario del asistente; es la
+ * inversa de `aSolicitud`. El archivo del apoderado no se descarga: solo se sube uno nuevo si se adjunta.
+ */
+export const desdeEdicion = (e: EdicionEstudiante): InscripcionForm => {
+  const vacia = inscripcionVacia();
+  const d = e.datos;
+  const est = d.estudiante;
+  const m = d.fichaMedica ?? {};
+  const conCuenta = (p: Parentesco) => e.conCuenta.includes(p);
+  return {
+    ...vacia,
+    editando: true,
+    estudiante: {
+      ...vacia.estudiante,
+      persona: est.persona
+        ? personaAFormulario(est.persona)
+        : vacia.estudiante.persona,
+      paisNacimiento: textoForm(est.paisNacimiento),
+      departamentoNacimiento: textoForm(est.departamentoNacimiento),
+      provinciaNacimiento: textoForm(est.provinciaNacimiento),
+      distritoNacimiento: textoForm(est.distritoNacimiento),
+      referenciaDomicilio: textoForm(est.referenciaDomicilio),
+      tieneInternet:
+        est.tieneInternet === null || est.tieneInternet === undefined
+          ? ''
+          : siNoForm(est.tieneInternet),
+      lenguaMaterna: textoForm(est.lenguaMaterna),
+      segundaLengua: textoForm(est.segundaLengua),
+      autoidentificacionEtnica: textoForm(est.autoidentificacionEtnica),
+      tieneDiscapacidad: siNoForm(est.tieneDiscapacidad),
+      discapacidadDetalle: textoForm(est.discapacidadDetalle),
+      colegioProcedencia: textoForm(est.colegioProcedencia),
+      gestionProcedencia: textoForm(est.gestionProcedencia),
+      anioAcademico: String(est.anioAcademico),
+      nivel: est.gradoCodigo.startsWith('PRI') ? 'PRIMARIA' : 'SECUNDARIA',
+      grado: est.gradoCodigo,
+      formaIngreso: textoForm(est.formaIngreso),
+    },
+    fichaMedica: {
+      ...vacia.fichaMedica,
+      tipoSangre: textoForm(m.tipoSangre),
+      pesoKg: decimalForm(m.pesoKg, LIMITES_FICHA.peso.decimales),
+      estaturaM: decimalForm(m.estaturaM, LIMITES_FICHA.estatura.decimales),
+      tipoSeguro: textoForm(m.tipoSeguro),
+      tieneAlergias: siNoForm(m.tieneAlergias),
+      alergiasAlimentarias: textoForm(m.alergiasAlimentarias),
+      alergiasMedicamentosas: textoForm(m.alergiasMedicamentosas),
+      fiebreMaxima: textoForm(m.fiebreMaxima),
+      haConvulsionado: siNoForm(m.haConvulsionado),
+      tieneEnfermedad: siNoForm(m.tieneEnfermedad),
+      enfermedadDetalle: textoForm(m.enfermedadDetalle),
+      tomaMedicamento: siNoForm(m.tomaMedicamento),
+      medicamentoDetalle: textoForm(m.medicamentoDetalle),
+      observaciones: textoForm(m.observaciones),
+    },
+    padre: familiarDesde(d.padre, conCuenta('PADRE'), vacia.padre),
+    madre: familiarDesde(d.madre, conCuenta('MADRE'), vacia.madre),
+    incluirApoderado: !!d.apoderado && !d.apoderado.noRegistra,
+    apoderado: familiarDesde(
+      d.apoderado,
+      conCuenta('APODERADO'),
+      vacia.apoderado,
+    ),
+    contactos: d.contactos.map((c) => ({
+      nombreCompleto: c.nombreCompleto,
+      parentesco: c.parentesco,
+      telefonoFijo: textoForm(c.telefonoFijo),
+      celular: textoForm(c.celular),
+    })),
+    modoSalida: d.modoSalida ?? '',
+    autorizados: d.autorizados.map((a) => ({ ...a })),
+    responsable: d.responsable ?? '',
+    correoResponsable: textoForm(d.correoResponsable),
+    celularResponsable: textoForm(d.celularResponsable),
+    documentoApoderado: {
+      tipo: textoForm(e.acreditacion?.tipo),
+      archivo: null,
+    },
+  };
 };

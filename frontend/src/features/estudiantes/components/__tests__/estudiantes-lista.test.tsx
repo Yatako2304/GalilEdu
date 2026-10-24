@@ -69,17 +69,24 @@ const abrirMenu = async (nombre: string) => {
 };
 
 const renderLista = async () =>
-  renderApp(<EstudiantesLista hrefFicha={(id) => `/ficha/${id}`} />, {
-    user: await createUser({ roles: [ROLES.PERSONAL_ADMINISTRATIVO] }),
-  });
+  renderApp(
+    <EstudiantesLista
+      hrefFicha={(id) => `/ficha/${id}`}
+      hrefEditar={(id) => `/editar/${id}`}
+    />,
+    {
+      user: await createUser({ roles: [ROLES.PERSONAL_ADMINISTRATIVO] }),
+    },
+  );
 
-test('el menú de un estudiante activo ofrece Ver, Inactivar y Eliminar', async () => {
+test('el menú de un estudiante activo ofrece Ver, Editar, Inactivar y Eliminar', async () => {
   await renderLista();
   await abrirMenu('Mateo Alonso Paredes');
 
   expect(
     await screen.findByRole('menuitem', { name: /ver/i }),
   ).toBeInTheDocument();
+  expect(screen.getByRole('menuitem', { name: /editar/i })).toBeInTheDocument();
   expect(
     screen.getByRole('menuitem', { name: /inactivar/i }),
   ).toBeInTheDocument();

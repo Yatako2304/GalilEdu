@@ -19,6 +19,8 @@ import { FileItem } from '@/components/ui/files';
 import { Input, Radio, Select } from '@/components/ui/form';
 import { Tag } from '@/components/ui/tag';
 import { TIPOS_DOCUMENTO } from '@/config/catalogos';
+import { DocumentoAdjunto } from '@/types/api';
+import { formatFecha } from '@/utils/format';
 import {
   restringir,
   soloDigitos,
@@ -30,6 +32,7 @@ import { buscarPersonaPorDocumento } from '../../api/estudiantes';
 import { Casilla, Grilla, SeccionPaso, Subtitulo } from './campos';
 import {
   InscripcionForm,
+  RELACIONES_APODERADO,
   TIPOS_DOCUMENTO_APODERADO,
   registra,
   validarDocumento,
@@ -46,26 +49,27 @@ const MOTIVOS = ['Fallecido(a)', 'No registra', 'Otro'].map((v) => ({
   value: v,
 }));
 
-const RELACIONES = [
-  'Abuelo(a)',
-  'Tío(a)',
-  'Hermano(a)',
-  'Amigo(a) de la familia',
-  'Tutor legal',
-  'Otro',
-].map((v) => ({ label: v, value: v }));
+const RELACIONES = RELACIONES_APODERADO.map((v) => ({ label: v, value: v }));
 
 const TarjetaFamiliar = ({
   form,
   clave,
   titulo,
   descripcion,
-}: PasoProps & { clave: Clave; titulo: string; descripcion: string }) => {
+  acreditacionActual = null,
+}: PasoProps & {
+  clave: Clave;
+  titulo: string;
+  descripcion: string;
+  acreditacionActual?: DocumentoAdjunto | null;
+}) => {
   const { register, watch, setValue, getValues, formState } = form;
   const errores = formState.errors[clave];
   const f = watch(clave);
+  const editando = watch('editando');
   const [buscando, setBuscando] = React.useState(false);
-  const [buscado, setBuscado] = React.useState(false);
+  // Un familiar ya vinculado (al editar) cuenta como buscado: salir del campo no recarga sus datos.
+  const [buscado, setBuscado] = React.useState(!!f.personaId);
 
   /** Solo con el documento completo y si no se buscó ya ese mismo número. */
   const buscar = async () => {
@@ -195,12 +199,18 @@ const TarjetaFamiliar = ({
             register={register}
             errors={formState.errors}
             prefix={`${clave}.persona`}
-            disabled={!!f.personaId}
+            // Al inscribir, un familiar ya registrado solo se vincula; al editar se pueden corregir sus datos.
+            disabled={!!f.personaId && !editando}
             sinDocumento
             conPaisDeNacimiento
           />
 
-          {clave === 'apoderado' && <RelacionYDocumento form={form} />}
+          {clave === 'apoderado' && (
+            <RelacionYDocumento
+              form={form}
+              acreditacionActual={acreditacionActual}
+            />
+          )}
 
           <div className="flex flex-wrap gap-6">
             <Casilla
@@ -219,7 +229,13 @@ const TarjetaFamiliar = ({
 };
 
 // Figma > Card "Apoderado" > RELACIÓN CON EL ESTUDIANTE: relación, "Especificar" y documento que lo acredita.
-const RelacionYDocumento = ({ form }: PasoProps) => {
+const RelacionYDocumento = ({
+  form,
+  acreditacionActual,
+}: PasoProps & {
+  /** Al editar: documento ya adjuntado; se conserva salvo que se adjunte otro. */
+  acreditacionActual: DocumentoAdjunto | null;
+}) => {
   const { register, watch, setValue, formState, clearErrors } = form;
   const erroresApoderado = formState.errors.apoderado;
   const erroresDocumento = formState.errors.documentoApoderado;
@@ -287,7 +303,7 @@ const RelacionYDocumento = ({ form }: PasoProps) => {
         <FileItem
           name={documento.archivo.name}
           mimeType={documento.archivo.type}
-          meta={`${(documento.archivo.size / 1024).toFixed(0)} KB · se subirá al registrar la inscripción`}
+          meta={`${(documento.archivo.size / 1024).toFixed(0)} KB · se subirá al guardar`}
           actions={
             <Button
               type="button"
@@ -297,6 +313,23 @@ const RelacionYDocumento = ({ form }: PasoProps) => {
               onClick={() => setValue('documentoApoderado.archivo', null)}
             >
               Quitar
+            </Button>
+          }
+        />
+      ) : acreditacionActual ? (
+        // Al editar: el documento ya adjuntado se conserva salvo que se adjunte otro.
+        <FileItem
+          name={acreditacionActual.nombreArchivo}
+          meta={`${acreditacionActual.tipo} · adjuntado el ${formatFecha(acreditacionActual.subidoEn)}`}
+          actions={
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              icon={<Paperclip className="size-4" />}
+              onClick={() => entrada.current?.click()}
+            >
+              Reemplazar
             </Button>
           }
         />
@@ -321,7 +354,10 @@ const RelacionYDocumento = ({ form }: PasoProps) => {
 };
 
 // Paso 3 · Figma > "Inscripción | Paso 3 - Padres y apoderado" (y su variante sin padres)
-export const PasoFamilia = ({ form }: PasoProps) => {
+export const PasoFamilia = ({
+  form,
+  acreditacionActual = null,
+}: PasoProps & { acreditacionActual?: DocumentoAdjunto | null }) => {
   const { watch, setValue, formState } = form;
   const [padre, madre, incluirApoderado] = watch([
     'padre',
@@ -368,6 +404,7 @@ export const PasoFamilia = ({ form }: PasoProps) => {
           <TarjetaFamiliar
             form={form}
             clave="apoderado"
+            acreditacionActual={acreditacionActual}
             titulo={sinPadres ? 'Apoderado' : 'Apoderado (opcional)'}
             descripcion="Persona que representa al estudiante ante el colegio."
           />

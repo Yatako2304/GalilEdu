@@ -23,6 +23,7 @@ En Notion, HU-7 está en "Seguridad" como "registro de estudiante con apoderado"
 | Listado | Personal Administrativo › "Admin / Estudiantes \| Listado de estudiantes" | `/app/administrativo/estudiantes` |
 | Inscripción, pasos 1–5 | "Admin / Estudiantes \| Inscripción \| Paso 1…5" (y variante sin padres) | `/app/administrativo/estudiantes/nueva` |
 | Ficha | "Admin / Estudiantes \| Ficha del estudiante - Familia" | `/app/administrativo/estudiantes/:id` |
+| Editar | El mismo asistente de la inscripción, con los datos guardados (decisión de UX; Figma no tiene una pantalla propia) | `/app/administrativo/estudiantes/:id/editar` |
 
 ## Base de datos
 
@@ -39,7 +40,7 @@ En Notion, HU-7 está en "Seguridad" como "registro de estudiante con apoderado"
 
 ## API
 
-Ver [backend/README.md](../../backend/README.md#api-prefijo-api): `/estudiantes`, `/estudiantes/{id}`, `/estudiantes/documentos?documento=`, `/estudiantes/personas?documento=`, `/estudiantes/inscripciones`, `/estudiantes/{id}/retirar`, `/estudiantes/{id}/reactivar`, `DELETE /estudiantes/{id}`, `/estudiantes/{id}/apoderado/documento`.
+Ver [backend/README.md](../../backend/README.md#api-prefijo-api): `/estudiantes`, `/estudiantes/{id}`, `/estudiantes/documentos?documento=`, `/estudiantes/personas?documento=`, `/estudiantes/inscripciones`, `/estudiantes/{id}/retirar`, `/estudiantes/{id}/reactivar`, `DELETE /estudiantes/{id}`, `/estudiantes/{id}/apoderado/documento`, `/estudiantes/correos?correo=`, `/estudiantes/{id}/edicion`, `PUT /estudiantes/{id}`.
 
 ## Código
 
@@ -102,6 +103,19 @@ Frame "Admin / Estudiantes | Inscripción | Paso 2 - Ficha médica". Las reglas 
 - **Enfermedad y medicamento diario:** su "¿Cuál?" aparece recién con "Sí" y entonces es obligatorio. **Diferencia con Figma**, por decisión del equipo: Figma lo muestra deshabilitado con "No".
 - Los detalles de una respuesta "No" no se envían ni se guardan aunque se hubieran escrito antes.
 
+## Editar
+
+Se abre desde "Editar" en los tres puntos del listado o desde "Editar datos" en la ficha. Es el mismo asistente de 5 pasos de "Nueva inscripción" (lo aprobó UX), precargado con `GET /estudiantes/{id}/edicion` (`desdeEdicion` en `esquema.ts` convierte lo guardado al formulario). Al final, "Guardar cambios" envía `PUT /estudiantes/{id}` con las mismas validaciones de los cinco pasos.
+
+- **Documento del estudiante:** se puede cambiar. El suyo no se vuelve a consultar; uno nuevo debe estar libre (el de otra persona o de un eliminado no).
+- **Matriculado** (ya pagó): año académico, nivel y grado quedan bloqueados, y el backend rechaza cambiarlos.
+- **Familiares:** los ya registrados se pueden corregir y se validan como uno nuevo (CAHU6). Son la misma persona para sus hermanos, así que el cambio también lo ven ellos. Se puede cambiar de padre, madre o apoderado escribiendo otro documento; el hermano conserva su vínculo anterior.
+- **Correo de un familiar con cuenta:** si cambia, la cuenta usa el correo nuevo y se le envía una contraseña nueva con su mismo código de usuario (una persona tiene una sola cuenta).
+- **Responsable de matrícula:** si cambia, al nuevo se le crea su cuenta (o se reactiva) y la del anterior queda **inactiva**, salvo que sea responsable de otro estudiante.
+- **Documento que acredita al apoderado:** se conserva si el apoderado sigue siendo la misma persona; se muestra con "Reemplazar" para adjuntar otro.
+- La casilla "Verifiqué los datos…" empieza sin marcar: hay que volver a confirmarla para guardar.
+- Datos antiguos incompletos (anteriores a estas validaciones) se piden al editar, como en una inscripción nueva.
+
 ## Documento repetido y estado del estudiante
 
 - **Sin avisos al pasar al Paso 2:** si el documento es de un estudiante eliminado, se sigue sin ningún mensaje; reutilizar su registro es interno.
@@ -116,7 +130,7 @@ Frame "Admin / Estudiantes | Inscripción | Paso 2 - Ficha médica". Las reglas 
 ## Pendientes
 
 - [ ] Prueba manual de los 5 pasos desde la pantalla.
-- [ ] **Editar** un estudiante desde el menú de tres puntos (hoy el menú tiene Ver, Inactivar/Reactivar y Eliminar).
+- [x] **Editar** un estudiante desde el menú de tres puntos y desde la ficha (ver "Editar").
 - [x] Reglas del servidor del paso 1: obligatorios, solo letras en nombres y apellidos, solo números en teléfono, correo con extensión y coherencia del lugar de nacimiento.
 - [ ] El backend no revisa que los valores de las listas (lengua, gestión, forma de ingreso…) ni el año académico (año en curso o siguiente) sean los del catálogo del frontend.
 - [ ] "Iniciar matrícula" desde la ficha (depende de Matrícula).

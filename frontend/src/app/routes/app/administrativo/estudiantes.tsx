@@ -25,6 +25,7 @@ const EstudiantesRoute = () => (
   >
     <EstudiantesLista
       hrefFicha={paths.app.administrativo.fichaEstudiante.getHref}
+      hrefEditar={paths.app.administrativo.editarEstudiante.getHref}
     />
   </ContentLayout>
 );

@@ -1,6 +1,7 @@
 import {
   EllipsisVertical,
   Eye,
+  Pencil,
   Search,
   Trash2,
   UserCheck,
@@ -79,8 +80,10 @@ export const EstadoEstudianteTag = ({
 // Figma > "Admin / Estudiantes | Listado de estudiantes"
 export const EstudiantesLista = ({
   hrefFicha,
+  hrefEditar,
 }: {
   hrefFicha: (id: string) => string;
+  hrefEditar: (id: string) => string;
 }) => {
   const [texto, setTexto] = React.useState('');
   const [q, setQ] = React.useState('');
@@ -192,6 +195,7 @@ export const EstudiantesLista = ({
                     <AccionesFila
                       estudiante={entry}
                       hrefFicha={hrefFicha}
+                      hrefEditar={hrefEditar}
                       onAccion={(tipo) =>
                         setAccion({ estudiante: entry, tipo })
                       }
@@ -230,14 +234,16 @@ export const EstudiantesLista = ({
   );
 };
 
-// Los tres puntos de cada fila, como en Usuarios: Ver, Inactivar o Reactivar, y Eliminar.
+// Los tres puntos de cada fila (Figma): Ver, Editar, Inactivar o Reactivar, y Eliminar.
 const AccionesFila = ({
   estudiante,
   hrefFicha,
+  hrefEditar,
   onAccion,
 }: {
   estudiante: EstudianteResumen;
   hrefFicha: (id: string) => string;
+  hrefEditar: (id: string) => string;
   onAccion: (tipo: AccionEstudiante) => void;
 }) => {
   const navigate = useNavigate();
@@ -251,6 +257,9 @@ const AccionesFila = ({
       <DropdownMenuContent align="end" className="w-40">
         <DropdownMenuItem onClick={() => navigate(hrefFicha(estudiante.id))}>
           <Eye className="mr-2 size-4" aria-hidden="true" /> Ver
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => navigate(hrefEditar(estudiante.id))}>
+          <Pencil className="mr-2 size-4" aria-hidden="true" /> Editar
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onAccion(retirado ? 'reactivar' : 'retirar')}

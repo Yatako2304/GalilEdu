@@ -112,6 +112,10 @@ export const createAppRouter = (
               () => import('./routes/app/administrativo/nueva-inscripcion'),
             ],
             [
+              paths.app.administrativo.editarEstudiante.path,
+              () => import('./routes/app/administrativo/editar-estudiante'),
+            ],
+            [
               paths.app.administrativo.fichaEstudiante.path,
               () => import('./routes/app/administrativo/ficha-estudiante'),
             ],
