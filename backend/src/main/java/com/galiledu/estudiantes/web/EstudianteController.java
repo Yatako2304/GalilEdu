@@ -1,6 +1,7 @@
 package com.galiledu.estudiantes.web;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Map;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -75,6 +76,15 @@ public class EstudianteController {
 	@GetMapping("/documentos")
 	public VerificacionDocumento verificarDocumento(@RequestParam String documento) {
 		return servicio.verificarDocumento(documento);
+	}
+
+	/**
+	 * GET /api/estudiantes/correos?correo=ana@gmail.com → {"disponible": true|false}. Paso 3: el correo de un familiar
+	 * nuevo no puede estar asignado a otra persona.
+	 */
+	@GetMapping("/correos")
+	public Map<String, Boolean> verificarCorreo(@RequestParam String correo) {
+		return Map.of("disponible", servicio.correoDisponible(correo));
 	}
 
 	/** POST /api/estudiantes/{id}/retirar: "Inactivar" en el listado. */

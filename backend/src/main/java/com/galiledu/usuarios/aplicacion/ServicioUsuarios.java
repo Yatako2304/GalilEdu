@@ -115,7 +115,7 @@ public class ServicioUsuarios {
 	 */
 	@Transactional
 	public UsuarioCreado crear(SolicitudUsuario solicitud) {
-		exigirDatosUsuario(solicitud.persona());
+		solicitud.persona().exigirCompletos();
 		return alta(solicitud, rolesDelFormulario(EnumSet.noneOf(Rol.class), solicitud.roles()));
 	}
 
@@ -185,7 +185,7 @@ public class ServicioUsuarios {
 	/** HU-9: edición de datos personales y roles (RF-22, RF-23). */
 	@Transactional
 	public UsuarioDetalle actualizar(UUID id, SolicitudUsuario solicitud) {
-		exigirDatosUsuario(solicitud.persona());
+		solicitud.persona().exigirCompletos();
 		Usuario usuario = obtener(id);
 		Set<Rol> roles = rolesDelFormulario(usuario.getRoles(), solicitud.roles());
 		personas.actualizar(usuario.getPersona(), solicitud.persona());
@@ -274,26 +274,6 @@ public class ServicioUsuarios {
 	private static void exigirContacto(SolicitudUsuario solicitud) {
 		exigir(solicitud.persona().correo(), "Ingresa el correo electrónico");
 		exigir(solicitud.persona().celular(), "Ingresa el celular");
-	}
-
-	/**
-	 * Datos obligatorios de una persona con cuenta (CAHU6, igual que personaUsuarioSchema del frontend): todo salvo
-	 * apellido materno, teléfono de casa y exalumno. El formato de cada dato lo valida {@link DatosPersona}.
-	 */
-	private static void exigirDatosUsuario(DatosPersona p) {
-		exigir(p.fechaNacimiento(), "Ingresa la fecha de nacimiento");
-		exigir(p.nacionalidad(), "Selecciona la nacionalidad");
-		exigir(p.lugarNacimiento(), "Selecciona el país de nacimiento");
-		exigir(p.sexo(), "Selecciona el sexo");
-		exigir(p.estadoCivil(), "Selecciona el estado civil");
-		exigir(p.gradoInstruccion(), "Selecciona el grado de instrucción");
-		exigir(p.celular(), "Ingresa el celular");
-		exigir(p.correo(), "Ingresa el correo electrónico");
-		exigir(p.profesion(), "Ingresa la profesión u ocupación");
-		exigir(p.centroTrabajo(), "Ingresa el centro de trabajo");
-		exigir(p.cargo(), "Ingresa el cargo");
-		exigir(p.distrito(), "Selecciona el distrito");
-		exigir(p.direccion(), "Ingresa la dirección");
 	}
 
 	/**

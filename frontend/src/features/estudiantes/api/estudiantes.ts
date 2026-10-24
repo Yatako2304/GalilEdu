@@ -95,6 +95,14 @@ export const verificarDocumentoEstudiante = (
 ): Promise<VerificacionDocumento> =>
   api.get('/estudiantes/documentos', { params: { documento } });
 
+/** GET /estudiantes/correos?correo= → si el correo no está asignado a ninguna persona (paso 3). */
+export const correoDisponible = async (correo: string): Promise<boolean> => {
+  const r: { disponible: boolean } = await api.get('/estudiantes/correos', {
+    params: { correo },
+  });
+  return r.disponible;
+};
+
 export type AccionEstudiante = 'retirar' | 'reactivar' | 'eliminar';
 
 // POST /estudiantes/{id}/retirar ("Inactivar") · POST /estudiantes/{id}/reactivar · DELETE /estudiantes/{id}

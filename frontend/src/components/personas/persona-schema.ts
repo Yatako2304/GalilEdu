@@ -5,11 +5,12 @@ import { DatosPersona } from '@/types/api';
 // Validaciones de datos personales (RF-12). Mismas reglas que backend/personas/aplicacion/DatosPersona.java.
 
 /** Letras (con tildes y ñ), espacios, apóstrofo y guion, como `soloLetras` y DatosPersona.SOLO_LETRAS. */
-const soloLetras = (mensaje: string) =>
+export const textoSoloLetras = (mensaje: string) =>
   z
     .string()
     .trim()
     .regex(/^[\p{L}\s'’-]*$/u, mensaje);
+const soloLetras = textoSoloLetras;
 
 const opcional = z
   .string()
@@ -74,15 +75,17 @@ const base = z.object({
   esExalumno: z.boolean().optional().nullable(),
 });
 
+/** DNI de 8 dígitos o carné de extranjería de hasta 12 letras y números (CAHU6-6). */
+export const documentoCompleto = (tipo: string | undefined, numero: string) =>
+  tipo === 'DNI'
+    ? /^[0-9]{8}$/.test(numero)
+    : /^[A-Za-z0-9]{1,12}$/.test(numero);
+
 const documentoValido = <T extends z.infer<typeof base>>(
   p: T,
   ctx: z.RefinementCtx,
 ) => {
-  const ok =
-    p.tipoDocumento === 'DNI'
-      ? /^[0-9]{8}$/.test(p.numeroDocumento)
-      : /^[A-Za-z0-9]{1,12}$/.test(p.numeroDocumento);
-  if (!ok) {
+  if (!documentoCompleto(p.tipoDocumento, p.numeroDocumento)) {
     ctx.addIssue({
       code: z.ZodIssueCode.custom,
       path: ['numeroDocumento'],
@@ -149,11 +152,7 @@ export const personaUsuarioSchema = z
     }
     const numero = (p.numeroDocumento ?? '').trim();
     if (numero) {
-      const valido =
-        p.tipoDocumento === 'DNI'
-          ? /^[0-9]{8}$/.test(numero)
-          : /^[A-Za-z0-9]{1,12}$/.test(numero);
-      if (!valido) {
+      if (!documentoCompleto(p.tipoDocumento, numero)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['numeroDocumento'],

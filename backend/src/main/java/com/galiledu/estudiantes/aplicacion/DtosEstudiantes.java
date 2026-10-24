@@ -44,8 +44,10 @@ public final class DtosEstudiantes {
 			ModoSalida modoSalida,
 			List<@Valid DatosAutorizado> autorizados,
 			@NotNull(message = "Elige al responsable de matrícula") Parentesco responsable,
-			String correoResponsable,
-			String celularResponsable) {
+			// Paso 5: con ellos se crea (o se completa) la cuenta del responsable.
+			@NotBlank(message = "Ingresa el correo de acceso") @Pattern(regexp = "^$|"
+					+ DatosPersona.CORREO, message = "Ingresa un correo válido") @Size(max = 254) String correoResponsable,
+			@NotBlank(message = "Ingresa el celular del responsable") @Pattern(regexp = "^$|^[0-9]{9}$", message = "El celular debe tener 9 dígitos") String celularResponsable) {
 	}
 
 	/** Paso 1. Los largos son los de estudiantes.estudiante (V2); los obligatorios los exige ServicioEstudiantes. */
@@ -96,14 +98,18 @@ public final class DtosEstudiantes {
 	}
 
 	/** Paso 4. */
+	/** Paso 4. Largos de estudiantes.contacto_emergencia (V2); mismas reglas que el esquema del frontend. */
 	public record DatosContacto(
-			@NotBlank(message = "Ingresa el nombre del contacto") String nombreCompleto,
-			@NotBlank(message = "Ingresa el parentesco del contacto") String parentesco,
-			String telefonoFijo,
-			String celular) {
+			@NotBlank(message = "Ingresa el nombre del contacto") @Size(max = 150) @Pattern(regexp = DatosPersona.SOLO_LETRAS, message = "El nombre solo puede contener letras") String nombreCompleto,
+			@NotBlank(message = "Ingresa la relación del contacto") @Size(max = 60) @Pattern(regexp = DatosPersona.SOLO_LETRAS, message = "La relación solo puede contener letras") String parentesco,
+			@Size(max = 15) @Pattern(regexp = "^[0-9]*$", message = "El teléfono solo puede contener números") String telefonoFijo,
+			@NotBlank(message = "Ingresa el celular del contacto") @Pattern(regexp = "^$|^[0-9]{9}$", message = "El celular debe tener 9 dígitos") String celular) {
 	}
 
-	public record DatosAutorizado(@NotBlank String nombreCompleto, @NotBlank String relacion) {
+	/** Persona autorizada a recoger al estudiante (estudiantes.autorizado_recojo). */
+	public record DatosAutorizado(
+			@NotBlank(message = "Ingresa el nombre de la persona autorizada") @Size(max = 150) @Pattern(regexp = DatosPersona.SOLO_LETRAS, message = "El nombre solo puede contener letras") String nombreCompleto,
+			@NotBlank(message = "Ingresa la relación de la persona autorizada") @Size(max = 60) @Pattern(regexp = DatosPersona.SOLO_LETRAS, message = "La relación solo puede contener letras") String relacion) {
 	}
 
 	public record InscripcionRegistrada(UUID id, String estudiante, String responsable, String usuarioResponsable,

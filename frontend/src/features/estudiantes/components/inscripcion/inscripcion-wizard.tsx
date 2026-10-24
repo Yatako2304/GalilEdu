@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as React from 'react';
 import { useForm, UseFormReturn } from 'react-hook-form';
 
+import { LIMITES_PERSONA } from '@/components/personas/limites-persona';
 import { Button } from '@/components/ui/button';
 import { Input, Radio } from '@/components/ui/form';
 import { Stepper } from '@/components/ui/stepper';
@@ -10,6 +11,7 @@ import { nombreGrado } from '@/config/catalogos';
 import {
   ResultadoInscripcion,
   useInscribir,
+  correoDisponible,
   verificarDocumentoEstudiante,
 } from '../../api/estudiantes';
 
@@ -50,8 +52,9 @@ const PasoResponsable = ({
 }: {
   form: UseFormReturn<InscripcionForm>;
 }) => {
-  const { register, watch, setValue } = form;
+  const { register, watch, setValue, formState } = form;
   const v = watch();
+  const errores = formState.errors;
   const candidatos = (
     [
       ['PADRE', 'Padre', v.padre],
@@ -62,15 +65,18 @@ const PasoResponsable = ({
 
   const elegido = candidatos.find(([clave]) => clave === v.responsable)?.[2];
 
+  // Empieza marcado el primero de la lista; si el elegido ya no está (se cambió el Paso 3), vuelve al primero.
   React.useEffect(() => {
-    if (!v.responsable && candidatos[0]) {
+    if (!elegido) {
       setValue(
         'responsable',
-        candidatos[0][0] as InscripcionForm['responsable'],
+        (candidatos[0]?.[0] ?? '') as InscripcionForm['responsable'],
       );
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Al elegirlo (y al volver a este paso) se cargan el correo y el celular del Paso 3. Aquí son solo de vista:
+  // se corrigen en el Paso 3.
   React.useEffect(() => {
     if (elegido) {
       setValue('correoResponsable', elegido.persona.correo ?? '');
@@ -147,16 +153,28 @@ const PasoResponsable = ({
               {...register('responsable')}
             />
           ))}
+          {errores.responsable && (
+            <p role="alert" className="text-body-4 text-content-error">
+              {errores.responsable.message}
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Input
             label="Correo de acceso"
             type="email"
+            maxLength={254}
+            disabled
             registration={register('correoResponsable')}
+            error={errores.correoResponsable}
           />
           <Input
             label="Celular para notificaciones"
+            inputMode="numeric"
+            maxLength={LIMITES_PERSONA.celular}
+            disabled
             registration={register('celularResponsable')}
+            error={errores.celularResponsable}
           />
         </div>
       </SeccionPaso>
@@ -180,6 +198,11 @@ const PasoResponsable = ({
           etiqueta="Verifiqué los datos con los documentos originales (DNI del estudiante y de los padres)."
           registration={register('verificado')}
         />
+        {errores.verificado && (
+          <p role="alert" className="text-body-4 text-content-error">
+            {errores.verificado.message}
+          </p>
+        )}
       </SeccionPaso>
     </>
   );
@@ -201,8 +224,6 @@ export const InscripcionWizard = ({
     mode: 'onSubmit',
   });
   const inscribir = useInscribir(onRegistrada);
-  const verificado = form.watch('verificado');
-  const responsable = form.watch('responsable');
 
   const subir = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -221,7 +242,11 @@ export const InscripcionWizard = ({
       if (!v.permitido) {
         form.setError(
           'estudiante.persona.numeroDocumento',
-          { type: 'manual', message: v.mensaje ?? 'El documento ya existe' },
+          {
+            type: 'manual',
+            message:
+              v.mensaje ?? 'El documento ya está registrado dentro del sistema',
+          },
           { shouldFocus: true },
         );
         return false;
@@ -236,17 +261,65 @@ export const InscripcionWizard = ({
     }
   };
 
+  /**
+   * Paso 3: el correo de cada familiar nuevo no puede estar asignado a otra persona del sistema ni repetirse entre
+   * ellos (el correo es único). Los ya registrados (vinculados por documento) conservan el suyo.
+   */
+  const correosDisponibles = async () => {
+    const v = form.getValues();
+    const nuevos = (['padre', 'madre', 'apoderado'] as const).filter(
+      (clave) =>
+        (clave !== 'apoderado' || v.incluirApoderado) &&
+        registra(v[clave]) &&
+        !v[clave].personaId,
+    );
+    setVerificando(true);
+    try {
+      const vistos = new Set<string>();
+      let primero = true;
+      for (const clave of nuevos) {
+        const correo = (v[clave].persona.correo ?? '').trim().toLowerCase();
+        const ocupado = vistos.has(correo) || !(await correoDisponible(correo));
+        vistos.add(correo);
+        if (ocupado) {
+          form.setError(
+            `${clave}.persona.correo`,
+            {
+              type: 'manual',
+              message: 'El correo ya está registrado en el sistema',
+            },
+            { shouldFocus: primero },
+          );
+          primero = false;
+        }
+      }
+      return primero;
+    } catch {
+      // El error de red o del servidor ya se muestra como notificación (api-client).
+      return false;
+    } finally {
+      setVerificando(false);
+    }
+  };
+
   const siguiente = async () => {
     const campos = CAMPOS_POR_PASO[
       paso
     ] as unknown as (keyof InscripcionForm)[];
     const ok = await form.trigger(campos, { shouldFocus: true });
     if (!ok || (paso === 0 && !(await documentoDisponible()))) return;
+    if (paso === 2 && !(await correosDisponibles())) return;
     setPaso((p) => p + 1);
     subir();
   };
 
-  const registrar = () => {
+  const registrar = async () => {
+    // Paso 5: responsable, correo, celular y verificación son obligatorios.
+    const ok = await form.trigger(
+      CAMPOS_POR_PASO[4] as unknown as (keyof InscripcionForm)[],
+      { shouldFocus: true },
+    );
+    if (!ok) return;
     const valores = form.getValues();
     const { tipo, archivo } = valores.documentoApoderado;
     inscribir.mutate({
@@ -258,6 +331,7 @@ export const InscripcionWizard = ({
     });
   };
 
+  const verificado = form.watch('verificado');
   const e = form.watch('estudiante.persona');
   const subtitulo =
     paso === 0
@@ -313,7 +387,8 @@ export const InscripcionWizard = ({
               variant="secondary"
               onClick={registrar}
               isLoading={inscribir.isPending}
-              disabled={!verificado || !responsable}
+              // Se habilita al marcar "Verifiqué los datos…"; entonces sí muestra los errores.
+              disabled={!verificado || inscribir.isPending}
             >
               Registrar inscripción
             </Button>

@@ -1,9 +1,17 @@
-import { Paperclip, Plus, Search, Trash2 } from 'lucide-react';
+import { Paperclip, Plus, Trash2 } from 'lucide-react';
 import * as React from 'react';
 import { useFieldArray, UseFormReturn } from 'react-hook-form';
 
-import { PersonaFields } from '@/components/personas/persona-fields';
-import { personaAFormulario } from '@/components/personas/persona-schema';
+import { LIMITES_PERSONA } from '@/components/personas/limites-persona';
+import {
+  PersonaFields,
+  filtroDocumento,
+  largoDocumento,
+} from '@/components/personas/persona-fields';
+import {
+  documentoCompleto,
+  personaAFormulario,
+} from '@/components/personas/persona-schema';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -11,6 +19,11 @@ import { FileItem } from '@/components/ui/files';
 import { Input, Radio, Select } from '@/components/ui/form';
 import { Tag } from '@/components/ui/tag';
 import { TIPOS_DOCUMENTO } from '@/config/catalogos';
+import {
+  restringir,
+  soloDigitos,
+  soloLetras,
+} from '@/utils/restringir-entrada';
 
 import { buscarPersonaPorDocumento } from '../../api/estudiantes';
 
@@ -25,12 +38,10 @@ import {
 type PasoProps = { form: UseFormReturn<InscripcionForm> };
 type Clave = 'padre' | 'madre' | 'apoderado';
 
-const MOTIVOS = [
-  'Fallecido(a)',
-  'No tiene la tutela',
-  'No registra',
-  'Otro',
-].map((v) => ({
+/** Largos de estudiantes.contacto_emergencia y autorizado_recojo (V2). */
+const LIMITES_CONTACTO = { nombre: 150, relacion: 60 } as const;
+
+const MOTIVOS = ['Fallecido(a)', 'No registra', 'Otro'].map((v) => ({
   label: v,
   value: v,
 }));
@@ -56,9 +67,11 @@ const TarjetaFamiliar = ({
   const [buscando, setBuscando] = React.useState(false);
   const [buscado, setBuscado] = React.useState(false);
 
+  /** Solo con el documento completo y si no se buscó ya ese mismo número. */
   const buscar = async () => {
     const numero = getValues(`${clave}.persona.numeroDocumento`).trim();
-    if (!numero) return;
+    const tipo = getValues(`${clave}.persona.tipoDocumento`);
+    if (buscado || !documentoCompleto(tipo, numero)) return;
     setBuscando(true);
     try {
       const encontrada = await buscarPersonaPorDocumento(numero);
@@ -125,30 +138,37 @@ const TarjetaFamiliar = ({
         </Grilla>
       ) : (
         <>
-          <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-[1fr_1fr_auto]">
+          {/* Mismas columnas que los demás datos personales (PersonaFields). */}
+          <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
             <Select
               label="Tipo de documento"
               options={TIPOS_DOCUMENTO}
               registration={register(`${clave}.persona.tipoDocumento`)}
+              error={errores?.persona?.tipoDocumento}
             />
+            {/* CAHU6-6: DNI solo 8 dígitos; carné de extranjería hasta 12 letras y números. */}
             <Input
               label="N.° de documento"
-              inputMode="numeric"
-              registration={register(`${clave}.persona.numeroDocumento`, {
-                onChange: alCambiarDocumento,
-              })}
+              inputMode={f.persona.tipoDocumento === 'DNI' ? 'numeric' : 'text'}
+              maxLength={largoDocumento(f.persona.tipoDocumento)}
+              // Como en el Paso 1: se habilita al elegir el tipo de documento.
+              disabled={!f.persona.tipoDocumento}
+              registration={restringir(
+                register(`${clave}.persona.numeroDocumento`, {
+                  onChange: alCambiarDocumento,
+                  // Se busca solo al salir del campo, sin botón.
+                  onBlur: buscar,
+                }),
+                filtroDocumento(f.persona.tipoDocumento),
+              )}
               error={errores?.persona?.numeroDocumento}
             />
-            <Button
-              type="button"
-              variant="primary-light"
-              icon={<Search className="size-4" />}
-              onClick={buscar}
-              isLoading={buscando}
-            >
-              Buscar
-            </Button>
           </div>
+          {buscando && (
+            <p className="text-body-4 text-content-tertiary">
+              Buscando en GalilEdu…
+            </p>
+          )}
 
           {f.personaId ? (
             <div className="rounded-xl bg-surface-success-light px-4 py-3 text-body-4 text-content-secondary">
@@ -177,6 +197,7 @@ const TarjetaFamiliar = ({
             prefix={`${clave}.persona`}
             disabled={!!f.personaId}
             sinDocumento
+            conPaisDeNacimiento
           />
 
           {clave === 'apoderado' && <RelacionYDocumento form={form} />}
@@ -199,7 +220,9 @@ const TarjetaFamiliar = ({
 
 // Figma > Card "Apoderado" > RELACIÓN CON EL ESTUDIANTE: relación, "Especificar" y documento que lo acredita.
 const RelacionYDocumento = ({ form }: PasoProps) => {
-  const { register, watch, setValue } = form;
+  const { register, watch, setValue, formState, clearErrors } = form;
+  const erroresApoderado = formState.errors.apoderado;
+  const erroresDocumento = formState.errors.documentoApoderado;
   const [relacion, documento] = watch([
     'apoderado.relacion',
     'documentoApoderado',
@@ -211,7 +234,10 @@ const RelacionYDocumento = ({ form }: PasoProps) => {
     if (!archivo) return;
     const problema = validarDocumento(archivo);
     setError(problema);
-    if (!problema) setValue('documentoApoderado.archivo', archivo);
+    if (!problema) {
+      setValue('documentoApoderado.archivo', archivo);
+      clearErrors('documentoApoderado.archivo');
+    }
   };
 
   return (
@@ -223,11 +249,16 @@ const RelacionYDocumento = ({ form }: PasoProps) => {
           options={RELACIONES}
           placeholder="Selecciona"
           registration={register('apoderado.relacion')}
+          error={erroresApoderado?.relacion}
         />
         <Input
           label="Especificar (si elige “Otro”)"
           disabled={relacion !== 'Otro'}
+          maxLength={LIMITES_CONTACTO.relacion}
           registration={register('apoderado.relacionDetalle')}
+          error={
+            relacion === 'Otro' ? erroresApoderado?.relacionDetalle : undefined
+          }
         />
         <Select
           label="Documento que lo acredita"
@@ -237,6 +268,7 @@ const RelacionYDocumento = ({ form }: PasoProps) => {
           }))}
           placeholder="Selecciona"
           registration={register('documentoApoderado.tipo')}
+          error={erroresDocumento?.tipo}
         />
       </Grilla>
 
@@ -279,7 +311,11 @@ const RelacionYDocumento = ({ form }: PasoProps) => {
           Adjuntar documento (PDF, JPG o PNG · máx. 5 MB)
         </Button>
       )}
-      {error && <p className="text-body-4 text-content-error">{error}</p>}
+      {(error ?? erroresDocumento?.archivo?.message) && (
+        <p role="alert" className="text-body-4 text-content-error">
+          {error ?? erroresDocumento?.archivo?.message}
+        </p>
+      )}
     </section>
   );
 };
@@ -305,7 +341,7 @@ export const PasoFamilia = ({ form }: PasoProps) => {
   return (
     <SeccionPaso
       titulo="Registra al menos al padre o a la madre"
-      descripcion="El apoderado se agrega solo si no hay padre ni madre, o si el responsable de la matrícula es otra persona (puede no ser familiar)."
+      descripcion="El apoderado se agrega solo si no hay padre ni madre presente, o si el responsable de la matrícula es otra persona (puede no ser familiar)."
     >
       <TarjetaFamiliar
         form={form}
@@ -384,6 +420,15 @@ export const PasoContactos = ({ form }: PasoProps) => {
   ]);
   const errores = formState.errors.contactos;
 
+  // Las filas de autorizados solo existen con "Recogido por persona autorizada".
+  const { replace: vaciarAutorizados } = autorizados;
+  const hayAutorizados = autorizados.fields.length > 0;
+  React.useEffect(() => {
+    if (modoSalida !== 'PERSONA_AUTORIZADA' && hayAutorizados) {
+      vaciarAutorizados([]);
+    }
+  }, [modoSalida, hayAutorizados, vaciarAutorizados]);
+
   const familiares = [
     registra(padre) && `${nombreFamiliar(padre)} · Padre`,
     registra(madre) && `${nombreFamiliar(madre)} · Madre`,
@@ -416,21 +461,41 @@ export const PasoContactos = ({ form }: PasoProps) => {
             <Grilla columnas={4}>
               <Input
                 label="Nombre completo"
-                registration={register(`contactos.${i}.nombreCompleto`)}
+                maxLength={LIMITES_CONTACTO.nombre}
+                registration={restringir(
+                  register(`contactos.${i}.nombreCompleto`),
+                  soloLetras(LIMITES_CONTACTO.nombre),
+                )}
                 error={errores?.[i]?.nombreCompleto}
               />
               <Input
                 label="Parentesco / relación"
-                registration={register(`contactos.${i}.parentesco`)}
+                maxLength={LIMITES_CONTACTO.relacion}
+                registration={restringir(
+                  register(`contactos.${i}.parentesco`),
+                  soloLetras(LIMITES_CONTACTO.relacion),
+                )}
                 error={errores?.[i]?.parentesco}
               />
               <Input
-                label="Teléfono fijo"
-                registration={register(`contactos.${i}.telefonoFijo`)}
+                label="Teléfono fijo (opcional)"
+                inputMode="numeric"
+                maxLength={LIMITES_PERSONA.telefonoCasa}
+                registration={restringir(
+                  register(`contactos.${i}.telefonoFijo`),
+                  soloDigitos(LIMITES_PERSONA.telefonoCasa),
+                )}
+                error={errores?.[i]?.telefonoFijo}
               />
               <Input
                 label="Celular"
-                registration={register(`contactos.${i}.celular`)}
+                inputMode="numeric"
+                maxLength={LIMITES_PERSONA.celular}
+                registration={restringir(
+                  register(`contactos.${i}.celular`),
+                  soloDigitos(LIMITES_PERSONA.celular),
+                )}
+                error={errores?.[i]?.celular}
               />
             </Grilla>
           </div>
@@ -483,15 +548,25 @@ export const PasoContactos = ({ form }: PasoProps) => {
             {autorizados.fields.map((a, i) => (
               <div
                 key={a.id}
-                className="grid grid-cols-1 items-end gap-3 md:grid-cols-[1fr_1fr_auto]"
+                className="grid grid-cols-1 items-start gap-3 md:grid-cols-[1fr_1fr_auto]"
               >
                 <Input
                   label="Nombre completo"
-                  registration={register(`autorizados.${i}.nombreCompleto`)}
+                  maxLength={LIMITES_CONTACTO.nombre}
+                  registration={restringir(
+                    register(`autorizados.${i}.nombreCompleto`),
+                    soloLetras(LIMITES_CONTACTO.nombre),
+                  )}
+                  error={formState.errors.autorizados?.[i]?.nombreCompleto}
                 />
                 <Input
                   label="Relación"
-                  registration={register(`autorizados.${i}.relacion`)}
+                  maxLength={LIMITES_CONTACTO.relacion}
+                  registration={restringir(
+                    register(`autorizados.${i}.relacion`),
+                    soloLetras(LIMITES_CONTACTO.relacion),
+                  )}
+                  error={formState.errors.autorizados?.[i]?.relacion}
                 />
                 <Button
                   type="button"

@@ -45,17 +45,27 @@ class InscripcionIT extends PruebaIntegracion {
 				 "contactos":[{"nombreCompleto":"Rosa Medina","parentesco":"Abuela","celular":"987654321"},
 				              {"nombreCompleto":"Pedro Rojas","parentesco":"Tío","celular":"976543210"}],
 				 "modoSalida":"PERSONA_AUTORIZADA","autorizados":[],
-				 "responsable":"%s"}"""
+				 "responsable":"%s",%s}"""
 				.formatted(InscripcionPrueba.estudiante("78945699", "Lucía", "PRI-6"), InscripcionPrueba.FICHA_MEDICA,
-						padre, madre, apoderado, responsable);
+						padre, madre, apoderado, responsable, contactoResponsable(responsable));
+	}
+
+	/** Paso 5: el correo y el celular de cada responsable (los mismos del Paso 3; el correo es único). */
+	private static String contactoResponsable(String responsable) {
+		String correo = switch (responsable) {
+			case "PADRE" -> "luis.paredes@galiledu.edu.pe";
+			case "MADRE" -> "carla.rojas@gmail.com";
+			default -> "lucia.fernandez@gmail.com";
+		};
+		return "\"correoResponsable\":\"%s\",\"celularResponsable\":\"911222333\"".formatted(correo);
 	}
 
 	private static final String PADRE_EXISTENTE = """
 			{"noRegistra":false,"personaId":"%s","viveConEstudiante":true,"tienePatriaPotestad":true}"""
 			.formatted(PERSONA_LUIS);
 	private static final String MADRE_NUEVA = """
-			{"noRegistra":false,"persona":{"tipoDocumento":"DNI","numeroDocumento":"42345678","apellidoPaterno":"Rojas",
-			"nombres":"Carla","celular":"987333444","correo":"carla.rojas@gmail.com"},"viveConEstudiante":true}""";
+			{"noRegistra":false,"persona":%s,"viveConEstudiante":true}"""
+			.formatted(InscripcionPrueba.persona("42345678", "Rojas", "Carla", "987333444", "carla.rojas@gmail.com"));
 	private static final String NO_REGISTRA = "{\"noRegistra\":true,\"motivo\":\"Fallecido(a)\"}";
 
 	@Test
@@ -146,6 +156,62 @@ class InscripcionIT extends PruebaIntegracion {
 				.replace("\"distritoNacimiento\":\"Magdalena del Mar\",", "");
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal, extranjero))
 				.andExpect(status().isCreated());
+	}
+
+	@Test
+	void unFamiliarNuevoNecesitaLosMismosDatosQueUnUsuario() throws Exception {
+		// La madre es nueva: cada dato obligatorio de CAHU6 dice de quién es.
+		rechaza("\"profesion\":\"Diseñadora\"", "\"profesion\":\"\"", "Madre: Ingresa la profesión u ocupación");
+		rechaza("\"lugarNacimiento\":\"Perú\"", "\"lugarNacimiento\":null", "Madre: Selecciona el país de nacimiento");
+		rechaza("\"estadoCivil\":\"Casado(a)\"", "\"estadoCivil\":null", "Madre: Selecciona el estado civil");
+		rechaza("\"celular\":\"987333444\"", "\"celular\":\"\"", "Madre: Ingresa el celular");
+		// Formatos de CAHU6 (celular, correo y nombres) también para los familiares.
+		rechaza("\"celular\":\"987333444\"", "\"celular\":\"98733\"", "El celular debe tener 9 dígitos");
+		rechaza("\"correo\":\"carla.rojas@gmail.com\"", "\"correo\":\"carla@gmail\"", "Ingresa un correo válido");
+		rechaza("\"nombres\":\"Carla\"", "\"nombres\":\"Carla2\"", "Los nombres solo pueden contener letras");
+	}
+
+	@Test
+	void validaContactosYPersonasAutorizadasDelPaso4() throws Exception {
+		rechaza("\"celular\":\"987654321\"}", "\"celular\":\"\"}", "Ingresa el celular del contacto");
+		rechaza("\"celular\":\"987654321\"}", "\"celular\":\"98765\"}", "El celular debe tener 9 dígitos");
+		rechaza("\"nombreCompleto\":\"Rosa Medina\"", "\"nombreCompleto\":\"Rosa 2\"",
+				"El nombre solo puede contener letras");
+		rechaza("\"parentesco\":\"Abuela\"", "\"parentesco\":\"Abuela!\"", "La relación solo puede contener letras");
+		rechaza("\"celular\":\"987654321\"}", "\"celular\":\"987654321\",\"telefonoFijo\":\"01-452\"}",
+				"El teléfono solo puede contener números");
+		rechaza("\"autorizados\":[]", "\"autorizados\":[{\"nombreCompleto\":\"\",\"relacion\":\"Abuela\"}]",
+				"Ingresa el nombre de la persona autorizada");
+	}
+
+	@Test
+	void exigeElCorreoYElCelularDelResponsableEnElPaso5() throws Exception {
+		rechaza("\"correoResponsable\":\"luis.paredes@galiledu.edu.pe\"", "\"correoResponsable\":\"\"",
+				"Ingresa el correo de acceso");
+		rechaza("\"correoResponsable\":\"luis.paredes@galiledu.edu.pe\"", "\"correoResponsable\":\"luis@galiledu\"",
+				"Ingresa un correo válido");
+		rechaza("\"celularResponsable\":\"911222333\"", "\"celularResponsable\":null",
+				"Ingresa el celular del responsable");
+		rechaza("\"celularResponsable\":\"911222333\"", "\"celularResponsable\":\"91122\"",
+				"El celular debe tener 9 dígitos");
+	}
+
+	@Test
+	void consultaSiUnCorreoYaEstaAsignadoSinImportarMayusculas() throws Exception {
+		mvc.perform(conToken(get("/estudiantes/correos").param("correo", "LUIS.PAREDES@galiledu.edu.pe"), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.disponible").value(false));
+		mvc.perform(conToken(get("/estudiantes/correos").param("correo", "nadie@gmail.com"), personal))
+				.andExpect(jsonPath("$.disponible").value(true));
+	}
+
+	@Test
+	void elApoderadoNecesitaSuRelacionConElEstudiante() throws Exception {
+		String json = inscripcion(NO_REGISTRA, NO_REGISTRA,
+				APODERADO_NUEVO.replace("\"relacion\":\"Amiga de la familia\"", "\"relacion\":\"\""), "APODERADO");
+		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal, json))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Apoderado: Selecciona la relación"));
 	}
 
 	@Test
@@ -250,8 +316,9 @@ class InscripcionIT extends PruebaIntegracion {
 	}
 
 	private static final String APODERADO_NUEVO = """
-			{"noRegistra":false,"persona":{"tipoDocumento":"DNI","numeroDocumento":"45678912","apellidoPaterno":"Fernández",
-			"nombres":"Lucía","celular":"999888777","correo":"lucia.fernandez@gmail.com"},"relacion":"Amiga de la familia"}""";
+			{"noRegistra":false,"persona":%s,"relacion":"Amiga de la familia"}"""
+			.formatted(InscripcionPrueba.persona("45678912", "Fernández", "Lucía", "999888777",
+					"lucia.fernandez@gmail.com"));
 	private static final byte[] PDF = "%PDF-1.4 carta poder".getBytes();
 
 	private String inscribirConApoderado() throws Exception {

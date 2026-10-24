@@ -64,6 +64,33 @@ El Paso 1 sigue el frame "Admin / Estudiantes | Inscripción | Paso 1 - Estudian
 - **Diferencia con Figma:** el campo "¿Cuál?" de discapacidad aparece al elegir Sí aunque Figma no lo dibuja.
 - Figma muestra "Administrador" en el selector de rol del sidebar de esta pantalla, pero es del Personal administrativo: es un error del diseño; la app muestra "Personal administrativo".
 
+## Paso 3 según Figma y CAHU6
+
+Frame "Admin / Estudiantes | Inscripción | Paso 3 - Padres y apoderado". Un padre, madre o apoderado **nuevo** (no encontrado por documento) se valida como un usuario de HU-6, porque el responsable de matrícula tendrá cuenta:
+
+- **Obligatorios (CAHU6-2):** todo salvo apellido materno, teléfono de casa y exalumno. Frontend: `personaUsuarioSchema` en `familiarSchema` (`esquema.ts`). Backend: `DatosPersona.exigirCompletos()`, compartido con "Nuevo usuario"; el mensaje dice de quién es el dato ("Madre: Ingresa el celular") y se revisa antes de guardar nada.
+- **Formatos (CAHU6-6, 10, 12, 21, 23, 24):** el N.° de documento solo deja escribir 8 dígitos con DNI o 12 letras y números con carné; nombres y apellidos solo letras; celular 9 dígitos; correo con extensión; teléfono solo números.
+- **"País de nacimiento"** con la lista de países (igual que Nuevo usuario), en vez del texto libre "Lugar de nacimiento".
+- Un familiar ya registrado (vinculado por documento) no se vuelve a validar: sus datos no se editan aquí.
+- **Sin valores por defecto:** el tipo de documento del familiar empieza vacío y el N.° de documento se habilita al elegirlo, como en el Paso 1.
+- **"No registra / fallecido(a)":** el motivo es obligatorio (Fallecido(a), No registra u Otro); la observación es opcional.
+- **Búsqueda automática:** no hay botón "Buscar"; la persona se busca al salir del N.° de documento, solo si está completo (`documentoCompleto` de `persona-schema.ts`) y una vez por número. Tipo y N.° de documento ocupan media fila cada uno, como los demás datos.
+- **Correo no repetido:** al pulsar "Siguiente", el correo de cada familiar nuevo se consulta con `GET /estudiantes/correos?correo=` (sin importar mayúsculas) y no puede repetirse entre ellos; si está ocupado: "El correo ya está registrado en el sistema" (sin decir de quién).
+- **Apoderado:** relación obligatoria; con "Otro", "Especificar" también; el tipo de documento que lo acredita es obligatorio. **Adjuntar el archivo no es obligatorio:** se puede adjuntar más adelante. El backend exige la relación.
+- **Pendiente (decisión del equipo):** la casilla "Misma dirección que el estudiante" de Figma no se implementa por ahora.
+
+## Paso 4: contactos y autorización de salida
+
+- **Contactos de emergencia** (mínimo 2): nombre, relación y celular obligatorios; teléfono fijo opcional. Nombre y relación solo dejan escribir letras (como nombres y apellidos), el celular 9 dígitos y el teléfono solo números. Largos de `estudiantes.contacto_emergencia` (150 y 60).
+- **Autorización de salida:** los tres radios siguen igual. Con "Recogido por persona autorizada", cada fila de "Agregar otra persona autorizada" pide nombre y relación (solo letras); no hay filas hasta pulsar ese botón. Si se cambia a "sale solo" o "movilidad", las filas se quitan y no se envían.
+- Backend: mismas reglas en `DatosContacto` y `DatosAutorizado` (con `DatosPersona.SOLO_LETRAS`).
+
+## Paso 5: responsable y registro
+
+- Se listan solo el padre, la madre y el apoderado registrados en el Paso 3; **empieza marcado el primero**. Al elegir uno (o al volver a este paso) se cargan su correo y su celular del Paso 3, que aquí son **solo de vista**: si falta o está mal alguno, el mensaje indica corregirlo en el Paso 3.
+- **"Registrar inscripción"** está deshabilitado hasta marcar "Verifiqué los datos…"; ya habilitado, al pulsarlo muestra los errores de responsable, correo y celular.
+- Backend: `correoResponsable` y `celularResponsable` son obligatorios en `SolicitudInscripcion`; con ellos se crea la cuenta (rol Apoderado) o se completa la existente.
+
 ## Paso 2 según Figma
 
 Frame "Admin / Estudiantes | Inscripción | Paso 2 - Ficha médica". Las reglas están en `fichaMedicaSchema` (`esquema.ts`) y, con los mismos mensajes, en `ServicioEstudiantes.exigirPaso2` y `DatosFichaMedica` del backend.
@@ -78,7 +105,7 @@ Frame "Admin / Estudiantes | Inscripción | Paso 2 - Ficha médica". Las reglas 
 ## Documento repetido y estado del estudiante
 
 - **Sin avisos al pasar al Paso 2:** si el documento es de un estudiante eliminado, se sigue sin ningún mensaje; reutilizar su registro es interno.
-- **Los mensajes no dicen de quién es el documento:** "El documento ya existe" (estudiante activo u otra persona); si es de un estudiante retirado, se añade que lo reactive desde el listado.
+- **Los mensajes no dicen de quién es el documento:** "El documento ya está registrado dentro del sistema" (estudiante activo u otra persona); si es de un estudiante retirado, se añade que lo reactive desde el listado.
 
 - **Se revisa en el paso 1**, al pulsar "Siguiente" (`GET /estudiantes/documentos`), no al registrar. El aviso sale bajo "N.° de documento" y no deja pasar al paso 2.
 - **Libre:** se inscribe normal. **Activo:** no se puede inscribir de nuevo. **Retirado (inactivo):** tampoco; primero hay que reactivarlo. **Eliminado:** sí se puede; al registrar la inscripción el mismo registro (mismo id, con su historial de matrículas y pagos) vuelve a quedar activo y sus datos, ficha médica, familia, contactos y autorizados se reemplazan por los nuevos (`ServicioEstudiantes.estudianteParaInscribir`). Si el documento es de otra persona que no es estudiante (padre, apoderado, usuario) también se rechaza, sin trato especial.
@@ -93,4 +120,5 @@ Frame "Admin / Estudiantes | Inscripción | Paso 2 - Ficha médica". Las reglas 
 - [x] Reglas del servidor del paso 1: obligatorios, solo letras en nombres y apellidos, solo números en teléfono, correo con extensión y coherencia del lugar de nacimiento.
 - [ ] El backend no revisa que los valores de las listas (lengua, gestión, forma de ingreso…) ni el año académico (año en curso o siguiente) sean los del catálogo del frontend.
 - [ ] "Iniciar matrícula" desde la ficha (depende de Matrícula).
+- [ ] **Deuda técnica (siguiente iteración):** pasar a la base de datos las reglas que hoy solo validan frontend y backend: `NOT NULL` en los datos obligatorios de `personas.persona` (CAHU6-2), del estudiante (pasos 1 y 2), de los contactos (celular) y del vínculo del apoderado (relación). Hacerlo con una migración nueva, después de corregir los registros antiguos (anteriores a estas validaciones) que no cumplan.
 - [x] Documento que acredita al apoderado (carta poder, resolución de tutela…): se adjunta en el paso 3 y se ve o reemplaza desde la ficha. PDF, JPG o PNG de hasta 5 MB.

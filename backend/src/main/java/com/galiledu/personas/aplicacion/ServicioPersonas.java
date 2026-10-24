@@ -46,6 +46,12 @@ public class ServicioPersonas {
 		return personas.findByNumeroDocumento(numeroDocumento.strip().toUpperCase());
 	}
 
+	/** Si ninguna persona tiene ese correo (sin importar mayúsculas). */
+	@Transactional(readOnly = true)
+	public boolean correoDisponible(String correo) {
+		return personas.buscarPorCorreo(correo.strip()).isEmpty();
+	}
+
 	public Persona obtener(UUID id) {
 		return personas.findById(id).orElseThrow(() -> ExcepcionNegocio.noEncontrado("La persona no existe"));
 	}

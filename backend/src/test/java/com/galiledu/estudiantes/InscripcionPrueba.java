@@ -18,6 +18,17 @@ final class InscripcionPrueba {
 				.formatted(documento, nombres, grado);
 	}
 
+	/** Paso 3: persona nueva (padre, madre o apoderado) con todos los datos obligatorios de CAHU6. */
+	static String persona(String documento, String apellido, String nombres, String celular, String correo) {
+		return """
+				{"tipoDocumento":"DNI","numeroDocumento":"%s","apellidoPaterno":"%s","nombres":"%s",
+				 "fechaNacimiento":"1988-03-08","nacionalidad":"Peruana","lugarNacimiento":"Perú","sexo":"FEMENINO",
+				 "estadoCivil":"Casado(a)","gradoInstruccion":"Superior técnica","celular":"%s","correo":"%s",
+				 "profesion":"Diseñadora","centroTrabajo":"Independiente","cargo":"Diseñadora",
+				 "distrito":"San Miguel","direccion":"Av. La Marina 1234"}"""
+				.formatted(documento, apellido, nombres, celular, correo);
+	}
+
 	/** Paso 2: "fichaMedica" de la solicitud (con alergia alimentaria). */
 	static final String FICHA_MEDICA = """
 			{"tipoSangre":"O+","pesoKg":22,"estaturaM":1.18,"tipoSeguro":"EsSalud",
