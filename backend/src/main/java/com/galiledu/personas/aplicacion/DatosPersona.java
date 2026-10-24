@@ -1,5 +1,7 @@
 package com.galiledu.personas.aplicacion;
 
+import static com.galiledu.compartido.web.ExcepcionNegocio.exigir;
+
 import java.time.LocalDate;
 
 import jakarta.validation.constraints.Email;
@@ -40,9 +42,30 @@ public record DatosPersona(
 		@Size(max = 200) String direccion,
 		Boolean esExalumno) {
 	/** Letras (con tildes y ñ), espacios, apóstrofo y guion: lo mismo que deja escribir soloLetras del frontend. */
-	static final String SOLO_LETRAS = "^[\\p{L}\\s'’-]*$";
+	public static final String SOLO_LETRAS = "^[\\p{L}\\s'’-]*$";
 	/** usuario@dominio.extensión: @Email por sí solo acepta "ana@colegio" sin extensión y el frontend (zod) no. */
-	static final String CORREO = "[^@\\s]+@[^@\\s]+\\.[^@\\s.]+";
+	public static final String CORREO = "[^@\\s]+@[^@\\s]+\\.[^@\\s.]+";
+
+	/**
+	 * Datos obligatorios de una persona con cuenta o que puede tenerla (CAHU6-2, igual que personaUsuarioSchema del
+	 * frontend): todo salvo apellido materno, teléfono de casa y exalumno. Lo usan "Nuevo usuario" y los padres y el
+	 * apoderado de la inscripción. El formato de cada dato lo validan las anotaciones de este record.
+	 */
+	public void exigirCompletos() {
+		exigir(fechaNacimiento, "Ingresa la fecha de nacimiento");
+		exigir(nacionalidad, "Selecciona la nacionalidad");
+		exigir(lugarNacimiento, "Selecciona el país de nacimiento");
+		exigir(sexo, "Selecciona el sexo");
+		exigir(estadoCivil, "Selecciona el estado civil");
+		exigir(gradoInstruccion, "Selecciona el grado de instrucción");
+		exigir(celular, "Ingresa el celular");
+		exigir(correo, "Ingresa el correo electrónico");
+		exigir(profesion, "Ingresa la profesión u ocupación");
+		exigir(centroTrabajo, "Ingresa el centro de trabajo");
+		exigir(cargo, "Ingresa el cargo");
+		exigir(distrito, "Selecciona el distrito");
+		exigir(direccion, "Ingresa la dirección");
+	}
 
 	/** Copia los datos a la entidad, normalizando textos vacíos a null. */
 	public void aplicarA(Persona p) {

@@ -56,7 +56,9 @@ public class ServicioEstudiantes {
 	private static final String PAIS_CON_UBIGEO = "Perú";
 	/** Nacionalidades del Paso 1 (NACIONALIDADES_ESTUDIANTE en el frontend). */
 	private static final List<String> NACIONALIDADES = List.of("Peruana", "Extranjera");
-	private static final String DOCUMENTO_EXISTE = "El documento ya existe";
+	private static final String DOCUMENTO_EXISTE = "El documento ya está registrado dentro del sistema";
+	private static final Map<Parentesco, String> NOMBRE_PARENTESCO = Map.of(Parentesco.PADRE, "Padre",
+			Parentesco.MADRE, "Madre", Parentesco.APODERADO, "Apoderado");
 
 	private final EstudianteRepositorio estudiantes;
 	private final ServicioPersonas personas;
@@ -85,6 +87,7 @@ public class ServicioEstudiantes {
 		DatosEstudiante d = s.estudiante();
 		exigirPaso1(d);
 		exigirPaso2(s.fichaMedica());
+		exigirPaso3(s);
 		Estudiante estudiante = estudianteParaInscribir(d);
 		Persona personaEstudiante = estudiante.getPersona();
 		estudiante.lugarNacimiento(d.paisNacimiento(), d.departamentoNacimiento(), d.provinciaNacimiento(),
@@ -167,6 +170,15 @@ public class ServicioEstudiantes {
 		// El DELETE de lo anterior debe ejecutarse antes del INSERT de lo nuevo (claves únicas de padre, madre y ficha).
 		estudiantes.flush();
 		return e;
+	}
+
+	/**
+	 * Paso 3: ¿el correo de un padre, madre o apoderado nuevo está libre? El correo es único entre personas. No dice
+	 * de quién es.
+	 */
+	@Transactional(readOnly = true)
+	public boolean correoDisponible(String correo) {
+		return personas.correoDisponible(correo);
 	}
 
 	/** Paso 1: ¿se puede inscribir un estudiante con este documento? Se consulta antes de pasar al paso 2. */
@@ -320,7 +332,9 @@ public class ServicioEstudiantes {
 			}
 			return VinculoFamiliar.noRegistra(parentesco, vacio(d.motivo()), vacio(d.observacion()));
 		}
-		Persona persona = d.personaId() != null ? personas.obtener(d.personaId()) : personas.crear(d.persona());
+		Persona persona = d.personaId() != null
+				? personas.obtener(d.personaId())
+				: personas.crear(d.persona());
 		return VinculoFamiliar.conPersona(parentesco, persona, vacio(d.relacion()),
 				Boolean.TRUE.equals(d.viveConEstudiante()), Boolean.TRUE.equals(d.tienePatriaPotestad()));
 	}
@@ -361,6 +375,35 @@ public class ServicioEstudiantes {
 
 	private static boolean vacios(String... textos) {
 		return Arrays.stream(textos).allMatch(t -> t == null || t.isBlank());
+	}
+
+	/**
+	 * Paso 3: padre, madre o apoderado nuevo, con los mismos obligatorios que un usuario (CAHU6-2), porque el
+	 * responsable de matrícula tendrá cuenta. El mensaje dice de quién es el dato ("Madre: Ingresa el celular").
+	 * Se revisa antes de guardar nada, para no dejar una inscripción a medias.
+	 */
+	private static void exigirPaso3(SolicitudInscripcion s) {
+		exigirFamiliarNuevo(Parentesco.PADRE, s.padre());
+		exigirFamiliarNuevo(Parentesco.MADRE, s.madre());
+		exigirFamiliarNuevo(Parentesco.APODERADO, s.apoderado());
+	}
+
+	private static void exigirFamiliarNuevo(Parentesco parentesco, DatosFamiliar d) {
+		if (d == null || !d.registra()) {
+			return;
+		}
+		// La relación es del vínculo, no de la persona: se pide aunque el apoderado ya esté registrado.
+		if (parentesco == Parentesco.APODERADO && (d.relacion() == null || d.relacion().isBlank())) {
+			throw ExcepcionNegocio.invalido("Apoderado: Selecciona la relación");
+		}
+		if (d.personaId() != null) {
+			return;
+		}
+		try {
+			d.persona().exigirCompletos();
+		} catch (ExcepcionNegocio e) {
+			throw ExcepcionNegocio.invalido(NOMBRE_PARENTESCO.get(parentesco) + ": " + e.getMessage());
+		}
 	}
 
 	private static void exigirMotivo(DatosFamiliar d, String mensaje) {

@@ -46,28 +46,43 @@ const valida = (): InscripcionForm => {
   };
   f.padre.personaId = 'id-del-padre';
   f.padre.persona.numeroDocumento = '41234567';
+  // Madre nueva: con todos los datos que pide CAHU6-2.
   f.madre.persona = {
     ...f.madre.persona,
+    tipoDocumento: 'DNI',
     numeroDocumento: '42345678',
     apellidoPaterno: 'Rojas',
     nombres: 'Carla',
+    fechaNacimiento: '1990-11-21',
+    nacionalidad: 'Peruana',
+    lugarNacimiento: 'Perú',
+    estadoCivil: 'Casado(a)',
+    gradoInstruccion: 'Superior técnica',
+    celular: '987333444',
     correo: 'carla@gmail.com',
+    profesion: 'Diseñadora gráfica',
+    centroTrabajo: 'Independiente',
+    cargo: 'Diseñadora',
+    distrito: 'San Miguel',
+    direccion: 'Av. La Marina 1234',
   };
   f.contactos = [
     {
       nombreCompleto: 'Rosa',
       parentesco: 'Abuela',
       telefonoFijo: '',
-      celular: '987 654 321',
+      celular: '987654321',
     },
     {
       nombreCompleto: 'Pedro',
       parentesco: 'Tío',
       telefonoFijo: '',
-      celular: '',
+      celular: '976543210',
     },
   ];
   f.responsable = 'MADRE';
+  f.correoResponsable = 'carla@gmail.com';
+  f.celularResponsable = '987333444';
   f.verificado = true;
   return f;
 };
@@ -212,12 +227,148 @@ describe('inscripcionSchema (reglas de Figma)', () => {
     expect(mensajes(f)).toContain('Indica el motivo');
   });
 
+  test('Paso 4: nombre, relación y celular del contacto son obligatorios; el teléfono fijo no', () => {
+    const f = valida();
+    f.contactos[0] = {
+      nombreCompleto: '',
+      parentesco: '',
+      telefonoFijo: '',
+      celular: '',
+    };
+    expect(mensajes(f)).toEqual([
+      'Ingresa el nombre',
+      'Ingresa la relación',
+      'Ingresa el celular',
+    ]);
+  });
+
+  test('Paso 4: formatos del contacto (letras, teléfono y celular)', () => {
+    const f = valida();
+    f.contactos[0] = {
+      nombreCompleto: 'Rosa 2',
+      parentesco: 'Abuela!',
+      telefonoFijo: '01-452',
+      celular: '98765',
+    };
+    expect(mensajes(f)).toEqual([
+      'El nombre solo puede contener letras',
+      'La relación solo puede contener letras',
+      'El teléfono solo puede contener números',
+      'El celular debe tener 9 dígitos',
+    ]);
+  });
+
+  test('Paso 4: una persona autorizada agregada exige nombre y relación', () => {
+    const f = valida();
+    f.autorizados = [{ nombreCompleto: '', relacion: '' }];
+    expect(mensajes(f)).toEqual(['Ingresa el nombre', 'Ingresa la relación']);
+    f.autorizados = [{ nombreCompleto: 'Rosa Medina', relacion: 'Abuela' }];
+    expect(mensajes(f)).toEqual([]);
+  });
+
+  test('Paso 4: los autorizados solo se envían si sale con persona autorizada', () => {
+    const f = valida();
+    f.autorizados = [{ nombreCompleto: 'Rosa Medina', relacion: 'Abuela' }];
+    expect(aSolicitud(f).autorizados).toHaveLength(1);
+    f.modoSalida = 'SOLO';
+    expect(aSolicitud(f).autorizados).toEqual([]);
+  });
+
+  test('Paso 5: responsable, correo, celular y verificación son obligatorios', () => {
+    const f = valida();
+    f.responsable = '';
+    f.correoResponsable = '';
+    f.celularResponsable = '';
+    f.verificado = false;
+    expect(mensajes(f)).toEqual([
+      'Elige al responsable de matrícula',
+      'Falta el correo: complétalo en el Paso 3',
+      'Falta el celular: complétalo en el Paso 3',
+      'Confirma que verificaste los datos con los documentos originales',
+    ]);
+  });
+
+  test('Paso 5: formato del correo y del celular del responsable', () => {
+    const f = valida();
+    f.correoResponsable = 'carla@gmail';
+    f.celularResponsable = '98733';
+    expect(mensajes(f)).toEqual([
+      'El correo no es válido: corrígelo en el Paso 3',
+      'El celular no es válido: corrígelo en el Paso 3',
+    ]);
+  });
+
+  test('Paso 3: el apoderado exige relación, "Especificar" con Otro y tipo de documento; el archivo no', () => {
+    const f = valida();
+    f.incluirApoderado = true;
+    f.apoderado.personaId = 'id-apoderado';
+    f.apoderado.persona.numeroDocumento = '45678912';
+    f.apoderado.relacion = 'Otro';
+    expect(mensajes(f)).toEqual([
+      'Especifica la relación',
+      'Selecciona el documento que lo acredita',
+    ]);
+    f.apoderado.relacion = '';
+    expect(mensajes(f)).toContain('Selecciona la relación');
+    f.apoderado.relacion = 'Otro';
+    f.apoderado.relacionDetalle = 'Vecina';
+    // Sin archivo adjunto: se puede subir más adelante.
+    f.documentoApoderado = { tipo: 'Carta poder notarial', archivo: null };
+    expect(mensajes(f)).toEqual([]);
+  });
+
   test('exige al menos 2 contactos de emergencia', () => {
     const f = valida();
     f.contactos = f.contactos.slice(0, 1);
     expect(mensajes(f)).toContain(
       'Registra al menos 2 contactos de emergencia',
     );
+  });
+});
+
+describe('Paso 3 · padres y apoderado (CAHU6)', () => {
+  test('un familiar nuevo pide todo salvo apellido materno, teléfono de casa y exalumno', () => {
+    const f = valida();
+    f.madre.persona = {
+      ...f.madre.persona,
+      fechaNacimiento: '',
+      lugarNacimiento: '',
+      estadoCivil: '',
+      celular: '',
+      profesion: '',
+      apellidoMaterno: '',
+      telefonoCasa: '',
+    };
+    expect(mensajes(f)).toEqual([
+      'Ingresa la fecha de nacimiento',
+      'Selecciona el país de nacimiento',
+      'Selecciona el estado civil',
+      'Ingresa el celular',
+      'Ingresa la profesión u ocupación',
+    ]);
+  });
+
+  test('aplica los formatos de CAHU6 (DNI, celular, correo)', () => {
+    const f = valida();
+    f.madre.persona.numeroDocumento = '4234';
+    f.madre.persona.celular = '98733';
+    f.madre.persona.correo = 'carla@gmail';
+    expect(mensajes(f)).toEqual([
+      'El celular debe tener 9 dígitos',
+      'Ingresa un correo válido',
+      'El DNI debe tener 8 dígitos',
+    ]);
+  });
+
+  test('el tipo de documento del familiar no trae valor por defecto', () => {
+    expect(inscripcionVacia().padre.persona.tipoDocumento).toBe('');
+    expect(inscripcionVacia().apoderado.persona.tipoDocumento).toBe('');
+  });
+
+  test('un familiar ya registrado (vinculado) no se vuelve a validar', () => {
+    const f = valida();
+    expect(f.padre.persona.nombres).toBe('');
+    expect(mensajes(f)).toEqual([]);
   });
 });
 

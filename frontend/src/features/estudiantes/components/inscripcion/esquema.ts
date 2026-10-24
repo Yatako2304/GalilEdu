@@ -3,7 +3,9 @@ import { z } from 'zod';
 import {
   PersonaFormValues,
   personaSchema,
+  personaUsuarioSchema,
   personaVacia,
+  textoSoloLetras,
 } from '@/components/personas/persona-schema';
 import { PAIS_CON_UBIGEO } from '@/config/ubigeo';
 import {
@@ -95,7 +97,12 @@ const familiarVacio = (sexo: 'MASCULINO' | 'FEMENINO' | ''): FamiliarForm => ({
   personaId: null,
   tieneCuenta: false,
   aCargo: [],
-  persona: { ...personaVacia(), sexo },
+  // Como en el Paso 1, el tipo de documento no trae valor por defecto.
+  persona: {
+    ...personaVacia(),
+    tipoDocumento: '' as unknown as PersonaFormValues['tipoDocumento'],
+    sexo,
+  },
   viveConEstudiante: true,
   tienePatriaPotestad: true,
   relacion: '',
@@ -182,7 +189,8 @@ const familiarSchema = (opcional: boolean) =>
       return;
     }
     if (f.personaId) return;
-    const r = personaSchema.safeParse(f.persona);
+    // Persona nueva: mismos obligatorios que un usuario (CAHU6-2), porque el responsable tendrá cuenta.
+    const r = personaUsuarioSchema.safeParse(f.persona);
     if (!r.success) {
       r.error.issues.forEach((i) =>
         ctx.addIssue({ ...i, path: ['persona', ...i.path] }),
@@ -416,24 +424,66 @@ export const inscripcionSchema = z
     madre: familiarSchema(false),
     incluirApoderado: z.boolean(),
     apoderado: z.custom<FamiliarForm>(),
+    // Paso 4: nombre, relación y celular obligatorios; teléfono fijo opcional (solo números).
     contactos: z
       .array(
         z.object({
-          nombreCompleto: z.string().trim().min(1, 'Ingresa el nombre'),
-          parentesco: z.string().trim().min(1, 'Ingresa el parentesco'),
-          telefonoFijo: z.string(),
-          celular: z.string(),
+          nombreCompleto: textoSoloLetras(
+            'El nombre solo puede contener letras',
+          ).min(1, 'Ingresa el nombre'),
+          parentesco: textoSoloLetras(
+            'La relación solo puede contener letras',
+          ).min(1, 'Ingresa la relación'),
+          telefonoFijo: z
+            .string()
+            .trim()
+            .regex(/^[0-9]*$/, 'El teléfono solo puede contener números'),
+          celular: z
+            .string()
+            .trim()
+            .min(1, 'Ingresa el celular')
+            .regex(/^([0-9]{9})?$/, 'El celular debe tener 9 dígitos'),
         }),
       )
       .min(2, 'Registra al menos 2 contactos de emergencia'),
     modoSalida: z.string(),
+    // Las filas aparecen solo con "Agregar otra persona autorizada"; las que hay son obligatorias.
     autorizados: z.array(
-      z.object({ nombreCompleto: z.string(), relacion: z.string() }),
+      z.object({
+        nombreCompleto: textoSoloLetras(
+          'El nombre solo puede contener letras',
+        ).min(1, 'Ingresa el nombre'),
+        relacion: textoSoloLetras('La relación solo puede contener letras').min(
+          1,
+          'Ingresa la relación',
+        ),
+      }),
     ),
-    responsable: z.string(),
-    correoResponsable: z.string(),
-    celularResponsable: z.string(),
-    verificado: z.boolean(),
+    // Se valida en el superRefine (solo si hay apoderado).
+    documentoApoderado: z.custom<InscripcionForm['documentoApoderado']>(),
+    // Paso 5: con el correo y el celular se crea (o se completa) la cuenta del responsable. Vienen del Paso 3 y
+    // aquí son solo de vista, así que los mensajes dicen dónde corregirlos.
+    responsable: z.string().min(1, 'Elige al responsable de matrícula'),
+    correoResponsable: z
+      .string()
+      .trim()
+      .min(1, 'Falta el correo: complétalo en el Paso 3')
+      // Vacío ya tiene su mensaje: el formato se revisa solo si hay algo escrito.
+      .refine((v) => v === '' || z.string().email().safeParse(v).success, {
+        message: 'El correo no es válido: corrígelo en el Paso 3',
+      }),
+    celularResponsable: z
+      .string()
+      .trim()
+      .min(1, 'Falta el celular: complétalo en el Paso 3')
+      .regex(
+        /^([0-9]{9})?$/,
+        'El celular no es válido: corrígelo en el Paso 3',
+      ),
+    verificado: z.boolean().refine((v) => v, {
+      message:
+        'Confirma que verificaste los datos con los documentos originales',
+    }),
   })
   .superRefine((v, ctx) => {
     const f = v as unknown as InscripcionForm;
@@ -443,6 +493,30 @@ export const inscripcionSchema = z
         r.error.issues.forEach((i) =>
           ctx.addIssue({ ...i, path: ['apoderado', ...i.path] }),
         );
+      }
+      // Relación con el estudiante y tipo de documento que lo acredita: obligatorios para el apoderado.
+      if (registra(f.apoderado)) {
+        const falta = (path: string[], valor: unknown, message: string) => {
+          if (vacio(valor)) ctx.addIssue({ code: 'custom', path, message });
+        };
+        falta(
+          ['apoderado', 'relacion'],
+          f.apoderado.relacion,
+          'Selecciona la relación',
+        );
+        if (f.apoderado.relacion === 'Otro') {
+          falta(
+            ['apoderado', 'relacionDetalle'],
+            f.apoderado.relacionDetalle,
+            'Especifica la relación',
+          );
+        }
+        falta(
+          ['documentoApoderado', 'tipo'],
+          f.documentoApoderado.tipo,
+          'Selecciona el documento que lo acredita',
+        );
+        // El archivo no es obligatorio: se puede adjuntar más adelante desde la ficha.
       }
     } else if (!registra(f.padre) && !registra(f.madre)) {
       ctx.addIssue({
@@ -458,9 +532,9 @@ export const inscripcionSchema = z
 export const CAMPOS_POR_PASO = [
   ['estudiante'],
   ['fichaMedica'],
-  ['padre', 'madre', 'apoderado', 'incluirApoderado'],
-  ['contactos'],
-  [],
+  ['padre', 'madre', 'apoderado', 'incluirApoderado', 'documentoApoderado'],
+  ['contactos', 'autorizados'],
+  ['responsable', 'correoResponsable', 'celularResponsable', 'verificado'],
 ] as const;
 
 const texto = (v?: string | null) => (v && v.trim() ? v.trim() : null);
@@ -542,7 +616,14 @@ export const aSolicitud = (f: InscripcionForm): SolicitudInscripcion => {
       celular: c.celular ? c.celular.replace(/\s/g, '') : null,
     })),
     modoSalida: f.modoSalida || null,
-    autorizados: f.autorizados.filter((a) => a.nombreCompleto.trim()),
+    // Solo se envían si el estudiante sale con persona autorizada.
+    autorizados:
+      f.modoSalida === 'PERSONA_AUTORIZADA'
+        ? f.autorizados.map((a) => ({
+            nombreCompleto: a.nombreCompleto.trim(),
+            relacion: a.relacion.trim(),
+          }))
+        : [],
     responsable: f.responsable as Parentesco,
     correoResponsable: texto(f.correoResponsable),
     celularResponsable: f.celularResponsable

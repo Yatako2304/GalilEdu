@@ -75,6 +75,70 @@ const siguiente = () =>
     screen.getByRole('button', { name: 'Siguiente: Ficha médica' }),
   );
 
+test('paso 3: sin botón "Buscar", busca al salir del N.° de documento y solo si está completo', async () => {
+  respuesta({ estado: 'LIBRE', permitido: true, mensaje: null });
+  const consultados: string[] = [];
+  server.use(
+    http.get(`${env.API_URL}/estudiantes/personas`, ({ request }) => {
+      consultados.push(new URL(request.url).searchParams.get('documento')!);
+      return HttpResponse.json({
+        personaId: 'id-luis',
+        tieneCuenta: true,
+        cuentaEliminada: false,
+        estudiantesACargo: [],
+        persona: {
+          tipoDocumento: 'DNI',
+          numeroDocumento: '70000003',
+          apellidoPaterno: 'Paredes',
+          nombres: 'Luis',
+        },
+      });
+    }),
+  );
+  const { container } = await renderWizard();
+  await llenarPaso1(container);
+  await siguiente();
+  await screen.findByText('Ficha médica del estudiante');
+  for (const [nombre, valor] of [
+    ['fichaMedica.tipoSangre', 'O+'],
+    ['fichaMedica.pesoKg', '22.0'],
+    ['fichaMedica.estaturaM', '1.18'],
+    ['fichaMedica.tipoSeguro', 'EsSalud'],
+    ['fichaMedica.fiebreMaxima', '39'],
+  ]) {
+    fireEvent.change(
+      container.querySelector(`[name="${nombre}"]`) as HTMLInputElement,
+      { target: { value: valor } },
+    );
+  }
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Siguiente: Padres y apoderado' }),
+  );
+  await screen.findByText('Registra al menos al padre o a la madre');
+  expect(
+    screen.queryByRole('button', { name: /Buscar/ }),
+  ).not.toBeInTheDocument();
+
+  fireEvent.change(
+    container.querySelector(
+      '[name="padre.persona.tipoDocumento"]',
+    ) as HTMLSelectElement,
+    { target: { value: 'DNI' } },
+  );
+  const documento = container.querySelector(
+    '[name="padre.persona.numeroDocumento"]',
+  ) as HTMLInputElement;
+  // Incompleto: al salir no se consulta.
+  fireEvent.change(documento, { target: { value: '7000' } });
+  fireEvent.blur(documento);
+  // Completo: al salir se busca y se vincula.
+  fireEvent.change(documento, { target: { value: '70000003' } });
+  fireEvent.blur(documento);
+
+  expect(await screen.findByText('Ya registrado')).toBeInTheDocument();
+  expect(consultados).toEqual(['70000003']);
+});
+
 test('un documento libre deja pasar al paso 2', async () => {
   respuesta({ estado: 'LIBRE', permitido: true, mensaje: null });
   const { container } = await renderWizard();
@@ -91,14 +155,18 @@ test('un estudiante activo no deja pasar y el aviso sale en el N.° de documento
   respuesta({
     estado: 'ESTUDIANTE_ACTIVO',
     permitido: false,
-    mensaje: 'El documento ya existe',
+    mensaje: 'El documento ya está registrado dentro del sistema',
   });
   const { container } = await renderWizard();
   await llenarPaso1(container);
 
   await siguiente();
 
-  expect(await screen.findByText('El documento ya existe')).toBeInTheDocument();
+  expect(
+    await screen.findByText(
+      'El documento ya está registrado dentro del sistema',
+    ),
+  ).toBeInTheDocument();
   expect(screen.getByText('Datos del estudiante')).toBeInTheDocument();
   expect(
     screen.queryByText('Ficha médica del estudiante'),
@@ -110,7 +178,7 @@ test('un estudiante retirado (inactivo) no se puede inscribir como nuevo', async
     estado: 'ESTUDIANTE_RETIRADO',
     permitido: false,
     mensaje:
-      'El documento ya existe: es de un estudiante inactivo (retirado). Reactívalo desde el listado.',
+      'El documento ya está registrado dentro del sistema: es de un estudiante inactivo (retirado). Reactívalo desde el listado.',
   });
   const { container } = await renderWizard();
   await llenarPaso1(container);

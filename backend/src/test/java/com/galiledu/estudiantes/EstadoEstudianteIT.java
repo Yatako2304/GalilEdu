@@ -50,7 +50,8 @@ class EstadoEstudianteIT extends PruebaIntegracion {
 				 "contactos":[{"nombreCompleto":"Rosa Medina","parentesco":"Abuela","celular":"987654321"},
 				              {"nombreCompleto":"Pedro Rojas","parentesco":"Tío","celular":"976543210"}],
 				 "modoSalida":"PERSONA_AUTORIZADA","autorizados":[],
-				 "responsable":"PADRE"}"""
+				 "responsable":"PADRE","correoResponsable":"luis.paredes@galiledu.edu.pe",
+				 "celularResponsable":"911222333"}"""
 				.formatted(InscripcionPrueba.estudiante(documento, nombres, grado), InscripcionPrueba.FICHA_MEDICA,
 						PERSONA_LUIS);
 	}
@@ -93,10 +94,10 @@ class EstadoEstudianteIT extends PruebaIntegracion {
 		verificar(DOCUMENTO, "ESTUDIANTE_ACTIVO", false);
 		// El mensaje no dice de quién es el documento.
 		mvc.perform(conToken(get("/estudiantes/documentos?documento=" + DOCUMENTO), personal, null))
-				.andExpect(jsonPath("$.mensaje").value("El documento ya existe"));
+				.andExpect(jsonPath("$.mensaje").value("El documento ya está registrado dentro del sistema"));
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal, inscripcion(DOCUMENTO, "Lucía", "PRI-6")))
 				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.message").value("El documento ya existe"));
+				.andExpect(jsonPath("$.message").value("El documento ya está registrado dentro del sistema"));
 	}
 
 	@Test

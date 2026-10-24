@@ -75,6 +75,7 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/estudiantes/{id}` | Admin, Personal adm. | Ficha (datos, ficha médica, familia, contactos, hermanos) |
 | GET | `/estudiantes/personas?documento=` | Admin, Personal adm. | Busca padre/madre/apoderado ya registrado (404 = persona nueva). `cuentaEliminada` indica si su usuario está eliminado |
 | GET | `/estudiantes/documentos?documento=` | Admin, Personal adm. | Paso 1: ¿se puede inscribir un estudiante con ese documento? `estado`: `LIBRE` y `REUTILIZABLE` (eliminado) sí; `ESTUDIANTE_ACTIVO`, `ESTUDIANTE_RETIRADO` y `OTRA_PERSONA` no (`permitido`, `mensaje`) |
+| GET | `/estudiantes/correos?correo=` | Admin, Personal adm. | Paso 3: `{"disponible": true|false}`, si ninguna persona tiene ese correo (sin importar mayúsculas); no dice de quién es |
 | POST | `/estudiantes/inscripciones` | Admin, Personal adm. | Registra la inscripción completa (5 pasos). El grado va como código del catálogo: `gradoCodigo` = `PRI-1`…`PRI-6`, `SEC-1`…`SEC-5`. Con el documento de un estudiante **eliminado** no crea uno nuevo: lo restaura (mismo id) y reemplaza sus datos, ficha médica, familia, contactos y autorizados por los de la inscripción; con uno activo o retirado responde 409 |
 | POST | `/estudiantes/{id}/retirar` | Admin, Personal adm. | "Inactivar": pasa a RETIRADO (409 si ya lo está). 204 |
 | POST | `/estudiantes/{id}/reactivar` | Admin, Personal adm. | Quita el retiro (409 si no está retirado). 204 |
