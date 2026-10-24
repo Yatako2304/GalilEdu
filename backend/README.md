@@ -73,6 +73,8 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/usuarios/carga-masiva` | Administrador | Crea los usuarios de las filas válidas y devuelve el resumen |
 | GET | `/estudiantes?q=&estado=&page=` | Admin, Personal adm. | Lista de estudiantes. `estado`: INSCRITO, MATRICULADO o RETIRADO (se calcula desde la matrícula) |
 | GET | `/estudiantes/{id}` | Admin, Personal adm. | Ficha (datos, ficha médica, familia, contactos, hermanos) |
+| GET | `/estudiantes/{id}/edicion` | Admin, Personal adm. | "Editar": la inscripción con la forma de `SolicitudInscripcion` (`datos`), más `matriculado`, `conCuenta` y `acreditacion` |
+| PUT | `/estudiantes/{id}` | Admin, Personal adm. | "Editar": mismas validaciones que la inscripción. Matriculado no cambia grado ni año; si cambia el responsable, el anterior queda inactivo (salvo que lo sea de otro estudiante); si cambia el correo de un familiar con cuenta, se le envía una contraseña nueva |
 | GET | `/estudiantes/personas?documento=` | Admin, Personal adm. | Busca padre/madre/apoderado ya registrado (404 = persona nueva). `cuentaEliminada` indica si su usuario está eliminado |
 | GET | `/estudiantes/documentos?documento=` | Admin, Personal adm. | Paso 1: ¿se puede inscribir un estudiante con ese documento? `estado`: `LIBRE` y `REUTILIZABLE` (eliminado) sí; `ESTUDIANTE_ACTIVO`, `ESTUDIANTE_RETIRADO` y `OTRA_PERSONA` no (`permitido`, `mensaje`) |
 | GET | `/estudiantes/correos?correo=` | Admin, Personal adm. | Paso 3: `{"disponible": true|false}`, si ninguna persona tiene ese correo (sin importar mayúsculas); no dice de quién es |

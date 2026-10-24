@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 
 import jakarta.persistence.criteria.Predicate;
@@ -26,6 +27,7 @@ import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosFamiliar;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosFichaMedica;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.Disponibilidad;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DocumentoAdjunto;
+import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.EdicionEstudiante;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.EstudianteResumen;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.Familiar;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.FichaEstudiante;
@@ -35,6 +37,7 @@ import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.SolicitudInscripcion;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.VerificacionDocumento;
 import com.galiledu.estudiantes.dominio.AutorizadoRecojo;
 import com.galiledu.estudiantes.dominio.ContactoEmergencia;
+import com.galiledu.estudiantes.dominio.DocumentoVinculo;
 import com.galiledu.estudiantes.dominio.EstadoEstudiante;
 import com.galiledu.estudiantes.dominio.Estudiante;
 import com.galiledu.estudiantes.dominio.FichaMedica;
@@ -75,6 +78,48 @@ public class ServicioEstudiantes {
 
 	@Transactional
 	public InscripcionRegistrada inscribir(SolicitudInscripcion s) {
+		validar(s);
+		return registrar(estudianteParaInscribir(s.estudiante()), s);
+	}
+
+	/**
+	 * "Editar" del listado: mismas validaciones y pasos que la inscripción, sobre el mismo estudiante. Se reemplazan
+	 * sus datos, ficha médica, familia, contactos y autorizados. Reglas del equipo: el documento se puede cambiar (si
+	 * no es de otra persona); un estudiante matriculado no cambia de grado ni de año; si cambia el responsable, al
+	 * nuevo se le crea (o reactiva) su cuenta y la del anterior queda inactiva, salvo que sea responsable de otro
+	 * estudiante. El documento que acredita al apoderado se conserva si el apoderado es el mismo.
+	 */
+	@Transactional
+	public InscripcionRegistrada actualizar(UUID id, SolicitudInscripcion s) {
+		Estudiante estudiante = obtener(id);
+		DatosEstudiante d = s.estudiante();
+		if (estudiante.getSituacion() == SituacionEstudiante.MATRICULADO
+				&& (d.anioAcademico() != estudiante.getAnioAcademico()
+						|| !d.gradoCodigo().equals(estudiante.getGradoCodigo()))) {
+			throw ExcepcionNegocio
+					.invalido("El estudiante está matriculado: no se puede cambiar el grado ni el año académico");
+		}
+		validar(s);
+		UUID responsableAnterior = responsableDe(estudiante).map(Persona::getId).orElse(null);
+		var acreditacion = acreditacionDe(estudiante);
+
+		personas.actualizar(estudiante.getPersona(), d.persona());
+		estudiante.vaciarRegistro();
+		// El DELETE de lo anterior debe ejecutarse antes del INSERT de lo nuevo (claves únicas de padre, madre y ficha).
+		estudiantes.flush();
+		InscripcionRegistrada resultado = registrar(estudiante, s);
+
+		acreditacion.ifPresent(a -> conservarAcreditacion(estudiante, a));
+		UUID responsableNuevo = responsableDe(estudiante).map(Persona::getId).orElse(null);
+		if (responsableAnterior != null && !responsableAnterior.equals(responsableNuevo)
+				&& !estudiantes.esResponsableDeOtro(responsableAnterior, estudiante.getId())) {
+			usuarios.desactivarCuentaDe(responsableAnterior);
+		}
+		return resultado;
+	}
+
+	/** Reglas de los cinco pasos, antes de guardar nada (para no dejar una inscripción a medias). */
+	private static void validar(SolicitudInscripcion s) {
 		// Regla de Figma (paso 3): al menos padre o madre; si no hay ninguno, el apoderado es obligatorio.
 		boolean hayPadres = s.padre().registra() || s.madre().registra();
 		boolean hayApoderado = s.apoderado() != null && s.apoderado().registra();
@@ -83,12 +128,14 @@ public class ServicioEstudiantes {
 		}
 		exigirMotivo(s.padre(), "Indica el motivo por el que no se registra al padre");
 		exigirMotivo(s.madre(), "Indica el motivo por el que no se registra a la madre");
-
-		DatosEstudiante d = s.estudiante();
-		exigirPaso1(d);
+		exigirPaso1(s.estudiante());
 		exigirPaso2(s.fichaMedica());
 		exigirPaso3(s);
-		Estudiante estudiante = estudianteParaInscribir(d);
+	}
+
+	/** Guarda los datos de los pasos en el estudiante y asegura la cuenta del responsable (paso 5). */
+	private InscripcionRegistrada registrar(Estudiante estudiante, SolicitudInscripcion s) {
+		DatosEstudiante d = s.estudiante();
 		Persona personaEstudiante = estudiante.getPersona();
 		estudiante.lugarNacimiento(d.paisNacimiento(), d.departamentoNacimiento(), d.provinciaNacimiento(),
 				d.distritoNacimiento());
@@ -145,6 +192,47 @@ public class ServicioEstudiantes {
 
 		return new InscripcionRegistrada(estudiante.getId(), personaEstudiante.nombreCompleto(),
 				personaResponsable.nombreCompleto(), cuenta.getNombreUsuario(), cuentaNueva);
+	}
+
+	private Estudiante obtener(UUID id) {
+		return estudiantes.findById(id)
+				.filter(x -> !x.isEliminado())
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El estudiante no existe"));
+	}
+
+	private static Optional<Persona> responsableDe(Estudiante e) {
+		return e.getVinculos().stream()
+				.filter(VinculoFamiliar::isEsResponsableMatricula)
+				.map(VinculoFamiliar::getPersona)
+				.filter(Objects::nonNull)
+				.findFirst();
+	}
+
+	/** Documento del apoderado copiado en memoria, para volver a enlazarlo después de reemplazar los vínculos. */
+	private record Acreditacion(UUID personaApoderado, String tipo, String nombreArchivo, String tipoMime,
+			byte[] contenido) {
+	}
+
+	private Optional<Acreditacion> acreditacionDe(Estudiante e) {
+		return e.getVinculos().stream()
+				.filter(v -> v.getParentesco() == Parentesco.APODERADO && v.getPersona() != null)
+				.findFirst()
+				.flatMap(v -> documentos.findById(v.getId())
+						.map(doc -> new Acreditacion(v.getPersona().getId(), doc.getTipo(), doc.getNombreArchivo(),
+								doc.getTipoMime(), doc.getContenido())));
+	}
+
+	/** Si el apoderado sigue siendo la misma persona, su documento pasa al vínculo nuevo. */
+	private void conservarAcreditacion(Estudiante e, Acreditacion a) {
+		e.getVinculos().stream()
+				.filter(v -> v.getParentesco() == Parentesco.APODERADO && v.getPersona() != null
+						&& v.getPersona().getId().equals(a.personaApoderado()))
+				.findFirst()
+				.ifPresent(v -> {
+					DocumentoVinculo copia = new DocumentoVinculo(v.getId());
+					copia.reemplazar(a.tipo(), a.nombreArchivo(), a.tipoMime(), a.contenido());
+					documentos.save(copia);
+				});
 	}
 
 	/**
@@ -259,9 +347,7 @@ public class ServicioEstudiantes {
 
 	@Transactional(readOnly = true)
 	public FichaEstudiante ficha(UUID id) {
-		Estudiante e = estudiantes.findById(id)
-				.filter(x -> !x.isEliminado())
-				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El estudiante no existe"));
+		Estudiante e = obtener(id);
 		var familia = e.getVinculos().stream().map(v -> {
 			Persona p = v.getPersona();
 			return new Familiar(p == null ? null : p.getId(), v.getParentesco(),
@@ -280,30 +366,80 @@ public class ServicioEstudiantes {
 				.distinct()
 				.map(ServicioEstudiantes::resumen)
 				.toList();
-		var datos = new DatosEstudiante(null, e.getPaisNacimiento(), e.getDepartamentoNacimiento(),
+		return new FichaEstudiante(e.getId(), e.getSituacion(), e.gradoDescriptivo(), e.getAnioAcademico(),
+				DatosPersona.de(e.getPersona()), datosEstudiante(e, null), datosFicha(e.getFichaMedica()), familia,
+				contactos(e), e.getModoSalida(), autorizados(e), hermanos);
+	}
+
+	/** "Editar": la inscripción con la misma forma que se envía al registrar, para precargar el asistente. */
+	@Transactional(readOnly = true)
+	public EdicionEstudiante edicion(UUID id) {
+		Estudiante e = obtener(id);
+		Map<Parentesco, VinculoFamiliar> porParentesco = new java.util.EnumMap<>(Parentesco.class);
+		e.getVinculos().forEach(v -> porParentesco.put(v.getParentesco(), v));
+		Optional<VinculoFamiliar> responsable = e.getVinculos().stream()
+				.filter(VinculoFamiliar::isEsResponsableMatricula)
+				.findFirst();
+		Persona pr = responsable.map(VinculoFamiliar::getPersona).orElse(null);
+		VinculoFamiliar apoderado = porParentesco.get(Parentesco.APODERADO);
+		var datos = new SolicitudInscripcion(datosEstudiante(e, DatosPersona.de(e.getPersona())),
+				datosFicha(e.getFichaMedica()), familiar(porParentesco.get(Parentesco.PADRE)),
+				familiar(porParentesco.get(Parentesco.MADRE)), apoderado == null ? null : familiar(apoderado),
+				contactos(e), e.getModoSalida(), autorizados(e),
+				responsable.map(VinculoFamiliar::getParentesco).orElse(null),
+				pr == null ? null : pr.getCorreo(), pr == null ? null : pr.getCelular());
+		List<Parentesco> conCuenta = e.getVinculos().stream()
+				.filter(v -> v.getPersona() != null && usuarios.tieneCuenta(v.getPersona().getId())
+						&& !usuarios.cuentaEliminada(v.getPersona().getId()))
+				.map(VinculoFamiliar::getParentesco)
+				.toList();
+		DocumentoAdjunto acreditacion = apoderado == null
+				? null
+				: documentos.findResumenByVinculoId(apoderado.getId())
+						.map(d -> new DocumentoAdjunto(d.getTipo(), d.getNombreArchivo(), d.getSubidoEn()))
+						.orElse(null);
+		return new EdicionEstudiante(e.getId(), datos,
+				e.getSituacion() == SituacionEstudiante.MATRICULADO, conCuenta, acreditacion);
+	}
+
+	private static DatosEstudiante datosEstudiante(Estudiante e, DatosPersona persona) {
+		return new DatosEstudiante(persona, e.getPaisNacimiento(), e.getDepartamentoNacimiento(),
 				e.getProvinciaNacimiento(), e.getDistritoNacimiento(), e.getReferenciaDomicilio(), e.getTieneInternet(),
 				e.getLenguaMaterna(), e.getSegundaLengua(), e.getAutoidentificacionEtnica(), e.isTieneDiscapacidad(),
 				e.getDiscapacidadDetalle(), e.getColegioProcedencia(), e.getGestionProcedencia(),
-				(int) e.getAnioAcademico(),
-				e.getGradoCodigo(), e.getFormaIngreso());
-		FichaMedica f = e.getFichaMedica();
-		var ficha = f == null
+				(int) e.getAnioAcademico(), e.getGradoCodigo(), e.getFormaIngreso());
+	}
+
+	private static DatosFichaMedica datosFicha(FichaMedica f) {
+		return f == null
 				? null
-				: new DatosFichaMedica(f.getTipoSangre(), f.getPesoKg(), f.getEstaturaM(),
-						f.getTipoSeguro(), f.isTieneAlergias(), f.getAlergiasAlimentarias(),
-						f.getAlergiasMedicamentosas(),
+				: new DatosFichaMedica(f.getTipoSangre(), f.getPesoKg(), f.getEstaturaM(), f.getTipoSeguro(),
+						f.isTieneAlergias(), f.getAlergiasAlimentarias(), f.getAlergiasMedicamentosas(),
 						f.getFiebreMaxima(), f.isHaConvulsionado(), f.isTieneEnfermedad(), f.getEnfermedadDetalle(),
 						f.isTomaMedicamento(), f.getMedicamentoDetalle(), f.getObservaciones());
-		var contactos = e.getContactos().stream()
+	}
+
+	/** Vínculo → datos del Paso 3 (con los datos completos de la persona, para poder corregirlos). */
+	private static DatosFamiliar familiar(VinculoFamiliar v) {
+		if (v == null || v.getPersona() == null) {
+			return new DatosFamiliar(true, v == null ? null : v.getMotivoNoRegistra(),
+					v == null ? null : v.getObservacion(), null, null, null, null, null);
+		}
+		return new DatosFamiliar(false, null, null, v.getPersona().getId(), DatosPersona.de(v.getPersona()),
+				v.isViveConEstudiante(), v.isTienePatriaPotestad(), v.getRelacion());
+	}
+
+	private static List<DatosContacto> contactos(Estudiante e) {
+		return e.getContactos().stream()
 				.map(c -> new DatosContacto(c.getNombreCompleto(), c.getParentesco(), c.getTelefonoFijo(),
 						c.getCelular()))
 				.toList();
-		var autorizados = e.getAutorizados().stream()
+	}
+
+	private static List<DatosAutorizado> autorizados(Estudiante e) {
+		return e.getAutorizados().stream()
 				.map(a -> new DatosAutorizado(a.getNombreCompleto(), a.getRelacion()))
 				.toList();
-		return new FichaEstudiante(e.getId(), e.getSituacion(), e.gradoDescriptivo(), e.getAnioAcademico(),
-				DatosPersona.de(e.getPersona()), datos, ficha, familia, contactos, e.getModoSalida(), autorizados,
-				hermanos);
 	}
 
 	/** "Busca por documento: si ya está registrado (por ejemplo, por un hermano), solo se vincula." */
@@ -332,9 +468,16 @@ public class ServicioEstudiantes {
 			}
 			return VinculoFamiliar.noRegistra(parentesco, vacio(d.motivo()), vacio(d.observacion()));
 		}
-		Persona persona = d.personaId() != null
-				? personas.obtener(d.personaId())
-				: personas.crear(d.persona());
+		Persona persona;
+		if (d.personaId() == null) {
+			persona = personas.crear(d.persona());
+		} else {
+			persona = personas.obtener(d.personaId());
+			// Al editar se pueden corregir sus datos (también los ve un hermano: es la misma persona).
+			if (d.persona() != null) {
+				actualizarFamiliar(persona, d.persona());
+			}
+		}
 		return VinculoFamiliar.conPersona(parentesco, persona, vacio(d.relacion()),
 				Boolean.TRUE.equals(d.viveConEstudiante()), Boolean.TRUE.equals(d.tienePatriaPotestad()));
 	}
@@ -383,12 +526,12 @@ public class ServicioEstudiantes {
 	 * Se revisa antes de guardar nada, para no dejar una inscripción a medias.
 	 */
 	private static void exigirPaso3(SolicitudInscripcion s) {
-		exigirFamiliarNuevo(Parentesco.PADRE, s.padre());
-		exigirFamiliarNuevo(Parentesco.MADRE, s.madre());
-		exigirFamiliarNuevo(Parentesco.APODERADO, s.apoderado());
+		exigirFamiliar(Parentesco.PADRE, s.padre());
+		exigirFamiliar(Parentesco.MADRE, s.madre());
+		exigirFamiliar(Parentesco.APODERADO, s.apoderado());
 	}
 
-	private static void exigirFamiliarNuevo(Parentesco parentesco, DatosFamiliar d) {
+	private static void exigirFamiliar(Parentesco parentesco, DatosFamiliar d) {
 		if (d == null || !d.registra()) {
 			return;
 		}
@@ -396,13 +539,26 @@ public class ServicioEstudiantes {
 		if (parentesco == Parentesco.APODERADO && (d.relacion() == null || d.relacion().isBlank())) {
 			throw ExcepcionNegocio.invalido("Apoderado: Selecciona la relación");
 		}
-		if (d.personaId() != null) {
+		// Ya registrado sin datos (solo se vincula): no se revisa. Con datos (nuevo, o editado al editar): sí.
+		if (d.persona() == null) {
 			return;
 		}
 		try {
 			d.persona().exigirCompletos();
 		} catch (ExcepcionNegocio e) {
 			throw ExcepcionNegocio.invalido(NOMBRE_PARENTESCO.get(parentesco) + ": " + e.getMessage());
+		}
+	}
+
+	/**
+	 * Corrige los datos de un familiar ya registrado. Su cuenta (si tiene) usa el correo de la persona: si el correo
+	 * cambia, se le genera una contraseña nueva y se envía al correo nuevo.
+	 */
+	private void actualizarFamiliar(Persona persona, DatosPersona datos) {
+		String correoAnterior = persona.getCorreo();
+		personas.actualizar(persona, datos);
+		if (!Objects.equals(correoAnterior, persona.getCorreo()) && persona.getCorreo() != null) {
+			usuarios.reenviarCredenciales(persona);
 		}
 	}
 

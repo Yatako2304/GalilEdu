@@ -58,7 +58,13 @@ const anioActual = new Date().getFullYear();
 const aniosAcademicos = opciones([String(anioActual), String(anioActual + 1)]);
 
 // Paso 1 · Figma > "Admin / Estudiantes | Inscripción | Paso 1 - Estudiante"
-export const PasoEstudiante = ({ form }: PasoProps) => {
+export const PasoEstudiante = ({
+  form,
+  bloquearGrado = false,
+}: PasoProps & {
+  /** "Editar" de un estudiante matriculado (ya pagó): no cambia de año, nivel ni grado. */
+  bloquearGrado?: boolean;
+}) => {
   const { register, formState, watch, setValue, getValues, clearErrors } = form;
   const errores = formState.errors.estudiante;
   const errorPersona = errores?.persona;
@@ -346,13 +352,20 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
         <Grilla columnas={4}>
           <Select
             label="Año académico"
-            options={aniosAcademicos}
+            disabled={bloquearGrado}
+            // Al editar, el año guardado se ofrece aunque ya no sea el en curso o el siguiente.
+            options={
+              anio && !aniosAcademicos.some((o) => o.value === anio)
+                ? [...opciones([anio]), ...aniosAcademicos]
+                : aniosAcademicos
+            }
             placeholder="Selecciona"
             registration={register('estudiante.anioAcademico')}
             error={errores?.anioAcademico}
           />
           <Select
             label="Nivel"
+            disabled={bloquearGrado}
             options={NIVELES}
             placeholder="Selecciona"
             registration={register('estudiante.nivel', {
@@ -362,7 +375,7 @@ export const PasoEstudiante = ({ form }: PasoProps) => {
           />
           <Select
             label="Grado"
-            disabled={!nivel}
+            disabled={!nivel || bloquearGrado}
             options={GRADOS_POR_NIVEL[nivel] ?? []}
             placeholder="Selecciona"
             registration={register('estudiante.grado')}

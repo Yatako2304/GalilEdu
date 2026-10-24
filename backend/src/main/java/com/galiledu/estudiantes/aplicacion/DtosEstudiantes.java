@@ -157,6 +157,15 @@ public final class DtosEstudiantes {
 			String motivoNoRegistra, DocumentoAdjunto acreditacion) {
 	}
 
+	/**
+	 * GET /estudiantes/{id}/edicion: la inscripción con la misma forma que se envía al registrar (para precargar el
+	 * asistente al editar). {@code matriculado}: no se pueden cambiar grado ni año académico. {@code conCuenta}:
+	 * familiares que ya tienen usuario. {@code acreditacion}: documento del apoderado ya adjuntado, si hay.
+	 */
+	public record EdicionEstudiante(UUID id, SolicitudInscripcion datos, boolean matriculado,
+			List<Parentesco> conCuenta, DocumentoAdjunto acreditacion) {
+	}
+
 	/** Documento que acredita al apoderado (sin el contenido; se descarga aparte). */
 	public record DocumentoAdjunto(String tipo, String nombreArchivo, Instant subidoEn) {
 	}

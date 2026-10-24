@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input, Radio } from '@/components/ui/form';
 import { Stepper } from '@/components/ui/stepper';
 import { nombreGrado } from '@/config/catalogos';
+import { EdicionEstudiante } from '@/types/api';
 
 import {
   ResultadoInscripcion,
@@ -21,6 +22,7 @@ import {
   FamiliarForm,
   InscripcionForm,
   aSolicitud,
+  desdeEdicion,
   inscripcionSchema,
   inscripcionVacia,
   registra,
@@ -212,17 +214,22 @@ const PasoResponsable = ({
 export const InscripcionWizard = ({
   onCancelar,
   onRegistrada,
+  edicion,
 }: {
   onCancelar: () => void;
   onRegistrada: (r: ResultadoInscripcion) => void;
+  /** "Editar": la inscripción guardada; el asistente arranca con sus datos y guarda con PUT. */
+  edicion?: EdicionEstudiante;
 }) => {
   const [paso, setPaso] = React.useState(0);
   const form = useForm<InscripcionForm>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(inscripcionSchema as any),
-    defaultValues: inscripcionVacia(),
+    defaultValues: edicion ? desdeEdicion(edicion) : inscripcionVacia(),
     mode: 'onSubmit',
   });
+  /** Datos tal como estaban guardados (al editar), para saber qué cambió. */
+  const original = edicion?.datos;
   const inscribir = useInscribir(onRegistrada);
 
   const subir = () => window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -234,12 +241,19 @@ export const InscripcionWizard = ({
    * no se puede inscribir de nuevo; uno eliminado sí, y sus datos se actualizan al final.
    */
   const documentoDisponible = async () => {
+    const numero = form.getValues('estudiante.persona.numeroDocumento');
+    // Al editar, el documento que ya tenía es suyo: no se consulta.
+    if (
+      original &&
+      numero.trim() === original.estudiante.persona?.numeroDocumento
+    ) {
+      return true;
+    }
     setVerificando(true);
     try {
-      const v = await verificarDocumentoEstudiante(
-        form.getValues('estudiante.persona.numeroDocumento'),
-      );
-      if (!v.permitido) {
+      const v = await verificarDocumentoEstudiante(numero);
+      // Al editar, un documento nuevo debe estar libre (el de un eliminado es de otra persona).
+      if (!v.permitido || (original && v.estado !== 'LIBRE')) {
         form.setError(
           'estudiante.persona.numeroDocumento',
           {
@@ -267,11 +281,19 @@ export const InscripcionWizard = ({
    */
   const correosDisponibles = async () => {
     const v = form.getValues();
+    // Al editar, el correo que ya tenía un familiar registrado es suyo: solo se consulta si cambió.
+    const correoGuardado = new Map(
+      [original?.padre, original?.madre, original?.apoderado]
+        .filter((f) => f?.personaId)
+        .map((f) => [f!.personaId!, (f!.persona?.correo ?? '').toLowerCase()]),
+    );
     const nuevos = (['padre', 'madre', 'apoderado'] as const).filter(
       (clave) =>
         (clave !== 'apoderado' || v.incluirApoderado) &&
         registra(v[clave]) &&
-        !v[clave].personaId,
+        (!v[clave].personaId ||
+          correoGuardado.get(v[clave].personaId!) !==
+            (v[clave].persona.correo ?? '').trim().toLowerCase()),
     );
     setVerificando(true);
     try {
@@ -323,6 +345,7 @@ export const InscripcionWizard = ({
     const valores = form.getValues();
     const { tipo, archivo } = valores.documentoApoderado;
     inscribir.mutate({
+      estudianteId: edicion?.id,
       solicitud: aSolicitud(valores),
       documento:
         valores.incluirApoderado && archivo
@@ -335,7 +358,9 @@ export const InscripcionWizard = ({
   const e = form.watch('estudiante.persona');
   const subtitulo =
     paso === 0
-      ? 'Registra los datos del estudiante. El estudiante no tiene usuario: su cuenta la gestiona el responsable de matrícula.'
+      ? edicion
+        ? 'Corrige los datos del estudiante. Los cambios se guardan al final, en "Guardar cambios".'
+        : 'Registra los datos del estudiante. El estudiante no tiene usuario: su cuenta la gestiona el responsable de matrícula.'
       : `${e.nombres} ${e.apellidoPaterno} ${e.apellidoMaterno ?? ''} · DNI ${e.numeroDocumento}`;
 
   return (
@@ -351,9 +376,16 @@ export const InscripcionWizard = ({
         className="flex flex-col gap-6"
         noValidate
       >
-        {paso === 0 && <PasoEstudiante form={form} />}
+        {paso === 0 && (
+          <PasoEstudiante form={form} bloquearGrado={!!edicion?.matriculado} />
+        )}
         {paso === 1 && <PasoFichaMedica form={form} />}
-        {paso === 2 && <PasoFamilia form={form} />}
+        {paso === 2 && (
+          <PasoFamilia
+            form={form}
+            acreditacionActual={edicion?.acreditacion ?? null}
+          />
+        )}
         {paso === 3 && <PasoContactos form={form} />}
         {paso === 4 && <PasoResponsable form={form} />}
       </form>
@@ -390,7 +422,7 @@ export const InscripcionWizard = ({
               // Se habilita al marcar "Verifiqué los datos…"; entonces sí muestra los errores.
               disabled={!verificado || inscribir.isPending}
             >
-              Registrar inscripción
+              {edicion ? 'Guardar cambios' : 'Registrar inscripción'}
             </Button>
           )}
         </div>

@@ -144,6 +144,13 @@ public class Usuario {
 		reemplazarRoles(nuevosRoles);
 	}
 
+	/** Contraseña nueva (p. ej. al cambiar el correo de la persona): se envía al correo nuevo. */
+	public void reemplazarContrasena(String contrasenaHash) {
+		this.contrasenaHash = contrasenaHash;
+		intentosFallidos = 0;
+		bloqueadoHasta = null;
+	}
+
 	public void agregarRol(Rol rol) {
 		roles.add(rol);
 	}

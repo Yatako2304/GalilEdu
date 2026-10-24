@@ -8,6 +8,7 @@ import {
 import { api } from '@/lib/api-client';
 import {
   DocumentoAdjunto,
+  EdicionEstudiante,
   EstadoEstudiante,
   EstudianteResumen,
   FichaEstudiante,
@@ -53,21 +54,23 @@ export type ResultadoInscripcion = InscripcionRegistrada & {
   documentoFallido: boolean;
 };
 
-// POST /estudiantes/inscripciones y, si hay, POST /estudiantes/{id}/apoderado/documento
+// POST /estudiantes/inscripciones (o PUT /estudiantes/{id} al editar) y, si hay, POST /estudiantes/{id}/apoderado/documento
 export const useInscribir = (onSuccess: (r: ResultadoInscripcion) => void) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       solicitud,
       documento,
+      estudianteId,
     }: {
       solicitud: SolicitudInscripcion;
       documento: { tipo: string; archivo: File } | null;
+      /** Si viene, es "Editar": se reemplaza la inscripción de ese estudiante. */
+      estudianteId?: string;
     }): Promise<ResultadoInscripcion> => {
-      const r: InscripcionRegistrada = await api.post(
-        '/estudiantes/inscripciones',
-        solicitud,
-      );
+      const r: InscripcionRegistrada = estudianteId
+        ? await api.put(`/estudiantes/${estudianteId}`, solicitud)
+        : await api.post('/estudiantes/inscripciones', solicitud);
       if (!documento) return { ...r, documentoFallido: false };
       try {
         await subirDocumentoApoderado(r.id, documento.tipo, documento.archivo);
@@ -102,6 +105,14 @@ export const correoDisponible = async (correo: string): Promise<boolean> => {
   });
   return r.disponible;
 };
+
+// GET /estudiantes/{id}/edicion: la inscripción para precargar "Editar".
+export const useEdicionEstudiante = (id: string) =>
+  useQuery({
+    queryKey: ['estudiantes', 'edicion', id],
+    queryFn: (): Promise<EdicionEstudiante> =>
+      api.get(`/estudiantes/${id}/edicion`),
+  });
 
 export type AccionEstudiante = 'retirar' | 'reactivar' | 'eliminar';
 

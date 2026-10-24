@@ -1,7 +1,11 @@
+import { Pencil } from 'lucide-react';
 import * as React from 'react';
 import { useLocation, useParams } from 'react-router';
 
 import { ContentLayout } from '@/components/layouts';
+import { Button } from '@/components/ui/button';
+import { Link } from '@/components/ui/link';
+import { paths } from '@/config/paths';
 import { useFichaEstudiante } from '@/features/estudiantes/api/estudiantes';
 import {
   FichaEstudiante,
@@ -23,6 +27,18 @@ const FichaEstudianteRoute = () => {
       title={cabecera?.nombre ?? 'Estudiante'}
       breadcrumbs={['Estudiantes', cabecera?.nombre ?? '…']}
       subtitle={cabecera?.detalle}
+      actions={
+        // Figma: "Editar datos" abre el mismo asistente de la inscripción con los datos guardados.
+        <Button asChild variant="primary-light">
+          <Link
+            to={paths.app.administrativo.editarEstudiante.getHref(estudianteId)}
+            className="hover:no-underline"
+          >
+            <Pencil className="size-4" aria-hidden="true" />
+            Editar datos
+          </Link>
+        </Button>
+      }
     >
       <FichaEstudiante
         id={estudianteId}

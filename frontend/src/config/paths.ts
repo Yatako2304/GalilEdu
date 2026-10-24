@@ -60,6 +60,10 @@ export const paths = {
         path: 'estudiantes/nueva',
         getHref: () => `${ADMINISTRATIVO}/estudiantes/nueva`,
       },
+      editarEstudiante: {
+        path: 'estudiantes/:estudianteId/editar',
+        getHref: (id: string) => `${ADMINISTRATIVO}/estudiantes/${id}/editar`,
+      },
       fichaEstudiante: {
         path: 'estudiantes/:estudianteId',
         getHref: (id: string) => `${ADMINISTRATIVO}/estudiantes/${id}`,

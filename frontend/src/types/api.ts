@@ -253,6 +253,18 @@ export type SolicitudInscripcion = {
   celularResponsable?: string | null;
 };
 
+/** GET /estudiantes/{id}/edicion: la inscripción con la forma de SolicitudInscripcion, para "Editar". */
+export type EdicionEstudiante = {
+  id: string;
+  datos: SolicitudInscripcion;
+  /** Matriculado (ya pagó): no se pueden cambiar grado ni año académico. */
+  matriculado: boolean;
+  /** Familiares que ya tienen usuario. */
+  conCuenta: Parentesco[];
+  /** Documento del apoderado ya adjuntado, si hay. */
+  acreditacion: DocumentoAdjunto | null;
+};
+
 export type InscripcionRegistrada = {
   id: string;
   estudiante: string;

@@ -22,4 +22,12 @@ public interface EstudianteRepositorio extends JpaRepository<Estudiante, UUID>, 
 			where v.persona.id = :personaId and v.estudiante.eliminado = false
 			""")
 	List<Estudiante> vinculadosA(@Param("personaId") UUID personaId);
+
+	/** Si la persona es responsable de matrícula de otro estudiante (no eliminado) además del indicado. */
+	@Query("""
+			select count(v) > 0 from VinculoFamiliar v
+			where v.persona.id = :personaId and v.esResponsableMatricula = true
+			  and v.estudiante.eliminado = false and v.estudiante.id <> :estudianteId
+			""")
+	boolean esResponsableDeOtro(@Param("personaId") UUID personaId, @Param("estudianteId") UUID estudianteId);
 }

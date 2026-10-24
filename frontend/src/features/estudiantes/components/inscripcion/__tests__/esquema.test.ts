@@ -1,6 +1,9 @@
+import { EdicionEstudiante } from '@/types/api';
+
 import {
   InscripcionForm,
   aSolicitud,
+  desdeEdicion,
   gradoSugerido,
   inscripcionSchema,
   inscripcionVacia,
@@ -458,6 +461,85 @@ describe('Paso 2 · ficha médica', () => {
       enfermedadDetalle: null,
       medicamentoDetalle: null,
     });
+  });
+});
+
+describe('Editar: desdeEdicion (guardado → formulario)', () => {
+  /** Lo que devolvería GET /estudiantes/{id}/edicion para la inscripción válida de estas pruebas. */
+  const edicion = (): EdicionEstudiante => {
+    const datos = aSolicitud(valida());
+    datos.madre = {
+      ...datos.madre,
+      personaId: 'id-madre',
+    };
+    datos.padre = {
+      ...datos.padre,
+      persona: {
+        ...datos.madre.persona!,
+        numeroDocumento: '41234567',
+        nombres: 'Jorge',
+        correo: 'jorge@gmail.com',
+      },
+    };
+    return {
+      id: 'id-estudiante',
+      datos,
+      matriculado: false,
+      conCuenta: ['MADRE'],
+      acreditacion: null,
+    };
+  };
+
+  test('carga los datos guardados con el formato del formulario', () => {
+    const f = desdeEdicion(edicion());
+    expect(f.editando).toBe(true);
+    expect(f.estudiante.persona.numeroDocumento).toBe('78945612');
+    expect(f.estudiante.nivel).toBe('PRIMARIA');
+    expect(f.estudiante.grado).toBe('PRI-6');
+    expect(f.fichaMedica.pesoKg).toBe('22.0');
+    expect(f.fichaMedica.estaturaM).toBe('1.18');
+    expect(f.madre.personaId).toBe('id-madre');
+    expect(f.madre.tieneCuenta).toBe(true);
+    expect(f.responsable).toBe('MADRE');
+    expect(f.correoResponsable).toBe('carla@gmail.com');
+  });
+
+  test('ida y vuelta: lo cargado se vuelve a enviar igual y es válido', () => {
+    const e = edicion();
+    const f = desdeEdicion(e);
+    // Al editar hay que volver a confirmar la verificación (ver la prueba siguiente).
+    f.verificado = true;
+    expect(mensajes(f)).toEqual([]);
+    const s = aSolicitud(f);
+    expect(s.estudiante).toEqual(e.datos.estudiante);
+    expect(s.fichaMedica).toEqual(e.datos.fichaMedica);
+    expect(s.contactos).toEqual(e.datos.contactos);
+  });
+
+  test('al editar, un familiar ya registrado envía sus datos (se pueden corregir) y se valida', () => {
+    const f = desdeEdicion(edicion());
+    f.verificado = true;
+    expect(aSolicitud(f).madre.persona?.nombres).toBe('Carla');
+    f.madre.persona.celular = '';
+    expect(mensajes(f)).toEqual(['Ingresa el celular']);
+  });
+
+  test('la casilla "Verifiqué los datos…" empieza sin marcar: hay que volver a confirmarla', () => {
+    expect(desdeEdicion(edicion()).verificado).toBe(false);
+  });
+
+  test('una relación del apoderado que no está en la lista vuelve como "Otro" + Especificar', () => {
+    const e = edicion();
+    e.datos.apoderado = {
+      noRegistra: false,
+      personaId: 'id-apoderado',
+      persona: e.datos.madre.persona,
+      relacion: 'Vecina',
+    };
+    const f = desdeEdicion(e);
+    expect(f.incluirApoderado).toBe(true);
+    expect(f.apoderado.relacion).toBe('Otro');
+    expect(f.apoderado.relacionDetalle).toBe('Vecina');
   });
 });
 

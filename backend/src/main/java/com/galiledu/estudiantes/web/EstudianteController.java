@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -25,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.galiledu.compartido.web.Pagina;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DocumentoAdjunto;
+import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.EdicionEstudiante;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.EstudianteResumen;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.FichaEstudiante;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.InscripcionRegistrada;
@@ -61,6 +63,18 @@ public class EstudianteController {
 	@GetMapping("/{id}")
 	public FichaEstudiante ficha(@PathVariable UUID id) {
 		return servicio.ficha(id);
+	}
+
+	/** GET /api/estudiantes/{id}/edicion → los datos de la inscripción para precargar "Editar". */
+	@GetMapping("/{id}/edicion")
+	public EdicionEstudiante edicion(@PathVariable UUID id) {
+		return servicio.edicion(id);
+	}
+
+	/** PUT /api/estudiantes/{id} → "Editar": mismas validaciones y datos que la inscripción. */
+	@PutMapping("/{id}")
+	public InscripcionRegistrada actualizar(@PathVariable UUID id, @Valid @RequestBody SolicitudInscripcion solicitud) {
+		return servicio.actualizar(id, solicitud);
 	}
 
 	@PostMapping("/inscripciones")
