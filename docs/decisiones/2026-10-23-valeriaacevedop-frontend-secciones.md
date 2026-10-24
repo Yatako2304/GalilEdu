@@ -51,7 +51,7 @@ La pestaña Secciones de la página del año escolar: tabla agrupada por grado, 
 - [ ] Inactivar y reactivar una sección (el backend ya los tiene): sin botón en CI-09. El mensaje de eliminar con historial dice "Inactívala".
 - [ ] `Select` con la lista vacía muestra una barra en blanco; debería decir "No hay cursos disponibles" o similar.
 - [ ] Los colores de foco y hover de la etiqueta flotante se aplicaron solo al Text Area; falta revisar si el Text Field de Figma hace lo mismo.
-- [ ] El ícono `supervisor_account` del modal "Asignar tutor" usa `UserCog`; agregarlo a la [tabla de equivalencias de íconos](2026-10-22-yatako-iconos-lucide.md).
+- [x] El ícono `supervisor_account` del modal "Asignar tutor" usa `UserCog`: agregado a la [tabla de equivalencias de íconos](2026-10-22-yatako-iconos-lucide.md).
 - [ ] Componentes compartidos pendientes de discutir (ModalFormulario, ModalConfirmacion, `ConfirmationDialog` controlable, `BotonSeccion`, `NombreRecortado`, tamaños del Text Area): ver "Pendientes de componentes" en la [guía de componentes](../guias/componentes-ui.md).
 
 ## Notas para quien siga

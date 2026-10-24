@@ -52,7 +52,7 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `mail` | `Mail` | Correo |
 | `phone` | `Phone` | Teléfono |
 | `person_add` | `UserPlus` | Nuevo usuario |
-| `group` | `Users` | Estudiantes, usuarios |
+| `group` / `groups` | `Users` | Estudiantes, usuarios, modal Nueva sección |
 | `logout` | `LogOut` | Cerrar sesión |
 | `public` | `Globe` | Radio Card / Checkbox Card con ícono |
 | `bookmark_border` | `Bookmark` | Selectable Tag con ícono |
@@ -67,6 +67,9 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `arrow_forward` | `ArrowRight` | "Ver detalle" |
 | `swap_horiz` | `ArrowLeftRight` | "Cambiar régimen" |
 | `view_sidebar` | `PanelLeft` | Ocultar o mostrar el menú lateral |
+| `schedule` | `Clock` | Modal Nueva estructura horaria |
+| `coffee` | `Coffee` | Receso en la jornada y en su vista previa |
+| `supervisor_account` | `UserCog` | Modal Asignar tutor |
 
 ## Notas para quien siga
 

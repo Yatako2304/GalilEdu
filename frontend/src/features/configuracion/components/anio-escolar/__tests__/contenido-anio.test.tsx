@@ -48,6 +48,14 @@ const servirSecciones = (anioId: string) =>
     ),
   );
 
+const servirEstructuras = (anioId: string) =>
+  server.use(
+    http.get(
+      `${API}/configuracion/anios-escolares/${anioId}/estructuras-horarias`,
+      () => HttpResponse.json({ anioModificable: true, estructuras: [] }),
+    ),
+  );
+
 const mostrar = async (anio: AnioEscolarDetalle) =>
   renderApp(<ContenidoAnio anio={anio} />, {
     user: await createUser({ roles: [ROLES.PERSONAL_ADMINISTRATIVO] }),
@@ -72,6 +80,7 @@ test('muestra las tres pestañas con sus contadores y abre en Periodos', async (
 
 test('cada pestaña muestra el contenido de su pantalla de Figma', async () => {
   servirSecciones('anio-2026');
+  servirEstructuras('anio-2026');
   await mostrar(anio2026);
 
   await userEvent.click(screen.getByRole('tab', { name: 'Secciones (23)' }));
@@ -89,13 +98,12 @@ test('cada pestaña muestra el contenido de su pantalla de Figma', async () => {
   await userEvent.click(
     screen.getByRole('tab', { name: 'Estructura horaria (2)' }),
   );
-  expect(screen.getByText('HU-44')).toBeInTheDocument();
+  expect(
+    await screen.findByRole('heading', { name: 'Estructuras del año' }),
+  ).toBeInTheDocument();
   expect(
     screen.queryByRole('heading', { name: 'Secciones por grado' }),
   ).not.toBeInTheDocument();
-  expect(
-    screen.getByRole('link', { name: /Ver diseño en Figma/ }),
-  ).toHaveAttribute('href', expect.stringContaining('850-10152'));
 
   await userEvent.click(screen.getByRole('tab', { name: 'Periodos (4)' }));
   expect(
@@ -115,6 +123,7 @@ test('año ACTIVO: sin la tarjeta de requisitos, y sin pedirlos', async () => {
 test('año PLANIFICADO: muestra los requisitos sobre las pestañas y "Revisar" cambia de pestaña', async () => {
   servirRequisitos();
   servirSecciones('anio-2027');
+  servirEstructuras('anio-2027');
   await mostrar(anio2027);
 
   expect(
@@ -144,5 +153,7 @@ test('año PLANIFICADO: muestra los requisitos sobre las pestañas y "Revisar" c
   expect(
     screen.getByRole('tab', { name: 'Estructura horaria (2)' }),
   ).toHaveAttribute('aria-selected', 'true');
-  expect(screen.getByText('HU-44')).toBeInTheDocument();
+  expect(
+    await screen.findByRole('heading', { name: 'Estructuras del año' }),
+  ).toBeInTheDocument();
 });
