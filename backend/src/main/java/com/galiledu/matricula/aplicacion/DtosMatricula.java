@@ -50,23 +50,4 @@ public final class DtosMatricula {
 	public record CuotaDeuda(UUID estudianteId, String estudiante, String concepto, LocalDate fechaVencimiento,
 			BigDecimal monto) {
 	}
-
-	/** Lectura administrativa para navegar desde el periodo hasta HU-36 con los ids de la base actual. */
-	public record MatriculaAdministrativa(
-			UUID id,
-			UUID estudianteId,
-			String nombre,
-			String numeroDocumento,
-			String tipo,
-			String grado,
-			int anio,
-			String seccion,
-			String tutor,
-			String estado,
-			String codigo,
-			String apoderado,
-			String contacto,
-			String contactoEmergencia,
-			String informacionMedica) {
-	}
 }

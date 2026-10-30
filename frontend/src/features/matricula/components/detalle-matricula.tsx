@@ -15,8 +15,8 @@ import { FileItem } from '@/components/ui/files';
 import { Stepper } from '@/components/ui/stepper';
 import { Tag } from '@/components/ui/tag';
 import { paths } from '@/config/paths';
-import { MatriculaAdministrativa } from '@/types/api';
 
+import { MatriculaFlujo } from './datos-flujo-matricula';
 import { seccionMatricula } from './presentacion-matricula';
 
 const PASOS = [
@@ -33,7 +33,7 @@ const documentos = [
   ['Declaración jurada del apoderado', 'declaracion_jurada.pdf'],
 ] as const;
 
-const configuracionEstado = (matricula: MatriculaAdministrativa) => {
+const configuracionEstado = (matricula: MatriculaFlujo) => {
   if (matricula.estado === 'MATRICULADO')
     return {
       paso: 4,
@@ -54,24 +54,6 @@ const configuracionEstado = (matricula: MatriculaAdministrativa) => {
       detalle:
         'La cuota de matrícula se consulta o genera desde la tarjeta de pago.',
     };
-  if (matricula.estado === 'RETIRADO')
-    return {
-      paso: 4,
-      tipo: 'error' as AlertType,
-      etiqueta: 'Retirado',
-      color: 'error' as const,
-      titulo: 'La matrícula fue retirada.',
-      detalle: 'Las obligaciones posteriores al retiro deben figurar anuladas.',
-    };
-  if (matricula.estado === 'ANULADA')
-    return {
-      paso: 1,
-      tipo: 'error' as AlertType,
-      etiqueta: 'Anulada',
-      color: 'error' as const,
-      titulo: 'La matrícula fue anulada.',
-      detalle: 'Este proceso ya no admite nuevas acciones.',
-    };
   return {
     paso: 2,
     tipo: 'warning' as AlertType,
@@ -82,16 +64,12 @@ const configuracionEstado = (matricula: MatriculaAdministrativa) => {
   };
 };
 
-const DatosMatricula = ({
-  matricula,
-}: {
-  matricula: MatriculaAdministrativa;
-}) => {
+const DatosMatricula = ({ matricula }: { matricula: MatriculaFlujo }) => {
   const seccion = seccionMatricula(matricula.estado, matricula.seccion);
   const seccionYTutor =
     seccion === 'Por asignar'
       ? seccion
-      : `${seccion} · Tutor: ${matricula.tutor ?? 'Por asignar'}`;
+      : `${seccion} · Tutor: ${matricula.tutor}`;
 
   return (
     <Card>
@@ -102,13 +80,13 @@ const DatosMatricula = ({
         <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
           {[
             ['Estudiante', matricula.nombre],
-            ['DNI', matricula.numeroDocumento],
+            ['DNI', matricula.dni],
             ['Grado', matricula.grado],
             ['Sección', seccionYTutor],
-            ['Apoderado', matricula.apoderado ?? '—'],
-            ['Contacto', matricula.contacto ?? '—'],
-            ['Contacto de emergencia', matricula.contactoEmergencia ?? '—'],
-            ['Información médica', matricula.informacionMedica ?? '—'],
+            ['Apoderado', matricula.apoderado],
+            ['Contacto', matricula.contacto],
+            ['Contacto de emergencia', matricula.emergencia],
+            ['Información médica', matricula.informacionMedica],
           ].map(([etiqueta, valor]) => (
             <div key={etiqueta}>
               <dt className="text-caption-1 text-content-quartiary">
@@ -125,14 +103,8 @@ const DatosMatricula = ({
   );
 };
 
-const DocumentosMatricula = ({
-  matricula,
-}: {
-  matricula: MatriculaAdministrativa;
-}) => {
-  const aprobados = ['PENDIENTE_PAGO', 'MATRICULADO', 'RETIRADO'].includes(
-    matricula.estado,
-  );
+const DocumentosMatricula = ({ matricula }: { matricula: MatriculaFlujo }) => {
+  const aprobados = matricula.estado !== 'SECCION_RESERVADA';
   return (
     <Card>
       <CardHeader>
@@ -196,7 +168,7 @@ export const DetalleMatricula = ({
   periodoId,
   pagoMatricula,
 }: {
-  matricula: MatriculaAdministrativa;
+  matricula: MatriculaFlujo;
   periodoId: string;
   pagoMatricula?: ReactNode;
 }) => {
@@ -219,11 +191,10 @@ export const DetalleMatricula = ({
           <DatosMatricula matricula={matricula} />
           <DocumentosMatricula matricula={matricula} />
         </div>
-        {pagoMatricula ? (
-          pagoMatricula
-        ) : matricula.estado === 'SECCION_RESERVADA' ||
-          matricula.estado === 'EN_VALIDACION' ? (
+        {matricula.estado === 'SECCION_RESERVADA' ? (
           <PagoPendienteValidacion />
+        ) : pagoMatricula ? (
+          pagoMatricula
         ) : (
           <Card>
             <CardHeader>
@@ -231,7 +202,7 @@ export const DetalleMatricula = ({
             </CardHeader>
             <CardContent>
               <p className="text-body-3 text-content-tertiary">
-                No hay información de pago disponible para esta matrícula.
+                Esta matrícula es parte de la maqueta y no consulta la API.
               </p>
             </CardContent>
           </Card>
@@ -261,9 +232,7 @@ export const DetalleMatricula = ({
   );
 };
 
-export const etiquetaDetalleMatricula = (
-  matricula: MatriculaAdministrativa,
-) => {
+export const etiquetaDetalleMatricula = (matricula: MatriculaFlujo) => {
   const estado = configuracionEstado(matricula);
   return (
     <Tag color={estado.color} size="md">

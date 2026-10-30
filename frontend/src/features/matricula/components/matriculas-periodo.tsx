@@ -19,36 +19,32 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown';
 import { Input, Select } from '@/components/ui/form';
-import { Spinner } from '@/components/ui/spinner';
 import { StatCard } from '@/components/ui/stat-card';
 import { PaginationBar, Table } from '@/components/ui/table';
 import { SelectableTag } from '@/components/ui/tag';
 import { paths } from '@/config/paths';
-import { useMatriculasDelPeriodo } from '@/features/matricula/api/matriculas-administrativo';
-import { EstadoMatricula, MatriculaAdministrativa } from '@/types/api';
 
+import {
+  EstadoFlujoMatricula,
+  MATRICULAS_FLUJO,
+  MatriculaFlujo,
+} from './datos-flujo-matricula';
 import { seccionMatricula } from './presentacion-matricula';
 
 const ESTADOS: Record<
-  EstadoMatricula,
-  {
-    etiqueta: string;
-    color: 'info' | 'warning' | 'success' | 'error';
-  }
+  EstadoFlujoMatricula,
+  { etiqueta: string; color: 'info' | 'warning' | 'success' }
 > = {
   SECCION_RESERVADA: { etiqueta: 'En proceso', color: 'info' },
-  EN_VALIDACION: { etiqueta: 'En validación', color: 'info' },
   PENDIENTE_PAGO: { etiqueta: 'Pendiente de pago', color: 'warning' },
   MATRICULADO: { etiqueta: 'Matriculado', color: 'success' },
-  RETIRADO: { etiqueta: 'Retirado', color: 'error' },
-  ANULADA: { etiqueta: 'Anulada', color: 'error' },
 };
 
 const AccionesMatricula = ({
   matricula,
   periodoId,
 }: {
-  matricula: MatriculaAdministrativa;
+  matricula: MatriculaFlujo;
   periodoId: string;
 }) => {
   const navigate = useNavigate();
@@ -81,62 +77,39 @@ const AccionesMatricula = ({
 
 // Figma > Personal Administrativo > A3 · Matrículas del periodo.
 export const MatriculasPeriodo = ({
-  periodoId,
-  cierre,
+  periodoId = 'periodo-2027',
 }: {
-  periodoId: string;
-  cierre?: string | null;
+  periodoId?: string;
 }) => {
-  const consulta = useMatriculasDelPeriodo(periodoId);
   const [busqueda, setBusqueda] = React.useState('');
   const [estado, setEstado] = React.useState('TODOS');
   const texto = busqueda.trim().toLocaleLowerCase('es-PE');
-  const todas = consulta.data ?? [];
-  const matriculas = todas.filter(
+  const matriculas = MATRICULAS_FLUJO.filter(
     (matricula) =>
       (estado === 'TODOS' || matricula.estado === estado) &&
       (!texto ||
-        `${matricula.nombre} ${matricula.numeroDocumento} ${matricula.codigo ?? ''}`
+        `${matricula.nombre} ${matricula.dni} ${matricula.codigo ?? ''}`
           .toLocaleLowerCase('es-PE')
           .includes(texto)),
   );
-  const matriculados = todas.filter(
-    (matricula) => matricula.estado === 'MATRICULADO',
+  const matriculados = MATRICULAS_FLUJO.filter(
+    (m) => m.estado === 'MATRICULADO',
   ).length;
-  const enProceso = todas.filter((matricula) =>
-    ['SECCION_RESERVADA', 'EN_VALIDACION', 'PENDIENTE_PAGO'].includes(
-      matricula.estado,
-    ),
-  ).length;
-
-  if (consulta.isLoading) {
-    return (
-      <div className="flex min-h-64 items-center justify-center">
-        <Spinner size="lg" />
-      </div>
-    );
-  }
-
-  if (consulta.isError) {
-    return (
-      <Alert type="error" title="No pudimos cargar las matrículas del periodo.">
-        Intenta nuevamente en unos minutos.
-      </Alert>
-    );
-  }
+  const enProceso = MATRICULAS_FLUJO.length - matriculados;
 
   return (
     <div className="flex flex-col gap-6">
-      {cierre && (
-        <Alert type="info" title={`El periodo está en curso hasta ${cierre}.`}>
-          La matrícula extemporánea se habilita cuando el periodo cierre.
-        </Alert>
-      )}
+      <Alert
+        type="info"
+        title="El periodo regular está en curso hasta el 31/10/2026."
+      >
+        La matrícula extemporánea se habilita cuando el periodo cierre.
+      </Alert>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Users aria-hidden="true" />}
-          value={todas.length}
+          value={MATRICULAS_FLUJO.length}
           label="Estudiantes en el periodo"
         />
         <StatCard
@@ -176,16 +149,13 @@ export const MatriculasPeriodo = ({
             options={[
               { label: 'Estado: Todos', value: 'TODOS' },
               { label: 'En proceso', value: 'SECCION_RESERVADA' },
-              { label: 'En validación', value: 'EN_VALIDACION' },
               { label: 'Pendiente de pago', value: 'PENDIENTE_PAGO' },
               { label: 'Matriculado', value: 'MATRICULADO' },
-              { label: 'Retirado', value: 'RETIRADO' },
-              { label: 'Anulada', value: 'ANULADA' },
             ]}
           />
         </div>
 
-        <Table<MatriculaAdministrativa>
+        <Table<MatriculaFlujo>
           data={matriculas}
           emptyMessage="No hay matrículas que coincidan con los filtros"
           columns={[
@@ -196,7 +166,7 @@ export const MatriculasPeriodo = ({
                 <div>
                   <p className="text-content-primary">{entry.nombre}</p>
                   <p className="text-body-4 text-content-tertiary">
-                    DNI {entry.numeroDocumento}
+                    DNI {entry.dni}
                     {entry.codigo ? ` · ${entry.codigo}` : ''}
                   </p>
                 </div>

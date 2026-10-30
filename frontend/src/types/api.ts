@@ -643,25 +643,6 @@ export type EstadoMatriculaApoderado = {
   deuda: { total: number; cuotas: CuotaDeudaFamiliar[] };
 };
 
-/** Matrícula real visible para el personal administrativo. */
-export type MatriculaAdministrativa = {
-  id: string;
-  estudianteId: string;
-  nombre: string;
-  numeroDocumento: string;
-  tipo: 'NUEVO' | 'CONTINUADOR';
-  grado: string;
-  anio: number;
-  seccion: string | null;
-  tutor: string | null;
-  estado: EstadoMatricula;
-  codigo: string | null;
-  apoderado: string | null;
-  contacto: string | null;
-  contactoEmergencia: string | null;
-  informacionMedica: string | null;
-};
-
 // ---------- Pagos y pensiones (HU-37) ----------
 // Iguales a backend/.../pagos/aplicacion/DtosPagos.java
 

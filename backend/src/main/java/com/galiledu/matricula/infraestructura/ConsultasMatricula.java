@@ -31,66 +31,6 @@ public class ConsultasMatricula {
 	public record MatriculaFila(UUID id, String estado, String grado, String seccion, String codigo) {
 	}
 
-	public record MatriculaAdministrativaFila(
-			UUID id,
-			UUID estudianteId,
-			String nombre,
-			String numeroDocumento,
-			String tipo,
-			String grado,
-			int anio,
-			String seccion,
-			String tutor,
-			String estado,
-			String codigo,
-			String apoderado,
-			String contacto,
-			String contactoEmergencia,
-			String informacionMedica) {
-	}
-
-	private static final String MATRICULA_ADMINISTRATIVA_SELECT = """
-			SELECT m.id,
-			       e.id,
-			       concat_ws(' ', pe.nombres, pe.apellido_paterno, pe.apellido_materno),
-			       pe.numero_documento,
-			       m.tipo_estudiante,
-			       g.nombre,
-			       a.anio,
-			       CASE WHEN m.estado IN ('MATRICULADO', 'RETIRADO')
-			            THEN g.numero || '.° ' || s.nombre END,
-			       CASE WHEN m.estado IN ('MATRICULADO', 'RETIRADO')
-			            THEN nullif(concat_ws(' ', pt.nombres, pt.apellido_paterno, pt.apellido_materno), '') END,
-			       m.estado,
-			       m.codigo,
-			       nullif(concat_ws(' ', pr.nombres, pr.apellido_paterno, pr.apellido_materno), ''),
-			       nullif(concat_ws(' · ', pr.celular, pr.correo), ''),
-			       (SELECT nullif(concat_ws(' · ', ce.nombre_completo, coalesce(ce.celular, ce.telefono_fijo)), '')
-			          FROM estudiantes.contacto_emergencia ce
-			         WHERE ce.estudiante_id = e.id
-			         ORDER BY ce.orden
-			         LIMIT 1),
-			       CASE
-			         WHEN fm.estudiante_id IS NULL THEN NULL
-			         WHEN fm.observaciones IS NOT NULL THEN fm.observaciones
-			         WHEN fm.tiene_alergias THEN 'Registra alergias'
-			         WHEN fm.tiene_enfermedad THEN coalesce(fm.enfermedad_detalle, 'Registra una enfermedad')
-			         ELSE 'Sin observaciones'
-			       END
-			FROM matricula.matricula m
-			JOIN estudiantes.estudiante e ON e.id = m.estudiante_id
-			JOIN personas.persona pe ON pe.id = e.persona_id
-			JOIN configuracion.grado g ON g.codigo = m.grado_codigo
-			JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
-			LEFT JOIN configuracion.seccion s ON s.id = m.seccion_id
-			LEFT JOIN seguridad.usuario ut ON ut.id = s.tutor_id
-			LEFT JOIN personas.persona pt ON pt.id = ut.persona_id
-			LEFT JOIN estudiantes.vinculo_familiar vf
-			       ON vf.estudiante_id = e.id AND vf.es_responsable_matricula
-			LEFT JOIN personas.persona pr ON pr.id = vf.persona_id
-			LEFT JOIN estudiantes.ficha_medica fm ON fm.estudiante_id = e.id
-			""";
-
 	public Optional<UUID> personaDeUsuario(UUID usuarioId) {
 		return jdbc.sql("SELECT persona_id FROM seguridad.usuario WHERE id = ?")
 				.param(usuarioId)
@@ -157,44 +97,5 @@ public class ConsultasMatricula {
 				.param(matriculaId)
 				.query(Integer.class)
 				.single();
-	}
-
-	/** Matrículas reales del año asociado al periodo. Sirve a la navegación administrativa de HU-36. */
-	public List<MatriculaAdministrativaFila> matriculasDelPeriodo(UUID periodoId) {
-		return jdbc.sql(MATRICULA_ADMINISTRATIVA_SELECT + """
-				JOIN matricula.periodo_matricula pm ON pm.anio_escolar_id = m.anio_escolar_id
-				WHERE pm.id = ?
-				ORDER BY 3
-				""")
-				.param(periodoId)
-				.query((rs, fila) -> mapearMatriculaAdministrativa(rs))
-				.list();
-	}
-
-	public Optional<MatriculaAdministrativaFila> matriculaAdministrativa(UUID matriculaId) {
-		return jdbc.sql(MATRICULA_ADMINISTRATIVA_SELECT + " WHERE m.id = ?")
-				.param(matriculaId)
-				.query((rs, fila) -> mapearMatriculaAdministrativa(rs))
-				.optional();
-	}
-
-	private MatriculaAdministrativaFila mapearMatriculaAdministrativa(java.sql.ResultSet rs)
-			throws java.sql.SQLException {
-		return new MatriculaAdministrativaFila(
-				rs.getObject(1, UUID.class),
-				rs.getObject(2, UUID.class),
-				rs.getString(3),
-				rs.getString(4),
-				rs.getString(5),
-				rs.getString(6),
-				rs.getInt(7),
-				rs.getString(8),
-				rs.getString(9),
-				rs.getString(10),
-				rs.getString(11),
-				rs.getString(12),
-				rs.getString(13),
-				rs.getString(14),
-				rs.getString(15));
 	}
 }

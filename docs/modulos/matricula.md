@@ -22,12 +22,9 @@ MATRICULADO (código MAT-…, cronograma de pensiones, HU-37)          · tambi�
 - **Sección:** es un resultado de la matrícula. El frontend muestra **Por asignar** durante `SECCION_RESERVADA`, `EN_VALIDACION` y `PENDIENTE_PAGO`; muestra la sección registrada al llegar a `MATRICULADO` y la conserva como dato histórico si después pasa a `RETIRADO`.
 - **Vacantes:** capacidad de la sección (`configuracion.seccion.capacidad_maxima`) menos las matrículas activas de esa sección. Se calculan; cambiar de sección (HU-26) mueve la matrícula y deja historial.
 
-## Endpoints
+## Endpoints (apoderado)
 
-Ver la tabla de [`backend/README.md`](../../backend/README.md).
-
-- Apoderado: `GET /matricula/apoderado/estudiantes` y `GET /matricula/apoderado/estudiantes/{id}/estado`.
-- Personal administrativo: `GET /matricula/administrativo/periodos/{periodoId}/matriculas` y `GET /matricula/administrativo/matriculas/{matriculaId}`. Estas lecturas obtienen las matrículas y sus ids desde la base del ambiente actual; el detalle usa el mismo `matriculaId` que HU-36.
+Ver la tabla de [`backend/README.md`](../../backend/README.md): `GET /matricula/apoderado/estudiantes` y `GET /matricula/apoderado/estudiantes/{id}/estado`.
 
 - La deuda (HU-30) se pide a Pagos con `ServicioEstadoCuenta.cuotasVencidas` (IEstadoCuenta): pensiones impagas después del vencimiento más los días de gracia, de **todos** los hijos del apoderado. Solo bloquea si el periodo tiene `bloquear_por_morosidad`.
 - `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula).
@@ -65,15 +62,13 @@ Desde una matrícula se llega a: el estudiante (`estudiantes.estudiante`) y su a
 
 El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documentos de Figma.
 
-Estos registros pertenecen a la semilla local. Un ambiente desplegado puede contener otros nombres, periodos e ids; el flujo administrativo ya no depende de estos valores y consulta los registros reales de ese ambiente.
-
 ## Observaciones encontradas
 
 - **El año de la pantalla viene del periodo de matrícula:** el título muestra "Matrícula 2027" porque ese es el año escolar del periodo consultado, aunque sus fechas de apertura y cierre estén en 2026. En los datos de prueba, el periodo 2027 está habilitado del **15 de septiembre al 31 de octubre de 2026**. El frontend no calcula el año desde la fecha actual.
 - **Sofía y Mateo tienen situaciones diferentes en 2027:** Mateo tiene una matrícula en proceso y su sección se muestra como **Por asignar**; Sofía está matriculada en 4.° A de 2026, pero no tiene una matrícula creada para 2027, por lo que también aparece pendiente de asignación para ese periodo.
 - **La deuda se valida por familia (HU-30):** la pensión vencida de S/ 600 pertenece a Sofía. Al consultar a Mateo, la matrícula también queda bloqueada porque el periodo tiene `bloquear_por_morosidad`; la interfaz aclara que Mateo no tiene deuda propia y que el impedimento proviene de Sofía. Al consultar a Sofía, la misma deuda se muestra como propia.
-- **HU-36 ya usa la matrícula del ambiente actual:** el listado del periodo y el detalle administrativo consultan la API, por lo que la tarjeta recibe el `matriculaId` real tanto en local como en despliegue. No hay UUID, nombre, DNI, año ni periodo fijo en la navegación.
-- **Flujo visual administrativo disponible:** se añadieron las pantallas de apoyo A3, A5, B6 y B7 para navegar desde el periodo hasta HU-36. El listado, el encabezado y los datos personales provienen de la API. Los documentos y las acciones de HU-24, HU-25, HU-26, HU-28, HU-29, HU-31 y HU-32 siguen siendo apoyo visual y permanecen desactivados.
+- **HU-36 tiene un acceso temporal:** como el listado y detalle administrativo de HU-24 aún no existen, la tarjeta "Pago de matrícula" se prueba pasando `matriculaId` en la URL. Cuando HU-24 esté disponible, la misma tarjeta debe integrarse en su detalle.
+- **Flujo visual administrativo disponible:** se añadieron las pantallas de apoyo A3, A5, B6 y B7 para poder navegar desde el periodo hasta cada estado de matrícula. El listado, los documentos y los datos personales son estáticos; no implementan HU-24, HU-25, HU-26, HU-28, HU-29, HU-31 ni HU-32. Sus acciones permanecen desactivadas. Solo las tarjetas ya entregadas de HU-36 y HU-37 consultan la API.
 - **HU-37 solo corresponde a estudiantes matriculados:** Sofía tiene el cronograma 2026 de los datos de prueba. Mateo todavía está en `SECCION_RESERVADA`, así que no debe tener pensiones generadas hasta completar la matrícula.
 - **Figma es la fuente visual; la API es la fuente de los datos:** textos, jerarquía y componentes siguen los frames indicados arriba. Año, fechas, grado, sección, deuda, montos y estados se muestran desde el backend.
 
@@ -121,14 +116,16 @@ Estos registros pertenecen a la semilla local. Un ambiente desplegado puede cont
 ### HU-36 · Generación de la cuota de matrícula
 
 1. Cierra la sesión del apoderado e inicia como personal administrativo con `U20260002`.
-2. En **Configuración → Periodos de matrícula**, abre un periodo y pulsa **Ver matrículas**.
-3. Comprueba que el listado contiene los estudiantes de la base conectada. Abre el menú `⋮` de una matrícula en proceso y selecciona **Ver detalle**. No copies una URL ni un UUID de otro ambiente.
+2. En **Configuración → Periodos de matrícula**, abre el periodo 2027 y pulsa **Ver matrículas**.
+3. En la fila de **Mateo Paredes**, abre el menú `⋮` y selecciona **Ver detalle**. También puedes abrir directamente:
+   `http://localhost:3000/app/administrativo/matricula/detalle/50000000-0000-0000-0000-000000000002`
 4. Si la cuota todavía no existe, comprueba que aparece el botón **Generar cuota de matrícula** y presiónalo.
-5. Comprueba que la tarjeta muestra el concepto, el monto del tarifario del periodo, estado pendiente, vencimiento y responsable de la generación.
+5. Comprueba que la tarjeta muestra el concepto, **S/ 450.00**, estado pendiente, vencimiento y responsable de la generación.
 6. Recarga la página: debe mostrarse la misma cuota y no debe ofrecer crear una duplicada.
-7. Para comprobar una matrícula histórica pagada, abre desde su periodo una matrícula que ya tenga la cuota pagada.
+7. Para comprobar una matrícula histórica pagada, abre el detalle de **Sofía Paredes** desde el mismo listado o usa:
+   `http://localhost:3000/app/administrativo/matricula/detalle/50000000-0000-0000-0000-000000000001`
 
-**Resultado esperado:** cada fila y detalle conserva el id de la matrícula elegida y la tarjeta permite generar o consultar su cuota. Los nombres e ids pueden diferir entre local y despliegue. Si la matrícula ya muestra una cuota al entrar, fue generada en una prueba anterior; para repetir el estado inicial se necesita restaurar una base de datos limpia.
+**Resultado esperado:** la primera URL permite generar o consultar la cuota de Mateo; la segunda muestra la cuota pagada de Sofía con sus datos de pago. Si Mateo ya muestra una cuota al entrar, fue generada en una prueba anterior; para repetir el estado inicial se necesita restaurar una base de datos limpia.
 
 ### HU-37 · Consulta del cronograma de pensiones
 
