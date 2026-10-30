@@ -20,11 +20,13 @@ import {
   HijoApoderado,
 } from '@/types/api';
 
+import { seccionMatricula } from './presentacion-matricula';
+
 const estados: Record<
   EstadoMatricula,
   { etiqueta: string; color: NonNullable<TagProps['color']> }
 > = {
-  SECCION_RESERVADA: { etiqueta: 'Sección reservada', color: 'info' },
+  SECCION_RESERVADA: { etiqueta: 'En proceso', color: 'info' },
   EN_VALIDACION: { etiqueta: 'En validación', color: 'info' },
   PENDIENTE_PAGO: { etiqueta: 'Pendiente de pago', color: 'warning' },
   MATRICULADO: { etiqueta: 'Matriculado', color: 'success' },
@@ -349,7 +351,10 @@ export const ConsultaMatricula = ({
             <div>
               <dt className="text-caption-1 text-content-quartiary">Sección</dt>
               <dd className="mt-1 text-body-3 font-medium text-content-primary">
-                {estado?.matricula?.seccion ?? 'Se asigna al confirmar'}
+                {seccionMatricula(
+                  estado?.matricula?.estado,
+                  estado?.matricula?.seccion,
+                )}
               </dd>
             </div>
             <div>

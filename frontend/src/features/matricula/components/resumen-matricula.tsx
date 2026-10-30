@@ -12,6 +12,7 @@ import { paths } from '@/config/paths';
 import { EstadoMatriculaApoderado } from '@/types/api';
 
 import { fechaPeriodo } from './consulta-matricula';
+import { seccionMatricula } from './presentacion-matricula';
 
 export const ResumenMatricula = ({
   estado,
@@ -43,7 +44,10 @@ export const ResumenMatricula = ({
               <dt className="text-caption-1 text-content-quartiary">Grado</dt>
               <dd className="text-body-3 text-content-primary">
                 {estado.matricula?.grado ?? estado.estudiante.grado} ·{' '}
-                {estado.matricula?.seccion ?? 'sección al confirmar'}
+                {seccionMatricula(
+                  estado.matricula?.estado,
+                  estado.matricula?.seccion,
+                )}
               </dd>
             </div>
           </div>

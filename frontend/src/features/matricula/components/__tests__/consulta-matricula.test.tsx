@@ -46,7 +46,7 @@ const estado: EstadoMatriculaApoderado = {
   deuda: { total: 0, cuotas: [] },
 };
 
-test('muestra el periodo, grado, sección y estado asignados', async () => {
+test('muestra la sección por asignar mientras la matrícula está en proceso', async () => {
   await renderApp(
     <ConsultaMatricula
       hijos={hijos}
@@ -59,8 +59,9 @@ test('muestra el periodo, grado, sección y estado asignados', async () => {
 
   expect(screen.getByText('Periodo abierto')).toBeInTheDocument();
   expect(screen.getAllByText('1.° de primaria')).not.toHaveLength(0);
-  expect(screen.getByText('A')).toBeInTheDocument();
-  expect(screen.getByText('Sección reservada')).toBeInTheDocument();
+  expect(screen.getByText('Por asignar')).toBeInTheDocument();
+  expect(screen.queryByText('A')).not.toBeInTheDocument();
+  expect(screen.getByText('En proceso')).toBeInTheDocument();
   expect(screen.getByText('31 ene 2027')).toBeInTheDocument();
 });
 
@@ -104,7 +105,7 @@ test('informa cuando el periodo cerró y aún no existe una sección', async () 
   );
 
   expect(screen.getByText('Periodo cerrado')).toBeInTheDocument();
-  expect(screen.getByText('Se asigna al confirmar')).toBeInTheDocument();
+  expect(screen.getByText('Por asignar')).toBeInTheDocument();
   expect(screen.getByText('Pendiente de asignación')).toBeInTheDocument();
   expect(
     screen.getByText('El periodo de matrícula está cerrado.'),

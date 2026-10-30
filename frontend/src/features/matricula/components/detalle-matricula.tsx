@@ -15,8 +15,9 @@ import { FileItem } from '@/components/ui/files';
 import { Stepper } from '@/components/ui/stepper';
 import { Tag } from '@/components/ui/tag';
 import { paths } from '@/config/paths';
+import { MatriculaAdministrativa } from '@/types/api';
 
-import { MatriculaFlujo } from './datos-flujo-matricula';
+import { seccionMatricula } from './presentacion-matricula';
 
 const PASOS = [
   { label: 'Datos y documentos' },
@@ -32,7 +33,7 @@ const documentos = [
   ['Declaración jurada del apoderado', 'declaracion_jurada.pdf'],
 ] as const;
 
-const configuracionEstado = (matricula: MatriculaFlujo) => {
+const configuracionEstado = (matricula: MatriculaAdministrativa) => {
   if (matricula.estado === 'MATRICULADO')
     return {
       paso: 4,
@@ -53,49 +54,85 @@ const configuracionEstado = (matricula: MatriculaFlujo) => {
       detalle:
         'La cuota de matrícula se consulta o genera desde la tarjeta de pago.',
     };
+  if (matricula.estado === 'RETIRADO')
+    return {
+      paso: 4,
+      tipo: 'error' as AlertType,
+      etiqueta: 'Retirado',
+      color: 'error' as const,
+      titulo: 'La matrícula fue retirada.',
+      detalle: 'Las obligaciones posteriores al retiro deben figurar anuladas.',
+    };
+  if (matricula.estado === 'ANULADA')
+    return {
+      paso: 1,
+      tipo: 'error' as AlertType,
+      etiqueta: 'Anulada',
+      color: 'error' as const,
+      titulo: 'La matrícula fue anulada.',
+      detalle: 'Este proceso ya no admite nuevas acciones.',
+    };
   return {
     paso: 2,
     tipo: 'warning' as AlertType,
-    etiqueta: 'Sección reservada',
+    etiqueta: 'En proceso',
     color: 'info' as const,
     titulo: 'Matrícula pendiente de validación',
     detalle: 'Revisa y valida cada uno para continuar con la matrícula.',
   };
 };
 
-const DatosMatricula = ({ matricula }: { matricula: MatriculaFlujo }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Datos del estudiante y apoderado</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-        {[
-          ['Estudiante', matricula.nombre],
-          ['DNI', matricula.dni],
-          ['Grado', matricula.grado],
-          ['Sección', `${matricula.seccion} · Tutor: ${matricula.tutor}`],
-          ['Apoderado', matricula.apoderado],
-          ['Contacto', matricula.contacto],
-          ['Contacto de emergencia', matricula.emergencia],
-          ['Información médica', matricula.informacionMedica],
-        ].map(([etiqueta, valor]) => (
-          <div key={etiqueta}>
-            <dt className="text-caption-1 text-content-quartiary">
-              {etiqueta}
-            </dt>
-            <dd className="mt-1 text-body-3 font-medium text-content-primary">
-              {valor}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </CardContent>
-  </Card>
-);
+const DatosMatricula = ({
+  matricula,
+}: {
+  matricula: MatriculaAdministrativa;
+}) => {
+  const seccion = seccionMatricula(matricula.estado, matricula.seccion);
+  const seccionYTutor =
+    seccion === 'Por asignar'
+      ? seccion
+      : `${seccion} · Tutor: ${matricula.tutor ?? 'Por asignar'}`;
 
-const DocumentosMatricula = ({ matricula }: { matricula: MatriculaFlujo }) => {
-  const aprobados = matricula.estado !== 'SECCION_RESERVADA';
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Datos del estudiante y apoderado</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          {[
+            ['Estudiante', matricula.nombre],
+            ['DNI', matricula.numeroDocumento],
+            ['Grado', matricula.grado],
+            ['Sección', seccionYTutor],
+            ['Apoderado', matricula.apoderado ?? '—'],
+            ['Contacto', matricula.contacto ?? '—'],
+            ['Contacto de emergencia', matricula.contactoEmergencia ?? '—'],
+            ['Información médica', matricula.informacionMedica ?? '—'],
+          ].map(([etiqueta, valor]) => (
+            <div key={etiqueta}>
+              <dt className="text-caption-1 text-content-quartiary">
+                {etiqueta}
+              </dt>
+              <dd className="mt-1 text-body-3 font-medium text-content-primary">
+                {valor}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
+  );
+};
+
+const DocumentosMatricula = ({
+  matricula,
+}: {
+  matricula: MatriculaAdministrativa;
+}) => {
+  const aprobados = ['PENDIENTE_PAGO', 'MATRICULADO', 'RETIRADO'].includes(
+    matricula.estado,
+  );
   return (
     <Card>
       <CardHeader>
@@ -159,7 +196,7 @@ export const DetalleMatricula = ({
   periodoId,
   pagoMatricula,
 }: {
-  matricula: MatriculaFlujo;
+  matricula: MatriculaAdministrativa;
   periodoId: string;
   pagoMatricula?: ReactNode;
 }) => {
@@ -182,10 +219,11 @@ export const DetalleMatricula = ({
           <DatosMatricula matricula={matricula} />
           <DocumentosMatricula matricula={matricula} />
         </div>
-        {matricula.estado === 'SECCION_RESERVADA' ? (
-          <PagoPendienteValidacion />
-        ) : pagoMatricula ? (
+        {pagoMatricula ? (
           pagoMatricula
+        ) : matricula.estado === 'SECCION_RESERVADA' ||
+          matricula.estado === 'EN_VALIDACION' ? (
+          <PagoPendienteValidacion />
         ) : (
           <Card>
             <CardHeader>
@@ -193,7 +231,7 @@ export const DetalleMatricula = ({
             </CardHeader>
             <CardContent>
               <p className="text-body-3 text-content-tertiary">
-                Esta matrícula es parte de la maqueta y no consulta la API.
+                No hay información de pago disponible para esta matrícula.
               </p>
             </CardContent>
           </Card>
@@ -223,7 +261,9 @@ export const DetalleMatricula = ({
   );
 };
 
-export const etiquetaDetalleMatricula = (matricula: MatriculaFlujo) => {
+export const etiquetaDetalleMatricula = (
+  matricula: MatriculaAdministrativa,
+) => {
   const estado = configuracionEstado(matricula);
   return (
     <Tag color={estado.color} size="md">
