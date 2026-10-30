@@ -61,9 +61,12 @@ const aniosAcademicos = opciones([String(anioActual), String(anioActual + 1)]);
 export const PasoEstudiante = ({
   form,
   bloquearGrado = false,
+  alSalirDelDocumento,
 }: PasoProps & {
   /** "Editar" de un estudiante matriculado (ya pagó): no cambia de año, nivel ni grado. */
   bloquearGrado?: boolean;
+  /** Al salir del N.° de documento: el asistente consulta si ya existe un estudiante con ese documento. */
+  alSalirDelDocumento?: () => void;
 }) => {
   const { register, formState, watch, setValue, getValues, clearErrors } = form;
   const errores = formState.errors.estudiante;
@@ -128,7 +131,9 @@ export const PasoEstudiante = ({
             inputMode={tipoDocumento === 'DNI' ? 'numeric' : 'text'}
             maxLength={largoDocumento(tipoDocumento)}
             registration={restringir(
-              register('estudiante.persona.numeroDocumento'),
+              register('estudiante.persona.numeroDocumento', {
+                onBlur: alSalirDelDocumento,
+              }),
               filtroDocumento(tipoDocumento),
             )}
             error={errorPersona?.numeroDocumento}

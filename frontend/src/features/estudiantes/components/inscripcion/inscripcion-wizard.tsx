@@ -226,7 +226,8 @@ export const InscripcionWizard = ({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(inscripcionSchema as any),
     defaultValues: edicion ? desdeEdicion(edicion) : inscripcionVacia(),
-    mode: 'onSubmit',
+    // Se valida mientras se escribe y al salir del campo, no solo al pulsar "Siguiente".
+    mode: 'all',
   });
   /** Datos tal como estaban guardados (al editar), para saber qué cambió. */
   const original = edicion?.datos;
@@ -235,12 +236,17 @@ export const InscripcionWizard = ({
   const subir = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   const [verificando, setVerificando] = React.useState(false);
+  /** Última consulta del documento: salir del campo y pulsar "Siguiente" no repiten la misma consulta. */
+  const consultaDocumento = React.useRef<{
+    numero: string;
+    resultado: ReturnType<typeof verificarDocumentoEstudiante>;
+  } | null>(null);
 
   /**
    * Paso 1: el documento se revisa antes de seguir, no al registrar. Un estudiante activo o retirado (inactivo)
    * no se puede inscribir de nuevo; uno eliminado sí, y sus datos se actualizan al final.
    */
-  const documentoDisponible = async () => {
+  const documentoDisponible = async (enfocar = true) => {
     const numero = form.getValues('estudiante.persona.numeroDocumento');
     // Al editar, el documento que ya tenía es suyo: no se consulta.
     if (
@@ -251,7 +257,17 @@ export const InscripcionWizard = ({
     }
     setVerificando(true);
     try {
-      const v = await verificarDocumentoEstudiante(numero);
+      if (consultaDocumento.current?.numero !== numero) {
+        consultaDocumento.current = {
+          numero,
+          resultado: verificarDocumentoEstudiante(numero),
+        };
+      }
+      const v = await consultaDocumento.current.resultado;
+      // Si siguió escribiendo mientras se consultaba, ese resultado ya no vale.
+      if (form.getValues('estudiante.persona.numeroDocumento') !== numero) {
+        return false;
+      }
       // Al editar, un documento nuevo debe estar libre (el de un eliminado es de otra persona).
       if (!v.permitido || (original && v.estado !== 'LIBRE')) {
         form.setError(
@@ -261,7 +277,7 @@ export const InscripcionWizard = ({
             message:
               v.mensaje ?? 'El documento ya está registrado dentro del sistema',
           },
-          { shouldFocus: true },
+          { shouldFocus: enfocar },
         );
         return false;
       }
@@ -269,6 +285,7 @@ export const InscripcionWizard = ({
       return true;
     } catch {
       // El error de red o del servidor ya se muestra como notificación (api-client).
+      consultaDocumento.current = null;
       return false;
     } finally {
       setVerificando(false);
@@ -276,18 +293,27 @@ export const InscripcionWizard = ({
   };
 
   /**
+   * Al salir del N.° de documento: se revisa en ese momento y sin mover el foco. Primero el formato (la consulta
+   * solo se hace con un documento completo y válido); así el aviso del servidor no lo borra esa validación.
+   */
+  const alSalirDelDocumento = async () => {
+    if (await form.trigger('estudiante.persona.numeroDocumento')) {
+      await documentoDisponible(false);
+    }
+  };
+
+  /**
    * Paso 3: el correo de cada familiar nuevo no puede estar asignado a otra persona del sistema ni repetirse entre
    * ellos (el correo es único). Los ya registrados (vinculados por documento) conservan el suyo.
    */
-  const correosDisponibles = async () => {
-    const v = form.getValues();
+  const familiaresPorVerificar = (v: InscripcionForm) => {
     // Al editar, el correo que ya tenía un familiar registrado es suyo: solo se consulta si cambió.
     const correoGuardado = new Map(
       [original?.padre, original?.madre, original?.apoderado]
         .filter((f) => f?.personaId)
         .map((f) => [f!.personaId!, (f!.persona?.correo ?? '').toLowerCase()]),
     );
-    const nuevos = (['padre', 'madre', 'apoderado'] as const).filter(
+    return (['padre', 'madre', 'apoderado'] as const).filter(
       (clave) =>
         (clave !== 'apoderado' || v.incluirApoderado) &&
         registra(v[clave]) &&
@@ -295,6 +321,11 @@ export const InscripcionWizard = ({
           correoGuardado.get(v[clave].personaId!) !==
             (v[clave].persona.correo ?? '').trim().toLowerCase()),
     );
+  };
+
+  const correosDisponibles = async () => {
+    const v = form.getValues();
+    const nuevos = familiaresPorVerificar(v);
     setVerificando(true);
     try {
       const vistos = new Set<string>();
@@ -321,6 +352,34 @@ export const InscripcionWizard = ({
       return false;
     } finally {
       setVerificando(false);
+    }
+  };
+
+  /**
+   * Al salir del correo de un familiar: se revisa en ese momento si lo tiene otra persona o ya lo escribió un
+   * familiar anterior. Solo si el formato es válido; el foco no se mueve.
+   */
+  const alSalirDelCorreo = async (clave: 'padre' | 'madre' | 'apoderado') => {
+    const campo = `${clave}.persona.correo` as const;
+    if (!(await form.trigger(campo))) return;
+    const v = form.getValues();
+    const nuevos = familiaresPorVerificar(v);
+    const correo = (v[clave].persona.correo ?? '').trim().toLowerCase();
+    if (!correo || !nuevos.includes(clave)) return;
+    try {
+      const repetido = nuevos
+        .slice(0, nuevos.indexOf(clave))
+        .some(
+          (c) => (v[c].persona.correo ?? '').trim().toLowerCase() === correo,
+        );
+      if (repetido || !(await correoDisponible(correo))) {
+        form.setError(campo, {
+          type: 'manual',
+          message: 'El correo ya está registrado en el sistema',
+        });
+      }
+    } catch {
+      // El error de red o del servidor ya se muestra como notificación (api-client).
     }
   };
 
@@ -377,13 +436,18 @@ export const InscripcionWizard = ({
         noValidate
       >
         {paso === 0 && (
-          <PasoEstudiante form={form} bloquearGrado={!!edicion?.matriculado} />
+          <PasoEstudiante
+            form={form}
+            bloquearGrado={!!edicion?.matriculado}
+            alSalirDelDocumento={alSalirDelDocumento}
+          />
         )}
         {paso === 1 && <PasoFichaMedica form={form} />}
         {paso === 2 && (
           <PasoFamilia
             form={form}
             acreditacionActual={edicion?.acreditacion ?? null}
+            alSalirDelCorreo={alSalirDelCorreo}
           />
         )}
         {paso === 3 && <PasoContactos form={form} />}

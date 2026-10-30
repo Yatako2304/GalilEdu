@@ -173,6 +173,48 @@ test('un estudiante activo no deja pasar y el aviso sale en el N.° de documento
   ).not.toBeInTheDocument();
 });
 
+test('al salir del N.° de documento ya avisa que existe, sin pulsar "Siguiente"', async () => {
+  respuesta({
+    estado: 'ESTUDIANTE_ACTIVO',
+    permitido: false,
+    mensaje: 'El documento ya está registrado dentro del sistema',
+  });
+  const { container } = await renderWizard();
+  await llenarPaso1(container);
+
+  fireEvent.blur(
+    container.querySelector(
+      '[name="estudiante.persona.numeroDocumento"]',
+    ) as HTMLInputElement,
+  );
+
+  expect(
+    await screen.findByText(
+      'El documento ya está registrado dentro del sistema',
+    ),
+  ).toBeInTheDocument();
+});
+
+test('un selector y la fecha vacíos se marcan al salir del campo, sin pulsar "Siguiente"', async () => {
+  const { container } = await renderWizard();
+  const botonDe = (nombre: string) =>
+    container
+      .querySelector(`[name="${nombre}"]`)!
+      .parentElement!.querySelector('button')!;
+
+  await userEvent.click(botonDe('estudiante.persona.sexo'));
+  await userEvent.tab();
+  expect(await screen.findByText('Selecciona el sexo')).toBeInTheDocument();
+
+  await userEvent.click(screen.getByRole('button', { name: /DD\/MM\/AAAA/ }));
+  // Con el calendario abierto, Tab entra a él en vez de salir del campo: se cierra primero.
+  await userEvent.keyboard('{Escape}');
+  await userEvent.tab();
+  expect(
+    await screen.findByText('Ingresa la fecha de nacimiento'),
+  ).toBeInTheDocument();
+});
+
 test('un estudiante retirado (inactivo) no se puede inscribir como nuevo', async () => {
   respuesta({
     estado: 'ESTUDIANTE_RETIRADO',
