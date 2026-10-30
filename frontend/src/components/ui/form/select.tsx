@@ -179,7 +179,10 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
             aria-activedescendant={abierto ? `${id}-${activo}` : undefined}
             onClick={() => (abierto ? setAbierto(false) : abrir())}
             onKeyDown={alTeclear}
-            onBlur={(e) => registration?.onBlur?.(e as never)}
+            // react-hook-form busca el campo por el name del destino: va el <select> nativo, no el botón.
+            onBlur={() =>
+              registration?.onBlur?.({ target: nativo.current, type: 'blur' })
+            }
             className={cn(
               fieldClassName(!!error),
               'flex h-11 items-center pr-10 text-left',

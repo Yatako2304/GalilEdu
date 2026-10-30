@@ -122,6 +122,8 @@ const FormularioUsuario = ({
   const form = useForm<Valores>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(esquema) as any,
+    // Se valida mientras se escribe y al salir del campo, no solo al guardar.
+    mode: 'all',
     defaultValues: usuario
       ? { persona: personaAFormulario(usuario.persona), roles: usuario.roles }
       : // Como en la inscripción: ningún campo trae valor por defecto (CAHU6-15).

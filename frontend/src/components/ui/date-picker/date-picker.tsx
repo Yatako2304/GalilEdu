@@ -76,6 +76,11 @@ const CampoFecha = ({
         aria-haspopup="dialog"
         aria-expanded={abierto}
         onClick={() => setAbierto(!abierto)}
+        // Salir del campo (no hacia el calendario) valida; los clics dentro del calendario no le quitan el foco.
+        onBlur={(e) => {
+          if (!contenedor.current?.contains(e.relatedTarget as Node))
+            onBlur?.();
+        }}
         className={cn(
           fieldClassName(invalid),
           'flex h-11 items-center justify-between text-left',
@@ -98,9 +103,12 @@ const CampoFecha = ({
         </EtiquetaFlotante>
       )}
       {abierto && (
+        // Evita que un clic dentro del calendario le quite el foco al botón (eso contaría como salir del campo).
+        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
         <div
           role="dialog"
           aria-label="Elegir fecha"
+          onMouseDown={(e) => e.preventDefault()}
           className="absolute left-0 top-full z-50 mt-1 w-max"
         >
           <Calendar
@@ -207,6 +215,10 @@ export const DateInput = React.forwardRef<HTMLInputElement, DateInputProps>(
           label={label}
           disabled={disabled}
           invalid={invalid}
+          // Como en el <input> normal: salir del campo valida (react-hook-form busca el campo por su name).
+          onBlur={() =>
+            registration?.onBlur?.({ target: nativo.current, type: 'blur' })
+          }
           onChange={(fecha) => {
             const input = nativo.current;
             if (!input) return;

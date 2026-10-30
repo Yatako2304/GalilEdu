@@ -41,6 +41,8 @@ type PersonaFieldsProps = {
   onTipoDocumentoChange?: (numeroFiltrado: (numero: string) => string) => void;
   /** Formulario de usuario: "Lugar de nacimiento" se pide como "País de nacimiento" con la lista de países. */
   conPaisDeNacimiento?: boolean;
+  /** Se llama al salir del campo de correo (ej. para comprobar que no esté asignado a otra persona). */
+  onSalirCorreo?: () => void;
 };
 
 /** DNI: solo 8 dígitos; carné de extranjería: letras y números, hasta 12 (CAHU6-6). */
@@ -69,6 +71,7 @@ export const PersonaFields = ({
   tipoDocumento,
   onTipoDocumentoChange,
   conPaisDeNacimiento,
+  onSalirCorreo,
 }: PersonaFieldsProps) => {
   const campo = (nombre: string) => ({
     registration: register(`${prefix}.${nombre}`),
@@ -172,7 +175,12 @@ export const PersonaFields = ({
         placeholder="987111222"
         {...filtrado('celular', soloDigitos(LIMITES_PERSONA.celular))}
       />
-      <Input label="Correo electrónico" type="email" {...campo('correo')} />
+      <Input
+        label="Correo electrónico"
+        type="email"
+        {...campo('correo')}
+        registration={register(`${prefix}.correo`, { onBlur: onSalirCorreo })}
+      />
       <Input
         label="Teléfono de casa"
         inputMode="numeric"

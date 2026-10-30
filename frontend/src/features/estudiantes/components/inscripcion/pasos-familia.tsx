@@ -57,11 +57,13 @@ const TarjetaFamiliar = ({
   titulo,
   descripcion,
   acreditacionActual = null,
+  alSalirDelCorreo,
 }: PasoProps & {
   clave: Clave;
   titulo: string;
   descripcion: string;
   acreditacionActual?: DocumentoAdjunto | null;
+  alSalirDelCorreo?: (clave: Clave) => void;
 }) => {
   const { register, watch, setValue, getValues, formState } = form;
   const errores = formState.errors[clave];
@@ -179,7 +181,8 @@ const TarjetaFamiliar = ({
               <Tag color="success" size="sm" className="mr-2">
                 Ya registrado
               </Tag>
-              Se vinculará sin duplicar sus datos.
+              Registro encontrado. Los datos se asociarán a la ficha del
+              estudiante.
               {f.aCargo.length > 0 &&
                 ` Ya está vinculado a: ${f.aCargo.join(', ')}.`}
               {f.tieneCuenta && ' Tiene usuario en GalilEdu.'}
@@ -203,6 +206,7 @@ const TarjetaFamiliar = ({
             disabled={!!f.personaId && !editando}
             sinDocumento
             conPaisDeNacimiento
+            onSalirCorreo={() => alSalirDelCorreo?.(clave)}
           />
 
           {clave === 'apoderado' && (
@@ -357,7 +361,11 @@ const RelacionYDocumento = ({
 export const PasoFamilia = ({
   form,
   acreditacionActual = null,
-}: PasoProps & { acreditacionActual?: DocumentoAdjunto | null }) => {
+  alSalirDelCorreo,
+}: PasoProps & {
+  acreditacionActual?: DocumentoAdjunto | null;
+  alSalirDelCorreo?: (clave: Clave) => void;
+}) => {
   const { watch, setValue, formState } = form;
   const [padre, madre, incluirApoderado] = watch([
     'padre',
@@ -382,12 +390,14 @@ export const PasoFamilia = ({
       <TarjetaFamiliar
         form={form}
         clave="padre"
+        alSalirDelCorreo={alSalirDelCorreo}
         titulo="Padre"
         descripcion="Busca por documento: si ya está registrado (por ejemplo, por un hermano), solo se vincula."
       />
       <TarjetaFamiliar
         form={form}
         clave="madre"
+        alSalirDelCorreo={alSalirDelCorreo}
         titulo="Madre"
         descripcion="Busca por documento: si ya está registrada, solo se vincula."
       />
@@ -404,6 +414,7 @@ export const PasoFamilia = ({
           <TarjetaFamiliar
             form={form}
             clave="apoderado"
+            alSalirDelCorreo={alSalirDelCorreo}
             acreditacionActual={acreditacionActual}
             titulo={sinPadres ? 'Apoderado' : 'Apoderado (opcional)'}
             descripcion="Persona que representa al estudiante ante el colegio."
