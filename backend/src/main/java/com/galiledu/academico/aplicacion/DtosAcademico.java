@@ -16,15 +16,12 @@ import jakarta.validation.constraints.Size;
 
 import com.galiledu.academico.dominio.Area;
 import com.galiledu.academico.dominio.Competencia;
-import com.galiledu.academico.dominio.Consolidacion;
 import com.galiledu.academico.dominio.Curso;
-import com.galiledu.academico.dominio.Escala;
 import com.galiledu.academico.dominio.EstadoArea;
 import com.galiledu.academico.dominio.EstadoCurso;
 import com.galiledu.academico.dominio.EstadoVersion;
 import com.galiledu.academico.dominio.NivelLogro;
 import com.galiledu.academico.dominio.RangoNivel;
-import com.galiledu.academico.dominio.ReglaNota;
 import com.galiledu.academico.dominio.TablaConversion;
 
 /** Contratos JSON del catálogo académico. Deben coincidir con frontend/src/types/api.ts. */
@@ -127,10 +124,7 @@ public final class DtosAcademico {
 	public record SeccionPlan(UUID id, String nombre, String tutor) {
 	}
 
-	/**
-	 * Fila de la tabla de CI-17. escala: VIGESIMAL, CUALITATIVA, MIXTA (si sus competencias usan las dos) o null (sin
-	 * configurar).
-	 */
+	/** Fila de la tabla de CI-17. La escala viene del año escolar o es null cuando el curso no tiene competencias. */
 	public record PlanCursoResumen(UUID id, UUID cursoId, String curso, String area, int horasSemanales,
 			int competencias, String escala, int docentesAsignados) {
 	}
@@ -142,9 +136,8 @@ public final class DtosAcademico {
 			List<PlanCursoResumen> cursos) {
 	}
 
-	/** Competencia del área en el modal de configuración; las no seleccionadas traen los valores por defecto. */
-	public record CompetenciaPlan(UUID competenciaId, String nombre, EstadoArea estado, boolean seleccionada,
-			Escala escala, ReglaNota reglaNota, Consolidacion consolidacion) {
+	/** Competencia del área en el modal de configuración; el curso solo decide si la evalúa. */
+	public record CompetenciaPlan(UUID competenciaId, String nombre, EstadoArea estado, boolean seleccionada) {
 	}
 
 	/** Modal "Aritmética · 1.° de secundaria". */
@@ -162,10 +155,7 @@ public final class DtosAcademico {
 	}
 
 	public record SolicitudCompetenciaPlan(
-			@NotNull(message = "Falta la competencia.") UUID competenciaId,
-			@NotNull(message = "Elige la escala de cada competencia.") Escala escala,
-			@NotNull(message = "Elige cómo se agregan los ítems de cada competencia.") ReglaNota reglaNota,
-			@NotNull(message = "Elige cómo se consolidan los periodos de cada competencia.") Consolidacion consolidacion) {
+			@NotNull(message = "Falta la competencia.") UUID competenciaId) {
 	}
 
 	/** Modal "Agregar curso a 3.° de secundaria". */

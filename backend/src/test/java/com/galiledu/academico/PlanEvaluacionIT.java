@@ -53,10 +53,9 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				curso);
 	}
 
-	private static String competencia(String id, String escala, String regla) {
+	private static String competencia(String id) {
 		return """
-				{"competenciaId":"%s","escala":"%s","reglaNota":"%s","consolidacion":"PROMEDIO_PERIODOS"}"""
-				.formatted(id, escala, regla);
+				{"competenciaId":"%s"}""".formatted(id);
 	}
 
 	// ---------- Consultas ----------
@@ -74,7 +73,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.docentesRequeridos").value(32))
 				.andExpect(jsonPath("$.docentesAsignados").value(1))
 				.andExpect(jsonPath("$.cursos[0].area").value("Matemática"))
-				.andExpect(jsonPath("$.cursos[?(@.curso == 'Comunicación')].escala").value("CUALITATIVA"))
+				.andExpect(jsonPath("$.cursos[?(@.curso == 'Comunicación')].escala").value("VIGESIMAL"))
 				.andExpect(jsonPath("$.cursos[?(@.curso == 'Física')].escala").value(org.hamcrest.Matchers.contains(
 						(Object) null)));
 	}
@@ -96,8 +95,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.anio").value(2026))
 				.andExpect(jsonPath("$.competencias.length()").value(4))
 				.andExpect(jsonPath("$.competencias[0].seleccionada").value(true))
-				.andExpect(jsonPath("$.competencias[1].seleccionada").value(false))
-				.andExpect(jsonPath("$.competencias[1].escala").value("VIGESIMAL"));
+				.andExpect(jsonPath("$.competencias[1].seleccionada").value(false));
 	}
 
 	@Test
@@ -120,13 +118,11 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 		mvc.perform(conToken(post("/planes-evaluacion"), personal, """
 				{"anioEscolarId":"%s","gradoCodigo":"SEC-3","cursoId":"%s","horasSemanales":2,
 				 "competencias":[%s]}""".formatted(ANIO_2027, idCurso("Física"),
-				competencia(idCompetencia("Indaga mediante métodos científicos para construir sus conocimientos"),
-						"VIGESIMAL", "PROMEDIO_PONDERADO"))))
+				competencia(idCompetencia("Indaga mediante métodos científicos para construir sus conocimientos")))))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.curso").value("Física"))
 				.andExpect(jsonPath("$.horasSemanales").value(2))
-				.andExpect(jsonPath("$.competencias[0].seleccionada").value(true))
-				.andExpect(jsonPath("$.competencias[0].reglaNota").value("PROMEDIO_PONDERADO"));
+				.andExpect(jsonPath("$.competencias[0].seleccionada").value(true));
 	}
 
 	@Test
@@ -145,38 +141,25 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 		mvc.perform(conToken(post("/planes-evaluacion"), personal, """
 				{"anioEscolarId":"%s","gradoCodigo":"SEC-3","cursoId":"%s","horasSemanales":2,"competencias":[%s]}"""
 				.formatted(ANIO_2027, idCurso("Álgebra"),
-						competencia(idCompetencia("Se comunica oralmente en su lengua materna"), "VIGESIMAL",
-								"PROMEDIO_SIMPLE"))))
+						competencia(idCompetencia("Se comunica oralmente en su lengua materna")))))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("La competencia no es del área de Álgebra."));
-	}
-
-	@Test
-	void laReglaDebeCorresponderALaEscala() throws Exception {
-		mvc.perform(conToken(put("/planes-evaluacion/" + idPlan("Aritmética")), personal, """
-				{"horasSemanales":2,"competencias":[%s]}""".formatted(
-				competencia(idCompetencia("Resuelve problemas de cantidad"), "CUALITATIVA", "PROMEDIO_SIMPLE"))))
-				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value(
-						"La agregación de ítems de \"Resuelve problemas de cantidad\" no corresponde a su escala."));
 	}
 
 	@Test
 	void configuraHorasYCompetencias() throws Exception {
 		mvc.perform(conToken(put("/planes-evaluacion/" + idPlan("Aritmética")), personal, """
 				{"horasSemanales":3,"competencias":[%s,%s]}""".formatted(
-				competencia(idCompetencia("Resuelve problemas de cantidad"), "CUALITATIVA", "ULTIMO_NIVEL"),
-				competencia(idCompetencia("Resuelve problemas de regularidad, equivalencia y cambio"), "VIGESIMAL",
-						"PROMEDIO_SIMPLE"))))
+				competencia(idCompetencia("Resuelve problemas de cantidad")),
+				competencia(idCompetencia("Resuelve problemas de regularidad, equivalencia y cambio")))))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.horasSemanales").value(3))
-				.andExpect(jsonPath("$.competencias[0].escala").value("CUALITATIVA"))
 				.andExpect(jsonPath("$.competencias[1].seleccionada").value(true))
 				.andExpect(jsonPath("$.competencias[3].seleccionada").value(false));
 		mvc.perform(conToken(get("/planes-evaluacion").param("anioEscolarId", ANIO_2026).param("grado", "SEC-1"),
 				personal))
 				.andExpect(jsonPath("$.cursos[?(@.curso == 'Aritmética')].escala").value(
-						org.hamcrest.Matchers.contains("MIXTA")));
+						org.hamcrest.Matchers.contains("VIGESIMAL")));
 	}
 
 	@Test

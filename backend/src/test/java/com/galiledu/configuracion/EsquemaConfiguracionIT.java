@@ -14,6 +14,7 @@ import com.galiledu.PruebaIntegracion;
  */
 class EsquemaConfiguracionIT extends PruebaIntegracion {
 	private static final String ANIO_2026 = "30000000-0000-0000-0000-000000002026";
+	private static final String ANIO_2027 = "30000000-0000-0000-0000-000000002027";
 	private static final String TARIFARIO_2027 = "32000000-0000-0000-0000-000000002027";
 
 	@Autowired
@@ -50,6 +51,42 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 		rechazaPor("ux_anio_escolar_un_activo", () -> jdbc.sql("""
 				INSERT INTO configuracion.anio_escolar (anio, fecha_inicio, fecha_fin, regimen, estado)
 				VALUES (2030, '2030-03-01', '2030-12-15', 'BIMESTRAL', 'ACTIVO')""").update());
+	}
+
+	@Test
+	void aceptaUnaConfiguracionCualitativaCompatibleParaTodoElAnio() {
+		jdbc.sql("""
+				UPDATE configuracion.anio_escolar
+				SET escala_evaluacion = 'CUALITATIVA', regla_nota = 'ULTIMO_NIVEL',
+				    consolidacion_periodos = 'ULTIMO_PERIODO'
+				WHERE id = ?::uuid""").param(ANIO_2027).update();
+
+		assertThat(jdbc.sql("""
+				SELECT concat_ws('|', escala_evaluacion, regla_nota, consolidacion_periodos)
+				FROM configuracion.anio_escolar WHERE id = ?::uuid""").param(ANIO_2027).query(String.class).single())
+				.isEqualTo("CUALITATIVA|ULTIMO_NIVEL|ULTIMO_PERIODO");
+	}
+
+	@Test
+	void laEscalaDelAnioSoloAceptaValoresConocidos() {
+		rechazaPor("ck_anio_escala_evaluacion", () -> jdbc.sql("""
+				UPDATE configuracion.anio_escolar SET escala_evaluacion = 'MIXTA' WHERE id = ?::uuid""")
+				.param(ANIO_2027).update());
+	}
+
+	@Test
+	void laReglaDeNotaDebeCorresponderALaEscalaDelAnio() {
+		rechazaPor("ck_anio_regla_nota", () -> jdbc.sql("""
+				UPDATE configuracion.anio_escolar
+				SET escala_evaluacion = 'CUALITATIVA', regla_nota = 'PROMEDIO_SIMPLE'
+				WHERE id = ?::uuid""").param(ANIO_2027).update());
+	}
+
+	@Test
+	void laConsolidacionDelAnioSoloAceptaValoresConocidos() {
+		rechazaPor("ck_anio_consolidacion_periodos", () -> jdbc.sql("""
+				UPDATE configuracion.anio_escolar SET consolidacion_periodos = 'MEDIANA'
+				WHERE id = ?::uuid""").param(ANIO_2027).update());
 	}
 
 	@Test

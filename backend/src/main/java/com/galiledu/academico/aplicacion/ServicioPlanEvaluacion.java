@@ -34,12 +34,9 @@ import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudPlanCurso;
 import com.galiledu.academico.dominio.Area;
 import com.galiledu.academico.dominio.Competencia;
 import com.galiledu.academico.dominio.CompetenciaEvaluada;
-import com.galiledu.academico.dominio.Consolidacion;
 import com.galiledu.academico.dominio.Curso;
 import com.galiledu.academico.dominio.DocenteAsignado;
-import com.galiledu.academico.dominio.Escala;
 import com.galiledu.academico.dominio.PlanCurso;
-import com.galiledu.academico.dominio.ReglaNota;
 import com.galiledu.academico.infraestructura.AreaRepositorio;
 import com.galiledu.academico.infraestructura.CompetenciaRepositorio;
 import com.galiledu.academico.infraestructura.ConsultasCatalogo;
@@ -51,15 +48,10 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 
 /**
  * Plan de evaluación de cada grado y año (Figma CI-17 y CI-20, HU-56): qué cursos se dictan y cuántas horas, qué
- * competencias evalúan y cómo, y qué docente los dicta en cada sección. RF-130 a RF-132.
+ * competencias evalúan y qué docente los dicta en cada sección. La escala y las reglas son únicas por año.
  */
 @Service
 public class ServicioPlanEvaluacion {
-	/** Valores con los que aparece una competencia no marcada en el modal (Figma: "Vigesimal (0–20)"…). */
-	private static final Escala ESCALA_POR_DEFECTO = Escala.VIGESIMAL;
-	private static final ReglaNota REGLA_POR_DEFECTO = ReglaNota.PROMEDIO_SIMPLE;
-	private static final Consolidacion CONSOLIDACION_POR_DEFECTO = Consolidacion.PROMEDIO_PERIODOS;
-
 	private final PlanCursoRepositorio planes;
 	private final CursoRepositorio cursos;
 	private final AreaRepositorio areas;
@@ -105,7 +97,8 @@ public class ServicioPlanEvaluacion {
 							.filter(d -> idsSecciones.contains(d.getSeccionId())).count();
 					return new PlanCursoResumen(p.getId(), curso.getId(), curso.getNombre(),
 							areasPorId.get(curso.getAreaId()).getNombre(), p.getHorasSemanales(),
-							p.getCompetencias().size(), escala(p), asignados);
+							p.getCompetencias().size(), p.getCompetencias().isEmpty() ? null : anio.escala().name(),
+							asignados);
 				})
 				.sorted(Comparator.comparing((PlanCursoResumen f) -> areaOrden(f, cursosPorId, areasPorId))
 						.thenComparing(PlanCursoResumen::curso))
@@ -133,12 +126,8 @@ public class ServicioPlanEvaluacion {
 		List<CompetenciaPlan> filas = competencias.findByAreaIdOrderByOrdenAscNombreAsc(curso.getAreaId()).stream()
 				.filter(c -> c.estaActiva() || elegidas.containsKey(c.getId()))
 				.map(c -> {
-					CompetenciaEvaluada e = elegidas.get(c.getId());
-					return e == null
-							? new CompetenciaPlan(c.getId(), c.getNombre(), c.getEstado(), false,
-									ESCALA_POR_DEFECTO, REGLA_POR_DEFECTO, CONSOLIDACION_POR_DEFECTO)
-							: new CompetenciaPlan(c.getId(), c.getNombre(), c.getEstado(), true, e.getEscala(),
-									e.getReglaNota(), e.getConsolidacion());
+					return new CompetenciaPlan(c.getId(), c.getNombre(), c.getEstado(),
+							elegidas.containsKey(c.getId()));
 				})
 				.toList();
 		return new PlanCursoDetalle(plan.getId(), curso.getId(), curso.getNombre(),
@@ -310,8 +299,7 @@ public class ServicioPlanEvaluacion {
 			}
 			List<CompetenciaEvaluada> activas = p.getCompetencias().stream()
 					.filter(c -> competenciasPorId.get(c.getCompetenciaId()).estaActiva())
-					.map(c -> new CompetenciaEvaluada(c.getCompetenciaId(), c.getEscala(), c.getReglaNota(),
-							c.getConsolidacion()))
+					.map(c -> new CompetenciaEvaluada(c.getCompetenciaId()))
 					.toList();
 			copias.add(new PlanCurso(anio.id(), grado, curso.getId(), p.getHorasSemanales(), activas));
 		}
@@ -334,8 +322,8 @@ public class ServicioPlanEvaluacion {
 	// ---------- Auxiliares ----------
 
 	/**
-	 * Convierte las competencias marcadas. Deben ser del área del curso, sin repetirse, con una regla que corresponda a
-	 * su escala; una competencia inactiva solo se acepta si el plan ya la tenía.
+	 * Convierte las competencias marcadas. Deben ser del área del curso y no repetirse; una competencia inactiva solo
+	 * se acepta si el plan ya la tenía.
 	 */
 	private List<CompetenciaEvaluada> competenciasEvaluadas(Curso curso, List<SolicitudCompetenciaPlan> pedidas,
 			Set<UUID> yaElegidas) {
@@ -355,11 +343,7 @@ public class ServicioPlanEvaluacion {
 				throw ExcepcionNegocio.conflicto(
 						"La competencia \"%s\" está inactiva: ya no puede agregarse.".formatted(c.getNombre()));
 			}
-			if (!p.reglaNota().sirvePara(p.escala())) {
-				throw ExcepcionNegocio.invalido("La agregación de ítems de \"%s\" no corresponde a su escala."
-						.formatted(c.getNombre()));
-			}
-			resultado.add(new CompetenciaEvaluada(c.getId(), p.escala(), p.reglaNota(), p.consolidacion()));
+			resultado.add(new CompetenciaEvaluada(c.getId()));
 		}
 		return resultado;
 	}
@@ -379,15 +363,6 @@ public class ServicioPlanEvaluacion {
 		return ExcepcionNegocio.conflicto(
 				"El grado tendría %d horas semanales y la estructura horaria solo tiene %d bloques."
 						.formatted(horas, bloques));
-	}
-
-	/** VIGESIMAL, CUALITATIVA, MIXTA o null si el curso aún no tiene competencias. */
-	private static String escala(PlanCurso p) {
-		var escalas = p.getCompetencias().stream().map(CompetenciaEvaluada::getEscala).distinct().toList();
-		if (escalas.isEmpty()) {
-			return null;
-		}
-		return escalas.size() == 1 ? escalas.get(0).name() : "MIXTA";
 	}
 
 	private static int areaOrden(PlanCursoResumen f, Map<UUID, Curso> cursos, Map<UUID, Area> areas) {

@@ -16,7 +16,22 @@ class AnioEscolarTests {
 	private static final LocalDate FIN = LocalDate.of(2028, 12, 15);
 
 	private static AnioEscolar anio(LocalDate inicio, LocalDate fin, Regimen regimen) {
-		return AnioEscolar.planificar(2028, inicio, fin, regimen);
+		return AnioEscolar.planificar(2028, inicio, fin, regimen, EscalaEvaluacion.VIGESIMAL,
+				ReglaNota.PROMEDIO_PONDERADO, ConsolidacionPeriodos.PROMEDIO_PERIODOS);
+	}
+
+	@Test
+	void losParametrosDeEvaluacionSoloCambianAntesDeIniciarElAnio() {
+		AnioEscolar anio = anio(INICIO, FIN, Regimen.BIMESTRAL);
+		anio.configurarEvaluacion(EscalaEvaluacion.CUALITATIVA, ReglaNota.ULTIMO_NIVEL,
+				ConsolidacionPeriodos.ULTIMO_PERIODO, INICIO.minusDays(1));
+
+		assertThat(anio.getEscalaEvaluacion()).isEqualTo(EscalaEvaluacion.CUALITATIVA);
+		assertThat(anio.getReglaNota()).isEqualTo(ReglaNota.ULTIMO_NIVEL);
+		assertThatThrownBy(() -> anio.configurarEvaluacion(EscalaEvaluacion.VIGESIMAL,
+				ReglaNota.PROMEDIO_SIMPLE, ConsolidacionPeriodos.PROMEDIO_PERIODOS, INICIO))
+				.isInstanceOf(IllegalStateException.class)
+				.hasMessage("Los parámetros de evaluación no se pueden modificar porque el año escolar ya empezó.");
 	}
 
 	private static LocalDate fecha(int mes, int dia) {

@@ -1,6 +1,6 @@
 package com.galiledu.academico.dominio;
 
-/** Cómo se consolidan los periodos en la nota final (Figma: "Consolidación de periodos"). */
+/** Regla global del año escolar para consolidar los periodos en la nota final. */
 public enum Consolidacion {
 	PROMEDIO_PERIODOS, ULTIMO_PERIODO
 }

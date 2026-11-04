@@ -20,8 +20,11 @@ import org.springframework.http.HttpStatus;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.configuracion.aplicacion.DtosEstructurasHorarias.SolicitudEstructuraHoraria;
 import com.galiledu.configuracion.dominio.AnioEscolar;
+import com.galiledu.configuracion.dominio.ConsolidacionPeriodos;
+import com.galiledu.configuracion.dominio.EscalaEvaluacion;
 import com.galiledu.configuracion.dominio.EstructuraHoraria;
 import com.galiledu.configuracion.dominio.Regimen;
+import com.galiledu.configuracion.dominio.ReglaNota;
 import com.galiledu.configuracion.infraestructura.AnioEscolarRepositorio;
 import com.galiledu.configuracion.infraestructura.EstructuraHorariaRepositorio;
 
@@ -41,7 +44,8 @@ class ServicioEstructurasHorariasTests {
 	@BeforeEach
 	void prepararUnAnioPlanificado() {
 		AnioEscolar anio = AnioEscolar.planificar(2027, LocalDate.of(2027, 3, 1), LocalDate.of(2027, 12, 15),
-				Regimen.BIMESTRAL);
+				Regimen.BIMESTRAL, EscalaEvaluacion.VIGESIMAL, ReglaNota.PROMEDIO_PONDERADO,
+				ConsolidacionPeriodos.PROMEDIO_PERIODOS);
 		when(anios.findById(any())).thenReturn(Optional.of(anio));
 	}
 

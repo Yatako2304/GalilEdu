@@ -13,12 +13,15 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import com.galiledu.configuracion.dominio.AnioEscolar;
+import com.galiledu.configuracion.dominio.ConsolidacionPeriodos;
 import com.galiledu.configuracion.dominio.DatosTarifario;
+import com.galiledu.configuracion.dominio.EscalaEvaluacion;
 import com.galiledu.configuracion.dominio.EstadoAnioEscolar;
 import com.galiledu.configuracion.dominio.EstadoPeriodo;
 import com.galiledu.configuracion.dominio.EstadoTarifario;
 import com.galiledu.configuracion.dominio.PeriodoAcademico;
 import com.galiledu.configuracion.dominio.Regimen;
+import com.galiledu.configuracion.dominio.ReglaNota;
 import com.galiledu.configuracion.infraestructura.ConsultasConfiguracion.AnioListado;
 import com.galiledu.configuracion.infraestructura.ConsultasConfiguracion.ConteosAnio;
 
@@ -32,7 +35,27 @@ public final class DtosConfiguracion {
 			@NotNull(message = "Ingresa el año escolar.") @Min(value = 2000, message = "El año escolar debe estar entre 2000 y 2100.") @Max(value = 2100, message = "El año escolar debe estar entre 2000 y 2100.") Integer anio,
 			@NotNull(message = "Ingresa la fecha de inicio.") LocalDate fechaInicio,
 			@NotNull(message = "Ingresa la fecha de fin.") LocalDate fechaFin,
-			@NotNull(message = "Elige el régimen de periodos.") Regimen regimen) {
+			@NotNull(message = "Elige el régimen de periodos.") Regimen regimen,
+			@NotNull(message = "Elige la escala de evaluación.") EscalaEvaluacion escalaEvaluacion,
+			@NotNull(message = "Elige la regla de cálculo de notas.") ReglaNota reglaNota,
+			@NotNull(message = "Elige cómo se consolidan los periodos.") ConsolidacionPeriodos consolidacionPeriodos) {
+	}
+
+	/** Parámetros comunes a todos los cursos del año. */
+	public record SolicitudParametrosEvaluacion(
+			@NotNull(message = "Elige la escala de evaluación.") EscalaEvaluacion escalaEvaluacion,
+			@NotNull(message = "Elige la regla de cálculo de notas.") ReglaNota reglaNota,
+			@NotNull(message = "Elige cómo se consolidan los periodos.") ConsolidacionPeriodos consolidacionPeriodos) {
+	}
+
+	public record ParametrosEvaluacion(EscalaEvaluacion escalaEvaluacion, ReglaNota reglaNota,
+			ConsolidacionPeriodos consolidacionPeriodos, boolean editable, String motivoNoEditable) {
+		static ParametrosEvaluacion de(AnioEscolar anio, LocalDate hoy) {
+			boolean editable = anio.parametrosEvaluacionEditables(hoy);
+			return new ParametrosEvaluacion(anio.getEscalaEvaluacion(), anio.getReglaNota(),
+					anio.getConsolidacionPeriodos(), editable,
+					editable ? null : "El año escolar ya empezó; sus parámetros de evaluación están cerrados.");
+		}
 	}
 
 	/** Botón "Editar" de "CI-06 · Año escolar 2027 (planificado)": cambia las fechas y regenera los periodos. */
@@ -67,10 +90,12 @@ public final class DtosConfiguracion {
 	 * (23)" y "Estructura horaria (2)".
 	 */
 	public record AnioEscolarDetalle(UUID id, int anio, LocalDate fechaInicio, LocalDate fechaFin, Regimen regimen,
-			EstadoAnioEscolar estado, int cantidadSecciones, int cantidadEstructuras, List<PeriodoDetalle> periodos) {
+			EstadoAnioEscolar estado, ParametrosEvaluacion parametrosEvaluacion, int cantidadSecciones,
+			int cantidadEstructuras, List<PeriodoDetalle> periodos) {
 		static AnioEscolarDetalle de(AnioEscolar a, ConteosAnio conteos, LocalDate hoy) {
 			return new AnioEscolarDetalle(a.getId(), a.getAnio(), a.getFechaInicio(), a.getFechaFin(), a.getRegimen(),
-					a.getEstado(), conteos.seccionesActivas(), conteos.estructurasHorarias(),
+					a.getEstado(), ParametrosEvaluacion.de(a, hoy), conteos.seccionesActivas(),
+					conteos.estructurasHorarias(),
 					a.getPeriodos().stream().map(p -> PeriodoDetalle.de(p, a.getEstado(), hoy)).toList());
 		}
 	}

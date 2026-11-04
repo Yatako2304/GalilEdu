@@ -1,9 +1,6 @@
 package com.galiledu.academico.dominio;
 
-/**
- * Cómo se agregan las notas de los ítems de una competencia (Figma: "Agregación de ítems"). Cada regla vale para una
- * escala (ck_plan_competencia_regla).
- */
+/** Regla global del año escolar para calcular la nota. Cada regla corresponde a una escala. */
 public enum ReglaNota {
 	PROMEDIO_SIMPLE(Escala.VIGESIMAL), PROMEDIO_PONDERADO(Escala.VIGESIMAL), NIVEL_MAS_FRECUENTE(
 			Escala.CUALITATIVA), ULTIMO_NIVEL(Escala.CUALITATIVA);
