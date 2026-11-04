@@ -5,6 +5,7 @@ import { AnioEscolarDetalle } from '@/types/api';
 import { EstructuraHorariaPestana } from '../estructura-horaria/estructura-horaria-pestana';
 import { SeccionesPestana } from '../secciones/secciones-pestana';
 
+import { ParametrosEvaluacionAnio } from './parametros-evaluacion';
 import { PeriodosPestana } from './periodos-pestana';
 import { PestanaAnio, PestanasAnio } from './pestanas-anio';
 import { RequisitosAnio } from './requisitos-anio';
@@ -34,6 +35,7 @@ export const ContenidoAnio = ({ anio }: ContenidoAnioProps) => {
       {pestana === 'estructura-horaria' && (
         <EstructuraHorariaPestana anioId={anio.id} estadoAnio={anio.estado} />
       )}
+      {pestana === 'evaluacion' && <ParametrosEvaluacionAnio anio={anio} />}
     </>
   );
 };

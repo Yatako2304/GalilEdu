@@ -34,6 +34,14 @@ const detalle = (
   fechaFin: `${anio}-12-17`,
   regimen: 'TRIMESTRAL',
   estado,
+  parametrosEvaluacion: {
+    escalaEvaluacion: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacionPeriodos: 'PROMEDIO_PERIODOS',
+    editable: estado === 'PLANIFICADO',
+    motivoNoEditable:
+      estado === 'PLANIFICADO' ? null : 'El año escolar ya empezó.',
+  },
   cantidadSecciones: 10,
   cantidadEstructuras: 2,
   periodos: [],

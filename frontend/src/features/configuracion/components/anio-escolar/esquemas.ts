@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { Regimen } from '@/types/api';
+import { Consolidacion, Escala, Regimen, ReglaNota } from '@/types/api';
 
 export const ANIO_MINIMO = 2000;
 export const ANIO_MAXIMO = 2100;
@@ -43,8 +43,28 @@ export const nuevoAnioSchema = z
     regimen: z.enum(['BIMESTRAL', 'TRIMESTRAL'], {
       errorMap: () => ({ message: 'Elige el régimen de periodos.' }),
     }),
+    escalaEvaluacion: z.enum(['VIGESIMAL', 'CUALITATIVA']),
+    reglaNota: z.enum([
+      'PROMEDIO_SIMPLE',
+      'PROMEDIO_PONDERADO',
+      'NIVEL_MAS_FRECUENTE',
+      'ULTIMO_NIVEL',
+    ]),
+    consolidacionPeriodos: z.enum(['PROMEDIO_PERIODOS', 'ULTIMO_PERIODO']),
   })
-  .superRefine(finPosteriorAlInicio);
+  .superRefine((valores, ctx) => {
+    finPosteriorAlInicio(valores, ctx);
+    const reglaVigesimal =
+      valores.reglaNota === 'PROMEDIO_SIMPLE' ||
+      valores.reglaNota === 'PROMEDIO_PONDERADO';
+    if ((valores.escalaEvaluacion === 'VIGESIMAL') !== reglaVigesimal) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['reglaNota'],
+        message: 'La regla de cálculo no corresponde a la escala elegida.',
+      });
+    }
+  });
 
 /** "Editar año escolar": solo las fechas; el año y el régimen no se tocan aquí. */
 export const edicionAnioSchema = z
@@ -56,6 +76,9 @@ export type ValoresAnio = {
   fechaInicio: string;
   fechaFin: string;
   regimen: Regimen;
+  escalaEvaluacion: Escala;
+  reglaNota: ReglaNota;
+  consolidacionPeriodos: Consolidacion;
 };
 
 /** Inicio y fin de clases que propone el modal para un año (Figma: 01/03 y 15/12). */
@@ -77,7 +100,14 @@ export const valoresIniciales = (
   anioActual?: number,
 ): ValoresAnio => {
   const anio = anioSugerido(anios, anioActual);
-  return { anio: String(anio), ...fechasSugeridas(anio), regimen: 'BIMESTRAL' };
+  return {
+    anio: String(anio),
+    ...fechasSugeridas(anio),
+    regimen: 'BIMESTRAL',
+    escalaEvaluacion: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacionPeriodos: 'PROMEDIO_PERIODOS',
+  };
 };
 
 /** El año escrito, si ya es un año válido (así no se recalculan las fechas con "20" o "202"). */

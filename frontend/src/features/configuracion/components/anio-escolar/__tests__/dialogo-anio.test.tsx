@@ -25,6 +25,13 @@ const anio2027: AnioEscolarDetalle = {
   fechaFin: '2027-12-17',
   regimen: 'TRIMESTRAL',
   estado: 'PLANIFICADO',
+  parametrosEvaluacion: {
+    escalaEvaluacion: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacionPeriodos: 'PROMEDIO_PERIODOS',
+    editable: true,
+    motivoNoEditable: null,
+  },
   cantidadSecciones: 10,
   cantidadEstructuras: 2,
   periodos: [],
@@ -135,6 +142,9 @@ test('Nuevo: crea el año con el régimen elegido, avisa y cierra', async () => 
     fechaInicio: '2028-03-01',
     fechaFin: '2028-12-15',
     regimen: 'TRIMESTRAL',
+    escalaEvaluacion: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacionPeriodos: 'PROMEDIO_PERIODOS',
   });
   expect(onGuardado.mock.calls[0][0].id).toBe('anio-2028');
   expect(onCerrar).toHaveBeenCalled();

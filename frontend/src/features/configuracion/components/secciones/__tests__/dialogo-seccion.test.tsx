@@ -33,6 +33,13 @@ const anio = (estado: EstadoAnioEscolar): AnioEscolarDetalle => ({
   fechaFin: '2026-12-18',
   regimen: 'BIMESTRAL',
   estado,
+  parametrosEvaluacion: {
+    escalaEvaluacion: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacionPeriodos: 'PROMEDIO_PERIODOS',
+    editable: false,
+    motivoNoEditable: 'El año escolar ya empezó.',
+  },
   cantidadSecciones: 6,
   cantidadEstructuras: 0,
   periodos: [],

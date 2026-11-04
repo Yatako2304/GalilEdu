@@ -2,6 +2,14 @@ import { AnioEscolarDetalle, EstadoPeriodo, PeriodoDetalle } from '@/types/api';
 
 // Datos de ejemplo de las pruebas de CI-03 y CI-06 (con los valores de Figma).
 
+export const parametrosEditables = {
+  escalaEvaluacion: 'VIGESIMAL' as const,
+  reglaNota: 'PROMEDIO_PONDERADO' as const,
+  consolidacionPeriodos: 'PROMEDIO_PERIODOS' as const,
+  editable: true,
+  motivoNoEditable: null,
+};
+
 export const periodo = (
   numero: number,
   nombre: string,
@@ -30,6 +38,12 @@ export const anio2026: AnioEscolarDetalle = {
   fechaFin: '2026-12-18',
   regimen: 'BIMESTRAL',
   estado: 'ACTIVO',
+  parametrosEvaluacion: {
+    ...parametrosEditables,
+    editable: false,
+    motivoNoEditable:
+      'El año escolar ya empezó; sus parámetros de evaluación están cerrados.',
+  },
   cantidadSecciones: 23,
   cantidadEstructuras: 2,
   periodos: [
@@ -77,6 +91,7 @@ export const anio2027: AnioEscolarDetalle = {
   fechaFin: '2027-12-17',
   regimen: 'TRIMESTRAL',
   estado: 'PLANIFICADO',
+  parametrosEvaluacion: parametrosEditables,
   cantidadSecciones: 23,
   cantidadEstructuras: 2,
   periodos: [
@@ -121,6 +136,7 @@ export const anioCorto: AnioEscolarDetalle = {
   fechaFin: '2027-12-17',
   regimen: 'BIMESTRAL',
   estado: 'PLANIFICADO',
+  parametrosEvaluacion: parametrosEditables,
   cantidadSecciones: 0,
   cantidadEstructuras: 0,
   periodos: [

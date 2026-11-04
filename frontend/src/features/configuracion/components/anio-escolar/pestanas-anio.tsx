@@ -1,7 +1,8 @@
 import { Tabs } from '@/components/ui/tabs';
 import { AnioEscolarDetalle } from '@/types/api';
 
-export type PestanaAnio = 'periodos' | 'secciones' | 'estructura-horaria';
+export type PestanaAnio =
+  'periodos' | 'secciones' | 'estructura-horaria' | 'evaluacion';
 
 type PestanasAnioProps = {
   anio: Pick<
@@ -31,6 +32,7 @@ export const PestanasAnio = ({
         value: 'estructura-horaria',
         label: `Estructura horaria (${anio.cantidadEstructuras})`,
       },
+      { value: 'evaluacion', label: 'Evaluación' },
     ]}
   />
 );

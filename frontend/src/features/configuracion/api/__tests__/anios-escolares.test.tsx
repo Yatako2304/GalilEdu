@@ -62,6 +62,14 @@ const detalle = (
   fechaFin: `${anio}-12-18`,
   regimen: 'BIMESTRAL',
   estado,
+  parametrosEvaluacion: {
+    escalaEvaluacion: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacionPeriodos: 'PROMEDIO_PERIODOS',
+    editable: estado === 'PLANIFICADO',
+    motivoNoEditable:
+      estado === 'PLANIFICADO' ? null : 'El año escolar ya empezó.',
+  },
   cantidadSecciones: 10,
   cantidadEstructuras: 2,
   periodos: [],
@@ -217,6 +225,9 @@ const Acciones = () => {
             fechaInicio: '2028-03-01',
             fechaFin: '2028-12-15',
             regimen: 'BIMESTRAL',
+            escalaEvaluacion: 'VIGESIMAL',
+            reglaNota: 'PROMEDIO_PONDERADO',
+            consolidacionPeriodos: 'PROMEDIO_PERIODOS',
           })
         }
       >
@@ -324,6 +335,9 @@ test('cada mutación llama a su endpoint con su cuerpo', async () => {
     fechaInicio: '2028-03-01',
     fechaFin: '2028-12-15',
     regimen: 'BIMESTRAL',
+    escalaEvaluacion: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacionPeriodos: 'PROMEDIO_PERIODOS',
   });
   expect(cuerpos.editar).toEqual({
     fechaInicio: '2027-03-08',

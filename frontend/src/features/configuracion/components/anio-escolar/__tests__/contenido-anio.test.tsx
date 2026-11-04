@@ -4,7 +4,7 @@ import { env } from '@/config/env';
 import { ROLES } from '@/config/roles';
 import { server } from '@/testing/mocks/server';
 import { createUser, renderApp, screen, userEvent } from '@/testing/test-utils';
-import { AnioEscolarDetalle } from '@/types/api';
+import { AnioEscolarDetalle, SolicitudParametrosEvaluacion } from '@/types/api';
 
 import { ContenidoAnio } from '../contenido-anio';
 
@@ -61,13 +61,14 @@ const mostrar = async (anio: AnioEscolarDetalle) =>
     user: await createUser({ roles: [ROLES.PERSONAL_ADMINISTRATIVO] }),
   });
 
-test('muestra las tres pestañas con sus contadores y abre en Periodos', async () => {
+test('muestra las cuatro pestañas con sus contadores y abre en Periodos', async () => {
   await mostrar(anio2026);
 
   expect(screen.getAllByRole('tab').map((p) => p.textContent)).toEqual([
     'Periodos (4)',
     'Secciones (23)',
     'Estructura horaria (2)',
+    'Evaluación',
   ]);
   expect(screen.getByRole('tab', { name: 'Periodos (4)' })).toHaveAttribute(
     'aria-selected',
@@ -76,6 +77,64 @@ test('muestra las tres pestañas con sus contadores y abre en Periodos', async (
   expect(
     screen.getByRole('heading', { name: 'Periodos académicos' }),
   ).toBeInTheDocument();
+});
+
+test('configura una sola escala, regla y consolidación para todo el año', async () => {
+  servirRequisitos();
+  let enviado: SolicitudParametrosEvaluacion | null = null;
+  server.use(
+    http.put(
+      `${API}/configuracion/anios-escolares/anio-2027/parametros-evaluacion`,
+      async ({ request }) => {
+        enviado = (await request.json()) as SolicitudParametrosEvaluacion;
+        return HttpResponse.json({
+          ...enviado,
+          editable: true,
+          motivoNoEditable: null,
+        });
+      },
+    ),
+  );
+  await mostrar(anio2027);
+
+  await userEvent.click(screen.getByRole('tab', { name: 'Evaluación' }));
+  expect(
+    screen.getByRole('heading', { name: 'Parámetros de evaluación' }),
+  ).toBeInTheDocument();
+  await userEvent.selectOptions(
+    screen.getByLabelText('Escala de evaluación'),
+    'CUALITATIVA',
+  );
+  await userEvent.selectOptions(
+    screen.getByLabelText('Cálculo del nivel'),
+    'ULTIMO_NIVEL',
+  );
+  await userEvent.selectOptions(
+    screen.getByLabelText('Consolidación de periodos'),
+    'ULTIMO_PERIODO',
+  );
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Guardar parámetros' }),
+  );
+
+  await vi.waitFor(() =>
+    expect(enviado).toEqual({
+      escalaEvaluacion: 'CUALITATIVA',
+      reglaNota: 'ULTIMO_NIVEL',
+      consolidacionPeriodos: 'ULTIMO_PERIODO',
+    }),
+  );
+});
+
+test('bloquea los parámetros cuando el año ya empezó', async () => {
+  await mostrar(anio2026);
+  await userEvent.click(screen.getByRole('tab', { name: 'Evaluación' }));
+
+  expect(screen.getByText('Configuración cerrada')).toBeInTheDocument();
+  expect(screen.getByLabelText('Escala de evaluación')).toBeDisabled();
+  expect(
+    screen.queryByRole('button', { name: 'Guardar parámetros' }),
+  ).not.toBeInTheDocument();
 });
 
 test('cada pestaña muestra el contenido de su pantalla de Figma', async () => {

@@ -47,7 +47,6 @@ const ESTADO_ANIO: Record<
 const ESCALA_TEXTO: Record<NonNullable<PlanCursoResumen['escala']>, string> = {
   VIGESIMAL: 'Vigesimal',
   CUALITATIVA: 'Cualitativa',
-  MIXTA: 'Mixta',
 };
 
 type Nivel = 'PRIMARIA' | 'SECUNDARIA';
