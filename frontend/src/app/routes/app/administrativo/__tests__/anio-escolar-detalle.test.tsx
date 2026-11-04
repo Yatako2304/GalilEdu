@@ -23,6 +23,14 @@ const anio = (
   fechaFin: `${numero}-12-18`,
   regimen: 'BIMESTRAL',
   estado,
+  parametrosEvaluacion: {
+    escalaEvaluacion: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacionPeriodos: 'PROMEDIO_PERIODOS',
+    editable: estado === 'PLANIFICADO',
+    motivoNoEditable:
+      estado === 'PLANIFICADO' ? null : 'El año escolar ya empezó.',
+  },
   cantidadSecciones: 23,
   cantidadEstructuras: 2,
   periodos: [1, 2, 3, 4].map((n) => ({

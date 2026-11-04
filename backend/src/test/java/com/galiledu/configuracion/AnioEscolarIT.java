@@ -45,7 +45,9 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 
 	private static String solicitud(int anio, String inicio, String fin, String regimen) {
 		return """
-				{"anio":%d,"fechaInicio":"%s","fechaFin":"%s","regimen":"%s"}""".formatted(anio, inicio, fin, regimen);
+				{"anio":%d,"fechaInicio":"%s","fechaFin":"%s","regimen":"%s",
+				 "escalaEvaluacion":"VIGESIMAL","reglaNota":"PROMEDIO_PONDERADO",
+				 "consolidacionPeriodos":"PROMEDIO_PERIODOS"}""".formatted(anio, inicio, fin, regimen);
 	}
 
 	@Test
@@ -113,6 +115,50 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos.length()").value(4))
 				.andExpect(jsonPath("$.periodos[0].nombre").value("I Bimestre"))
 				.andExpect(jsonPath("$.periodos[2].estado").value("EN_CURSO"));
+	}
+
+	@Test
+	void elDetalleTraeLosParametrosComunesYBloqueaLosDelAnioQueYaEmpezo() throws Exception {
+		mvc.perform(conToken(get(RUTA + "/" + ID_2026), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.parametrosEvaluacion.escalaEvaluacion").value("VIGESIMAL"))
+				.andExpect(jsonPath("$.parametrosEvaluacion.reglaNota").value("PROMEDIO_PONDERADO"))
+				.andExpect(jsonPath("$.parametrosEvaluacion.consolidacionPeriodos").value("PROMEDIO_PERIODOS"))
+				.andExpect(jsonPath("$.parametrosEvaluacion.editable").value(false));
+	}
+
+	@Test
+	void configuraLosParametrosAntesDeQueEmpieceElAnio() throws Exception {
+		String parametros = """
+				{"escalaEvaluacion":"CUALITATIVA","reglaNota":"ULTIMO_NIVEL",
+				 "consolidacionPeriodos":"ULTIMO_PERIODO"}""";
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027 + "/parametros-evaluacion"), personal, parametros))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.escalaEvaluacion").value("CUALITATIVA"))
+				.andExpect(jsonPath("$.reglaNota").value("ULTIMO_NIVEL"))
+				.andExpect(jsonPath("$.consolidacionPeriodos").value("ULTIMO_PERIODO"))
+				.andExpect(jsonPath("$.editable").value(true));
+	}
+
+	@Test
+	void noModificaLosParametrosCuandoElAnioYaEmpezo() throws Exception {
+		String parametros = """
+				{"escalaEvaluacion":"VIGESIMAL","reglaNota":"PROMEDIO_SIMPLE",
+				 "consolidacionPeriodos":"ULTIMO_PERIODO"}""";
+		mvc.perform(conToken(put(RUTA + "/" + ID_2026 + "/parametros-evaluacion"), personal, parametros))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value(
+						"Los parámetros de evaluación no se pueden modificar porque el año escolar ya empezó."));
+	}
+
+	@Test
+	void rechazaUnaReglaQueNoCorrespondeALaEscalaDelAnio() throws Exception {
+		String parametros = """
+				{"escalaEvaluacion":"CUALITATIVA","reglaNota":"PROMEDIO_SIMPLE",
+				 "consolidacionPeriodos":"PROMEDIO_PERIODOS"}""";
+		mvc.perform(conToken(put(RUTA + "/" + ID_2027 + "/parametros-evaluacion"), personal, parametros))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("La regla de cálculo no corresponde a la escala elegida."));
 	}
 
 	@Test

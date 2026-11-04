@@ -12,7 +12,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input, RadioCard } from '@/components/ui/form';
+import { Input, RadioCard, Select } from '@/components/ui/form';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { useNotifications } from '@/components/ui/notifications';
 import { AnioEscolarDetalle, AnioEscolarResumen, Regimen } from '@/types/api';
@@ -28,6 +28,11 @@ import {
   valoresIniciales,
 } from './esquemas';
 import { periodosAlAnio } from './formato';
+import {
+  CONSOLIDACIONES_PERIODOS,
+  ESCALAS_EVALUACION,
+  REGLAS_NOTA,
+} from './opciones-evaluacion';
 
 const REGIMENES: { valor: Regimen; nombre: string }[] = [
   { valor: 'BIMESTRAL', nombre: 'Bimestral' },
@@ -96,6 +101,10 @@ const FormularioAnio = ({
             fechaInicio: anio.fechaInicio,
             fechaFin: anio.fechaFin,
             regimen: anio.regimen,
+            escalaEvaluacion: anio.parametrosEvaluacion.escalaEvaluacion,
+            reglaNota: anio.parametrosEvaluacion.reglaNota,
+            consolidacionPeriodos:
+              anio.parametrosEvaluacion.consolidacionPeriodos,
           }
         : valoresIniciales(aniosRegistrados),
   });
@@ -141,6 +150,9 @@ const FormularioAnio = ({
         fechaInicio: valores.fechaInicio,
         fechaFin: valores.fechaFin,
         regimen: valores.regimen,
+        escalaEvaluacion: valores.escalaEvaluacion,
+        reglaNota: valores.reglaNota,
+        consolidacionPeriodos: valores.consolidacionPeriodos,
       });
     }
   });
@@ -232,6 +244,51 @@ const FormularioAnio = ({
                   {...register('regimen')}
                 />
               ))}
+            </div>
+          </fieldset>
+        )}
+
+        {!editando && (
+          <fieldset className="space-y-3">
+            <legend className="text-label-2 font-medium text-content-primary">
+              Parámetros de evaluación
+            </legend>
+            <p className="text-body-4 text-content-tertiary">
+              Se aplicarán a todos los cursos del año escolar.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Select
+                label="Escala *"
+                options={ESCALAS_EVALUACION}
+                value={watch('escalaEvaluacion')}
+                onChange={(e) => {
+                  const escala = e.target
+                    .value as ValoresAnio['escalaEvaluacion'];
+                  setValue('escalaEvaluacion', escala, {
+                    shouldValidate: true,
+                  });
+                  setValue('reglaNota', REGLAS_NOTA[escala][0].value, {
+                    shouldValidate: true,
+                  });
+                }}
+                error={errores.escalaEvaluacion}
+              />
+              <Select
+                label={
+                  watch('escalaEvaluacion') === 'VIGESIMAL'
+                    ? 'Promedio *'
+                    : 'Cálculo del nivel *'
+                }
+                options={REGLAS_NOTA[watch('escalaEvaluacion')]}
+                registration={register('reglaNota')}
+                error={errores.reglaNota}
+              />
+              <Select
+                label="Consolidación *"
+                options={CONSOLIDACIONES_PERIODOS}
+                registration={register('consolidacionPeriodos')}
+                error={errores.consolidacionPeriodos}
+              />
             </div>
           </fieldset>
         )}

@@ -489,8 +489,8 @@ export type PlanCursoResumen = {
   area: string;
   horasSemanales: number;
   competencias: number;
-  /** null = sin configurar; MIXTA si sus competencias usan las dos escalas. */
-  escala: Escala | 'MIXTA' | null;
+  /** null = sin configurar; cuando tiene competencias usa la escala única del año. */
+  escala: Escala | null;
   docentesAsignados: number;
 };
 
@@ -516,9 +516,6 @@ export type CompetenciaPlan = {
   nombre: string;
   estado: EstadoArea;
   seleccionada: boolean;
-  escala: Escala;
-  reglaNota: ReglaNota;
-  consolidacion: Consolidacion;
 };
 
 export type PlanCursoDetalle = {
@@ -552,9 +549,6 @@ export type OrigenPlan = {
 
 export type SolicitudCompetenciaPlan = {
   competenciaId: string;
-  escala: Escala;
-  reglaNota: ReglaNota;
-  consolidacion: Consolidacion;
 };
 
 export type SolicitudPlanCurso = {
@@ -758,6 +752,20 @@ export type SolicitudAnioEscolar = {
   fechaInicio: string;
   fechaFin: string;
   regimen: Regimen;
+  escalaEvaluacion: Escala;
+  reglaNota: ReglaNota;
+  consolidacionPeriodos: Consolidacion;
+};
+
+export type SolicitudParametrosEvaluacion = {
+  escalaEvaluacion: Escala;
+  reglaNota: ReglaNota;
+  consolidacionPeriodos: Consolidacion;
+};
+
+export type ParametrosEvaluacion = SolicitudParametrosEvaluacion & {
+  editable: boolean;
+  motivoNoEditable: string | null;
 };
 
 export type SolicitudEdicionAnio = {
@@ -807,6 +815,7 @@ export type AnioEscolarDetalle = {
   fechaFin: string;
   regimen: Regimen;
   estado: EstadoAnioEscolar;
+  parametrosEvaluacion: ParametrosEvaluacion;
   cantidadSecciones: number;
   cantidadEstructuras: number;
   periodos: PeriodoDetalle[];

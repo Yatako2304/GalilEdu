@@ -39,7 +39,7 @@ Reglas: un esquema de BD por módulo; los controladores no tocan repositorios di
 
 ## Base de datos
 
-| Migración | Esquemas | Qué crea |
+| Migración | Esquemas | Qué cambia |
 | --- | --- | --- |
 | `V1__personas_y_seguridad.sql` | `personas`, `seguridad` | Personas, usuarios, roles |
 | `V2__estudiantes_inscripcion.sql` | `estudiantes` | Estudiante, ficha médica, familia, contactos, autorizados |
@@ -49,8 +49,9 @@ Reglas: un esquema de BD por módulo; los controladores no tocan repositorios di
 | `V6__catalogo_academico.sql` | `academico`, `configuracion` | Áreas, competencias, cursos, plan de evaluación, tabla de conversión, ambientes |
 | `V7__ajustes_integracion.sql` | varios | Grado del estudiante del catálogo, estado ACTIVO/RETIRADO, estructura horaria por nivel, descuento por estudiante, formato del código de matrícula |
 | `V8__configuracion_periodo_sin_estado.sql` | `configuracion` | Elimina `periodo_academico.estado`: el estado del periodo se calcula con las fechas |
+| `V9__parametros_evaluacion_por_anio.sql` | `configuracion`, `academico` | Parámetros globales de evaluación del año; conserva las columnas anteriores del plan como legado |
 
-Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V9…).
+Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V10…).
 
 ## API (prefijo `/api`)
 
@@ -102,7 +103,7 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/planes-evaluacion/anios` · `/planes-evaluacion/docentes` | Personal adm. · Coordinador | Años escolares (del más reciente) · usuarios activos con rol Docente |
 | GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Personal adm. · Coordinador | Cursos activos que se dictan en el grado y aún no están en su plan, con las competencias activas del área |
 | GET | `/planes-evaluacion/origenes?anioEscolarId=&grado=` | Personal adm. · Coordinador | Otros planes con cursos, para copiarlos |
-| POST | `/planes-evaluacion` | Personal adm. · Coordinador | Agrega un curso `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId, escala, reglaNota, consolidacion}]}`. 409 si ya está, si no se dicta en el grado o si las horas superan los bloques |
+| POST | `/planes-evaluacion` | Personal adm. · Coordinador | Agrega un curso `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId}]}`. La escala, regla de nota y consolidación se toman del año escolar. 409 si ya está, si no se dicta en el grado o si las horas superan los bloques |
 | POST | `/planes-evaluacion/copias` | Personal adm. · Coordinador | Copia `{anioEscolarId, gradoCodigo, origenAnioEscolarId, origenGradoCodigo}` a un grado vacío, sin docentes |
 | GET · PUT · DELETE | `/planes-evaluacion/{id}` | Personal adm. · Coordinador | Detalle del curso en el plan · `{horasSemanales, competencias}` · quitarlo del plan. 409 si el año está cerrado |
 | GET · PUT | `/planes-evaluacion/{id}/docentes` | Personal adm. · Coordinador | Docente de cada sección `{asignaciones: [{seccionId, docenteId}]}` (`docenteId` null = sin docente) |
@@ -116,7 +117,8 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/configuracion/anios-escolares` | Personal adm. | Años escolares, del más reciente al más antiguo, con régimen, estado, cantidad de periodos, secciones activas y estructuras horarias (arreglo simple, HU-74) |
 | GET | `/configuracion/anios-escolares/actual` | Personal adm. | Card del año en curso (CI-01): periodo en curso, periodo ya terminado con notas abiertas, próximo periodo, secciones activas, alumnos matriculados, estructuras y avance (%). Los periodos son `null` si no aplican. 404 si no hay año activo |
 | GET | `/configuracion/anios-escolares/{id}` | Personal adm. | El año con sus periodos ordenados por número; cada periodo trae `duracionSemanas`, su `estado` (se calcula con las fechas) y `registroNotasAbierto` (HU-74) |
-| POST | `/configuracion/anios-escolares` | Personal adm. | Crea un año PLANIFICADO `{anio, fechaInicio, fechaFin, regimen}` y genera sus 4 bimestres o 3 trimestres con fechas sugeridas. 400 si `fechaFin` no es posterior a `fechaInicio`, si el año es muy corto o está fuera de 2000–2100; 409 si el año ya existe |
+| POST | `/configuracion/anios-escolares` | Personal adm. | Crea un año PLANIFICADO `{anio, fechaInicio, fechaFin, regimen, escalaEvaluacion, reglaNota, consolidacionPeriodos}` y genera sus 4 bimestres o 3 trimestres con fechas sugeridas. 400 si las fechas, el año o la combinación de evaluación no son válidos; 409 si el año ya existe |
+| PUT | `/configuracion/anios-escolares/{id}/parametros-evaluacion` | Personal adm. | Cambia `{escalaEvaluacion, reglaNota, consolidacionPeriodos}` antes de `fechaInicio`. 400 si la regla no corresponde a la escala; 404 si no existe; 409 desde el día de inicio |
 | GET | `/configuracion/anios-escolares/{anioId}/secciones?nivel=` | Personal adm. | Grados del año con sus secciones, tutor, cotutor y alumnos que ocupan vacante (HU-75). `nivel` opcional; arreglo simple |
 | POST | `/configuracion/anios-escolares/{anioId}/secciones` | Personal adm. | Nueva sección `{gradoCodigo, nombre, capacidadMaxima}`. 409 si el nombre ya existe en el grado o el año no es modificable |
 | PUT | `/configuracion/secciones/{id}` | Personal adm. | Cambia la capacidad `{capacidadMaxima}` (1–45). 400 si es menor a los alumnos que ya ocupan vacante (RF-50) |

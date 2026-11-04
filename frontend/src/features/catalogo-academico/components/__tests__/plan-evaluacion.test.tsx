@@ -52,7 +52,7 @@ const plan1ro: PlanGrado = {
       area: 'Matemática',
       horasSemanales: 2,
       competencias: 3,
-      escala: 'MIXTA',
+      escala: 'VIGESIMAL',
       docentesAsignados: 1,
     },
     {
@@ -173,7 +173,7 @@ test('muestra el plan del año activo con sus tarjetas y cursos', async () => {
   expect(screen.getByText('1 / 4')).toBeInTheDocument();
   expect(screen.getByText('2 secciones × 2 cursos')).toBeInTheDocument();
   const tabla = within(screen.getByRole('table'));
-  expect(tabla.getByText('Mixta')).toBeInTheDocument();
+  expect(tabla.getByText('Vigesimal')).toBeInTheDocument();
   expect(tabla.getByText('Sin configurar')).toBeInTheDocument();
   expect(tabla.getByText('1 / 2')).toBeInTheDocument();
 });
@@ -206,7 +206,7 @@ test('un grado sin cursos muestra el estado vacío y copia el plan elegido', asy
   );
 });
 
-test('agrega un curso con las competencias marcadas y su escala', async () => {
+test('agrega un curso con las competencias marcadas', async () => {
   await renderizar();
   await screen.findByText('1.° de secundaria · 2026');
   await userEvent.click(screen.getByRole('button', { name: 'Agregar curso' }));
@@ -221,10 +221,9 @@ test('agrega un curso con las competencias marcadas y su escala', async () => {
   await userEvent.click(
     modal.getByRole('checkbox', { name: 'Explica el mundo físico' }),
   );
-  await userEvent.selectOptions(
-    modal.getByLabelText('Escala de Explica el mundo físico'),
-    'CUALITATIVA',
-  );
+  expect(
+    modal.queryByText('Consolidación de periodos'),
+  ).not.toBeInTheDocument();
   await userEvent.click(modal.getByRole('button', { name: 'Agregar curso' }));
 
   await vi.waitFor(() =>
@@ -236,9 +235,6 @@ test('agrega un curso con las competencias marcadas y su escala', async () => {
       competencias: [
         {
           competenciaId: 'k2',
-          escala: 'CUALITATIVA',
-          reglaNota: 'NIVEL_MAS_FRECUENTE',
-          consolidacion: 'PROMEDIO_PERIODOS',
         },
       ],
     }),

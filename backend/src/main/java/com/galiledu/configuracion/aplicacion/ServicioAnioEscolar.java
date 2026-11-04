@@ -15,11 +15,13 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarActual;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarDetalle;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarResumen;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.ParametrosEvaluacion;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.PeriodoDetalle;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.Requisito;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.RequisitosAnio;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudAnioEscolar;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudEdicionAnio;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudParametrosEvaluacion;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudPeriodo;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudRegimen;
 import com.galiledu.configuracion.dominio.AnioEscolar;
@@ -84,12 +86,25 @@ public class ServicioAnioEscolar {
 	@Transactional
 	public AnioEscolarDetalle crear(SolicitudAnioEscolar solicitud) {
 		validarFechas(solicitud.fechaInicio(), solicitud.fechaFin(), solicitud.regimen());
+		if (!solicitud.reglaNota().sirvePara(solicitud.escalaEvaluacion())) {
+			throw ExcepcionNegocio.invalido("La regla de cálculo no corresponde a la escala elegida.");
+		}
 		if (anios.existsByAnio(solicitud.anio().shortValue())) {
 			throw ExcepcionNegocio.conflicto("Ya existe un año escolar " + solicitud.anio() + ".");
 		}
 		AnioEscolar nuevo = AnioEscolar.planificar(solicitud.anio(), solicitud.fechaInicio(), solicitud.fechaFin(),
-				solicitud.regimen());
+				solicitud.regimen(), solicitud.escalaEvaluacion(), solicitud.reglaNota(),
+				solicitud.consolidacionPeriodos());
 		return detalle(anios.save(nuevo));
+	}
+
+	/** Cambia los parámetros globales solo antes de la fecha de inicio de clases. */
+	@Transactional
+	public ParametrosEvaluacion configurarEvaluacion(UUID id, SolicitudParametrosEvaluacion solicitud) {
+		AnioEscolar anio = buscar(id);
+		traducir(() -> anio.configurarEvaluacion(solicitud.escalaEvaluacion(), solicitud.reglaNota(),
+				solicitud.consolidacionPeriodos(), hoy()));
+		return ParametrosEvaluacion.de(anio, hoy());
 	}
 
 	/**

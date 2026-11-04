@@ -3,14 +3,7 @@ import * as React from 'react';
 
 import { Checkbox, Select, Input } from '@/components/ui/form';
 import { Spinner } from '@/components/ui/spinner';
-import {
-  Consolidacion,
-  Escala,
-  PlanGrado,
-  ReglaNota,
-  SolicitudCompetenciaPlan,
-} from '@/types/api';
-import { cn } from '@/utils/cn';
+import { PlanGrado, SolicitudCompetenciaPlan } from '@/types/api';
 import { formatDay } from '@/utils/format';
 
 import {
@@ -22,44 +15,16 @@ import {
 
 import { DialogoCatalogo } from './dialogo-catalogo';
 
-// Opciones de las columnas "Escala", "Agregación de ítems" y "Consolidación de periodos" (Figma CI-17).
-export const ESCALAS: { label: string; value: Escala }[] = [
-  { label: 'Vigesimal (0–20)', value: 'VIGESIMAL' },
-  { label: 'Cualitativa (AD–C)', value: 'CUALITATIVA' },
-];
-
-export const REGLAS: Record<Escala, { label: string; value: ReglaNota }[]> = {
-  VIGESIMAL: [
-    { label: 'Promedio simple', value: 'PROMEDIO_SIMPLE' },
-    { label: 'Promedio ponderado', value: 'PROMEDIO_PONDERADO' },
-  ],
-  CUALITATIVA: [
-    { label: 'Nivel más frecuente', value: 'NIVEL_MAS_FRECUENTE' },
-    { label: 'Último nivel', value: 'ULTIMO_NIVEL' },
-  ],
-};
-
-export const CONSOLIDACIONES: { label: string; value: Consolidacion }[] = [
-  { label: 'Promedio de periodos', value: 'PROMEDIO_PERIODOS' },
-  { label: 'Último periodo', value: 'ULTIMO_PERIODO' },
-];
-
 type Fila = {
   competenciaId: string;
   nombre: string;
   seleccionada: boolean;
-  escala: Escala;
-  reglaNota: ReglaNota;
-  consolidacion: Consolidacion;
 };
 
 const filaPorDefecto = (competenciaId: string, nombre: string): Fila => ({
   competenciaId,
   nombre,
   seleccionada: false,
-  escala: 'VIGESIMAL',
-  reglaNota: 'PROMEDIO_SIMPLE',
-  consolidacion: 'PROMEDIO_PERIODOS',
 });
 
 export type ModoCursoPlan =
@@ -108,17 +73,11 @@ export const DialogoCursoPlan = ({
     );
   };
 
-  const cambiar = (id: string, cambio: Partial<Fila>) =>
+  const cambiar = (id: string, seleccionada: boolean) =>
     setFilas((actuales) =>
-      actuales.map((f) => {
-        if (f.competenciaId !== id) return f;
-        const nueva = { ...f, ...cambio };
-        // Al cambiar la escala, la agregación vuelve a la primera opción de esa escala.
-        if (cambio.escala && cambio.escala !== f.escala) {
-          nueva.reglaNota = REGLAS[cambio.escala][0].value;
-        }
-        return nueva;
-      }),
+      actuales.map((f) =>
+        f.competenciaId === id ? { ...f, seleccionada } : f,
+      ),
     );
 
   const horasPropias = agregando ? 0 : (detalle.data?.horasSemanales ?? 0);
@@ -144,12 +103,7 @@ export const DialogoCursoPlan = ({
     if (nuevos.curso || nuevos.horas) return;
     const competencias: SolicitudCompetenciaPlan[] = filas
       .filter((f) => f.seleccionada)
-      .map(({ competenciaId, escala, reglaNota, consolidacion }) => ({
-        competenciaId,
-        escala,
-        reglaNota,
-        consolidacion,
-      }));
+      .map(({ competenciaId }) => ({ competenciaId }));
     if (agregando) {
       agregar.mutate({
         anioEscolarId: plan.anioEscolarId,
@@ -191,7 +145,7 @@ export const DialogoCursoPlan = ({
       descripcion={
         agregando || !area
           ? `Año escolar ${plan.anio}`
-          : `Año escolar ${plan.anio}. Marca las competencias del área ${area} que se evaluarán en este curso y cómo se calculará su nota.`
+          : `Año escolar ${plan.anio}. Marca las competencias del área ${area} que se evaluarán en este curso.`
       }
       formId="form-curso-plan"
       textoGuardar={agregando ? 'Agregar curso' : 'Guardar configuración'}
@@ -264,69 +218,19 @@ export const DialogoCursoPlan = ({
                   : 'El área de este curso aún no tiene competencias activas.'}
               </p>
             ) : (
-              <table className="w-full text-left">
-                <thead className="text-label-3 text-content-tertiary">
-                  <tr className="border-b border-stroke-tertiary">
-                    <th className="py-2 pr-3 font-medium">Competencia</th>
-                    <th className="p-2 font-medium">Escala</th>
-                    <th className="p-2 font-medium">Agregación de ítems</th>
-                    <th className="p-2 font-medium">
-                      Consolidación de periodos
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filas.map((f) => (
-                    <tr
-                      key={f.competenciaId}
-                      className="border-b border-stroke-tertiary"
-                    >
-                      <td className="py-2 pr-3">
-                        <Checkbox
-                          label={f.nombre}
-                          checked={f.seleccionada}
-                          onChange={(e) =>
-                            cambiar(f.competenciaId, {
-                              seleccionada: e.target.checked,
-                            })
-                          }
-                        />
-                      </td>
-                      <CeldaSelect
-                        etiqueta={`Escala de ${f.nombre}`}
-                        deshabilitado={!f.seleccionada}
-                        opciones={ESCALAS}
-                        valor={f.escala}
-                        onCambiar={(v) =>
-                          cambiar(f.competenciaId, { escala: v as Escala })
-                        }
-                      />
-                      <CeldaSelect
-                        etiqueta={`Agregación de ítems de ${f.nombre}`}
-                        deshabilitado={!f.seleccionada}
-                        opciones={REGLAS[f.escala]}
-                        valor={f.reglaNota}
-                        onCambiar={(v) =>
-                          cambiar(f.competenciaId, {
-                            reglaNota: v as ReglaNota,
-                          })
-                        }
-                      />
-                      <CeldaSelect
-                        etiqueta={`Consolidación de periodos de ${f.nombre}`}
-                        deshabilitado={!f.seleccionada}
-                        opciones={CONSOLIDACIONES}
-                        valor={f.consolidacion}
-                        onCambiar={(v) =>
-                          cambiar(f.competenciaId, {
-                            consolidacion: v as Consolidacion,
-                          })
-                        }
-                      />
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="divide-y divide-stroke-tertiary rounded-lg border border-stroke-tertiary px-3">
+                {filas.map((f) => (
+                  <div key={f.competenciaId} className="py-3">
+                    <Checkbox
+                      label={f.nombre}
+                      checked={f.seleccionada}
+                      onChange={(e) =>
+                        cambiar(f.competenciaId, e.target.checked)
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </form>
@@ -334,28 +238,3 @@ export const DialogoCursoPlan = ({
     </DialogoCatalogo>
   );
 };
-
-const CeldaSelect = ({
-  etiqueta,
-  deshabilitado,
-  opciones,
-  valor,
-  onCambiar,
-}: {
-  etiqueta: string;
-  deshabilitado: boolean;
-  opciones: { label: string; value: string }[];
-  valor: string;
-  onCambiar: (valor: string) => void;
-}) => (
-  <td className="p-2">
-    <Select
-      aria-label={etiqueta}
-      disabled={deshabilitado}
-      options={opciones}
-      value={valor}
-      onChange={(e) => onCambiar(e.target.value)}
-      className={cn('h-9 text-body-4', deshabilitado && 'opacity-60')}
-    />
-  </td>
-);

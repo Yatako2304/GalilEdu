@@ -2,13 +2,13 @@
 
 - **HU:** HU-52, 53, 54, 55, 56 (iteración 1) · HU-43 (3)
 - **Estado:** 🚧 en desarrollo: la iteración 1 (HU-52 a HU-56) está hecha; falta HU-43 (iteración 3)
-- **Última actualización:** 2026-10-20
+- **Última actualización:** 2026-11-04
 
 ## Alcance
 
 El Personal administrativo arma el catálogo curricular. Cada **área** agrupa sus **competencias** y sus **cursos**. Para cada año escolar define el **plan de evaluación**:
 - qué cursos se dictan en cada grado y cuántas horas tienen;
-- qué competencias evalúa cada curso, con su escala, su regla de nota final y cómo se consolidan los periodos;
+- qué competencias evalúa cada curso; la escala, la regla de nota final y la consolidación de periodos se toman del año escolar;
 - qué docente dicta cada curso en cada sección.
 
 También mantiene la **tabla de conversión** de vigesimal a AD/A/B/C, que tiene versiones, y el catálogo de **ambientes físicos**.
@@ -18,6 +18,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 **Figma frente a los RF de Notion:**
 - RF-130 a RF-132 dicen que el plan lo configura el Coordinador; en Figma está en el menú del Personal administrativo. **Excepción a "manda Figma" (2026-10-20, a pedido del equipo):** lo tienen los dos roles, con los mismos permisos. El Coordinador lo ve en su menú como "Plan de evaluación" (`/app/coordinador/plan-evaluacion`).
 - RF-126 pide una descripción obligatoria para el área; en Figma es opcional. Aquí manda Figma.
+- El modal de Figma muestra escala, agregación de ítems y consolidación por competencia. Esta parte fue reemplazada por la [decisión de parámetros de evaluación por año](../decisiones/2026-11-04-josezavaleta-parametros-evaluacion-por-anio.md): el modal solo permite indicar horas semanales y marcar competencias.
 
 ## Historias de usuario
 
@@ -27,7 +28,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 | HU-53 | Competencias de un área | ✅ | Nombre único dentro del área. Se agregan al final de la lista. |
 | HU-54 | Cursos de un área y sus grados | ✅ | Nombre único y al menos un grado. No se puede quitar un grado en el que el curso ya está en un plan de evaluación. |
 | HU-55 | Escala de calificación | ✅ | Las versiones no se editan: se agrega una nueva con su fecha "Vigente desde", que no puede ser anterior a hoy. Si la fecha es futura, queda **programada**. El estado (vigente, programada, anterior) se calcula con la fecha de hoy y no se guarda. **Diferencia con Figma:** debajo de la tabla vigente agregamos "Otras versiones" (programadas y anteriores), porque CI-23 no muestra dónde ver la versión programada ni el historial que menciona el modal. |
-| HU-56 | Plan de evaluación | ✅ | Por grado y año: agregar cursos con sus horas y competencias, configurarlos, quitarlos, asignar docentes por sección y copiar el plan de otro grado o año a un grado vacío (sin docentes). Un año CERRADO es de solo lectura. **Diferencias con Figma:** (1) el modal de configuración también muestra "Agregación de ítems", como el de "Agregar curso", porque la BD exige la regla de nota (`regla_nota`); (2) la columna Estado dice "Configurado" o "Sin configurar" (curso sin competencias); (3) el menú de cada curso tiene "Configurar competencias", "Asignar docentes" y "Quitar del plan"; (4) "Copiar plan" solo aparece cuando el grado está vacío. |
+| HU-56 | Plan de evaluación | ✅ | Por grado y año: agregar cursos con sus horas y competencias, configurarlos, quitarlos, asignar docentes por sección y copiar el plan de otro grado o año a un grado vacío (sin docentes). Un año CERRADO es de solo lectura. El modal del curso solo pide las horas semanales y las competencias; la escala, la regla de nota y la consolidación se definen una vez en el año escolar. **Diferencias con Figma:** (1) se retiraron los tres selectores por competencia según la [decisión](../decisiones/2026-11-04-josezavaleta-parametros-evaluacion-por-anio.md); (2) la columna Estado dice "Configurado" o "Sin configurar" (curso sin competencias); (3) el menú de cada curso tiene "Configurar competencias", "Asignar docentes" y "Quitar del plan"; (4) "Copiar plan" solo aparece cuando el grado está vacío. |
 | HU-43 | Ambientes físicos | ⏳ | Iteración 3. |
 
 ## Pantallas (Figma)
@@ -41,7 +42,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 
 ## Base de datos
 
-- **Esquemas:** `academico` y `configuracion` (ambientes) · **Migración:** `V6__catalogo_academico.sql`
+- **Esquemas:** `academico` y `configuracion` (ambientes) · **Migraciones:** `V6__catalogo_academico.sql`, `V9__parametros_evaluacion_por_anio.sql`
 
 | Tabla | Para qué |
 | --- | --- |
@@ -50,10 +51,22 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 | `academico.curso` | Curso de un área. |
 | `academico.curso_grado` | Grados en los que se dicta el curso. |
 | `academico.plan_curso` | Curso que se dicta en un grado y año, con sus horas semanales (de 1 a 20). La BD impide planificar un curso en un grado donde no se dicta. |
-| `academico.plan_competencia` | Competencia que evalúa el curso en ese plan. Tiene una escala (VIGESIMAL o CUALITATIVA). Su regla de nota final depende de la escala: promedio simple o ponderado si es vigesimal, nivel más frecuente o último nivel si es cualitativa. La consolidación puede ser PROMEDIO_PERIODOS o ULTIMO_PERIODO. |
+| `academico.plan_competencia` | Competencia que evalúa el curso en ese plan. Desde V9 la relación efectiva solo necesita `plan_curso_id` y `competencia_id`. Las columnas anteriores de escala, regla y consolidación se conservan temporalmente para no perder información, pero la aplicación ya no las usa. |
 | `academico.docente_seccion` | Docente que dicta un curso del plan en una sección. |
 | `academico.tabla_conversion`, `tabla_conversion_nivel` | Versiones de la tabla de conversión, con su fecha de vigencia y los rangos de AD, A, B y C (de 0 a 20). |
 | `configuracion.ambiente` | Aula regular (aforo máximo 45) o espacio especial, con sus recursos. Además, `configuracion.seccion.ambiente_id` indica el aula de cada sección. |
+
+### Cambio de esquema de V9
+
+V9 no crea ni elimina tablas en `academico`. En `academico.plan_competencia` mantiene `escala`, `regla_nota` y `consolidacion` para conservar la información histórica, junto con sus restricciones `CHECK`. Solo agrega estos valores técnicos por defecto para que los registros nuevos sigan siendo compatibles con la estructura heredada:
+
+| Columna heredada | Tipo | Valor por defecto desde V9 | Fuente efectiva en la aplicación |
+| --- | --- | --- | --- |
+| `escala` | `VARCHAR(12)` | `VIGESIMAL` | `configuracion.anio_escolar.escala_evaluacion` |
+| `regla_nota` | `VARCHAR(20)` | `PROMEDIO_SIMPLE` | `configuracion.anio_escolar.regla_nota` |
+| `consolidacion` | `VARCHAR(20)` | `PROMEDIO_PERIODOS` | `configuracion.anio_escolar.consolidacion_periodos` |
+
+El backend ya no recibe, lee ni decide estos tres valores por competencia. `academico.plan_competencia` representa efectivamente la relación entre `plan_curso_id` y `competencia_id`; retirar las columnas heredadas requiere otra migración y una decisión sobre sus valores históricos. Las columnas nuevas y restricciones del año están documentadas en [Configuración](configuracion.md#cambio-de-esquema-de-v9).
 
 **Lo valida el servicio del plan curricular (`ServicioPlanCurricular`):**
 - Los nombres no se repiten, sin importar mayúsculas: ni las áreas, ni los cursos, ni las competencias dentro de su área.
@@ -67,7 +80,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 
 **Lo valida el plan de evaluación (`ServicioPlanEvaluacion`):**
 - Solo se agregan cursos activos, de áreas activas, que se dictan en el grado y que aún no están en su plan.
-- Las competencias son del área del curso, no se repiten y su agregación corresponde a la escala. Una competencia inactiva solo se conserva si el curso ya la evaluaba.
+- Las competencias son del área del curso y no se repiten. Una competencia inactiva solo se conserva si el curso ya la evaluaba.
 - La suma de horas del grado no supera los bloques semanales de la estructura horaria principal de su nivel (bloques por día × días lectivos). Si el año aún no tiene estructura, no hay límite.
 - La sección del docente es del mismo grado y año, y el docente es un usuario activo con rol Docente.
 - Solo se copia a un grado sin cursos. Se copian los cursos y las competencias que siguen activos, sin los docentes.
@@ -105,8 +118,8 @@ Rol: Personal administrativo; las rutas de `/planes-evaluacion` también las usa
 | GET | `/planes-evaluacion/anios` · `/docentes` | Años escolares para el selector · docentes activos |
 | GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Cursos que se pueden agregar, con las competencias activas de su área |
 | GET | `/planes-evaluacion/origenes?anioEscolarId=&grado=` | Planes que se pueden copiar |
-| POST | `/planes-evaluacion` · `/planes-evaluacion/copias` | Agrega un curso al plan · copia otro plan a un grado vacío |
-| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Detalle del curso en el plan · horas y competencias · quitarlo |
+| POST | `/planes-evaluacion` · `/planes-evaluacion/copias` | Agrega un curso con `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId}]}` · copia otro plan a un grado vacío |
+| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Detalle del curso en el plan · cambia `{horasSemanales, competencias: [{competenciaId}]}` · quitarlo |
 | GET · PUT | `/planes-evaluacion/{id}/docentes` | Docente de cada sección |
 
 ## Código

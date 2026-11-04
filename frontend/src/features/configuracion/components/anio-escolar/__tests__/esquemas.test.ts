@@ -12,6 +12,9 @@ const valido = {
   fechaInicio: '2028-03-01',
   fechaFin: '2028-12-15',
   regimen: 'BIMESTRAL',
+  escalaEvaluacion: 'VIGESIMAL',
+  reglaNota: 'PROMEDIO_PONDERADO',
+  consolidacionPeriodos: 'PROMEDIO_PERIODOS',
 };
 
 const mensajes = (resultado: {
@@ -29,6 +32,9 @@ describe('valores iniciales del modal Nuevo año escolar (Figma)', () => {
       fechaInicio: '2028-03-01',
       fechaFin: '2028-12-15',
       regimen: 'BIMESTRAL',
+      escalaEvaluacion: 'VIGESIMAL',
+      reglaNota: 'PROMEDIO_PONDERADO',
+      consolidacionPeriodos: 'PROMEDIO_PERIODOS',
     });
   });
 
@@ -104,6 +110,27 @@ describe('nuevoAnioSchema (mensajes del backend)', () => {
     expect(
       mensajes(nuevoAnioSchema.safeParse({ ...valido, regimen: undefined })),
     ).toEqual({ regimen: 'Elige el régimen de periodos.' });
+  });
+
+  test('la regla de cálculo debe corresponder a la escala', () => {
+    expect(
+      mensajes(
+        nuevoAnioSchema.safeParse({
+          ...valido,
+          escalaEvaluacion: 'CUALITATIVA',
+          reglaNota: 'PROMEDIO_SIMPLE',
+        }),
+      ),
+    ).toEqual({
+      reglaNota: 'La regla de cálculo no corresponde a la escala elegida.',
+    });
+    expect(
+      nuevoAnioSchema.safeParse({
+        ...valido,
+        escalaEvaluacion: 'CUALITATIVA',
+        reglaNota: 'ULTIMO_NIVEL',
+      }).success,
+    ).toBe(true);
   });
 });
 

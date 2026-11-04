@@ -4,11 +4,13 @@ import { api } from '@/lib/api-client';
 import {
   AnioEscolarDetalle,
   AnioEscolarResumen,
+  ParametrosEvaluacion,
   PeriodoDetalle,
   Regimen,
   SolicitudAnioEscolar,
   SolicitudEdicionAnio,
   SolicitudPeriodo,
+  SolicitudParametrosEvaluacion,
 } from '@/types/api';
 
 import {
@@ -70,6 +72,30 @@ export const useEditarAnio = (
     onSuccess: async (anio) => {
       await refrescar();
       onSuccess?.(anio);
+    },
+  });
+};
+
+// PUT /configuracion/anios-escolares/{id}/parametros-evaluacion (solo antes de iniciar las clases)
+export const useConfigurarEvaluacion = (
+  onSuccess?: (parametros: ParametrosEvaluacion) => void,
+) => {
+  const refrescar = useRefrescarAnios();
+  return useMutation({
+    mutationFn: ({
+      id,
+      data,
+    }: {
+      id: string;
+      data: SolicitudParametrosEvaluacion;
+    }): Promise<ParametrosEvaluacion> =>
+      api.put(
+        `/configuracion/anios-escolares/${id}/parametros-evaluacion`,
+        data,
+      ),
+    onSuccess: async (parametros) => {
+      await refrescar();
+      onSuccess?.(parametros);
     },
   });
 };

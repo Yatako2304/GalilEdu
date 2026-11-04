@@ -7,6 +7,10 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Component;
 
+import com.galiledu.academico.dominio.Consolidacion;
+import com.galiledu.academico.dominio.Escala;
+import com.galiledu.academico.dominio.ReglaNota;
+
 /**
  * Datos de otros módulos que el catálogo solo lee: grados, años escolares, secciones y estructura horaria
  * (configuracion, V4 y V7), y docentes (seguridad, V1). Mientras esos módulos no tengan servicio, se leen con SQL.
@@ -19,7 +23,8 @@ public class ConsultasCatalogo {
 		this.jdbc = jdbc;
 	}
 
-	public record AnioEscolar(UUID id, int anio, String estado) {
+	public record AnioEscolar(UUID id, int anio, String estado, Escala escala, ReglaNota reglaNota,
+			Consolidacion consolidacion) {
 		public boolean estaCerrado() {
 			return "CERRADO".equals(estado);
 		}
@@ -55,12 +60,19 @@ public class ConsultasCatalogo {
 
 	/** Años escolares, del más reciente al más antiguo. */
 	public List<AnioEscolar> aniosEscolares() {
-		return jdbc.sql("SELECT id, anio, estado FROM configuracion.anio_escolar ORDER BY anio DESC")
+		return jdbc.sql("""
+				SELECT id, anio, estado, escala_evaluacion AS escala, regla_nota,
+				       consolidacion_periodos AS consolidacion
+				FROM configuracion.anio_escolar
+				ORDER BY anio DESC""")
 				.query(AnioEscolar.class).list();
 	}
 
 	public Optional<AnioEscolar> anioEscolar(UUID id) {
-		return jdbc.sql("SELECT id, anio, estado FROM configuracion.anio_escolar WHERE id = ?").param(id)
+		return jdbc.sql("""
+				SELECT id, anio, estado, escala_evaluacion AS escala, regla_nota,
+				       consolidacion_periodos AS consolidacion
+				FROM configuracion.anio_escolar WHERE id = ?""").param(id)
 				.query(AnioEscolar.class).optional();
 	}
 

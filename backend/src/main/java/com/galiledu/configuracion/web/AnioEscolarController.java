@@ -19,9 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarActual;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarDetalle;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.AnioEscolarResumen;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.ParametrosEvaluacion;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.RequisitosAnio;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudAnioEscolar;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudEdicionAnio;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudParametrosEvaluacion;
 import com.galiledu.configuracion.aplicacion.DtosConfiguracion.SolicitudRegimen;
 import com.galiledu.configuracion.aplicacion.ServicioAnioEscolar;
 
@@ -83,6 +85,13 @@ public class AnioEscolarController {
 	@PutMapping("/{id}")
 	public AnioEscolarDetalle editar(@PathVariable UUID id, @Valid @RequestBody SolicitudEdicionAnio solicitud) {
 		return servicio.editar(id, solicitud);
+	}
+
+	/** PUT /api/configuracion/anios-escolares/{id}/parametros-evaluacion · parámetros comunes a todos los cursos. */
+	@PutMapping("/{id}/parametros-evaluacion")
+	public ParametrosEvaluacion configurarEvaluacion(@PathVariable UUID id,
+			@Valid @RequestBody SolicitudParametrosEvaluacion solicitud) {
+		return servicio.configurarEvaluacion(id, solicitud);
 	}
 
 	/** POST /api/configuracion/anios-escolares/{id}/activar · pasa el año de PLANIFICADO a ACTIVO. */

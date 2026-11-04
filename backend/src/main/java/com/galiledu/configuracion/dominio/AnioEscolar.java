@@ -47,6 +47,15 @@ public class AnioEscolar {
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false)
 	private EstadoAnioEscolar estado = EstadoAnioEscolar.PLANIFICADO;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "escala_evaluacion", nullable = false)
+	private EscalaEvaluacion escalaEvaluacion;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "regla_nota", nullable = false)
+	private ReglaNota reglaNota;
+	@Enumerated(EnumType.STRING)
+	@Column(name = "consolidacion_periodos", nullable = false)
+	private ConsolidacionPeriodos consolidacionPeriodos;
 	@Column(name = "creado_en", nullable = false, updatable = false)
 	private Instant creadoEn;
 	@Column(name = "actualizado_en", nullable = false)
@@ -63,14 +72,43 @@ public class AnioEscolar {
 	 * Año PLANIFICADO con sus periodos ya repartidos. El servicio valida antes que fechaFin > fechaInicio y que el año
 	 * alcance para el régimen (ver {@link #diasMinimos(Regimen)}).
 	 */
-	public static AnioEscolar planificar(int anio, LocalDate fechaInicio, LocalDate fechaFin, Regimen regimen) {
+	public static AnioEscolar planificar(int anio, LocalDate fechaInicio, LocalDate fechaFin, Regimen regimen,
+			EscalaEvaluacion escalaEvaluacion, ReglaNota reglaNota, ConsolidacionPeriodos consolidacionPeriodos) {
 		AnioEscolar a = new AnioEscolar();
 		a.anio = (short) anio;
 		a.fechaInicio = fechaInicio;
 		a.fechaFin = fechaFin;
 		a.regimen = regimen;
+		a.aplicarParametrosEvaluacion(escalaEvaluacion, reglaNota, consolidacionPeriodos);
 		a.generarPeriodos();
 		return a;
+	}
+
+	/** Los parámetros se aplican a todos los cursos y quedan fijos desde el primer día de clases. */
+	public void configurarEvaluacion(EscalaEvaluacion escalaEvaluacion, ReglaNota reglaNota,
+			ConsolidacionPeriodos consolidacionPeriodos, LocalDate hoy) {
+		if (!hoy.isBefore(fechaInicio)) {
+			throw new IllegalStateException(
+					"Los parámetros de evaluación no se pueden modificar porque el año escolar ya empezó.");
+		}
+		aplicarParametrosEvaluacion(escalaEvaluacion, reglaNota, consolidacionPeriodos);
+	}
+
+	private void aplicarParametrosEvaluacion(EscalaEvaluacion escalaEvaluacion, ReglaNota reglaNota,
+			ConsolidacionPeriodos consolidacionPeriodos) {
+		if (escalaEvaluacion == null || reglaNota == null || consolidacionPeriodos == null) {
+			throw new IllegalArgumentException("Completa los parámetros de evaluación del año escolar.");
+		}
+		if (!reglaNota.sirvePara(escalaEvaluacion)) {
+			throw new IllegalArgumentException("La regla de cálculo no corresponde a la escala elegida.");
+		}
+		this.escalaEvaluacion = escalaEvaluacion;
+		this.reglaNota = reglaNota;
+		this.consolidacionPeriodos = consolidacionPeriodos;
+	}
+
+	public boolean parametrosEvaluacionEditables(LocalDate hoy) {
+		return hoy.isBefore(fechaInicio);
 	}
 
 	public static long diasMinimos(Regimen regimen) {
@@ -261,6 +299,15 @@ public class AnioEscolar {
 	}
 	public EstadoAnioEscolar getEstado() {
 		return estado;
+	}
+	public EscalaEvaluacion getEscalaEvaluacion() {
+		return escalaEvaluacion;
+	}
+	public ReglaNota getReglaNota() {
+		return reglaNota;
+	}
+	public ConsolidacionPeriodos getConsolidacionPeriodos() {
+		return consolidacionPeriodos;
 	}
 	public List<PeriodoAcademico> getPeriodos() {
 		return periodos;
