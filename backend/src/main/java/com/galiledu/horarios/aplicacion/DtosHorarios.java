@@ -3,6 +3,10 @@ package com.galiledu.horarios.aplicacion;
 import java.util.List;
 import java.util.UUID;
 
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotNull;
+
 import com.galiledu.configuracion.dominio.DiaSemana;
 
 /**
@@ -58,5 +62,20 @@ public final class DtosHorarios {
 	/** GET /horarios/secciones/{seccionId}/opciones. */
 	public record OpcionesDeHorario(UUID ambientePorDefectoId, List<CursoOpcion> cursos,
 			List<AmbienteOpcion> ambientes) {
+	}
+
+	/** Una celda del PUT. El docente no viaja: es el de academico.docente_seccion para (plan_curso_id, seccion_id). */
+	public record SolicitudCelda(@NotNull(message = "Elige el día de cada bloque.") DiaSemana dia,
+			@NotNull(message = "Elige el número de cada bloque.") @Min(value = 1, message = "El número de bloque empieza en 1.") Integer numeroBloque,
+			@NotNull(message = "Elige el curso de cada bloque.") UUID planCursoId,
+			@NotNull(message = "Elige el ambiente de cada bloque.") UUID ambienteId) {
+	}
+
+	/**
+	 * Cuerpo del PUT /horarios/secciones/{seccionId}: la matriz COMPLETA deseada (no un delta). {@code version} es la
+	 * que devolvió el GET: null si la sección aún no tenía horario guardado.
+	 */
+	public record SolicitudHorario(Long version,
+			@NotNull(message = "Envía las celdas del horario.") @Valid List<@NotNull(message = "Hay una celda vacía.") @Valid SolicitudCelda> celdas) {
 	}
 }

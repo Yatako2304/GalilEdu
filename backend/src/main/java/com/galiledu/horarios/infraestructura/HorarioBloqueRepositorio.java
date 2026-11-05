@@ -9,4 +9,6 @@ import com.galiledu.horarios.dominio.HorarioBloque;
 
 public interface HorarioBloqueRepositorio extends JpaRepository<HorarioBloque, UUID> {
 	List<HorarioBloque> findByHorarioSeccionId(UUID horarioSeccionId);
+
+	long countByHorarioSeccionIdAndPlanCursoId(UUID horarioSeccionId, UUID planCursoId);
 }

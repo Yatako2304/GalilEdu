@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -11,10 +13,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
+import com.galiledu.configuracion.aplicacion.ServicioEstructurasHorarias;
 import com.galiledu.configuracion.dominio.DiaSemana;
 import com.galiledu.horarios.aplicacion.AmbientesActivos.AmbienteDisponible;
 import com.galiledu.horarios.aplicacion.DatosDeSeccion.DatosSeccion;
@@ -29,6 +34,7 @@ import com.galiledu.horarios.aplicacion.DtosHorarios.OpcionesDeHorario;
 import com.galiledu.horarios.aplicacion.DtosHorarios.RecesoJornada;
 import com.galiledu.horarios.aplicacion.DtosHorarios.Referencia;
 import com.galiledu.horarios.aplicacion.DtosHorarios.SeccionDelHorario;
+import com.galiledu.horarios.aplicacion.DtosHorarios.SolicitudHorario;
 import com.galiledu.horarios.aplicacion.JornadaDeSeccion.JornadaEstructura;
 import com.galiledu.horarios.aplicacion.PlanDeSeccion.CursoDelPlan;
 import com.galiledu.horarios.dominio.HorarioBloque;
@@ -37,16 +43,18 @@ import com.galiledu.horarios.infraestructura.HorarioBloqueRepositorio;
 import com.galiledu.horarios.infraestructura.HorarioSeccionRepositorio;
 
 /**
- * Servicio del módulo Horarios (HU-45). DUEÑA: Valeria. Fase 1: solo lectura (la matriz de la sección y las opciones
- * del modal "Asignar bloque horario"). Lo de otros módulos entra por los puertos de solo lectura.
+ * Servicio del módulo Horarios (HU-45). DUEÑA: Valeria. Lectura (la matriz de la sección y las opciones del modal
+ * "Asignar bloque horario") y escritura (el PUT de la matriz completa). Lo de otros módulos entra por los puertos de
+ * solo lectura.
  * <p>
- * Errores: sección inexistente → 404; sin horario guardado y sin estructura principal del nivel → 409. Un año CERRADO
- * no es un error: la respuesta sigue siendo 200 con {@code editable = false}.
+ * Errores de la lectura: sección inexistente → 404; sin horario guardado y sin estructura principal del nivel → 409.
+ * Un año CERRADO no es un error al leer: la respuesta sigue siendo 200 con {@code editable = false}.
  */
 @Service
 public class ServicioHorarios {
 	/** Con estos estados del año se puede editar el horario. */
 	private static final Set<String> ESTADOS_EDITABLES = Set.of("PLANIFICADO", "ACTIVO");
+	static final String MENSAJE_ANIO_CERRADO = "No se puede modificar el horario de un año cerrado.";
 
 	private final DatosDeSeccion secciones;
 	private final HorarioSeccionRepositorio horarios;
@@ -56,10 +64,13 @@ public class ServicioHorarios {
 	private final AmbientesActivos ambientes;
 	private final ConversorDeBloques conversor;
 	private final ValidadorCruces validadorCruces;
+	private final ReglasDelHorario reglas;
+	private final ServicioEstructurasHorarias estructuras;
 
 	public ServicioHorarios(DatosDeSeccion secciones, HorarioSeccionRepositorio horarios,
 			HorarioBloqueRepositorio bloques, ResolutorDeJornada resolutor, PlanDeSeccion plan,
-			AmbientesActivos ambientes, ConversorDeBloques conversor, ValidadorCruces validadorCruces) {
+			AmbientesActivos ambientes, ConversorDeBloques conversor, ValidadorCruces validadorCruces,
+			ReglasDelHorario reglas, ServicioEstructurasHorarias estructuras) {
 		this.secciones = secciones;
 		this.horarios = horarios;
 		this.bloques = bloques;
@@ -68,6 +79,8 @@ public class ServicioHorarios {
 		this.ambientes = ambientes;
 		this.conversor = conversor;
 		this.validadorCruces = validadorCruces;
+		this.reglas = reglas;
+		this.estructuras = estructuras;
 	}
 
 	/**
@@ -77,7 +90,48 @@ public class ServicioHorarios {
 	@Transactional(readOnly = true)
 	public HorarioDeSeccion horarioDeSeccion(UUID seccionId) {
 		DatosSeccion datos = obtenerSeccion(seccionId);
+		return construirHorario(datos, horarios.findBySeccionId(seccionId));
+	}
+
+	/**
+	 * Guarda la matriz COMPLETA de la sección (no un delta) y devuelve el estado resultante. Todo ocurre en una
+	 * transacción: se bloquea el año ANTES de leer la versión, se valida y se aplica por diferencia, de modo que los
+	 * bloques sin cambios conservan su id. La versión sube exactamente 1 solo si algo cambió.
+	 * <p>
+	 * Errores: 404 sección inexistente; 409 año cerrado, versión desactualizada, curso sin docente, horas semanales
+	 * excedidas, cruces o falta de estructura principal; 400 por las reglas de forma de las celdas.
+	 */
+	@Transactional
+	public HorarioDeSeccion guardarHorario(UUID seccionId, SolicitudHorario solicitud) {
+		DatosSeccion datos = obtenerSeccion(seccionId);
+		if ("CERRADO".equals(datos.estadoAnio())) {
+			throw ExcepcionNegocio.conflicto(MENSAJE_ANIO_CERRADO);
+		}
+		// Primero el bloqueo y luego la lectura de la cabecera: así la versión que se compara no es una lectura vieja.
+		estructuras.bloquearAnioParaHorarios(datos.anioEscolarId());
 		Optional<HorarioSeccion> cabecera = horarios.findBySeccionId(seccionId);
+		validarVersion(datos, cabecera, solicitud.version());
+
+		List<CeldaHorario> celdas = solicitud.celdas().stream()
+				.map(c -> new CeldaHorario(c.dia(), c.numeroBloque(), c.planCursoId(), c.ambienteId())).toList();
+		if (cabecera.isEmpty() && celdas.isEmpty()) {
+			return construirHorario(datos, cabecera);
+		}
+
+		JornadaEstructura jornada = resolutor.resolver(datos, cabecera);
+		Map<UUID, CursoDelPlan> cursosDelPlan = new HashMap<>();
+		plan.cursosDelPlan(seccionId).forEach(c -> cursosDelPlan.put(c.planCursoId(), c));
+		Set<UUID> ambientesActivos = new HashSet<>();
+		ambientes.activos().forEach(a -> ambientesActivos.add(a.id()));
+		reglas.validar(datos, jornada, celdas, cursosDelPlan, ambientesActivos);
+		validarCruces(datos, celdas);
+
+		HorarioSeccion horario = aplicar(datos, cabecera, jornada, celdas);
+		return construirHorario(datos, Optional.of(horario));
+	}
+
+	private HorarioDeSeccion construirHorario(DatosSeccion datos, Optional<HorarioSeccion> cabecera) {
+		UUID seccionId = datos.id();
 		JornadaEstructura jornada = resolutor.resolver(datos, cabecera);
 		List<HorarioBloque> guardados = cabecera.map(h -> bloques.findByHorarioSeccionId(h.getId()))
 				.orElse(List.of()).stream()
@@ -125,12 +179,108 @@ public class ServicioHorarios {
 		return new OpcionesDeHorario(datos.ambienteId(), cursos, opcionesAmbiente);
 	}
 
-	/**
-	 * Cuántos bloques tiene asignados el curso del plan en el horario de la sección. Lo usará Académico. TODO
-	 * (Valeria, HU-45): contar las filas de horarios.horario_bloque; hoy devuelve 0.
-	 */
+	/** Cuántos bloques tiene asignados el curso del plan en el horario de la sección. Lo usa Académico. */
+	@Transactional(readOnly = true)
 	public int bloquesDeCurso(UUID planCursoId, UUID seccionId) {
-		return 0;
+		return horarios.findBySeccionId(seccionId)
+				.map(h -> (int) bloques.countByHorarioSeccionIdAndPlanCursoId(h.getId(), planCursoId)).orElse(0);
+	}
+
+	// ---------- Escritura ----------
+
+	private static ExcepcionNegocio otraPersona(DatosSeccion datos) {
+		return ExcepcionNegocio.conflicto("Otra persona modificó el horario de " + datos.gradoNombre() + " "
+				+ datos.nombre() + ". Recarga para ver los cambios.");
+	}
+
+	/** La versión que llegó debe ser la actual; null significa "no había horario cuando se leyó". */
+	private void validarVersion(DatosSeccion datos, Optional<HorarioSeccion> cabecera, Long versionRecibida) {
+		boolean coincide = cabecera.isPresent()
+				? versionRecibida != null && versionRecibida == cabecera.get().getVersion()
+				: versionRecibida == null;
+		if (!coincide) {
+			throw otraPersona(datos);
+		}
+	}
+
+	private void validarCruces(DatosSeccion datos, List<CeldaHorario> celdas) {
+		List<BloqueSolicitado> solicitados = conversor.aBloquesSolicitados(datos.id(), celdas);
+		if (solicitados.size() != celdas.size()) {
+			// Las reglas ya garantizaron docente y bloque existentes: el conversor no debería omitir nada.
+			throw new IllegalStateException("El conversor omitió " + (celdas.size() - solicitados.size())
+					+ " celda(s) que ya habían pasado las reglas del horario.");
+		}
+		List<CruceDetectado> cruces = validadorCruces.buscarCruces(datos.anioEscolarId(), datos.id(), solicitados);
+		if (!cruces.isEmpty()) {
+			// Con varios cruces se muestra el primero: el mensaje se presenta tal cual en una sola notificación.
+			throw ExcepcionNegocio.conflicto(cruces.get(0).mensaje());
+		}
+	}
+
+	/**
+	 * Aplica la matriz por diferencia con clave (día, bloque): elimina los que ya no están, actualiza los que cambiaron
+	 * de curso o ambiente e inserta los nuevos. Los que no cambian no se tocan y conservan su id. Los DELETE se
+	 * envían (flush) antes de los INSERT para no chocar con uq_horario_bloque_posicion.
+	 */
+	private HorarioSeccion aplicar(DatosSeccion datos, Optional<HorarioSeccion> cabecera, JornadaEstructura jornada,
+			List<CeldaHorario> celdas) {
+		boolean nueva = cabecera.isEmpty();
+		HorarioSeccion horario = cabecera.orElseGet(() -> crearCabecera(datos, jornada));
+
+		Map<String, HorarioBloque> existentes = new LinkedHashMap<>();
+		if (!nueva) {
+			bloques.findByHorarioSeccionId(horario.getId())
+					.forEach(b -> existentes.put(clave(b.getDia(), b.getNumeroBloque()), b));
+		}
+		Map<String, CeldaHorario> deseadas = new LinkedHashMap<>();
+		celdas.forEach(c -> deseadas.put(clave(c.dia(), c.numeroBloque()), c));
+
+		List<HorarioBloque> aEliminar = existentes.entrySet().stream().filter(e -> !deseadas.containsKey(e.getKey()))
+				.map(Map.Entry::getValue).toList();
+		List<HorarioBloque> aInsertar = new ArrayList<>();
+		int modificados = 0;
+		for (Map.Entry<String, CeldaHorario> entrada : deseadas.entrySet()) {
+			CeldaHorario celda = entrada.getValue();
+			HorarioBloque actual = existentes.get(entrada.getKey());
+			if (actual == null) {
+				aInsertar.add(HorarioBloque.crear(horario.getId(), celda.dia(), celda.numeroBloque(),
+						celda.planCursoId(), celda.ambienteId()));
+			} else if (actual.reasignar(celda.planCursoId(), celda.ambienteId())) {
+				modificados++;
+			}
+		}
+
+		if (!aEliminar.isEmpty()) {
+			bloques.deleteAll(aEliminar);
+			bloques.flush();
+		}
+		bloques.saveAll(aInsertar);
+		bloques.flush();
+
+		boolean huboCambios = !aEliminar.isEmpty() || !aInsertar.isEmpty() || modificados > 0;
+		// Una cabecera nueva nace con la versión 0; una existente sube exactamente 1 si algo cambió. Se toca la
+		// cabecera (y no OPTIMISTIC_FORCE_INCREMENT) para que la versión nueva ya esté en la entidad al responder.
+		if (!nueva && huboCambios) {
+			horario.marcarModificado();
+			try {
+				horarios.saveAndFlush(horario);
+			} catch (ObjectOptimisticLockingFailureException versionCambiada) {
+				throw otraPersona(datos);
+			}
+		}
+		return horario;
+	}
+
+	private HorarioSeccion crearCabecera(DatosSeccion datos, JornadaEstructura jornada) {
+		try {
+			return horarios.saveAndFlush(HorarioSeccion.crear(datos.id(), jornada.estructuraId()));
+		} catch (DataIntegrityViolationException violacion) {
+			// Dos primeros guardados a la vez: el segundo choca con la UNIQUE de seccion_id.
+			if (String.valueOf(violacion.getMessage()).contains("uq_horario_seccion_seccion")) {
+				throw otraPersona(datos);
+			}
+			throw violacion;
+		}
 	}
 
 	// ---------- Apoyo ----------

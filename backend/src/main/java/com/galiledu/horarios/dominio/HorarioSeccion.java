@@ -52,6 +52,14 @@ public class HorarioSeccion {
 		return h;
 	}
 
+	/**
+	 * Registra que cambió el horario aunque esta fila no cambie (solo cambiaron sus bloques): al guardar, la versión
+	 * sube exactamente 1 y {@code actualizado_en} se renueva.
+	 */
+	public void marcarModificado() {
+		this.actualizadoEn = Instant.now();
+	}
+
 	@PrePersist
 	void alCrear() {
 		creadoEn = Instant.now();
