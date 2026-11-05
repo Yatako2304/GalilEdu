@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Pasa las celdas del horario a bloques con horas reales y docente. DUEÑO: Jose (HU-45). Lo usan el PUT, el GET y el
+ * Pasa las celdas del horario a bloques con horas reales y docente. DUEÑA: Valeria (HU-45). Lo usan el PUT, el GET y el
  * endpoint de cruces. Hoy responde {@code ConversorDeBloquesStub}.
  */
 public interface ConversorDeBloques {

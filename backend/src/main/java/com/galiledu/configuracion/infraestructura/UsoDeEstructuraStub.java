@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 import com.galiledu.configuracion.aplicacion.UsoDeEstructura;
 import com.galiledu.configuracion.dominio.DiaSemana;
 
-/** Stub del contrato de la Fase 0. TODO (Jose, HU-45): reemplazar por la lectura SQL de horarios.horario_bloque. */
+/** Stub del contrato de la Fase 0. TODO (Valeria, HU-45): reemplazar por la lectura SQL de horarios.horario_bloque. */
 @Component
 public class UsoDeEstructuraStub implements UsoDeEstructura {
 	@Override
