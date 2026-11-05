@@ -1233,3 +1233,105 @@ export type VistaPreviaJornada = {
   errores: string[];
   jornada: JornadaCalculada | null;
 };
+
+// ---------- Calificaciones del docente (HU-57, HU-59 y HU-62) ----------
+
+export type EscalaEvaluacion = 'VIGESIMAL' | 'CUALITATIVA';
+export type EstadoPeriodoCalificacion = 'PLANIFICADO' | 'EN_CURSO' | 'CERRADO';
+
+export type PeriodoCursoDocente = {
+  id: string;
+  numero: number;
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  fechaLimiteNotas: string;
+  estado: EstadoPeriodoCalificacion;
+  registroNotasAbierto: boolean;
+  competencias: number;
+  items: number;
+};
+
+export type CursoDocente = {
+  planCursoId: string;
+  seccionId: string;
+  anioEscolarId: string;
+  anio: number;
+  curso: string;
+  area: string;
+  gradoCodigo: string;
+  grado: string;
+  seccion: string;
+  escala: EscalaEvaluacion;
+  reglaNota: string;
+  consolidacion: string;
+  periodos: PeriodoCursoDocente[];
+};
+
+export type CompetenciaOpcion = { id: string; nombre: string };
+
+export type CompetenciaItem = {
+  competenciaId: string;
+  competencia: string;
+  pesoPorcentaje: number;
+};
+
+export type TipoItemEvaluacion =
+  | 'PRACTICA'
+  | 'EXAMEN'
+  | 'PROYECTO'
+  | 'TRABAJO_INDIVIDUAL'
+  | 'EXPOSICION'
+  | 'PORTAFOLIO'
+  | 'OTRO';
+
+export type ItemEvaluacion = {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  tipo: TipoItemEvaluacion;
+  actualizadoEn: string;
+  competencias: CompetenciaItem[];
+  editable: boolean;
+};
+
+export type SolicitudItemEvaluacion = {
+  nombre: string;
+  descripcion: string;
+  tipo: TipoItemEvaluacion;
+  competencias: {
+    competenciaId: string;
+    pesoPorcentaje: number;
+  }[];
+};
+
+export type EvidenciaCalificacion = {
+  nombreArchivo: string;
+  tipoMime: string;
+  tamanoBytes: number;
+  subidoEn: string;
+};
+
+export type FilaCalificacion = {
+  id: string | null;
+  matriculaId: string;
+  estudianteId: string;
+  estudiante: string;
+  notaNumerica: number | null;
+  nivelLogro: 'AD' | 'A' | 'B' | 'C' | null;
+  evidencia: EvidenciaCalificacion | null;
+  estado: 'PENDIENTE' | 'CALIFICADO';
+};
+
+export type TipoReporteCalificaciones = 'ITEM' | 'COMPETENCIA' | 'PERIODO';
+
+export type ReporteCalificaciones = {
+  titulo: string;
+  detalle: string;
+  columnas: { clave: string; titulo: string }[];
+  filas: {
+    matriculaId: string;
+    estudiante: string;
+    valores: Record<string, string>;
+  }[];
+};
