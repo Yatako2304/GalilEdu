@@ -9,6 +9,7 @@ import java.util.function.Supplier;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
@@ -107,6 +108,18 @@ public class ServicioEstructurasHorarias {
 	}
 
 	// ---------- Cambios ----------
+
+	/**
+	 * Para Horarios (HU-45): bloquea, con el mismo bloqueo y la misma clave que los cambios de estructuras, el año
+	 * hasta el fin de la transacción, de modo que guardar un horario y editar una estructura del año no se crucen.
+	 * Exige una transacción abierta: un bloqueo xact se libera al terminar la transacción que lo pidió, así que fuera
+	 * de
+	 * una no serviría de nada.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void bloquearAnioParaHorarios(UUID anioId) {
+		estructuraRepositorio.bloquearEstructurasDelAnio(anioId);
+	}
 
 	@Transactional
 	public EstructuraGuardada crearEstructuraHoraria(UUID anioId, SolicitudEstructuraHoraria solicitud) {
