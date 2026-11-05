@@ -58,6 +58,26 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				{"competenciaId":"%s"}""".formatted(id);
 	}
 
+	private void crearItemDeAlgebra() {
+		String plan = idPlan("Álgebra");
+		String competencia = idCompetencia("Resuelve problemas de regularidad, equivalencia y cambio");
+		jdbc.sql("""
+				INSERT INTO academico.item_evaluacion
+				    (id, plan_curso_id, anio_escolar_id, grado_codigo, seccion_id, periodo_academico_id,
+				     nombre, descripcion, tipo, creado_por)
+				SELECT '80000000-0000-0000-0000-000000000001', ?::uuid, ?::uuid, 'SEC-1', s.id, pa.id,
+				       'Práctica 1', 'Operaciones algebraicas', 'PRACTICA', ?::uuid
+				FROM configuracion.seccion s
+				JOIN configuracion.periodo_academico pa ON pa.anio_escolar_id = s.anio_escolar_id AND pa.numero = 4
+				WHERE s.anio_escolar_id = ?::uuid AND s.grado_codigo = 'SEC-1' AND s.nombre = 'A'""")
+				.params(plan, ANIO_2026, MARIA_FERNANDEZ, ANIO_2026).update();
+		jdbc.sql("""
+				INSERT INTO academico.item_competencia
+				    (item_evaluacion_id, plan_curso_id, competencia_id, peso_porcentaje)
+				VALUES ('80000000-0000-0000-0000-000000000001', ?::uuid, ?::uuid, 100)""")
+				.params(plan, competencia).update();
+	}
+
 	// ---------- Consultas ----------
 
 	@Test
@@ -160,6 +180,36 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				personal))
 				.andExpect(jsonPath("$.cursos[?(@.curso == 'Aritmética')].escala").value(
 						org.hamcrest.Matchers.contains("VIGESIMAL")));
+	}
+
+	@Test
+	void agregaUnaCompetenciaAAlgebraSinEliminarLaQueYaUsaUnItem() throws Exception {
+		crearItemDeAlgebra();
+		String plan = idPlan("Álgebra");
+		String cantidad = idCompetencia("Resuelve problemas de cantidad");
+		String regularidad = idCompetencia("Resuelve problemas de regularidad, equivalencia y cambio");
+
+		mvc.perform(conToken(put("/planes-evaluacion/" + plan), personal, """
+				{"horasSemanales":3,"competencias":[%s,%s]}"""
+				.formatted(competencia(cantidad), competencia(regularidad))))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.competencias[?(@.competenciaId == '%s')].seleccionada".formatted(cantidad))
+						.value(org.hamcrest.Matchers.contains(true)))
+				.andExpect(jsonPath("$.competencias[?(@.competenciaId == '%s')].seleccionada".formatted(regularidad))
+						.value(org.hamcrest.Matchers.contains(true)));
+	}
+
+	@Test
+	void noQuitaUnaCompetenciaQueYaTieneItemsDeEvaluacion() throws Exception {
+		crearItemDeAlgebra();
+		String plan = idPlan("Álgebra");
+		String cantidad = idCompetencia("Resuelve problemas de cantidad");
+
+		mvc.perform(conToken(put("/planes-evaluacion/" + plan), personal, """
+				{"horasSemanales":3,"competencias":[%s]}""".formatted(competencia(cantidad))))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value(
+						"No se puede quitar la competencia \"Resuelve problemas de regularidad, equivalencia y cambio\" porque ya tiene ítems de evaluación."));
 	}
 
 	@Test
