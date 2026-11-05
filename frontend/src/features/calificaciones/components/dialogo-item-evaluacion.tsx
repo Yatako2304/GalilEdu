@@ -40,18 +40,47 @@ type Props = {
   seleccion: SeleccionPeriodo;
   periodo: string;
   competencias: CompetenciaOpcion[];
+  pesoAsignadoPorCompetencia: ReadonlyMap<string, number>;
   item?: ItemEvaluacion;
   onCerrar: () => void;
 };
+
+const redondearPeso = (peso: number) => Math.round(peso * 100) / 100;
 
 export const DialogoItemEvaluacion = ({
   seleccion,
   periodo,
   competencias,
+  pesoAsignadoPorCompetencia,
   item,
   onCerrar,
 }: Props) => {
   const { addNotification } = useNotifications();
+  const pesoActualPorCompetencia = React.useMemo(
+    () =>
+      new Map(
+        item?.competencias.map(
+          (competencia) =>
+            [competencia.competenciaId, competencia.pesoPorcentaje] as const,
+        ) ?? [],
+      ),
+    [item],
+  );
+  const pesoMaximo = React.useCallback(
+    (competenciaId: string) =>
+      redondearPeso(
+        Math.max(
+          0,
+          100 -
+            (pesoAsignadoPorCompetencia.get(competenciaId) ?? 0) +
+            (pesoActualPorCompetencia.get(competenciaId) ?? 0),
+        ),
+      ),
+    [pesoActualPorCompetencia, pesoAsignadoPorCompetencia],
+  );
+  const primeraCompetenciaDisponible = competencias.find(
+    (competencia) => pesoMaximo(competencia.id) > 0,
+  );
   const [nombre, setNombre] = React.useState(item?.nombre ?? '');
   const [descripcion, setDescripcion] = React.useState(item?.descripcion ?? '');
   const [tipo, setTipo] = React.useState<TipoItemEvaluacion>(
@@ -62,7 +91,12 @@ export const DialogoItemEvaluacion = ({
       competenciaId: c.competenciaId,
       pesoPorcentaje: String(c.pesoPorcentaje),
     })) ?? [
-      { competenciaId: competencias[0]?.id ?? '', pesoPorcentaje: '100' },
+      {
+        competenciaId: primeraCompetenciaDisponible?.id ?? '',
+        pesoPorcentaje: primeraCompetenciaDisponible
+          ? String(pesoMaximo(primeraCompetenciaDisponible.id))
+          : '',
+      },
     ],
   );
   const [error, setError] = React.useState('');
@@ -99,6 +133,20 @@ export const DialogoItemEvaluacion = ({
       setError('Una competencia no puede repetirse en el mismo ítem.');
       return;
     }
+    const filaSinCupo = filas.find(
+      (fila) => Number(fila.pesoPorcentaje) > pesoMaximo(fila.competenciaId),
+    );
+    if (filaSinCupo) {
+      const competencia = competencias.find(
+        (actual) => actual.id === filaSinCupo.competenciaId,
+      );
+      setError(
+        `${competencia?.nombre ?? 'La competencia'} solo tiene ${pesoMaximo(
+          filaSinCupo.competenciaId,
+        )} % de peso disponible.`,
+      );
+      return;
+    }
     const datos: SolicitudItemEvaluacion = {
       nombre: nombre.trim(),
       descripcion: descripcion.trim(),
@@ -125,7 +173,11 @@ export const DialogoItemEvaluacion = ({
   return (
     <Dialog open onOpenChange={(abierto) => !abierto && onCerrar()}>
       <DialogContent className="flex max-h-[92vh] max-w-[760px] flex-col gap-0 overflow-hidden rounded-xl border-stroke-tertiary bg-white p-0">
-        <form onSubmit={guardar} className="flex min-h-0 flex-1 flex-col">
+        <form
+          noValidate
+          onSubmit={guardar}
+          className="flex min-h-0 flex-1 flex-col"
+        >
           <div className="flex-1 space-y-5 overflow-y-auto p-6">
             <div>
               <DialogDescription className="mb-2 flex items-center gap-2 text-body-4 text-content-quartiary">
@@ -202,20 +254,28 @@ export const DialogoItemEvaluacion = ({
                     options={competencias.map((c) => ({
                       label: c.nombre,
                       value: c.id,
-                      disabled: filas.some(
-                        (otra, otroIndice) =>
-                          otroIndice !== indice && otra.competenciaId === c.id,
-                      ),
+                      disabled:
+                        (pesoMaximo(c.id) <= 0 &&
+                          c.id !== fila.competenciaId) ||
+                        filas.some(
+                          (otra, otroIndice) =>
+                            otroIndice !== indice &&
+                            otra.competenciaId === c.id,
+                        ),
                     }))}
-                    onChange={(e) =>
-                      actualizarFila(indice, { competenciaId: e.target.value })
-                    }
+                    onChange={(e) => {
+                      const competenciaId = e.target.value;
+                      actualizarFila(indice, {
+                        competenciaId,
+                        pesoPorcentaje: String(pesoMaximo(competenciaId)),
+                      });
+                    }}
                   />
                   <Input
                     label="Peso en % *"
                     type="number"
                     min="0.01"
-                    max="100"
+                    max={pesoMaximo(fila.competenciaId)}
                     step="0.01"
                     value={fila.pesoPorcentaje}
                     onChange={(e) =>
@@ -245,21 +305,33 @@ export const DialogoItemEvaluacion = ({
                 size="sm"
                 icon={<Plus className="size-4" />}
                 iconPosition="right"
-                disabled={filas.length >= competencias.length}
+                disabled={
+                  !competencias.some(
+                    (competencia) =>
+                      pesoMaximo(competencia.id) > 0 &&
+                      !filas.some(
+                        (fila) => fila.competenciaId === competencia.id,
+                      ),
+                  )
+                }
                 onClick={() =>
-                  setFilas((actuales) => [
-                    ...actuales,
-                    {
-                      competenciaId:
-                        competencias.find(
-                          (c) =>
-                            !actuales.some(
-                              (fila) => fila.competenciaId === c.id,
-                            ),
-                        )?.id ?? '',
-                      pesoPorcentaje: '100',
-                    },
-                  ])
+                  setFilas((actuales) => {
+                    const competencia = competencias.find(
+                      (actual) =>
+                        pesoMaximo(actual.id) > 0 &&
+                        !actuales.some(
+                          (fila) => fila.competenciaId === actual.id,
+                        ),
+                    );
+                    if (!competencia) return actuales;
+                    return [
+                      ...actuales,
+                      {
+                        competenciaId: competencia.id,
+                        pesoPorcentaje: String(pesoMaximo(competencia.id)),
+                      },
+                    ];
+                  })
                 }
               >
                 Agregar competencia
