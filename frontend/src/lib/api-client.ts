@@ -34,7 +34,8 @@ export const tokenStorage = {
 
 function authRequestInterceptor(config: InternalAxiosRequestConfig) {
   if (config.headers) {
-    config.headers.Accept = 'application/json';
+    config.headers.Accept =
+      config.responseType === 'blob' ? '*/*' : 'application/json';
     const token = tokenStorage.get();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

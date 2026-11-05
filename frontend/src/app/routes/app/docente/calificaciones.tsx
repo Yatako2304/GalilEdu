@@ -1,14 +1,13 @@
 import { ContentLayout } from '@/components/layouts';
-import { ModulePlaceholder } from '@/components/module-placeholder';
+import { CalificacionesDocente } from '@/features/calificaciones/components/calificaciones-docente';
 
 const DocenteCalificacionesRoute = () => {
   return (
-    <ContentLayout title="Calificaciones">
-      <ModulePlaceholder
-        feature="calificaciones"
-        historias={['HU-62']}
-        figmaNodeId="629:11540"
-      />
+    <ContentLayout
+      title="Calificaciones"
+      subtitle="Registra y consulta las notas de tus estudiantes por periodo lectivo."
+    >
+      <CalificacionesDocente />
     </ContentLayout>
   );
 };
