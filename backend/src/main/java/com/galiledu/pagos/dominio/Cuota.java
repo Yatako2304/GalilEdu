@@ -1,7 +1,9 @@
 package com.galiledu.pagos.dominio;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -122,6 +124,35 @@ public class Cuota {
 		return CONCEPTO_PENSION.equals(conceptoCodigo)
 				&& estado != EstadoCuota.PAGADA && estado != EstadoCuota.ANULADA
 				&& hoy.isAfter(fechaVencimiento.plusDays(diasGracia));
+	}
+
+	/** Capital que falta pagar: monto base menos descuento menos lo ya pagado (nunca negativo). */
+	public BigDecimal capitalPendiente() {
+		return montoBase.subtract(montoDescuento).subtract(montoPagado).max(BigDecimal.ZERO);
+	}
+
+	/** Días desde el vencimiento hasta hoy (0 si aún no vence). */
+	public int diasAtraso(LocalDate hoy) {
+		return (int) Math.max(0, ChronoUnit.DAYS.between(fechaVencimiento, hoy));
+	}
+
+	/**
+	 * RF-92: recargo por mora de una pensión vencida (RF-91). Se cobra la tasa del tarifario por cada 30 días completos
+	 * de
+	 * atraso sobre el capital pendiente, sin capitalizar, y nunca más que el tope (porcentaje del capital). Figma P11:
+	 * S/ 600 con 63 días de atraso y tasa 2 % → 2 × 2 % × 600 = S/ 24; con 32 días → S/ 12.
+	 */
+	public BigDecimal recargo(LocalDate hoy, int diasGracia, BigDecimal tasa, BigDecimal tope) {
+		if (!estaVencida(hoy, diasGracia)) {
+			return BigDecimal.ZERO;
+		}
+		BigDecimal capital = capitalPendiente();
+		long periodos = diasAtraso(hoy) / 30;
+		BigDecimal cien = BigDecimal.valueOf(100);
+		BigDecimal recargo = capital.multiply(tasa).multiply(BigDecimal.valueOf(periodos))
+				.divide(cien, 2, RoundingMode.HALF_UP);
+		BigDecimal maximo = capital.multiply(tope).divide(cien, 2, RoundingMode.HALF_UP);
+		return recargo.min(maximo);
 	}
 
 	public boolean estaActiva() {
