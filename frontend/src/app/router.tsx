@@ -270,6 +270,14 @@ export const createAppRouter = (
               paths.app.apoderado.pensiones.path,
               () => import('./routes/app/apoderado/pensiones'),
             ],
+            [
+              paths.app.apoderado.resultadoPago.path,
+              () => import('./routes/app/apoderado/resultado-pago'),
+            ],
+            [
+              paths.app.apoderado.pasarelaSimulada.path,
+              () => import('./routes/app/apoderado/pasarela-simulada'),
+            ],
           ],
         ),
 

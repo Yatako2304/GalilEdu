@@ -1233,3 +1233,64 @@ export type VistaPreviaJornada = {
   errores: string[];
   jornada: JornadaCalculada | null;
 };
+
+// HU-41 · Pago en línea (backend: pagos/aplicacion/DtosPagoEnLinea.java).
+
+/** Cuota con saldo. `requiere`: pensiones anteriores del mismo hijo que se marcan junto con esta. */
+export type CuotaPorPagar = {
+  cuotaId: string;
+  concepto: string;
+  numero: number | null;
+  nombre: string;
+  anio: number;
+  fechaVencimiento: string;
+  capital: number;
+  recargo: number;
+  total: number;
+  vencida: boolean;
+  estado: EstadoCuota;
+  seleccionable: boolean;
+  requiere: string[];
+};
+
+export type EstudianteConCuotas = {
+  estudianteId: string;
+  nombre: string;
+  cuotas: CuotaPorPagar[];
+};
+
+export type CuotasPorPagar = { estudiantes: EstudianteConCuotas[] };
+
+export type OrdenCreada = {
+  codigo: string;
+  total: number;
+  expiraEn: string;
+  urlPago: string;
+};
+
+export type EstadoOrdenPago =
+  'EN_PROCESO' | 'APROBADA' | 'RECHAZADA' | 'EXPIRADA';
+
+export type OrdenPagoDetalle = {
+  codigo: string;
+  estado: EstadoOrdenPago;
+  total: number;
+  montoConfirmado: number | null;
+  motivo: string | null;
+  creadoEn: string;
+  expiraEn: string;
+  urlPago: string | null;
+  cuotas: {
+    cuotaId: string;
+    estudiante: string;
+    nombre: string;
+    capital: number;
+    recargo: number;
+  }[];
+  constancias: {
+    numero: string;
+    estudiante: string;
+    monto: number;
+    estado: 'CONFIRMADO' | 'OBSERVADO';
+  }[];
+};

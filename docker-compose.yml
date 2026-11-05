@@ -48,6 +48,11 @@ services:
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
       MAIL_FROM: ${MAIL_FROM:-no-responder@galiledu.edu.pe}
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+      # Pago en línea (HU-41): "simulada" no cobra; con "stripe" se necesitan las llaves de Stripe.
+      PASARELA_PAGOS: ${PASARELA_PAGOS:-simulada}
+      URL_FRONTEND: ${URL_PUBLICA:-http://localhost}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/actuator/health || exit 1"]
       interval: 10s

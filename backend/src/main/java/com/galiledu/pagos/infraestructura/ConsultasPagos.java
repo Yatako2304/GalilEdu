@@ -128,9 +128,9 @@ public class ConsultasPagos {
 						       coalesce(sum(q.monto_final) FILTER (WHERE q.estado <> 'ANULADA'), 0),
 						       coalesce(sum(q.monto_pagado) FILTER (WHERE q.estado <> 'ANULADA'), 0),
 						       coalesce(sum(q.monto_final - q.monto_pagado) FILTER (WHERE q.concepto_codigo = 'PENSION'
-						           AND q.estado NOT IN ('PAGADA', 'ANULADA') AND q.fecha_vencimiento + t.dias_gracia < :hoy), 0),
+						           AND q.estado NOT IN ('PAGADA', 'ANULADA', 'EN_PROCESO') AND q.fecha_vencimiento + t.dias_gracia < :hoy), 0),
 						       count(q.id) FILTER (WHERE q.concepto_codigo = 'PENSION'
-						           AND q.estado NOT IN ('PAGADA', 'ANULADA') AND q.fecha_vencimiento + t.dias_gracia < :hoy)
+						           AND q.estado NOT IN ('PAGADA', 'ANULADA', 'EN_PROCESO') AND q.fecha_vencimiento + t.dias_gracia < :hoy)
 						FROM pagos.compromiso_pago c
 						JOIN configuracion.anio_escolar a ON a.id = c.anio_escolar_id
 						JOIN pagos.tarifario t ON t.id = c.tarifario_id
@@ -170,7 +170,7 @@ public class ConsultasPagos {
 				JOIN estudiantes.estudiante e ON e.id = c.estudiante_id
 				JOIN personas.persona p ON p.id = e.persona_id
 				WHERE c.estudiante_id IN (:ids) AND c.estado = 'VIGENTE'
-				  AND q.concepto_codigo = 'PENSION' AND q.estado NOT IN ('PAGADA', 'ANULADA')
+				  AND q.concepto_codigo = 'PENSION' AND q.estado NOT IN ('PAGADA', 'ANULADA', 'EN_PROCESO')
 				  AND q.fecha_vencimiento + t.dias_gracia < :hoy
 				ORDER BY q.fecha_vencimiento, 2""")
 				.param("ids", estudianteIds)
@@ -178,6 +178,45 @@ public class ConsultasPagos {
 				.query((rs, i) -> new CuotaVencidaFila(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
 						rs.getObject(4, LocalDate.class), rs.getBigDecimal(5)))
 				.list();
+	}
+
+	public record EstudianteACargo(UUID id, String nombre) {
+	}
+
+	/**
+	 * HU-41: estudiantes vinculados al usuario como padre, madre o apoderado. Cualquiera de ellos puede pagar (acta del
+	 * PO, 30/10: "ambos padres pueden consultar y pagar").
+	 */
+	public List<EstudianteACargo> estudiantesDelUsuario(UUID usuarioId) {
+		return jdbc.sql("""
+				SELECT DISTINCT e.id, concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno) AS nombre
+				FROM seguridad.usuario u
+				JOIN estudiantes.vinculo_familiar v ON v.persona_id = u.persona_id
+				JOIN estudiantes.estudiante e ON e.id = v.estudiante_id
+				JOIN personas.persona p ON p.id = e.persona_id
+				WHERE u.id = ? AND NOT e.eliminado
+				ORDER BY nombre""")
+				.param(usuarioId)
+				.query((rs, i) -> new EstudianteACargo(rs.getObject(1, UUID.class), rs.getString(2)))
+				.list();
+	}
+
+	/** OP-2026-000001 */
+	public String siguienteCodigoOrden(int anio) {
+		long n = jdbc.sql("SELECT nextval('pagos.orden_pago_codigo_seq')").query(Long.class).single();
+		return "OP-%d-%06d".formatted(anio, n);
+	}
+
+	/** C-2026-00008: siguiente número de constancia del año (correlativo_constancia). */
+	public String siguienteConstancia(int anio) {
+		int n = jdbc.sql("""
+				INSERT INTO pagos.correlativo_constancia (anio, ultimo) VALUES (:anio, 1)
+				ON CONFLICT (anio) DO UPDATE SET ultimo = pagos.correlativo_constancia.ultimo + 1
+				RETURNING ultimo""")
+				.param("anio", anio)
+				.query(Integer.class)
+				.single();
+		return "C-%d-%05d".formatted(anio, n);
 	}
 
 	public record FilaCuotaMatricula(UUID cuotaId, UUID compromisoId, UUID estudianteId, int anio, String concepto,
