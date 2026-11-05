@@ -28,6 +28,7 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Button, Button icon | `Button` (`button`) | Acciones. Variantes `primary`, `secondary`, `primary-light`, `tertiary`, `error`, `error-light`; tamaños `lg`, `md`, `sm`. |
 | Text Field, Select, Text Area | `Input`, `Select`, `Textarea` (`form`) | Campos con etiqueta, ayuda y error. `Input` acepta `startAdornment` (texto o ícono corto al inicio, como el "S/" de un monto) y `endAdornment` (al final). Con react-hook-form pasa `registration={register('campo')}`. En un `Select` opcional agrega `vaciable` (con `placeholder`): "Selecciona" pasa a ser una opción elegible para volver a dejar el campo sin valor (`''`). `Textarea` con `maxLength` y `showCount` muestra el contador "12/100". En `Input` (también con `type="date"`), `Select`, `Textarea` y `DatePicker` la etiqueta flota sobre el borde superior, como en Figma: descansa dentro si el campo está vacío, sin foco y sin `placeholder`, y sube al enfocar, escribir, elegir o si hay `placeholder` o `startAdornment`. Así los campos de una misma fila quedan alineados. Las opciones de `Select` admiten `disabled`. Con `type="time"` la etiqueta queda arriba (el navegador siempre dibuja "--:--"), y en reposo una etiqueta larga se recorta con puntos suspensivos si no cabe. |
 | Tag Field | `TagField` (`form`) | Campo que acumula etiquetas (Enter o coma). Úsalo con `<Controller>`. |
+| Select múltiple | `MultiSelect` (`form`) | Selector que muestra las opciones elegidas como etiquetas removibles, como el campo de ítems del consolidado. |
 | Checkbox, Checkbox Label | `Checkbox` (`form`) | Casilla con etiqueta y ayuda opcionales. |
 | Radio Buttons, Radio Label | `Radio` (`form`) | Opción única; mismo `name` en el grupo. |
 | Radio Card, Checkbox Card | `RadioCard`, `CheckboxCard` (`form`) | Opciones grandes en tarjeta, con ícono opcional. |
@@ -43,7 +44,7 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Dropdown Item, Dropdown Item List | `DropdownMenu` (`dropdown`) | Menú ⋮ de una fila. |
 | cell-table, cell-table-header | `Table` (`table`) | Tablas con columnas declarativas. |
 | Pagination, Count | `PaginationBar` (`table`) | "Mostrando 1-10 de 200" con flechas y números. |
-| Informative Tag | `Tag` (`tag`) | Etiqueta de solo lectura: `primary`, `info`, `success`, `warning`, `error`, `neutral`. |
+| Informative Tag | `Tag` (`tag`) | Etiqueta de solo lectura: `primary`, `info`, `success`, `warning`, `error`, `neutral`. Usa `appearance="outline"` para los estados delineados de Figma. |
 | Status | `Status` (`tag`) | Punto + "Activo" / "Inactivo". |
 | Selectable Tag(s) | `SelectableTag` (`tag`) | Etiqueta que se marca (filtros). Con `onRemove` muestra la X para quitarla. Con `readOnly` (y `shape="circle"`, `size="md"`) es la pastilla de estado de una tabla ("Programado", "Abierto", "Cerrado"): un `<span>`, no un botón. |
 | Stat Card | `StatCard` (`stat-card`) | Indicador (KPI) con ícono, valor y etiqueta. |

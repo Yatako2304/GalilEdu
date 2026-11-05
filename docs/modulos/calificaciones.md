@@ -2,7 +2,7 @@
 
 - **HU:** HU-57, HU-59 y HU-62
 - **Estado:** ✅ terminado: backend, frontend, pruebas automatizadas y validación manual implementados
-- **Última actualización:** 2026-11-04
+- **Última actualización:** 2026-11-05
 
 ## Alcance
 
@@ -20,19 +20,21 @@ La escala, la regla de cálculo y la consolidación no se eligen en esta pantall
 
 | HU | Qué | Estado | Reglas principales |
 | --- | --- | --- | --- |
-| HU-57 | Registro de criterios e ítems de evaluación de un curso | ✅ | El ítem pertenece a un curso, sección y periodo. Tiene nombre, criterio, tipo y una o más competencias del plan; cada asociación lleva un peso de 0,01 a 100. |
+| HU-57 | Registro de criterios e ítems de evaluación de un curso | ✅ | El ítem pertenece a un curso, sección y periodo. Tiene nombre, criterio, tipo y una o más competencias del plan; cada asociación lleva un peso de 0,01 a 100 y la suma por competencia no supera 100 %. |
 | HU-59 | Registro de calificación de un ítem | ✅ | Una nota por estudiante matriculado e ítem. VIGESIMAL admite 0–20; CUALITATIVA admite AD, A, B o C. Puede adjuntar un PDF, DOC, DOCX, JPG o PNG de hasta 10 MB. |
-| HU-62 | Reporte de notas de un curso | ✅ | Consulta por ítem, competencia y periodo; usa la regla del año para calcular resultados y permite exportar CSV. |
+| HU-62 | Consolidado de notas de un curso | ✅ | Selecciona los ítems de una competencia, muestra sus notas y, cuando se solicita, calcula el promedio final con la regla del año; permite exportar CSV. |
 
 ## Pantallas (Figma)
 
 | Flujo | Frames revisados | Implementación |
 | --- | --- | --- |
-| Configurar ítems | `738:20655` y modal `738:20344` | **Configurar ítems**, con vistas **Ítems de evaluación** e **Ítems por competencia** |
-| Calificar alumnos | `631:14676`, con estados previos `629:11540` y `629:11893` | Pestaña **Calificar alumnos** |
-| Ver y exportar notas | `648:17853` y detalle `631:16187` | Pestaña **Ver calificaciones** |
+| Configurar ítems | `738:20655` y modal `738:20344` | Botón **Configuración de ítems** → **Configurar ítems**, con vistas **Ítems de evaluación** e **Ítems por competencia** |
+| Calificar alumnos | `631:14676`, con estados previos `629:11540` y `629:11893` | Botón **Configuración de ítems** → pestaña **Calificar alumnos** |
+| Consolidar y exportar notas | `648:17853` y detalle `631:16187` | Botón **Consolidado de notas**, con los filtros, selección múltiple de ítems, interruptor de promedio final y tabla agrupada de Figma |
 
-La pantalla conserva los filtros separados de año, curso, grado, sección y área, las tarjetas de periodos y los componentes del catálogo UI del repositorio. Las tablas usan columnas de ancho estable para evitar desplazamientos entre encabezados y celdas. La vista por competencia agrupa sus ítems, muestra el peso de cada uno e indica si la suma alcanza 100 %.
+Debajo del encabezado **Calificaciones**, dos pestañas con apariencia de botón separan **Configuración de ítems** y **Consolidado de notas**, según el ajuste solicitado por josezavaleta. La primera contiene los filtros de curso y sección, las tarjetas de periodos y las pestañas **Configurar ítems** y **Calificar alumnos**; la segunda muestra únicamente el flujo del consolidado.
+
+La pantalla conserva los filtros separados de año, curso, grado, sección y área, las tarjetas de periodos y los componentes del catálogo UI del repositorio. Las tablas usan columnas de ancho estable para evitar desplazamientos entre encabezados y celdas. La vista por competencia agrupa sus ítems, muestra el peso de cada uno e indica con una etiqueta verde si la suma alcanza 100 % o con una etiqueta roja si todavía está incompleta. Cuando una competencia alcanza 100 %, deja de estar disponible para nuevos ítems.
 
 ## Base de datos
 
@@ -53,10 +55,12 @@ V11 agrega restricciones `UNIQUE` compuestas a `academico.plan_curso`, `configur
 - El backend valida la asignación en `academico.docente_seccion` en cada operación; conocer un identificador de otro curso no concede acceso.
 - Los datos históricos se consultan, pero solo se crean o modifican ítems, notas y evidencias cuando el año está `ACTIVO` y la fecha está entre el inicio del periodo y `fecha_limite_notas`, ambos inclusive.
 - No se elimina un ítem que ya tiene calificaciones.
+- La suma de los pesos de una competencia dentro del mismo curso, sección y periodo no puede superar 100 %. La validación se repite en el backend y serializa las altas y ediciones del mismo plan de curso para evitar sobreasignaciones simultáneas.
 - Una calificación vacía elimina la nota y su evidencia. Para adjuntar evidencia primero debe existir la calificación.
 - `PROMEDIO_SIMPLE` promedia los ítems calificados. `PROMEDIO_PONDERADO` usa los pesos de los ítems calificados y normaliza por la suma de esos pesos.
 - `NIVEL_MAS_FRECUENTE` elige el nivel más repetido; si hay empate, prevalece el nivel de logro mayor. `ULTIMO_NIVEL` toma el último ítem registrado.
-- En los reportes de periodo se calcula un resultado por cada competencia que tenga ítems en el periodo.
+- El consolidado muestra una columna por cada ítem seleccionado. Si se activa **Incluir promedio final**, agrega la última columna con el promedio y el estado Aprobado, Desaprobado o Pendiente.
+- Para la escala vigesimal, el estado Aprobado empieza en el rango A de la tabla de conversión vigente en la fecha de inicio del periodo. Para la escala cualitativa, A y AD son aprobatorios.
 - Las descargas usan el tipo MIME real del archivo: CSV para reportes y el tipo guardado para evidencias.
 
 ## API
@@ -71,8 +75,8 @@ Todas las rutas usan el prefijo `/api/calificaciones/docente` y requieren rol Do
 | PUT · DELETE | `/items/{itemId}` | Edita o elimina un ítem. |
 | GET · PUT | `/items/{itemId}/calificaciones` | Lista estudiantes con su nota y guarda el lote de calificaciones. |
 | POST · GET · DELETE | `/items/{itemId}/calificaciones/{matriculaId}/evidencia` | Sube, descarga o elimina la evidencia. |
-| GET | `/reportes?tipo=&planCursoId=&seccionId=&periodoId=&objetivoId=` | Reporte `ITEM`, `COMPETENCIA` o `PERIODO`. |
-| GET | `/reportes/exportar` | El mismo reporte en CSV UTF-8. |
+| GET | `/reportes?tipo=&planCursoId=&seccionId=&periodoId=&objetivoId=&itemIds=&incluirPromedio=` | Genera el consolidado de los ítems seleccionados para una competencia. Las variantes `ITEM` y `PERIODO` se mantienen disponibles en el servicio. |
+| GET | `/reportes/exportar` | El mismo consolidado en CSV UTF-8. |
 
 ## Código y pruebas
 
