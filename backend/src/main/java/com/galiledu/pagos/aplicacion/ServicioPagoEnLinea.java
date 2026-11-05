@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -188,6 +189,17 @@ public class ServicioPagoEnLinea {
 						throw ExcepcionNegocio.invalido("Primero paga la «" + anterior.getNombre() + "» de "
 								+ q.getCompromiso().getEstudianteNombre() + ": las pensiones se pagan en orden.");
 					});
+			// CAHU31-2: la matrícula de un hijo se paga cuando ese hijo no tiene pensiones vencidas (o se pagan junto).
+			if (q.esMatricula()) {
+				LocalDate hoy = LocalDate.now(reloj);
+				boolean debe = todas.get(q.getCompromiso().getEstudianteId()).stream()
+						.anyMatch(o -> o.esPagable() && !ids.contains(o.getId())
+								&& o.estaVencida(hoy, o.getCompromiso().getDiasGracia()));
+				if (debe) {
+					throw ExcepcionNegocio.invalido("Primero paga las pensiones vencidas de "
+							+ q.getCompromiso().getEstudianteNombre() + " para pagar la matrícula.");
+				}
+			}
 		}
 	}
 
@@ -295,6 +307,7 @@ public class ServicioPagoEnLinea {
 				.stream().collect(Collectors.toMap(Cuota::getId, Function.identity()));
 		Map<UUID, Pago> porEstudiante = new LinkedHashMap<>();
 		List<UUID> pagadas = new ArrayList<>();
+		List<UUID> matriculas = new ArrayList<>();
 		for (OrdenPago.Linea linea : orden.getLineas()) {
 			Cuota q = porId.get(linea.getCuotaId());
 			Pago pago = porEstudiante.computeIfAbsent(q.getCompromiso().getEstudianteId(),
@@ -304,6 +317,9 @@ public class ServicioPagoEnLinea {
 			q.registrarPago(linea.getCapital(), ahora.toLocalDate());
 			if (q.getEstado() == EstadoCuota.PAGADA) {
 				pagadas.add(q.getId());
+				if (q.esMatricula() && q.getCompromiso().getMatriculaId() != null) {
+					matriculas.add(q.getCompromiso().getMatriculaId());
+				}
 			}
 		}
 		if (montoConfirmado != null && montoConfirmado.compareTo(orden.getMontoTotal()) != 0) {
@@ -314,7 +330,8 @@ public class ServicioPagoEnLinea {
 		}
 		pagos.saveAll(porEstudiante.values());
 		orden.aprobar(montoConfirmado, ahora);
-		eventos.publishEvent(new PagoEnLineaAprobado(orden.getId(), orden.getCodigo(), orden.getUsuarioId(), pagadas));
+		eventos.publishEvent(
+				new PagoEnLineaAprobado(orden.getId(), orden.getCodigo(), orden.getUsuarioId(), pagadas, matriculas));
 	}
 
 	private void cerrarSinPago(OrdenPago orden, EstadoOrdenPago estado, String motivo) {
@@ -335,8 +352,10 @@ public class ServicioPagoEnLinea {
 		Map<UUID, Cuota> porId = cuotas
 				.findAllById(orden.getLineas().stream().map(OrdenPago.Linea::getCuotaId).toList())
 				.stream().collect(Collectors.toMap(Cuota::getId, Function.identity()));
-		Map<UUID, String> nombres = porId.values().stream().collect(Collectors.toMap(
-				q -> q.getCompromiso().getEstudianteId(), q -> q.getCompromiso().getEstudianteNombre(), (a, b) -> a));
+		// Un HashMap (no Collectors.toMap) para tolerar un nombre aún no cargado.
+		Map<UUID, String> nombres = new HashMap<>();
+		porId.values().forEach(q -> nombres.putIfAbsent(q.getCompromiso().getEstudianteId(),
+				q.getCompromiso().getEstudianteNombre()));
 		List<LineaOrden> lineas = orden.getLineas().stream()
 				.map(l -> {
 					Cuota q = porId.get(l.getCuotaId());

@@ -195,3 +195,36 @@ test('indica cuando la deuda pertenece al hijo seleccionado', async () => {
     'Sofía Paredes tiene una deuda pendiente de S/ 600.00',
   );
 });
+
+test('con la documentación validada avisa de la cuota y muestra el pago', async () => {
+  await renderApp(
+    <ConsultaMatricula
+      hijos={hijos}
+      estudianteId="mateo"
+      estado={{
+        ...estado,
+        matricula: { ...estado.matricula!, estado: 'PENDIENTE_PAGO' },
+        pasoActual: 3,
+        pagoMatricula: {
+          cuotaId: 'cuota-matricula',
+          concepto: 'Matrícula 2027',
+          monto: 850,
+          fechaVencimiento: '2027-01-31',
+          estado: 'PENDIENTE',
+          responsable: 'Luis Paredes',
+          puedePagar: true,
+          motivo: null,
+        },
+      }}
+      isLoading={false}
+      onElegir={vi.fn()}
+      pagoMatricula={<p>Tarjeta de pago</p>}
+    />,
+  );
+
+  expect(screen.getByText('Documentación validada')).toBeInTheDocument();
+  expect(
+    screen.getByText(/Se generó la cuota de matrícula de S\/ 850.00/),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Tarjeta de pago')).toBeInTheDocument();
+});

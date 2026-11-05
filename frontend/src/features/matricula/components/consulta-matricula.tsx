@@ -1,4 +1,5 @@
 import { Check, ChevronDown } from 'lucide-react';
+import * as React from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
@@ -257,6 +258,8 @@ type ConsultaMatriculaProps = {
   estado?: EstadoMatriculaApoderado;
   isLoading: boolean;
   onElegir: (id: string) => void;
+  /** HU-31: tarjeta "Pago de matrícula" (la arma la ruta con el módulo de pagos). */
+  pagoMatricula?: React.ReactNode;
 };
 
 export const ConsultaMatricula = ({
@@ -265,6 +268,7 @@ export const ConsultaMatricula = ({
   estado,
   isLoading,
   onElegir,
+  pagoMatricula,
 }: ConsultaMatriculaProps) => {
   const elegido = hijos.find((hijo) => hijo.id === estudianteId);
   const impedimentos = estado?.impedimentos ?? [];
@@ -323,7 +327,20 @@ export const ConsultaMatricula = ({
         </Alert>
       )}
 
+      {/* Figma > HU-31: aviso de la cuota generada al validar la documentación. */}
+      {estado?.matricula?.estado === 'PENDIENTE_PAGO' &&
+        estado.pagoMatricula && (
+          <Alert type="warning" title="Documentación validada">
+            Se generó la cuota de matrícula de{' '}
+            {soles(estado.pagoMatricula.monto)}. Págala antes del{' '}
+            {fechaDeuda(estado.pagoMatricula.fechaVencimiento)} para confirmar
+            la matrícula.
+          </Alert>
+        )}
+
       <ProgresoMatricula pasoActual={estado?.pasoActual ?? 0} />
+
+      {pagoMatricula}
 
       {estado && estado.deuda.total > 0 && (
         <DeudaPendiente deuda={estado.deuda} />

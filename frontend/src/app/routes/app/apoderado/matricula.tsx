@@ -11,6 +11,7 @@ import {
   datosResumenMatricula,
   fechaPeriodo,
 } from '@/features/matricula/components/consulta-matricula';
+import { PagoMatriculaApoderado } from '@/features/pagos/components/pago-matricula-apoderado';
 
 const ApoderadoMatriculaRoute = () => {
   const hijos = useHijosApoderado();
@@ -61,6 +62,11 @@ const ApoderadoMatriculaRoute = () => {
         estado={estado.data}
         isLoading={hijos.isLoading || estado.isLoading}
         onElegir={setElegido}
+        pagoMatricula={
+          estado.data?.pagoMatricula ? (
+            <PagoMatriculaApoderado pago={estado.data.pagoMatricula} />
+          ) : undefined
+        }
       />
     </ContentLayout>
   );

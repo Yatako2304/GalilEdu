@@ -1,6 +1,7 @@
 package com.galiledu.matricula.aplicacion;
 
 import java.math.BigDecimal;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,12 +20,16 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.EstudianteMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.HijoApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.Impedimento;
 import com.galiledu.matricula.aplicacion.DtosMatricula.MatriculaActual;
+import com.galiledu.matricula.aplicacion.DtosMatricula.PagoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PeriodoMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.HijoFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.MatriculaFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.PeriodoFila;
+import com.galiledu.pagos.aplicacion.DtosPagos.CuotaMatriculaDetalle;
+import com.galiledu.pagos.aplicacion.ServicioCuotaMatricula;
 import com.galiledu.pagos.aplicacion.ServicioEstadoCuenta;
+import com.galiledu.pagos.dominio.EstadoCuota;
 
 /**
  * HU-27 (consulta del periodo y estado de matrícula) y HU-30 (validación de deuda). Componente "Proceso de
@@ -34,10 +39,15 @@ import com.galiledu.pagos.aplicacion.ServicioEstadoCuenta;
 public class ServicioEstadoMatricula {
 	private final ConsultasMatricula consultas;
 	private final ServicioEstadoCuenta estadoCuenta;
+	private final ServicioCuotaMatricula cuotaMatricula;
+	private final Clock reloj;
 
-	public ServicioEstadoMatricula(ConsultasMatricula consultas, ServicioEstadoCuenta estadoCuenta) {
+	public ServicioEstadoMatricula(ConsultasMatricula consultas, ServicioEstadoCuenta estadoCuenta,
+			ServicioCuotaMatricula cuotaMatricula, Clock reloj) {
 		this.consultas = consultas;
 		this.estadoCuenta = estadoCuenta;
+		this.cuotaMatricula = cuotaMatricula;
+		this.reloj = reloj;
 	}
 
 	/** RF-58: hijos del apoderado con su grado y el estado de su matrícula en el periodo vigente. */
@@ -60,7 +70,7 @@ public class ServicioEstadoMatricula {
 
 		List<Impedimento> impedimentos = new ArrayList<>();
 		Optional<PeriodoFila> periodoFila = consultas.periodoVigente();
-		PeriodoMatricula periodo = periodoFila.map(ServicioEstadoMatricula::aPeriodo).orElse(null);
+		PeriodoMatricula periodo = periodoFila.map(this::aPeriodo).orElse(null);
 		if (periodo == null) {
 			impedimentos.add(new Impedimento("PERIODO", "Aún no hay un periodo de matrícula configurado."));
 		} else if (!periodo.abierto()) {
@@ -93,8 +103,37 @@ public class ServicioEstadoMatricula {
 		int paso = matricula == null ? 0 : pasoDe(matricula.estado());
 		boolean puedeContinuar = impedimentos.isEmpty() && matricula != null
 				&& !"MATRICULADO".equals(matricula.estado());
+		PagoMatricula pago = matricula == null
+				? null
+				: cuotaMatricula.buscar(matricula.id())
+						.map(c -> pagoMatricula(c, matricula, periodo, deuda, hijo))
+						.orElse(null);
 		return new EstadoMatriculaApoderado(new EstudianteMatricula(hijo.estudianteId(), hijo.nombre(), hijo.grado()),
-				periodo, matricula, paso, puedeContinuar, impedimentos, deuda);
+				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago);
+	}
+
+	/**
+	 * HU-31: la cuota de matrícula se paga en línea con la matrícula PENDIENTE_PAGO y el periodo abierto. Solo bloquea
+	 * la deuda vencida del propio hijo, no la de sus hermanos (acta del PO, 30/10; CAHU31-2).
+	 */
+	private static PagoMatricula pagoMatricula(CuotaMatriculaDetalle c, MatriculaActual m, PeriodoMatricula periodo,
+			DeudaFamiliar deuda, HijoFila hijo) {
+		String motivo = null;
+		if (!"PENDIENTE_PAGO".equals(m.estado())) {
+			motivo = "MATRICULADO".equals(m.estado())
+					? "La matrícula ya está confirmada."
+					: "La cuota se paga cuando el colegio valida la documentación.";
+		} else if (c.estado() == EstadoCuota.EN_PROCESO) {
+			motivo = "Tu pago está en proceso. Espera la confirmación de la pasarela.";
+		} else if (c.estado() == EstadoCuota.PAGADA) {
+			motivo = "La cuota ya está pagada; estamos confirmando la matrícula.";
+		} else if (periodo == null || !periodo.abierto()) {
+			motivo = "El periodo de matrícula no está abierto.";
+		} else if (deuda.cuotas().stream().anyMatch(q -> q.estudianteId().equals(hijo.estudianteId()))) {
+			motivo = "Primero paga las pensiones vencidas de " + hijo.nombre() + ".";
+		}
+		return new PagoMatricula(c.cuotaId(), c.concepto(), c.monto(), c.fechaVencimiento(), c.estado().name(),
+				c.responsable(), motivo == null, motivo);
 	}
 
 	private List<HijoFila> hijosDelUsuario(UUID usuarioId) {
@@ -113,8 +152,8 @@ public class ServicioEstadoMatricula {
 		return new DeudaFamiliar(total, cuotas);
 	}
 
-	private static PeriodoMatricula aPeriodo(PeriodoFila p) {
-		OffsetDateTime ahora = OffsetDateTime.now();
+	private PeriodoMatricula aPeriodo(PeriodoFila p) {
+		OffsetDateTime ahora = OffsetDateTime.now(reloj);
 		boolean abierto = "HABILITADO".equals(p.estado()) && !ahora.isBefore(p.inicio()) && !ahora.isAfter(p.cierre());
 		return new PeriodoMatricula(p.anio(), p.inicio(), p.cierre(), p.estado(), abierto);
 	}

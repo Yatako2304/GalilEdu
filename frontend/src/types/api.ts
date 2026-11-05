@@ -635,6 +635,20 @@ export type EstadoMatriculaApoderado = {
   puedeContinuar: boolean;
   impedimentos: ImpedimentoMatricula[];
   deuda: { total: number; cuotas: CuotaDeudaFamiliar[] };
+  /** HU-31: cuota de matrícula y si se puede pagar ya. Null mientras no exista. */
+  pagoMatricula?: PagoMatricula | null;
+};
+
+/** HU-31 · Igual a DtosMatricula.PagoMatricula. `motivo` explica por qué no se puede pagar. */
+export type PagoMatricula = {
+  cuotaId: string;
+  concepto: string;
+  monto: number;
+  fechaVencimiento: string;
+  estado: EstadoCuota;
+  responsable: string;
+  puedePagar: boolean;
+  motivo: string | null;
 };
 
 // ---------- Pagos y pensiones (HU-37) ----------

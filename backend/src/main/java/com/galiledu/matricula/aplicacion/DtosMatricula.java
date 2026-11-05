@@ -23,7 +23,16 @@ public final class DtosMatricula {
 			int pasoActual,
 			boolean puedeContinuar,
 			List<Impedimento> impedimentos,
-			DeudaFamiliar deuda) {
+			DeudaFamiliar deuda,
+			PagoMatricula pagoMatricula) {
+	}
+
+	/**
+	 * HU-31 · Figma "HU-31 Derivación a pagos" > "Pago de matrícula": la cuota de matrícula y si el apoderado puede
+	 * pagarla ahora. {@code motivo} explica por qué no, cuando {@code puedePagar} es false. Null si aún no hay cuota.
+	 */
+	public record PagoMatricula(UUID cuotaId, String concepto, BigDecimal monto, LocalDate fechaVencimiento,
+			String estado, String responsable, boolean puedePagar, String motivo) {
 	}
 
 	public record EstudianteMatricula(UUID id, String nombre, String grado) {

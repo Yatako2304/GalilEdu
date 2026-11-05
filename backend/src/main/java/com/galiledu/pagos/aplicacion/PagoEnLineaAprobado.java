@@ -9,6 +9,9 @@ import java.util.UUID;
  *
  * @param cuotaIds
  *            cuotas que quedaron pagadas por completo
+ * @param matriculasPagadas
+ *            matrículas cuya cuota de matrícula quedó pagada por completo con esta orden (HU-31)
  */
-public record PagoEnLineaAprobado(UUID ordenId, String codigoOrden, UUID usuarioId, List<UUID> cuotaIds) {
+public record PagoEnLineaAprobado(UUID ordenId, String codigoOrden, UUID usuarioId, List<UUID> cuotaIds,
+		List<UUID> matriculasPagadas) {
 }
