@@ -1,0 +1,300 @@
+package com.galiledu.horarios;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.empty;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.UUID;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.web.servlet.ResultActions;
+
+import com.galiledu.PruebaIntegracion;
+
+/**
+ * HU-45, Fase 1: los dos GET de lectura del horario. Cada prueba arma sus datos por SQL en 2027 (año PLANIFICADO, sin
+ * estructuras ni secciones): una estructura de 6 bloques de 45 min desde las 08:00 con un receso de 20 min después del
+ * bloque 3, y secciones propias. Todo se deshace al final.
+ */
+class HorarioLecturaIT extends PruebaIntegracion {
+	private static final UUID ANIO_2027 = UUID.fromString("30000000-0000-0000-0000-000000002027");
+	private static final String SIN_PRINCIPAL_SECUNDARIA = "Configura la estructura horaria principal de secundaria antes de asignar horarios.";
+
+	@Autowired
+	private JdbcClient jdbc;
+
+	// ---------- Datos de prueba ----------
+
+	private UUID estructura(String codigo, String nivel, boolean principal, int bloques) {
+		UUID id = jdbc.sql("""
+				INSERT INTO configuracion.estructura_horaria
+				    (anio_escolar_id, codigo, dias_lectivos, hora_entrada, bloques_por_dia, duracion_bloque_min, nivel,
+				     es_principal)
+				VALUES (:anio, :codigo, ARRAY['LUN','MAR','MIE','JUE','VIE']::varchar[], TIME '08:00', :bloques, 45,
+				        :nivel, :principal)
+				RETURNING id""")
+				.param("anio", ANIO_2027).param("codigo", codigo).param("bloques", bloques).param("nivel", nivel)
+				.param("principal", principal).query(UUID.class).single();
+		if (bloques >= 3) {
+			jdbc.sql("""
+					INSERT INTO configuracion.receso (estructura_horaria_id, despues_de_bloque, duracion_min)
+					VALUES (:id, 3, 20)""").param("id", id).update();
+		}
+		return id;
+	}
+
+	private UUID ambiente(String codigo, String estado) {
+		return jdbc.sql("""
+				INSERT INTO configuracion.ambiente (codigo, nombre, tipo, aforo_maximo, estado)
+				VALUES (:codigo, :nombre, 'AULA_REGULAR', 30, :estado) RETURNING id""")
+				.param("codigo", codigo).param("nombre", "Aula " + codigo).param("estado", estado)
+				.query(UUID.class).single();
+	}
+
+	private UUID docente() {
+		return jdbc.sql("SELECT id FROM seguridad.usuario WHERE nombre_usuario = :u").param("u", DOCENTE)
+				.query(UUID.class).single();
+	}
+
+	private UUID seccion(String grado, String nombre, UUID ambienteId, UUID tutorId) {
+		return jdbc.sql("""
+				INSERT INTO configuracion.seccion
+				    (anio_escolar_id, grado_codigo, nombre, capacidad_maxima, ambiente_id, tutor_id)
+				VALUES (:anio, :grado, :nombre, 30, :ambiente, :tutor) RETURNING id""")
+				.param("anio", ANIO_2027).param("grado", grado).param("nombre", nombre).param("ambiente", ambienteId)
+				.param("tutor", tutorId).query(UUID.class).single();
+	}
+
+	private UUID plan(String curso, int horas) {
+		return jdbc.sql("""
+				INSERT INTO academico.plan_curso (anio_escolar_id, grado_codigo, curso_id, horas_semanales)
+				SELECT :anio, 'SEC-1', c.id, :horas FROM academico.curso c WHERE c.nombre = :curso
+				RETURNING id""")
+				.param("anio", ANIO_2027).param("horas", horas).param("curso", curso).query(UUID.class).single();
+	}
+
+	private void asignarDocente(UUID planId, UUID seccionId, UUID docenteId) {
+		jdbc.sql("INSERT INTO academico.docente_seccion (plan_curso_id, seccion_id, docente_id) VALUES (:p, :s, :d)")
+				.param("p", planId).param("s", seccionId).param("d", docenteId).update();
+	}
+
+	private UUID cabecera(UUID seccionId, UUID estructuraId) {
+		return jdbc.sql("""
+				INSERT INTO horarios.horario_seccion (seccion_id, estructura_horaria_id)
+				VALUES (:s, :e) RETURNING id""").param("s", seccionId).param("e", estructuraId)
+				.query(UUID.class).single();
+	}
+
+	private void bloque(UUID cabeceraId, String dia, int numero, UUID planId, UUID ambienteId) {
+		jdbc.sql("""
+				INSERT INTO horarios.horario_bloque (horario_seccion_id, dia, numero_bloque, plan_curso_id, ambiente_id)
+				VALUES (:h, :dia, :n, :p, :a)""")
+				.param("h", cabeceraId).param("dia", dia).param("n", numero).param("p", planId)
+				.param("a", ambienteId).update();
+	}
+
+	private ResultActions pedir(String ruta, String usuario) throws Exception {
+		return mvc.perform(conToken(get(ruta), token(usuario), null));
+	}
+
+	private long cabeceras() {
+		return jdbc.sql("SELECT count(*) FROM horarios.horario_seccion").query(Long.class).single();
+	}
+
+	// ---------- GET /horarios/secciones/{id} ----------
+
+	@Test
+	void conCabeceraDevuelveLaMatrizConDocenteAmbienteYCurso() throws Exception {
+		UUID eh = estructura("EH-T-27", "SECUNDARIA", true, 6);
+		UUID aula = ambiente("TMP-A1", "ACTIVO");
+		UUID docente = docente();
+		UUID seccion = seccion("SEC-1", "T1", aula, docente);
+		UUID algebra = plan("Álgebra", 5);
+		asignarDocente(algebra, seccion, docente);
+		UUID cab = cabecera(seccion, eh);
+		bloque(cab, "LUN", 1, algebra, aula);
+		bloque(cab, "MIE", 4, algebra, aula);
+
+		pedir("/horarios/secciones/" + seccion, COORDINADOR).andExpect(status().isOk())
+				.andExpect(jsonPath("$.seccion.id").value(seccion.toString()))
+				.andExpect(jsonPath("$.seccion.nombre").value("T1"))
+				.andExpect(jsonPath("$.seccion.gradoNombre").value("1.° de secundaria"))
+				.andExpect(jsonPath("$.seccion.nivel").value("SECUNDARIA"))
+				.andExpect(jsonPath("$.seccion.anioEscolarId").value(ANIO_2027.toString()))
+				.andExpect(jsonPath("$.seccion.ambienteId").value(aula.toString()))
+				.andExpect(jsonPath("$.seccion.tutor.id").value(docente.toString()))
+				.andExpect(jsonPath("$.seccion.tutor.nombre").value(containsString("María")))
+				.andExpect(jsonPath("$.version").value(0)).andExpect(jsonPath("$.editable").value(true))
+				.andExpect(jsonPath("$.estructura.id").value(eh.toString()))
+				.andExpect(jsonPath("$.estructura.codigo").value("EH-T-27"))
+				.andExpect(jsonPath("$.estructura.principal").value(true))
+				.andExpect(jsonPath("$.jornada.dias[0]").value("LUN"))
+				.andExpect(jsonPath("$.jornada.dias", hasSize(5)))
+				.andExpect(jsonPath("$.jornada.bloques", hasSize(6)))
+				.andExpect(jsonPath("$.jornada.bloques[0].numero").value(1))
+				.andExpect(jsonPath("$.jornada.bloques[0].inicio").value("08:00"))
+				.andExpect(jsonPath("$.jornada.bloques[0].fin").value("08:45"))
+				.andExpect(jsonPath("$.jornada.bloques[3].inicio").value("10:35"))
+				.andExpect(jsonPath("$.jornada.recesos", hasSize(1)))
+				.andExpect(jsonPath("$.jornada.recesos[0].despuesDeBloque").value(3))
+				.andExpect(jsonPath("$.jornada.recesos[0].inicio").value("10:15"))
+				.andExpect(jsonPath("$.jornada.recesos[0].fin").value("10:35"))
+				.andExpect(jsonPath("$.celdas", hasSize(2)))
+				.andExpect(jsonPath("$.celdas[0].dia").value("LUN"))
+				.andExpect(jsonPath("$.celdas[0].numeroBloque").value(1))
+				.andExpect(jsonPath("$.celdas[0].planCursoId").value(algebra.toString()))
+				.andExpect(jsonPath("$.celdas[0].curso").value("Álgebra"))
+				.andExpect(jsonPath("$.celdas[0].docente.id").value(docente.toString()))
+				.andExpect(jsonPath("$.celdas[0].docente.nombre").value(containsString("María")))
+				.andExpect(jsonPath("$.celdas[0].ambiente.id").value(aula.toString()))
+				.andExpect(jsonPath("$.celdas[0].ambiente.nombre").value("Aula TMP-A1"))
+				// El validador de cruces es un stub: cada celda llega con la lista vacía.
+				.andExpect(jsonPath("$.celdas[0].cruces", empty()))
+				.andExpect(jsonPath("$.celdas[1].dia").value("MIE"))
+				.andExpect(jsonPath("$.celdas[1].numeroBloque").value(4))
+				.andExpect(jsonPath("$.celdas[1].cruces", empty()));
+	}
+
+	@Test
+	void sinCabeceraConPrincipalDevuelveLaJornadaSinGuardarNada() throws Exception {
+		UUID eh = estructura("EH-T-27", "SECUNDARIA", true, 6);
+		UUID seccion = seccion("SEC-1", "T1", null, null);
+		long antes = cabeceras();
+
+		pedir("/horarios/secciones/" + seccion, COORDINADOR).andExpect(status().isOk())
+				.andExpect(jsonPath("$.version").value(nullValue()))
+				.andExpect(jsonPath("$.editable").value(true))
+				.andExpect(jsonPath("$.estructura.id").value(eh.toString()))
+				.andExpect(jsonPath("$.estructura.principal").value(true))
+				.andExpect(jsonPath("$.seccion.ambienteId").value(nullValue()))
+				.andExpect(jsonPath("$.seccion.tutor").value(nullValue()))
+				.andExpect(jsonPath("$.jornada.bloques", hasSize(6)))
+				.andExpect(jsonPath("$.celdas", empty()));
+
+		assertThat(cabeceras()).isEqualTo(antes);
+	}
+
+	@Test
+	void sinCabeceraYSinPrincipalResponde409ConElNivelDeLaSeccion() throws Exception {
+		UUID secundaria = seccion("SEC-1", "T1", null, null);
+		UUID primaria = seccion("PRI-1", "T1", null, null);
+
+		pedir("/horarios/secciones/" + secundaria, COORDINADOR).andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value(SIN_PRINCIPAL_SECUNDARIA));
+		pedir("/horarios/secciones/" + primaria, COORDINADOR).andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message")
+						.value("Configura la estructura horaria principal de primaria antes de asignar horarios."));
+	}
+
+	@Test
+	void conCabeceraUsaLaEstructuraGuardadaAunqueYaNoSeaLaPrincipal() throws Exception {
+		estructura("EH-NUEVA", "SECUNDARIA", true, 6);
+		UUID vieja = estructura("EH-VIEJA", "SECUNDARIA", false, 4);
+		UUID seccion = seccion("SEC-1", "T1", null, null);
+		cabecera(seccion, vieja);
+
+		pedir("/horarios/secciones/" + seccion, COORDINADOR).andExpect(status().isOk())
+				.andExpect(jsonPath("$.estructura.id").value(vieja.toString()))
+				.andExpect(jsonPath("$.estructura.codigo").value("EH-VIEJA"))
+				.andExpect(jsonPath("$.estructura.principal").value(false))
+				.andExpect(jsonPath("$.jornada.bloques", hasSize(4)));
+	}
+
+	@Test
+	void conElAnioCerradoResponde200ConEditableFalso() throws Exception {
+		estructura("EH-T-27", "SECUNDARIA", true, 6);
+		UUID seccion = seccion("SEC-1", "T1", null, null);
+		jdbc.sql("UPDATE configuracion.anio_escolar SET estado = 'CERRADO' WHERE id = :id").param("id", ANIO_2027)
+				.update();
+
+		pedir("/horarios/secciones/" + seccion, COORDINADOR).andExpect(status().isOk())
+				.andExpect(jsonPath("$.editable").value(false));
+	}
+
+	@Test
+	void seccionInexistenteResponde404() throws Exception {
+		pedir("/horarios/secciones/" + UUID.randomUUID(), COORDINADOR).andExpect(status().isNotFound());
+		pedir("/horarios/secciones/" + UUID.randomUUID() + "/opciones", COORDINADOR).andExpect(status().isNotFound());
+	}
+
+	@Test
+	void unaCeldaSinDocenteLlegaConDocenteNulo() throws Exception {
+		UUID eh = estructura("EH-T-27", "SECUNDARIA", true, 6);
+		UUID aula = ambiente("TMP-A1", "ACTIVO");
+		UUID seccion = seccion("SEC-1", "T1", aula, null);
+		UUID geometria = plan("Geometría", 3);
+		UUID cab = cabecera(seccion, eh);
+		bloque(cab, "MAR", 2, geometria, aula);
+
+		pedir("/horarios/secciones/" + seccion, COORDINADOR).andExpect(status().isOk())
+				.andExpect(jsonPath("$.celdas", hasSize(1)))
+				.andExpect(jsonPath("$.celdas[0].curso").value("Geometría"))
+				.andExpect(jsonPath("$.celdas[0].docente").value(nullValue()))
+				.andExpect(jsonPath("$.celdas[0].cruces", empty()));
+	}
+
+	@Test
+	void otroRolRecibe403EnLosDosEndpoints() throws Exception {
+		UUID seccion = seccion("SEC-1", "T1", null, null);
+
+		pedir("/horarios/secciones/" + seccion, PERSONAL_ADMINISTRATIVO).andExpect(status().isForbidden());
+		pedir("/horarios/secciones/" + seccion + "/opciones", PERSONAL_ADMINISTRATIVO)
+				.andExpect(status().isForbidden());
+	}
+
+	// ---------- GET /horarios/secciones/{id}/opciones ----------
+
+	@Test
+	void opcionesTraeLosCursosConSusHorasAsignadasYDocente() throws Exception {
+		UUID eh = estructura("EH-T-27", "SECUNDARIA", true, 6);
+		UUID aula = ambiente("TMP-A1", "ACTIVO");
+		UUID docente = docente();
+		UUID seccion = seccion("SEC-1", "T1", aula, null);
+		UUID algebra = plan("Álgebra", 5);
+		UUID geometria = plan("Geometría", 3);
+		asignarDocente(algebra, seccion, docente);
+		UUID cab = cabecera(seccion, eh);
+		bloque(cab, "LUN", 1, algebra, aula);
+		bloque(cab, "MAR", 1, algebra, aula);
+
+		pedir("/horarios/secciones/" + seccion + "/opciones", COORDINADOR).andExpect(status().isOk())
+				.andExpect(jsonPath("$.ambientePorDefectoId").value(aula.toString()))
+				.andExpect(jsonPath("$.cursos", hasSize(2)))
+				.andExpect(jsonPath("$.cursos[?(@.nombre=='Álgebra')].planCursoId", contains(algebra.toString())))
+				.andExpect(jsonPath("$.cursos[?(@.nombre=='Álgebra')].horasSemanales", contains(5)))
+				.andExpect(jsonPath("$.cursos[?(@.nombre=='Álgebra')].horasAsignadas", contains(2)))
+				.andExpect(jsonPath("$.cursos[?(@.nombre=='Álgebra')].docente.id", contains(docente.toString())))
+				.andExpect(jsonPath("$.cursos[?(@.nombre=='Geometría')].planCursoId", contains(geometria.toString())))
+				.andExpect(jsonPath("$.cursos[?(@.nombre=='Geometría')].horasSemanales", contains(3)))
+				.andExpect(jsonPath("$.cursos[?(@.nombre=='Geometría')].horasAsignadas", contains(0)))
+				.andExpect(jsonPath("$.cursos[?(@.nombre=='Geometría')].docente", contains(nullValue())));
+	}
+
+	@Test
+	void opcionesSoloOfreceAmbientesActivosYSinAulaNoHayPorDefecto() throws Exception {
+		UUID activo = ambiente("TMP-ACT", "ACTIVO");
+		UUID inactivo = ambiente("TMP-INA", "INACTIVO");
+		UUID seccion = seccion("SEC-1", "T1", null, null);
+		long activos = jdbc.sql("SELECT count(*) FROM configuracion.ambiente WHERE estado = 'ACTIVO'")
+				.query(Long.class).single();
+
+		pedir("/horarios/secciones/" + seccion + "/opciones", COORDINADOR).andExpect(status().isOk())
+				.andExpect(jsonPath("$.ambientePorDefectoId").value(nullValue()))
+				.andExpect(jsonPath("$.cursos", empty()))
+				.andExpect(jsonPath("$.ambientes", hasSize((int) activos)))
+				.andExpect(jsonPath("$.ambientes[*].id", hasItem(activo.toString())))
+				.andExpect(jsonPath("$.ambientes[*].id", not(hasItem(inactivo.toString()))))
+				.andExpect(jsonPath("$.ambientes[?(@.id=='" + activo + "')].tipo", contains("AULA_REGULAR")))
+				.andExpect(jsonPath("$.ambientes[?(@.id=='" + activo + "')].aforoMaximo", contains(30)));
+	}
+}
