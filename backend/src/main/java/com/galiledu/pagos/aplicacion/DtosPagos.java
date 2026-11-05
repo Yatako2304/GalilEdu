@@ -2,6 +2,7 @@ package com.galiledu.pagos.aplicacion;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,7 +61,9 @@ public final class DtosPagos {
 			BigDecimal montoPagado,
 			EstadoCuota estado,
 			boolean vencida,
-			LocalDate fechaPago) {
+			LocalDate fechaPago,
+			int diasAtraso,
+			BigDecimal recargo) {
 	}
 
 	/** Respuesta de POST /pagos/matriculas/{id}/cronograma (RF-81, RF-82). */
@@ -156,5 +159,33 @@ public final class DtosPagos {
 			BigDecimal recargo,
 			BigDecimal total,
 			List<CuotaMorosa> cuotas) {
+	}
+
+	/**
+	 * HU-40 · RF-95: un hijo del apoderado. {@code codigo} es el número de documento (la ficha del estudiante no tiene
+	 * otro código); {@code grado} y {@code seccion} son los de su matrícula más reciente; {@code saldo} suma las cuotas
+	 * pendientes de sus compromisos vigentes y {@code cuotasVencidas} cuenta las pensiones vencidas (RF-91).
+	 */
+	public record HijoConDeuda(
+			UUID estudianteId,
+			String codigo,
+			String nombres,
+			String apellidos,
+			String grado,
+			String seccion,
+			BigDecimal saldo,
+			int cuotasVencidas) {
+	}
+
+	/** RF-97 y pestaña "Pagos": un pago con su constancia y las cuotas que cubrió. */
+	public record PagoRealizado(
+			UUID id,
+			String numeroConstancia,
+			OffsetDateTime fechaPago,
+			BigDecimal monto,
+			BigDecimal capital,
+			BigDecimal recargo,
+			String estado,
+			List<String> cuotas) {
 	}
 }

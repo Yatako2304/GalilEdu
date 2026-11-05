@@ -2,7 +2,7 @@
 
 - **HU:** HU-24, 27, 30 (iteración 1) · HU-28, 29, 31, 32 (2) · HU-25, 26, 33, 71, 72 (3)
 - **Estado:** 🚧 en desarrollo: HU-27 y HU-30 completas; falta HU-24
-- **Última actualización:** 2026-10-23
+- **Última actualización:** 2026-11-04
 
 ## Alcance
 
@@ -18,14 +18,14 @@ PENDIENTE_PAGO (se crea el compromiso con la cuota de matrícula, HU-36) ──(
 MATRICULADO (código MAT-…, cronograma de pensiones, HU-37)          · también: RETIRADO, ANULADA
 ```
 
-- **Deuda (HU-30):** antes de aprobar se revisa si el apoderado tiene cuotas vencidas de **cualquiera** de sus hijos. Se calcula desde `pagos.cuota`; no se guarda.
+- **Deuda (HU-30):** antes de aprobar se revisa si **el estudiante** tiene cuotas vencidas; la deuda de un hermano no bloquea su matrícula (corrección de la iteración 2). Se calcula desde `pagos.cuota`; no se guarda.
 - **Vacantes:** capacidad de la sección (`configuracion.seccion.capacidad_maxima`) menos las matrículas activas de esa sección. Se calculan; cambiar de sección (HU-26) mueve la matrícula y deja historial.
 
 ## Endpoints (apoderado)
 
 Ver la tabla de [`backend/README.md`](../../backend/README.md): `GET /matricula/apoderado/estudiantes` y `GET /matricula/apoderado/estudiantes/{id}/estado`.
 
-- La deuda (HU-30) se pide a Pagos con `ServicioEstadoCuenta.cuotasVencidas` (IEstadoCuenta): pensiones impagas después del vencimiento más los días de gracia, de **todos** los hijos del apoderado. Solo bloquea si el periodo tiene `bloquear_por_morosidad`.
+- La deuda (HU-30) se pide a Pagos con `ServicioEstadoCuenta.cuotasVencidas` (IEstadoCuenta): pensiones impagas después del vencimiento más los días de gracia, solo del estudiante consultado. Solo bloquea si el periodo tiene `bloquear_por_morosidad`. El estado visible del periodo (PROGRAMADO, ABIERTO o CERRADO) lo calcula Configuración con `ServicioPeriodoMatricula.estadoEn` y el `Clock` de la app.
 - `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula).
 - Si `periodo.abierto` es false, el frontend no muestra la opción de matricular (RF-59).
 
@@ -65,7 +65,7 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 
 - **El año de la pantalla viene del periodo de matrícula:** el título muestra "Matrícula 2027" porque ese es el año escolar del periodo consultado, aunque sus fechas de apertura y cierre estén en 2026. En los datos de prueba, el periodo 2027 está habilitado del **15 de septiembre al 31 de octubre de 2026**. El frontend no calcula el año desde la fecha actual.
 - **Sofía y Mateo tienen situaciones diferentes en 2027:** Mateo tiene una sección reservada en 1.° A; Sofía está matriculada en 4.° A de 2026, pero no tiene una matrícula creada para 2027, por lo que en el periodo consultado aparece pendiente de asignación.
-- **La deuda se valida por familia (HU-30):** la pensión vencida de S/ 600 pertenece a Sofía. Al consultar a Mateo, la matrícula también queda bloqueada porque el periodo tiene `bloquear_por_morosidad`; la interfaz aclara que Mateo no tiene deuda propia y que el impedimento proviene de Sofía. Al consultar a Sofía, la misma deuda se muestra como propia.
+- **La deuda se valida por estudiante (HU-30, corregida en la iteración 2):** la pensión vencida de S/ 600 pertenece a Sofía y solo bloquea la matrícula de Sofía. Mateo no tiene deuda propia, así que la deuda de su hermana ya no lo bloquea.
 - **HU-36 tiene un acceso temporal:** como el listado y detalle administrativo de HU-24 aún no existen, la tarjeta "Pago de matrícula" se prueba pasando `matriculaId` en la URL. Cuando HU-24 esté disponible, la misma tarjeta debe integrarse en su detalle.
 - **Flujo visual administrativo disponible:** se añadieron las pantallas de apoyo A3, A5, B6 y B7 para poder navegar desde el periodo hasta cada estado de matrícula. El listado, los documentos y los datos personales son estáticos; no implementan HU-24, HU-25, HU-26, HU-28, HU-29, HU-31 ni HU-32. Sus acciones permanecen desactivadas. Solo las tarjetas ya entregadas de HU-36 y HU-37 consultan la API.
 - **HU-37 solo corresponde a estudiantes matriculados:** Sofía tiene el cronograma 2026 de los datos de prueba. Mateo todavía está en `SECCION_RESERVADA`, así que no debe tener pensiones generadas hasta completar la matrícula.
@@ -101,16 +101,14 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 
 **Resultado esperado:** el periodo, grado, sección, estado y progreso cambian según el hijo seleccionado y siempre provienen de la API.
 
-### HU-30 · Validación de deuda familiar
+### HU-30 · Validación de deuda del estudiante
 
 1. Continúa en **Matrícula** con la sesión de `U20260003`.
-2. Selecciona **Mateo Paredes**.
-3. Comprueba la etiqueta **Deuda familiar** y el mensaje: Mateo no tiene deuda propia, pero su matrícula está bloqueada por la deuda de Sofía.
-4. En la tarjeta **Deuda pendiente**, comprueba la pensión de septiembre de Sofía, vencida el 30 de septiembre de 2026, por **S/ 600.00**, y el total familiar.
-5. Cambia a **Sofía Paredes**.
-6. Comprueba la etiqueta **Deuda propia** y el mensaje que atribuye los S/ 600.00 a Sofía.
+2. Selecciona **Mateo Paredes** y comprueba que no aparece la tarjeta **Deuda pendiente** ni el impedimento por deuda.
+3. Cambia a **Sofía Paredes**.
+4. En la tarjeta **Deuda pendiente**, comprueba la pensión de septiembre, vencida el 30 de septiembre de 2026, por **S/ 600.00**, y el mensaje que atribuye la deuda a Sofía.
 
-**Resultado esperado:** la misma deuda familiar bloquea el proceso de ambos hijos, pero la pantalla distingue claramente quién tiene la deuda.
+**Resultado esperado:** la deuda solo bloquea el proceso del hijo que la tiene (corrección de la iteración 2).
 
 ### HU-36 · Generación de la cuota de matrícula
 
