@@ -1,7 +1,9 @@
 package com.galiledu.pagos;
 
+import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -113,5 +115,33 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.alumnos[?(@.nombre == 'Sofía Paredes Rojas')].capitalPagado").value(4020.0))
 				.andExpect(jsonPath("$.deudaVencida").value(greaterThanOrEqualTo(600.0)))
 				.andExpect(jsonPath("$.alumnosConDeuda").value(greaterThanOrEqualTo(1)));
+	}
+
+	@Test
+	void laMorosidadMuestraLaPensionVencidaConSuRecargoSeparado() throws Exception {
+		mvc.perform(
+				conToken(get("/pagos/compromisos/{id}/morosidad", COMPROMISO_SOFIA), token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.anio").value(2026))
+				.andExpect(jsonPath("$.diasGracia").value(5))
+				.andExpect(jsonPath("$.recargoPorcentaje").value(2.0))
+				.andExpect(jsonPath("$.topeRecargoPorcentaje").value(10.0))
+				// la más antigua primero: septiembre (S/ 600), vencida desde el 30/09/2026
+				.andExpect(jsonPath("$.cuotas[0].concepto").value("Pensión de septiembre"))
+				.andExpect(jsonPath("$.cuotas[0].fechaVencimiento").value("2026-09-30"))
+				.andExpect(jsonPath("$.cuotas[0].capital").value(600.0))
+				.andExpect(jsonPath("$.cuotas[0].diasAtraso").value(greaterThan(5)))
+				// RF-92: hay recargo y nunca pasa del tope (10 % de 600)
+				.andExpect(jsonPath("$.cuotas[0].recargo").value(greaterThan(0.0)))
+				.andExpect(jsonPath("$.cuotas[0].recargo").value(lessThanOrEqualTo(60.0)))
+				.andExpect(jsonPath("$.capital").value(greaterThanOrEqualTo(600.0)))
+				.andExpect(jsonPath("$.recargo").value(greaterThan(0.0)));
+	}
+
+	@Test
+	void morosidadDeUnCompromisoInexistenteDevuelve404() throws Exception {
+		mvc.perform(conToken(get("/pagos/compromisos/{id}/morosidad", "99999999-0000-0000-0000-000000000000"),
+				token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isNotFound());
 	}
 }

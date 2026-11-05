@@ -28,13 +28,6 @@ public class ConsultasPagos {
 			OffsetDateTime confirmadoEn) {
 	}
 
-	public record Tarifario(UUID id, BigDecimal montoPension, String estado, BigDecimal montoMatricula,
-			LocalDate vencimientoMatricula) {
-	}
-
-	public record CuotaTarifario(short numero, String nombre, LocalDate fechaVencimiento) {
-	}
-
 	public record DescuentoActivo(UUID id, BigDecimal porcentaje, LocalDate vigenciaDesde, LocalDate vigenciaHasta) {
 		public boolean vigenteEn(LocalDate fecha) {
 			return !fecha.isBefore(vigenciaDesde) && (vigenciaHasta == null || !fecha.isAfter(vigenciaHasta));
@@ -50,26 +43,6 @@ public class ConsultasPagos {
 				.query((rs, i) -> new MatriculaParaPagos(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
 						rs.getInt(3), rs.getString(4), rs.getObject(5, OffsetDateTime.class)))
 				.optional();
-	}
-
-	public Optional<Tarifario> tarifario(UUID anioEscolarId) {
-		return jdbc.sql("""
-				SELECT id, monto_pension, estado, monto_matricula, vencimiento_matricula
-				FROM pagos.tarifario WHERE anio_escolar_id = ?""")
-				.param(anioEscolarId)
-				.query((rs, i) -> new Tarifario(rs.getObject(1, UUID.class), rs.getBigDecimal(2), rs.getString(3),
-						rs.getBigDecimal(4), rs.getObject(5, LocalDate.class)))
-				.optional();
-	}
-
-	public List<CuotaTarifario> cuotasTarifario(UUID tarifarioId) {
-		return jdbc.sql("""
-				SELECT numero, nombre, fecha_vencimiento FROM pagos.cuota_tarifario
-				WHERE tarifario_id = ? ORDER BY numero""")
-				.param(tarifarioId)
-				.query((rs, i) -> new CuotaTarifario(rs.getShort(1), rs.getString(2),
-						rs.getObject(3, LocalDate.class)))
-				.list();
 	}
 
 	/** Descuento ACTIVO del estudiante que aplica al concepto indicado (HU-38 lo registra; aquí solo se usa). */
@@ -204,5 +177,129 @@ public class ConsultasPagos {
 						rs.getObject(10, LocalDate.class),
 						rs.getString(11), rs.getObject(12, LocalDate.class), rs.getString(13)))
 				.optional();
+	}
+
+	/** RF-74: de los códigos indicados, los que existen en el catálogo de conceptos de pago. */
+	public List<String> conceptosExistentes(Collection<String> codigos) {
+		if (codigos.isEmpty()) {
+			return List.of();
+		}
+		return jdbc.sql("SELECT codigo FROM pagos.concepto WHERE codigo IN (:codigos)")
+				.param("codigos", codigos)
+				.query(String.class)
+				.list();
+	}
+
+	/**
+	 * RF-75, RF-86: estudiantes con matrícula formalizada en ese año que comparten un padre, madre o apoderado con el
+	 * estudiante, contándolo a él (Sofía sola = 1).
+	 */
+	public int hermanosMatriculados(UUID estudianteId, UUID anioEscolarId) {
+		return jdbc.sql("""
+				SELECT count(DISTINCT m.estudiante_id)
+				FROM matricula.matricula m
+				WHERE m.anio_escolar_id = :anio AND m.estado = 'MATRICULADO'
+				  AND (m.estudiante_id = :estudiante OR m.estudiante_id IN (
+				       SELECT h.estudiante_id FROM estudiantes.vinculo_familiar v
+				       JOIN estudiantes.vinculo_familiar h ON h.persona_id = v.persona_id
+				       WHERE v.estudiante_id = :estudiante AND v.persona_id IS NOT NULL))""")
+				.param("anio", anioEscolarId)
+				.param("estudiante", estudianteId)
+				.query(Integer.class)
+				.single();
+	}
+
+	/** HU-40: ¿el usuario es padre, madre o apoderado del estudiante? Ambos padres pueden consultar (corrección 2). */
+	public boolean esHijoDelUsuario(UUID usuarioId, UUID estudianteId) {
+		return jdbc.sql("""
+				SELECT EXISTS (SELECT 1 FROM seguridad.usuario u
+				               JOIN estudiantes.vinculo_familiar v ON v.persona_id = u.persona_id
+				               WHERE u.id = ? AND v.estudiante_id = ?)""")
+				.params(usuarioId, estudianteId)
+				.query(Boolean.class)
+				.single();
+	}
+
+	public record FilaHijoDeuda(UUID estudianteId, String codigo, String nombres, String apellidos, String grado,
+			String seccion, BigDecimal saldo, int cuotasVencidas) {
+	}
+
+	/**
+	 * RF-95: hijos del usuario con su grado y sección (de la matrícula más reciente), saldo pendiente (cuotas no
+	 * pagadas ni anuladas de compromisos vigentes) y pensiones vencidas (RF-91), ordenados por apellido. El código del
+	 * estudiante es su número de documento: la tabla de estudiantes no tiene otro código.
+	 */
+	public List<FilaHijoDeuda> hijosConDeuda(UUID usuarioId, LocalDate hoy) {
+		return jdbc.sql("""
+				SELECT e.id, p.numero_documento, p.nombres, concat_ws(' ', p.apellido_paterno, p.apellido_materno),
+				       ult.grado, ult.seccion,
+				       coalesce((SELECT sum(q.monto_final - q.monto_pagado)
+				                 FROM pagos.compromiso_pago c JOIN pagos.cuota q ON q.compromiso_id = c.id
+				                 WHERE c.estudiante_id = e.id AND c.estado = 'VIGENTE'
+				                   AND q.estado NOT IN ('PAGADA', 'ANULADA')), 0),
+				       (SELECT count(*)
+				        FROM pagos.compromiso_pago c
+				        JOIN pagos.tarifario t ON t.id = c.tarifario_id
+				        JOIN pagos.cuota q ON q.compromiso_id = c.id
+				        WHERE c.estudiante_id = e.id AND c.estado = 'VIGENTE' AND q.concepto_codigo = 'PENSION'
+				          AND q.estado NOT IN ('PAGADA', 'ANULADA') AND q.fecha_vencimiento + t.dias_gracia < :hoy)
+				FROM (SELECT DISTINCT v.estudiante_id FROM seguridad.usuario u
+				      JOIN estudiantes.vinculo_familiar v ON v.persona_id = u.persona_id
+				      WHERE u.id = :usuario) h
+				JOIN estudiantes.estudiante e ON e.id = h.estudiante_id
+				JOIN personas.persona p ON p.id = e.persona_id
+				LEFT JOIN LATERAL (
+				     SELECT g.nombre AS grado, s.nombre AS seccion
+				     FROM matricula.matricula m
+				     JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
+				     JOIN configuracion.grado g ON g.codigo = m.grado_codigo
+				     LEFT JOIN configuracion.seccion s ON s.id = m.seccion_id
+				     WHERE m.estudiante_id = e.id AND m.estado <> 'ANULADA'
+				     ORDER BY a.anio DESC LIMIT 1) ult ON TRUE
+				WHERE NOT e.eliminado
+				ORDER BY p.apellido_paterno, p.apellido_materno, p.nombres""")
+				.param("usuario", usuarioId)
+				.param("hoy", hoy)
+				.query((rs, i) -> new FilaHijoDeuda(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
+						rs.getString(4), rs.getString(5), rs.getString(6), rs.getBigDecimal(7), rs.getInt(8)))
+				.list();
+	}
+
+	public record FilaPago(UUID id, String numeroConstancia, OffsetDateTime fechaPago, BigDecimal montoTotal,
+			BigDecimal capital, BigDecimal recargo, String estado, List<String> cuotas) {
+	}
+
+	/**
+	 * RF-97 (y la pestaña "Pagos" de P8): pagos que cubrieron cuotas del compromiso, del más reciente al más antiguo.
+	 */
+	public List<FilaPago> pagosDelCompromiso(UUID compromisoId) {
+		return jdbc.sql("""
+				SELECT pg.id, pg.numero_constancia, pg.fecha_pago, pg.monto_total, sum(d.capital), sum(d.recargo),
+				       pg.estado, array_agg(q.nombre ORDER BY q.fecha_vencimiento)
+				FROM pagos.pago pg
+				JOIN pagos.pago_detalle d ON d.pago_id = pg.id
+				JOIN pagos.cuota q ON q.id = d.cuota_id
+				WHERE q.compromiso_id = ?
+				GROUP BY pg.id
+				ORDER BY pg.fecha_pago DESC, pg.numero_constancia DESC""")
+				.param(compromisoId)
+				.query((rs, i) -> new FilaPago(rs.getObject(1, UUID.class), rs.getString(2),
+						rs.getObject(3, OffsetDateTime.class), rs.getBigDecimal(4), rs.getBigDecimal(5),
+						rs.getBigDecimal(6), rs.getString(7), List.of((String[]) rs.getArray(8).getArray())))
+				.list();
+	}
+
+	/** P10 "Aplicado por": nombre y primer apellido del usuario (null si no hay usuario). */
+	public String nombreDeUsuario(UUID usuarioId) {
+		if (usuarioId == null) {
+			return null;
+		}
+		return jdbc.sql("""
+				SELECT concat_ws(' ', p.nombres, p.apellido_paterno)
+				FROM seguridad.usuario u JOIN personas.persona p ON p.id = u.persona_id WHERE u.id = ?""")
+				.param(usuarioId)
+				.query(String.class)
+				.optional()
+				.orElse(null);
 	}
 }

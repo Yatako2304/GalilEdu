@@ -56,6 +56,12 @@ public class CompromisoPago {
 	@Formula("(SELECT t.monto_pension FROM pagos.tarifario t WHERE t.id = tarifario_id)")
 	private BigDecimal montoPension;
 
+	@Formula("(SELECT t.recargo_porcentaje FROM pagos.tarifario t WHERE t.id = tarifario_id)")
+	private BigDecimal recargoPorcentaje;
+
+	@Formula("(SELECT t.tope_recargo_porcentaje FROM pagos.tarifario t WHERE t.id = tarifario_id)")
+	private BigDecimal topeRecargoPorcentaje;
+
 	@Formula("""
 			(SELECT concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno)
 			 FROM estudiantes.estudiante e JOIN personas.persona p ON p.id = e.persona_id
@@ -138,6 +144,10 @@ public class CompromisoPago {
 		return estudianteId;
 	}
 
+	public UUID getAnioEscolarId() {
+		return anioEscolarId;
+	}
+
 	public EstadoCompromiso getEstado() {
 		return estado;
 	}
@@ -156,6 +166,14 @@ public class CompromisoPago {
 
 	public BigDecimal getMontoPension() {
 		return montoPension;
+	}
+
+	public BigDecimal getRecargoPorcentaje() {
+		return recargoPorcentaje == null ? BigDecimal.ZERO : recargoPorcentaje;
+	}
+
+	public BigDecimal getTopeRecargoPorcentaje() {
+		return topeRecargoPorcentaje == null ? BigDecimal.ZERO : topeRecargoPorcentaje;
 	}
 
 	public String getEstudianteNombre() {

@@ -29,7 +29,10 @@ public final class DtosMatricula {
 	public record EstudianteMatricula(UUID id, String nombre, String grado) {
 	}
 
-	/** RF-58, RF-59: {@code abierto} indica si hoy se puede matricular; si es false, el frontend oculta la opción. */
+	/**
+	 * RF-58, RF-59: {@code abierto} indica si hoy se puede matricular; si es false, el frontend oculta la opción.
+	 * {@code estado}: PROGRAMADO, ABIERTO o CERRADO (el estado visible que calcula Configuración).
+	 */
 	public record PeriodoMatricula(int anio, OffsetDateTime inicio, OffsetDateTime cierre, String estado,
 			boolean abierto) {
 	}
@@ -43,7 +46,11 @@ public final class DtosMatricula {
 	public record Impedimento(String tipo, String mensaje) {
 	}
 
-	/** RF-64: deuda vencida del apoderado o de cualquiera de sus hijos, con el estudiante al que corresponde. */
+	/**
+	 * RF-64: deuda vencida del estudiante consultado. Solo bloquea su matrícula: la deuda de un hermano no bloquea la
+	 * de
+	 * los demás (corrección de la iteración 2).
+	 */
 	public record DeudaFamiliar(BigDecimal total, List<CuotaDeuda> cuotas) {
 	}
 
