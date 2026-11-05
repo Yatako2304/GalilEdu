@@ -1,10 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { CalificacionesDocente } from '../calificaciones-docente';
 
 const crearItem = vi.fn();
+const { filasVacias } = vi.hoisted(() => ({ filasVacias: [] }));
 
 vi.mock('../../api/calificaciones', () => ({
   useCursosDocente: () => ({
@@ -57,7 +58,7 @@ vi.mock('../../api/calificaciones', () => ({
           {
             competenciaId: 'competencia-1',
             competencia: 'Resuelve problemas de cantidad',
-            pesoPorcentaje: 100,
+            pesoPorcentaje: 50,
           },
         ],
       },
@@ -70,25 +71,28 @@ vi.mock('../../api/calificaciones', () => ({
   }),
   useCrearItem: () => ({ mutateAsync: crearItem, isPending: false }),
   useEditarItem: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCalificacionesItem: () => ({ data: filasVacias, isLoading: false }),
+  useGuardarCalificaciones: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useGuardarEvidencia: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useEliminarEvidencia: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useReporteCalificaciones: (filtros: unknown) => ({
     isLoading: false,
     data: filtros
       ? {
-          titulo: 'Práctica 1',
-          detalle: 'Calificaciones por ítem',
+          titulo: 'Resuelve problemas de cantidad',
+          detalle: 'Consolidado de notas',
           columnas: [
-            { clave: 'nota', titulo: 'Calificación' },
-            { clave: 'evidencia', titulo: 'Evidencia' },
-            { clave: 'estado', titulo: 'Estado' },
+            { clave: 'item-1', titulo: 'Práctica 1' },
+            { clave: 'resultado', titulo: 'Promedio final' },
           ],
           filas: [
             {
               matriculaId: 'matricula-1',
               estudiante: 'Ana García',
               valores: {
-                nota: '17',
-                evidencia: 'practica.pdf',
-                estado: 'Calificado',
+                'item-1': '17',
+                resultado: '17',
+                resultado_estado: 'Aprobado',
               },
             },
           ],
@@ -101,7 +105,7 @@ vi.mock('../../api/calificaciones', () => ({
 describe('Calificaciones del docente', () => {
   beforeEach(() => crearItem.mockReset().mockResolvedValue({}));
 
-  it('muestra el curso asignado, el periodo y los tres recorridos de las HU', async () => {
+  it('agrupa configuración y calificación bajo el primer botón y separa el consolidado', async () => {
     render(<CalificacionesDocente />);
 
     expect((await screen.findAllByText('Álgebra')).length).toBeGreaterThan(0);
@@ -111,9 +115,23 @@ describe('Calificaciones del docente', () => {
     expect(
       screen.getByRole('tab', { name: 'Calificar alumnos' }),
     ).toBeVisible();
+    const vistas = screen.getByRole('tablist', {
+      name: 'Vistas de calificaciones',
+    });
+    expect(within(vistas).getAllByRole('tab')).toHaveLength(2);
     expect(
-      screen.getByRole('tab', { name: 'Ver calificaciones' }),
+      within(vistas).getByRole('tab', { name: 'Configuración de ítems' }),
+    ).toHaveAttribute('aria-selected', 'true');
+    expect(
+      within(vistas).getByRole('tab', { name: 'Consolidado de notas' }),
     ).toBeVisible();
+    const secciones = screen.getByRole('tablist', {
+      name: 'Secciones de calificaciones',
+    });
+    expect(within(secciones).getAllByRole('tab')).toHaveLength(2);
+    expect(
+      screen.queryByRole('heading', { name: 'Generar consolidado de notas' }),
+    ).not.toBeInTheDocument();
     expect(
       screen.getByRole('tab', { name: 'Ítems por competencia' }),
     ).toBeVisible();
@@ -148,30 +166,75 @@ describe('Calificaciones del docente', () => {
         nombre: 'Examen 4',
         descripcion: 'Resuelve situaciones de cantidad.',
         tipo: 'PRACTICA',
-        competencias: [{ competenciaId: 'competencia-1', pesoPorcentaje: 100 }],
+        competencias: [{ competenciaId: 'competencia-1', pesoPorcentaje: 50 }],
       },
     });
   });
 
-  it('mantiene alineadas las columnas en cada tipo de reporte', async () => {
+  it('genera el consolidado desde su propio botón sin mostrar los controles de configuración', async () => {
     const usuario = userEvent.setup();
     render(<CalificacionesDocente />);
 
     await usuario.click(
-      screen.getByRole('tab', { name: 'Ver calificaciones' }),
+      screen.getByRole('tab', { name: 'Consolidado de notas' }),
+    );
+
+    expect(
+      screen.getByRole('heading', { name: 'Generar consolidado de notas' }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { name: 'Curso y sección' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('tab', { name: 'Configurar ítems' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('tab', { name: 'Calificar alumnos' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Agregar ítem de evaluación' }),
+    ).not.toBeInTheDocument();
+    await usuario.click(
+      screen.getByRole('button', { name: 'Generar consolidado' }),
     );
 
     const tabla = await screen.findByRole('table', {
-      name: 'Práctica 1. Calificaciones por ítem',
+      name: 'Resuelve problemas de cantidad. Consolidado de notas',
     });
-    expect(tabla).toHaveStyle({ minWidth: '800px' });
     expect(screen.getByText('Ana García')).toBeVisible();
-    expect(screen.getByText('Calificado')).toBeVisible();
+    expect(
+      within(tabla).getByRole('columnheader', { name: 'Promedio final' }),
+    ).toBeVisible();
+    expect(within(tabla).getByText('Aprobado')).toBeVisible();
+    expect(within(tabla).getAllByText('17/20')).toHaveLength(2);
+    expect(
+      screen.getByRole('button', { name: 'Exportar consolidado' }),
+    ).toBeEnabled();
+  });
 
-    await usuario.click(screen.getByRole('tab', { name: 'Por competencia' }));
-    expect(tabla).toHaveStyle({ minWidth: '800px' });
+  it('permite volver a calificar alumnos después de abrir el consolidado', async () => {
+    const usuario = userEvent.setup();
+    render(<CalificacionesDocente />);
 
-    await usuario.click(screen.getByRole('tab', { name: 'Por periodo' }));
-    expect(tabla).toHaveStyle({ minWidth: '800px' });
+    await usuario.click(screen.getByRole('tab', { name: 'Calificar alumnos' }));
+    await usuario.click(
+      screen.getByRole('tab', { name: 'Consolidado de notas' }),
+    );
+    await usuario.click(
+      screen.getByRole('tab', { name: 'Configuración de ítems' }),
+    );
+
+    expect(
+      screen.getByRole('tab', { name: 'Calificar alumnos' }),
+    ).toHaveAttribute('aria-selected', 'true');
+    expect(
+      screen.getByRole('heading', { name: 'Calificar alumnos' }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('heading', { name: 'Curso y sección' }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { name: 'Generar consolidado de notas' }),
+    ).not.toBeInTheDocument();
   });
 });

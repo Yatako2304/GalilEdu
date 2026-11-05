@@ -1,6 +1,7 @@
 package com.galiledu.academico.web;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -36,6 +37,7 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCalificacio
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudItem;
 import com.galiledu.academico.aplicacion.ServicioCalificaciones;
 import com.galiledu.compartido.seguridad.ServicioJwt;
+import com.galiledu.compartido.web.ExcepcionNegocio;
 
 /** API del flujo de Calificaciones del usuario Docente (HU-57, HU-59 y HU-62). */
 @RestController
@@ -123,20 +125,36 @@ public class CalificacionController {
 	@GetMapping("/reportes")
 	public ReporteCalificaciones reporte(@RequestParam String tipo, @RequestParam UUID planCursoId,
 			@RequestParam UUID seccionId, @RequestParam UUID periodoId,
-			@RequestParam(required = false) UUID objetivoId, Authentication autenticacion) {
+			@RequestParam(required = false) UUID objetivoId,
+			@RequestParam(required = false) String itemIds,
+			@RequestParam(defaultValue = "true") boolean incluirPromedio, Authentication autenticacion) {
 		return servicio.reporte(ServicioJwt.usuarioActual(autenticacion), tipo, planCursoId, seccionId, periodoId,
-				objetivoId);
+				objetivoId, ids(itemIds), incluirPromedio);
 	}
 
 	@GetMapping(value = "/reportes/exportar", produces = "text/csv")
 	public ResponseEntity<byte[]> exportar(@RequestParam String tipo, @RequestParam UUID planCursoId,
 			@RequestParam UUID seccionId, @RequestParam UUID periodoId,
-			@RequestParam(required = false) UUID objetivoId, Authentication autenticacion) {
+			@RequestParam(required = false) UUID objetivoId,
+			@RequestParam(required = false) String itemIds,
+			@RequestParam(defaultValue = "true") boolean incluirPromedio, Authentication autenticacion) {
 		byte[] contenido = servicio.exportarCsv(ServicioJwt.usuarioActual(autenticacion), tipo, planCursoId,
-				seccionId, periodoId, objetivoId);
+				seccionId, periodoId, objetivoId, ids(itemIds), incluirPromedio);
 		return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
 				.header(HttpHeaders.CONTENT_DISPOSITION,
-						ContentDisposition.attachment().filename("reporte-calificaciones.csv").build().toString())
+						ContentDisposition.attachment().filename("consolidado-notas.csv").build().toString())
 				.body(contenido);
+	}
+
+	private static List<UUID> ids(String valor) {
+		if (valor == null || valor.isBlank()) {
+			return List.of();
+		}
+		try {
+			return Arrays.stream(valor.split(",")).map(String::strip).filter(id -> !id.isEmpty()).map(UUID::fromString)
+					.toList();
+		} catch (IllegalArgumentException excepcion) {
+			throw ExcepcionNegocio.invalido("Los ítems seleccionados no son válidos.");
+		}
 	}
 }

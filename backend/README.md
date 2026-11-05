@@ -117,7 +117,7 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | PUT · DELETE | `/calificaciones/docente/items/{itemId}` | Docente | Edita o elimina un ítem; no elimina si ya tiene notas |
 | GET · PUT | `/calificaciones/docente/items/{itemId}/calificaciones` | Docente | Lista estudiantes y guarda sus notas según la escala del año |
 | POST · GET · DELETE | `/calificaciones/docente/items/{itemId}/calificaciones/{matriculaId}/evidencia` | Docente | Sube, descarga o elimina una evidencia PDF, DOC, DOCX, JPG o PNG de hasta 10 MB |
-| GET | `/calificaciones/docente/reportes` · `/reportes/exportar` | Docente | Reporte por ítem, competencia o periodo; consulta JSON o exportación CSV |
+| GET | `/calificaciones/docente/reportes` · `/reportes/exportar` | Docente | Consolidado JSON o CSV: `tipo=COMPETENCIA`, `objetivoId`, `itemIds` separados por coma e `incluirPromedio`; conserva las variantes ITEM y PERIODO |
 | GET | `/pagos/estado-cuenta?anio=` | Personal adm. | P2 · Estado de cuenta (HU-37): compromisos del año (por defecto el ACTIVO) con sección, antigüedad y deuda vencida de cada alumno, y las tarjetas comprometido, cobrado (%), deuda vencida y cuotas vencidas (solo compromisos VIGENTES) |
 | GET | `/pagos/estudiantes/{estudianteId}/compromisos` | Personal adm. | Compromisos de pago del estudiante, del año más reciente al más antiguo (selector de P8, HU-37) |
 | GET | `/pagos/compromisos/{id}` | Personal adm. | Resumen (total anual, capital pagado, descuento, pensión, saldo) y cronograma de cuotas; `vencida` se calcula con los días de gracia y cada cuota trae `diasAtraso` y `recargo` (HU-37, RF-84, RF-91, RF-92) |
