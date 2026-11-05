@@ -1,8 +1,8 @@
 # Pagos y pensiones
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** 🚧 en desarrollo: HU-36 y HU-37 hechas; falta integrar la tarjeta de HU-36 al detalle de HU-24 y completar la iteración 2
-- **Última actualización:** 2026-11-02
+- **Estado:** 🚧 en desarrollo: HU-36 y 37 hechas; backend de HU-35, 38, 39 y 40 hecho (falta su front); falta integrar la tarjeta de HU-36 al detalle de HU-24
+- **Última actualización:** 2026-11-04
 
 ## Alcance
 
@@ -28,7 +28,12 @@ Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
 
 ## Endpoints
 
-Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-cuenta`, `/pagos/estudiantes/{id}/compromisos`, `/pagos/compromisos/{id}`, `/pagos/matriculas/{id}/cronograma`, `/pagos/compromisos/{id}/retiro` y `/pagos/matriculas/{id}/cuota-matricula`.
+Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-cuenta`, `/pagos/estudiantes/{id}/compromisos`, `/pagos/compromisos/{id}` (y `/morosidad`, `/pagos`, `/descuento`, `/descuentos-aplicables`, `/descuentos`), `/pagos/descuentos`, `/pagos/descuentos-aplicados/{id}/revocacion`, `/pagos/apoderado/...`, `/pagos/matriculas/{id}/cronograma`, `/pagos/compromisos/{id}/retiro` y `/pagos/matriculas/{id}/cuota-matricula`.
+
+- El tarifario se lee con el servicio de Configuración (`ServicioTarifario.vigente` y `calendario`, de Luciana); ya no hay SQL propio sobre `pagos.tarifario` para generar cuotas. Sin tarifario CONFIRMADO responde 409 "El tarifario {año} aún no está confirmado.".
+- HU-35: el límite de descuento (RF-77) rige para lo que se registre o edite desde que se cambia; los descuentos ya guardados no se revalidan.
+- HU-38: el descuento es del **estudiante**: al aplicarlo se rebajan las cuotas PENDIENTES sin pagos de todos sus compromisos vigentes cuyos conceptos cubre y que vencen dentro de la vigencia (por defecto, desde hoy). "Hermanos matriculados" cuenta a los estudiantes con matrícula MATRICULADO en el año del compromiso que comparten padre, madre o apoderado, incluido él mismo.
+- HU-40: lo consulta cualquier padre, madre o apoderado vinculado al estudiante (no solo el responsable de matrícula, corrección 2). El "código de estudiante" es su número de documento porque la ficha no tiene otro código.
 
 - HU-36: cuando el colegio aprueba los documentos (HU-29/HU-72), Matrícula debe llamar a `ServicioCuotaMatricula.generar(matriculaId, usuarioId)`; para saber si ya se pagó (HU-31) usa `ServicioCuotaMatricula.consultar(matriculaId)`. Mientras tanto, el personal la genera con el `POST`. Como el cronograma, exige el tarifario del año CONFIRMADO (P19, HU-34): en los datos de prueba el de 2027 está EN_CONFIGURACION, así que hay que confirmarlo antes de generar la cuota de Mateo. La tarjeta "Pago de matrícula" de B6/B7 usa el `GET` (404 = todavía no generada) y su enlace "Ver compromiso de pago" lleva a P8 con el `estudianteId` de la respuesta.
 - Al confirmarse el pago de la matrícula (HU-31), Matrícula debe llamar a `ServicioCronograma.generarPensiones(matriculaId, usuarioId)`. Ver la [decisión](../decisiones/2026-10-20-leonardo-cronograma-pensiones.md).
@@ -75,5 +80,9 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 - [x] HU-36 (backend): generar y consultar la cuota de matrícula.
 - [x] HU-36 (front): tarjeta reutilizable "Pago de matrícula" de B6/B7; se abre con `?matriculaId=` hasta que HU-24 aporte el detalle administrativo.
 - [x] La pensión vence el último día de cada mes (diciembre, el 15), como en el tarifario; el "día 05" del cronograma del apoderado no se usa. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).
+- [x] HU-35 (backend): catálogo de descuentos, tramos por hermanos, activación y límite de la institución.
+- [x] HU-38 (backend): descuentos aplicables, aplicar con reemplazo confirmado, recálculo de cuotas pendientes, consulta y revocación.
+- [x] HU-40 (backend): hijos con saldo y cuotas vencidas, cronograma con recargo e historial de pagos del apoderado.
+- [ ] Front de HU-35 (P21), HU-38 (P10) y HU-40 (Apoderado › Pensiones), con sus tipos en `frontend/src/types/api.ts` (`CuotaDetalle` ahora trae `diasAtraso` y `recargo`).
 - [ ] Pasarela de pagos real: hoy la orden solo guarda la referencia y el resultado; falta elegir el proveedor.
 - [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).

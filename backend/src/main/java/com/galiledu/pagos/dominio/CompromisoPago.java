@@ -144,6 +144,10 @@ public class CompromisoPago {
 		return estudianteId;
 	}
 
+	public UUID getAnioEscolarId() {
+		return anioEscolarId;
+	}
+
 	public EstadoCompromiso getEstado() {
 		return estado;
 	}

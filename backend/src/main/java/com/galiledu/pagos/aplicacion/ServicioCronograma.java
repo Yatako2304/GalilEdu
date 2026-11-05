@@ -12,6 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.CalendarioPension;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.CuotaCalendario;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.TarifarioVigente;
+import com.galiledu.configuracion.aplicacion.ServicioTarifario;
 import com.galiledu.pagos.aplicacion.DtosPagos.CronogramaGenerado;
 import com.galiledu.pagos.aplicacion.DtosPagos.RetiroRegistrado;
 import com.galiledu.pagos.dominio.CompromisoPago;
@@ -19,10 +23,8 @@ import com.galiledu.pagos.dominio.Cuota;
 import com.galiledu.pagos.dominio.EstadoCompromiso;
 import com.galiledu.pagos.infraestructura.CompromisoPagoRepositorio;
 import com.galiledu.pagos.infraestructura.ConsultasPagos;
-import com.galiledu.pagos.infraestructura.ConsultasPagos.CuotaTarifario;
 import com.galiledu.pagos.infraestructura.ConsultasPagos.DescuentoActivo;
 import com.galiledu.pagos.infraestructura.ConsultasPagos.MatriculaParaPagos;
-import com.galiledu.pagos.infraestructura.ConsultasPagos.Tarifario;
 
 /**
  * HU-37: genera el cronograma de pensiones de una matrícula formalizada (RF-81, RF-82, RF-83) y anula las pensiones
@@ -35,10 +37,13 @@ public class ServicioCronograma {
 
 	private final CompromisoPagoRepositorio compromisos;
 	private final ConsultasPagos consultas;
+	private final ServicioTarifario tarifarios;
 
-	public ServicioCronograma(CompromisoPagoRepositorio compromisos, ConsultasPagos consultas) {
+	public ServicioCronograma(CompromisoPagoRepositorio compromisos, ConsultasPagos consultas,
+			ServicioTarifario tarifarios) {
 		this.compromisos = compromisos;
 		this.consultas = consultas;
+		this.tarifarios = tarifarios;
 	}
 
 	@Transactional
@@ -49,16 +54,16 @@ public class ServicioCronograma {
 			throw ExcepcionNegocio.conflicto(
 					"El cronograma de pensiones se genera cuando la matrícula está formalizada (matriculado).");
 		}
-		Tarifario tarifario = consultas.tarifario(m.anioEscolarId())
-				.orElseThrow(() -> ExcepcionNegocio.conflicto("No hay tarifario para el año " + m.anio() + "."));
-		if (!"CONFIRMADO".equals(tarifario.estado())) {
-			throw ExcepcionNegocio.conflicto("El tarifario " + m.anio() + " aún no está confirmado.");
-		}
+		// Tarifario CONFIRMADO del año (HU-34): Configuración lo expone por su servicio.
+		TarifarioVigente tarifario = tarifarios.vigente(m.anioEscolarId())
+				.orElseThrow(() -> ExcepcionNegocio.conflicto("El tarifario " + m.anio() + " aún no está confirmado."));
+		CalendarioPension calendario = tarifarios.calendario(m.anioEscolarId())
+				.orElseThrow(() -> ExcepcionNegocio.conflicto("El tarifario " + m.anio() + " aún no está confirmado."));
 
 		CompromisoPago compromiso = compromisos.findByMatriculaId(matriculaId)
 				.or(() -> compromisos.findByEstudianteIdAndAnioEscolarId(m.estudianteId(), m.anioEscolarId()))
 				.orElseGet(() -> CompromisoPago.nuevo(m.estudianteId(), m.anioEscolarId(), matriculaId,
-						tarifario.id()));
+						tarifario.tarifarioId()));
 		if (compromiso.getEstado() == EstadoCompromiso.ANULADO) {
 			throw ExcepcionNegocio.conflicto("El compromiso de pago " + m.anio() + " del estudiante está anulado.");
 		}
@@ -73,7 +78,7 @@ public class ServicioCronograma {
 		LocalDate fechaMatricula = m.confirmadoEn() != null
 				? m.confirmadoEn().atZoneSameInstant(LIMA).toLocalDate()
 				: LocalDate.now(LIMA);
-		List<CuotaTarifario> pendientes = consultas.cuotasTarifario(tarifario.id()).stream()
+		List<CuotaCalendario> pendientes = calendario.cuotas().stream()
 				.filter(ct -> ct.fechaVencimiento().isAfter(fechaMatricula))
 				.toList();
 		if (pendientes.isEmpty()) {
@@ -81,12 +86,13 @@ public class ServicioCronograma {
 		}
 
 		Optional<DescuentoActivo> descuento = consultas.descuentoPara(m.estudianteId(), Cuota.CONCEPTO_PENSION);
-		for (CuotaTarifario ct : pendientes) {
+		for (CuotaCalendario ct : pendientes) {
 			BigDecimal rebaja = descuento.filter(d -> d.vigenteEn(ct.fechaVencimiento()))
 					.map(d -> tarifario.montoPension().multiply(d.porcentaje()).divide(CIEN, 2, RoundingMode.HALF_UP))
 					.orElse(BigDecimal.ZERO);
-			compromiso.agregarCuota(Cuota.pension(compromiso, ct.numero(), ct.nombre(), tarifario.montoPension(),
-					ct.fechaVencimiento(), rebaja, descuento.map(DescuentoActivo::id).orElse(null), usuarioId));
+			compromiso
+					.agregarCuota(Cuota.pension(compromiso, (short) ct.numero(), ct.nombre(), tarifario.montoPension(),
+							ct.fechaVencimiento(), rebaja, descuento.map(DescuentoActivo::id).orElse(null), usuarioId));
 		}
 		CompromisoPago guardado = compromisos.save(compromiso);
 		return new CronogramaGenerado(guardado.getId(), m.anio(), pendientes.size());

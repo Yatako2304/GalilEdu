@@ -155,6 +155,36 @@ public class Cuota {
 		return recargo.min(maximo);
 	}
 
+	/** RF-88: solo se recalculan las cuotas PENDIENTES sin pagos; las pagadas o parciales conservan su monto. */
+	public boolean admiteRecalculo() {
+		return estado == EstadoCuota.PENDIENTE && montoPagado.signum() == 0;
+	}
+
+	/** RF-88: aplica el porcentaje sobre el monto original (monto base), no sobre un monto ya rebajado. */
+	public boolean aplicarDescuento(BigDecimal porcentaje, UUID descuentoAplicadoId) {
+		if (!admiteRecalculo()) {
+			return false;
+		}
+		montoDescuento = montoBase.multiply(porcentaje).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+		this.descuentoAplicadoId = descuentoAplicadoId;
+		// monto_final lo calcula la BD; se actualiza aquí para que la misma sesión lea el valor nuevo.
+		montoFinal = montoBase.subtract(montoDescuento);
+		porcentajeDescuento = porcentaje;
+		return true;
+	}
+
+	/** RF-87, RF-90: restituye el monto original si la cuota tenía ese descuento y todavía no se paga. */
+	public boolean quitarDescuento(UUID descuentoAplicadoId) {
+		if (!descuentoAplicadoId.equals(this.descuentoAplicadoId) || !admiteRecalculo()) {
+			return false;
+		}
+		montoDescuento = BigDecimal.ZERO;
+		this.descuentoAplicadoId = null;
+		montoFinal = montoBase;
+		porcentajeDescuento = null;
+		return true;
+	}
+
 	public boolean estaActiva() {
 		return estado != EstadoCuota.ANULADA;
 	}
@@ -205,6 +235,10 @@ public class Cuota {
 
 	public LocalDate getFechaPago() {
 		return fechaPago;
+	}
+
+	public UUID getDescuentoAplicadoId() {
+		return descuentoAplicadoId;
 	}
 
 	public BigDecimal getPorcentajeDescuento() {
