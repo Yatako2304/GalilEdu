@@ -64,6 +64,25 @@ export const ItemsEvaluacion = ({
   const [editando, setEditando] = React.useState<ItemEvaluacion | 'nuevo'>();
   const eliminar = useEliminarItem();
   const { addNotification } = useNotifications();
+  const pesoAsignadoPorCompetencia = React.useMemo(() => {
+    const totales = new Map<string, number>();
+    items.forEach((item) =>
+      item.competencias.forEach((competencia) =>
+        totales.set(
+          competencia.competenciaId,
+          (totales.get(competencia.competenciaId) ?? 0) +
+            competencia.pesoPorcentaje,
+        ),
+      ),
+    );
+    return totales;
+  }, [items]);
+  const competenciasCompletas =
+    competencias.length > 0 &&
+    competencias.every(
+      (competencia) =>
+        (pesoAsignadoPorCompetencia.get(competencia.id) ?? 0) >= 100,
+    );
 
   const quitar = async (item: ItemEvaluacion) => {
     try {
@@ -84,11 +103,18 @@ export const ItemsEvaluacion = ({
         <Button
           icon={<Plus className="size-4" />}
           iconPosition="right"
-          disabled={!periodo.registroNotasAbierto || !competencias.length}
+          disabled={
+            isLoading ||
+            !periodo.registroNotasAbierto ||
+            !competencias.length ||
+            competenciasCompletas
+          }
           title={
-            periodo.registroNotasAbierto
-              ? undefined
-              : 'El periodo no está habilitado para registrar calificaciones.'
+            !periodo.registroNotasAbierto
+              ? 'El periodo no está habilitado para registrar calificaciones.'
+              : competenciasCompletas
+                ? 'Todas las competencias ya tienen el 100 % de peso asignado.'
+                : undefined
           }
           onClick={() => setEditando('nuevo')}
         >
@@ -149,6 +175,7 @@ export const ItemsEvaluacion = ({
           seleccion={seleccion}
           periodo={periodo.nombre}
           competencias={competencias}
+          pesoAsignadoPorCompetencia={pesoAsignadoPorCompetencia}
           item={editando === 'nuevo' ? undefined : editando}
           onCerrar={() => setEditando(undefined)}
         />
@@ -287,6 +314,7 @@ const ItemsPorCompetencia = ({
           0,
         );
         const completo = Math.abs(pesoTotal - 100) < 0.01;
+        const excedido = pesoTotal > 100;
         return (
           <section key={grupo.competencia.id} className="py-6">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -304,8 +332,16 @@ const ItemsPorCompetencia = ({
                   </p>
                 </div>
               </div>
-              <Tag color={completo ? 'success' : 'warning'} size="md">
-                {completo ? 'Pesos completos' : `Peso total: ${pesoTotal}%`}
+              <Tag
+                color={completo ? 'success' : 'error'}
+                appearance={completo ? 'soft' : 'outline'}
+                size="md"
+              >
+                {completo
+                  ? 'Pesos completos'
+                  : excedido
+                    ? 'Pesos excedidos'
+                    : 'Pesos incompletos'}
               </Tag>
             </div>
 

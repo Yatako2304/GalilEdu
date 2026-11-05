@@ -61,6 +61,12 @@ No se editó ninguna migración anterior.
 - **Decisión:** exportar CSV UTF-8 desde el mismo modelo que alimenta la tabla del reporte.
   **Por qué:** evita diferencias entre lo que se ve y lo que se descarga, y no añade una librería nueva.
   **Alternativas descartadas:** generar XLSX en esta iteración; no lo exige la HU ni el frame revisado.
+- **Decisión:** presentar HU-62 como un único consolidado de notas, con selección de competencia e ítems y promedio final opcional, sin pestañas separadas «Por ítem», «Por competencia» o «Por periodo».
+  **Por qué:** el frame de Figma muestra un formulario para generar el consolidado y una sola tabla agrupada por competencia, con los ítems elegidos y el promedio como última columna.
+  **Alternativas descartadas:** dividir el reporte en tres vistas, porque cambia el recorrido y la jerarquía visual definidos para HU-62.
+- **Decisión:** separar la navegación principal en los botones **Configuración de ítems** y **Consolidado de notas**, debajo del título Calificaciones, según la indicación de josezavaleta del 2026-11-05.
+  **Por qué:** la configuración y el registro de notas comparten los filtros de curso, sección y periodo; el consolidado tiene su propio formulario y reporte.
+  **Alternativas descartadas:** mantener el consolidado como una tercera pestaña junto a Configurar ítems y Calificar alumnos.
 - **Decisión:** sincronizar las competencias del plan por identificador y conservar las relaciones que no cambiaron.
   **Por qué:** los ítems dependen de `plan_competencia`; eliminar toda la colección antes de recrearla rompía la configuración de cursos que ya tenían ítems.
   **Alternativas descartadas:** borrar en cascada los ítems al configurar el plan, porque eliminaría trabajo académico ya registrado.
