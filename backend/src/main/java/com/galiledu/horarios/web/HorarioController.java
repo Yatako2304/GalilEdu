@@ -2,17 +2,22 @@ package com.galiledu.horarios.web;
 
 import java.util.UUID;
 
+import jakarta.validation.Valid;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.galiledu.horarios.aplicacion.DtosHorarios.HorarioDeSeccion;
 import com.galiledu.horarios.aplicacion.DtosHorarios.OpcionesDeHorario;
+import com.galiledu.horarios.aplicacion.DtosHorarios.SolicitudHorario;
 import com.galiledu.horarios.aplicacion.ServicioHorarios;
 
-/** Horario semanal de una sección (HU-45), para el Coordinador. Fase 1: solo lectura. */
+/** Horario semanal de una sección (HU-45), para el Coordinador. Lectura y escritura. */
 @RestController
 @RequestMapping("/horarios")
 @PreAuthorize("hasRole('COORDINADOR')")
@@ -41,5 +46,17 @@ public class HorarioController {
 	@GetMapping("/secciones/{seccionId}/opciones")
 	public OpcionesDeHorario opcionesDeSeccion(@PathVariable UUID seccionId) {
 		return servicio.opcionesDeSeccion(seccionId);
+	}
+
+	/**
+	 * PUT /api/horarios/secciones/{seccionId}
+	 * Guarda la matriz COMPLETA de la sección y responde con el mismo cuerpo que el GET. {@code version} es la que
+	 * devolvió el GET (null si no había horario). 404 si la sección no existe; 409 si el año está cerrado, la versión
+	 * cambió, falta docente, se exceden las horas semanales o hay cruces; 400 si una celda no es válida.
+	 */
+	@PutMapping("/secciones/{seccionId}")
+	public HorarioDeSeccion guardarHorario(@PathVariable UUID seccionId,
+			@Valid @RequestBody SolicitudHorario solicitud) {
+		return servicio.guardarHorario(seccionId, solicitud);
 	}
 }

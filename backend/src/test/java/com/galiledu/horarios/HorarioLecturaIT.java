@@ -8,108 +8,20 @@ import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.simple.JdbcClient;
-import org.springframework.test.web.servlet.ResultActions;
-
-import com.galiledu.PruebaIntegracion;
 
 /**
  * HU-45, Fase 1: los dos GET de lectura del horario. Cada prueba arma sus datos por SQL en 2027 (año PLANIFICADO, sin
  * estructuras ni secciones): una estructura de 6 bloques de 45 min desde las 08:00 con un receso de 20 min después del
  * bloque 3, y secciones propias. Todo se deshace al final.
  */
-class HorarioLecturaIT extends PruebaIntegracion {
-	private static final UUID ANIO_2027 = UUID.fromString("30000000-0000-0000-0000-000000002027");
+class HorarioLecturaIT extends PruebaHorarios {
 	private static final String SIN_PRINCIPAL_SECUNDARIA = "Configura la estructura horaria principal de secundaria antes de asignar horarios.";
-
-	@Autowired
-	private JdbcClient jdbc;
-
-	// ---------- Datos de prueba ----------
-
-	private UUID estructura(String codigo, String nivel, boolean principal, int bloques) {
-		UUID id = jdbc.sql("""
-				INSERT INTO configuracion.estructura_horaria
-				    (anio_escolar_id, codigo, dias_lectivos, hora_entrada, bloques_por_dia, duracion_bloque_min, nivel,
-				     es_principal)
-				VALUES (:anio, :codigo, ARRAY['LUN','MAR','MIE','JUE','VIE']::varchar[], TIME '08:00', :bloques, 45,
-				        :nivel, :principal)
-				RETURNING id""")
-				.param("anio", ANIO_2027).param("codigo", codigo).param("bloques", bloques).param("nivel", nivel)
-				.param("principal", principal).query(UUID.class).single();
-		if (bloques >= 3) {
-			jdbc.sql("""
-					INSERT INTO configuracion.receso (estructura_horaria_id, despues_de_bloque, duracion_min)
-					VALUES (:id, 3, 20)""").param("id", id).update();
-		}
-		return id;
-	}
-
-	private UUID ambiente(String codigo, String estado) {
-		return jdbc.sql("""
-				INSERT INTO configuracion.ambiente (codigo, nombre, tipo, aforo_maximo, estado)
-				VALUES (:codigo, :nombre, 'AULA_REGULAR', 30, :estado) RETURNING id""")
-				.param("codigo", codigo).param("nombre", "Aula " + codigo).param("estado", estado)
-				.query(UUID.class).single();
-	}
-
-	private UUID docente() {
-		return jdbc.sql("SELECT id FROM seguridad.usuario WHERE nombre_usuario = :u").param("u", DOCENTE)
-				.query(UUID.class).single();
-	}
-
-	private UUID seccion(String grado, String nombre, UUID ambienteId, UUID tutorId) {
-		return jdbc.sql("""
-				INSERT INTO configuracion.seccion
-				    (anio_escolar_id, grado_codigo, nombre, capacidad_maxima, ambiente_id, tutor_id)
-				VALUES (:anio, :grado, :nombre, 30, :ambiente, :tutor) RETURNING id""")
-				.param("anio", ANIO_2027).param("grado", grado).param("nombre", nombre).param("ambiente", ambienteId)
-				.param("tutor", tutorId).query(UUID.class).single();
-	}
-
-	private UUID plan(String curso, int horas) {
-		return jdbc.sql("""
-				INSERT INTO academico.plan_curso (anio_escolar_id, grado_codigo, curso_id, horas_semanales)
-				SELECT :anio, 'SEC-1', c.id, :horas FROM academico.curso c WHERE c.nombre = :curso
-				RETURNING id""")
-				.param("anio", ANIO_2027).param("horas", horas).param("curso", curso).query(UUID.class).single();
-	}
-
-	private void asignarDocente(UUID planId, UUID seccionId, UUID docenteId) {
-		jdbc.sql("INSERT INTO academico.docente_seccion (plan_curso_id, seccion_id, docente_id) VALUES (:p, :s, :d)")
-				.param("p", planId).param("s", seccionId).param("d", docenteId).update();
-	}
-
-	private UUID cabecera(UUID seccionId, UUID estructuraId) {
-		return jdbc.sql("""
-				INSERT INTO horarios.horario_seccion (seccion_id, estructura_horaria_id)
-				VALUES (:s, :e) RETURNING id""").param("s", seccionId).param("e", estructuraId)
-				.query(UUID.class).single();
-	}
-
-	private void bloque(UUID cabeceraId, String dia, int numero, UUID planId, UUID ambienteId) {
-		jdbc.sql("""
-				INSERT INTO horarios.horario_bloque (horario_seccion_id, dia, numero_bloque, plan_curso_id, ambiente_id)
-				VALUES (:h, :dia, :n, :p, :a)""")
-				.param("h", cabeceraId).param("dia", dia).param("n", numero).param("p", planId)
-				.param("a", ambienteId).update();
-	}
-
-	private ResultActions pedir(String ruta, String usuario) throws Exception {
-		return mvc.perform(conToken(get(ruta), token(usuario), null));
-	}
-
-	private long cabeceras() {
-		return jdbc.sql("SELECT count(*) FROM horarios.horario_seccion").query(Long.class).single();
-	}
 
 	// ---------- GET /horarios/secciones/{id} ----------
 
