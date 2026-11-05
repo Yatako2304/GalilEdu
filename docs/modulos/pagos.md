@@ -2,7 +2,7 @@
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
 - **Estado:** 🚧 en desarrollo: HU-36 y HU-37 hechas; falta integrar la tarjeta de HU-36 al detalle de HU-24 y completar la iteración 2
-- **Última actualización:** 2026-10-22
+- **Última actualización:** 2026-11-02
 
 ## Alcance
 
@@ -21,7 +21,7 @@ Apoderado elige cuotas ─► orden de pago (cuotas EN_PROCESO) ─► pasarela 
 **Se calcula al consultar y no se guarda:**
 - **Cuota vencida:** una pensión impaga después de su vencimiento más los días de gracia.
 - **Días de atraso.**
-- **Recargo por mora:** la tasa por cada 30 días sobre el capital pendiente, sin pasar del tope.
+- **Recargo por mora:** la tasa por cada **30 días completos** de atraso, contados desde el vencimiento, sobre el capital pendiente (monto final menos lo pagado), sin capitalizar y sin pasar del tope (porcentaje del capital). Como en Figma P11: S/ 600 con tasa 2 % → 32 días = S/ 12 y 63 días = S/ 24. Solo las pensiones generan mora (RF-91).
 - **Deuda del apoderado:** la suma de todos sus hijos.
 
 Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
@@ -70,6 +70,8 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 ## Pendientes
 
 - [x] HU-37: generar, consultar y anular por retiro el cronograma de pensiones.
+- [x] HU-39 (backend): morosidad del compromiso (`GET /pagos/compromisos/{id}/morosidad`), como Figma P11.
+- [ ] HU-39 (front): pestaña "Morosidad (n)" en P8.
 - [x] HU-36 (backend): generar y consultar la cuota de matrícula.
 - [x] HU-36 (front): tarjeta reutilizable "Pago de matrícula" de B6/B7; se abre con `?matriculaId=` hasta que HU-24 aporte el detalle administrativo.
 - [x] La pensión vence el último día de cada mes (diciembre, el 15), como en el tarifario; el "día 05" del cronograma del apoderado no se usa. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).

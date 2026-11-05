@@ -126,4 +126,35 @@ public final class DtosPagos {
 			LocalDate fechaPago,
 			String responsable) {
 	}
+
+	/** HU-39 · P11 Morosidad: una pensión vencida con sus días de atraso, capital y recargo (RF-93). */
+	public record CuotaMorosa(
+			UUID cuotaId,
+			String concepto,
+			Short numero,
+			LocalDate fechaVencimiento,
+			int diasAtraso,
+			BigDecimal capital,
+			BigDecimal recargo,
+			BigDecimal total) {
+	}
+
+	/**
+	 * HU-39 · P11 Morosidad del compromiso (RF-91 a RF-93). {@code fecha} es el "Total adeudado al …" de Figma. El
+	 * recargo va siempre separado del capital; la política (gracia, tasa y tope) es la del tarifario del año.
+	 */
+	public record MorosidadCompromiso(
+			UUID compromisoId,
+			LocalDate fecha,
+			int anio,
+			UUID estudianteId,
+			String estudiante,
+			int diasGracia,
+			BigDecimal recargoPorcentaje,
+			BigDecimal topeRecargoPorcentaje,
+			BigDecimal capital,
+			BigDecimal recargo,
+			BigDecimal total,
+			List<CuotaMorosa> cuotas) {
+	}
 }

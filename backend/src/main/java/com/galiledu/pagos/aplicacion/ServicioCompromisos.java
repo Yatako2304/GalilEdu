@@ -16,8 +16,10 @@ import com.galiledu.pagos.aplicacion.DtosPagos.AlumnoEstadoCuenta;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoAnio;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoDetalle;
 import com.galiledu.pagos.aplicacion.DtosPagos.CuotaDetalle;
+import com.galiledu.pagos.aplicacion.DtosPagos.CuotaMorosa;
 import com.galiledu.pagos.aplicacion.DtosPagos.EstadoCuentaGeneral;
 import com.galiledu.pagos.aplicacion.DtosPagos.EstudianteCompromiso;
+import com.galiledu.pagos.aplicacion.DtosPagos.MorosidadCompromiso;
 import com.galiledu.pagos.aplicacion.DtosPagos.ResumenCompromiso;
 import com.galiledu.pagos.dominio.CompromisoPago;
 import com.galiledu.pagos.dominio.Cuota;
@@ -26,7 +28,7 @@ import com.galiledu.pagos.dominio.EstadoCuota;
 import com.galiledu.pagos.infraestructura.CompromisoPagoRepositorio;
 import com.galiledu.pagos.infraestructura.ConsultasPagos;
 
-/** Compromiso de pago y cronograma de cuotas (HU-37). Solo consulta. */
+/** Compromiso de pago, cronograma de cuotas (HU-37) y morosidad (HU-39). Solo consulta. */
 @Service
 public class ServicioCompromisos {
 	private static final ZoneId LIMA = ZoneId.of("America/Lima");
@@ -107,6 +109,36 @@ public class ServicioCompromisos {
 				c.getEstudianteDocumento(), c.getApoderadoNombre(), c.getSeccion());
 
 		return new CompromisoDetalle(c.getId(), c.getAnio(), c.getEstado(), estudiante, resumen, cuotas);
+	}
+
+	/**
+	 * HU-39 · P11: pensiones vencidas del compromiso, de la más antigua a la más reciente, con días de atraso, capital
+	 * pendiente y recargo (RF-91 a RF-93). Se calcula al consultar; no se guarda.
+	 */
+	@Transactional(readOnly = true)
+	public MorosidadCompromiso morosidad(UUID compromisoId) {
+		CompromisoPago c = compromisos.findById(compromisoId)
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No existe el compromiso de pago."));
+		LocalDate hoy = LocalDate.now(LIMA);
+		int gracia = c.getDiasGracia();
+		BigDecimal tasa = c.getRecargoPorcentaje();
+		BigDecimal tope = c.getTopeRecargoPorcentaje();
+
+		List<CuotaMorosa> cuotas = c.getCuotas().stream()
+				.filter(q -> q.estaVencida(hoy, gracia))
+				.sorted(Comparator.comparing(Cuota::getFechaVencimiento))
+				.map(q -> {
+					BigDecimal capital = q.capitalPendiente();
+					BigDecimal recargo = q.recargo(hoy, gracia, tasa, tope);
+					return new CuotaMorosa(q.getId(), q.getNombre(), q.getNumero(), q.getFechaVencimiento(),
+							q.diasAtraso(hoy), capital, recargo, capital.add(recargo));
+				})
+				.toList();
+		BigDecimal capital = cuotas.stream().map(CuotaMorosa::capital).reduce(BigDecimal.ZERO, BigDecimal::add);
+		BigDecimal recargo = cuotas.stream().map(CuotaMorosa::recargo).reduce(BigDecimal.ZERO, BigDecimal::add);
+		return new MorosidadCompromiso(c.getId(), hoy, c.getAnio(), c.getEstudianteId(), c.getEstudianteNombre(),
+				gracia,
+				tasa, tope, capital, recargo, capital.add(recargo), cuotas);
 	}
 
 	private static BigDecimal sumar(List<Cuota> cuotas, java.util.function.Function<Cuota, BigDecimal> campo) {
