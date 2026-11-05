@@ -39,7 +39,10 @@ class ServicioEstructurasHorariasTests {
 	private final EstructuraHorariaRepositorio estructuras = mock(EstructuraHorariaRepositorio.class);
 	private final AnioEscolarRepositorio anios = mock(AnioEscolarRepositorio.class);
 	private final PlanesDeEvaluacion planes = mock(PlanesDeEvaluacion.class);
-	private final ServicioEstructurasHorarias servicio = new ServicioEstructurasHorarias(estructuras, anios, planes);
+	// Un mock sin configurar no tiene horarios: ni estructuras en uso ni días usados.
+	private final UsoDeEstructura uso = mock(UsoDeEstructura.class);
+	private final ServicioEstructurasHorarias servicio = new ServicioEstructurasHorarias(estructuras, anios, planes,
+			uso);
 
 	@BeforeEach
 	void prepararUnAnioPlanificado() {
