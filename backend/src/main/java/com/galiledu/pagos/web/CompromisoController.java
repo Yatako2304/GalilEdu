@@ -22,6 +22,8 @@ import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoAnio;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoDetalle;
 import com.galiledu.pagos.aplicacion.DtosPagos.CronogramaGenerado;
 import com.galiledu.pagos.aplicacion.DtosPagos.EstadoCuentaGeneral;
+import com.galiledu.pagos.aplicacion.DtosPagos.MorosidadCompromiso;
+import com.galiledu.pagos.aplicacion.DtosPagos.PagoRealizado;
 import com.galiledu.pagos.aplicacion.DtosPagos.RetiroRegistrado;
 import com.galiledu.pagos.aplicacion.DtosPagos.SolicitudRetiro;
 import com.galiledu.pagos.aplicacion.ServicioCompromisos;
@@ -56,6 +58,18 @@ public class CompromisoController {
 	@GetMapping("/compromisos/{id}")
 	public CompromisoDetalle detalle(@PathVariable UUID id) {
 		return servicio.detalle(id);
+	}
+
+	/** GET /api/pagos/compromisos/{id}/morosidad · Figma "P11 · Morosidad" (HU-39, RF-91 a RF-93). */
+	@GetMapping("/compromisos/{id}/morosidad")
+	public MorosidadCompromiso morosidad(@PathVariable UUID id) {
+		return servicio.morosidad(id);
+	}
+
+	/** GET /api/pagos/compromisos/{id}/pagos · pestaña "Pagos" de P8/P9: pagos con su constancia. */
+	@GetMapping("/compromisos/{id}/pagos")
+	public List<PagoRealizado> pagos(@PathVariable UUID id) {
+		return servicio.pagos(id);
 	}
 
 	/** POST /api/pagos/matriculas/{matriculaId}/cronograma · genera las pensiones (RF-81, RF-82, RF-83). */

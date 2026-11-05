@@ -11,7 +11,7 @@ Implementé el flujo del Docente para definir ítems de evaluación, registrar n
 
 ## Archivos principales
 
-- `backend/src/main/resources/db/migration/V10__calificaciones_docente.sql`
+- `backend/src/main/resources/db/migration/V11__calificaciones_docente.sql`
 - `backend/src/main/java/com/galiledu/academico/aplicacion/ServicioCalificaciones.java`
 - `backend/src/main/java/com/galiledu/academico/infraestructura/RepositorioCalificaciones.java`
 - `backend/src/main/java/com/galiledu/academico/aplicacion/ServicioPlanEvaluacion.java`
@@ -21,7 +21,7 @@ Implementé el flujo del Docente para definir ítems de evaluación, registrar n
 
 ## Cambios en los esquemas de base de datos
 
-La migración `V10__calificaciones_docente.sql` crea cuatro tablas en `academico`:
+La migración `V11__calificaciones_docente.sql` crea cuatro tablas en `academico`:
 
 | Tabla | Clave y relación principal |
 | --- | --- |

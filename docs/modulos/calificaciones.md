@@ -37,7 +37,7 @@ La pantalla conserva los filtros separados de año, curso, grado, sección y ár
 ## Base de datos
 
 - **Esquema:** `academico`
-- **Migración:** `V10__calificaciones_docente.sql`
+- **Migración:** `V11__calificaciones_docente.sql`
 
 | Tabla | Para qué | Reglas destacadas |
 | --- | --- | --- |
@@ -46,7 +46,7 @@ La pantalla conserva los filtros separados de año, curso, grado, sección y ár
 | `academico.calificacion_item` | Nota de un estudiante para un ítem. | Una por matrícula e ítem; exactamente un valor numérico o cualitativo; la matrícula debe pertenecer a la sección del ítem. |
 | `academico.evidencia_calificacion` | Archivo de evidencia de la nota. | Una por calificación; MIME permitido y tamaño entre 1 byte y 10 MB. |
 
-V10 agrega restricciones `UNIQUE` compuestas a `academico.plan_curso`, `configuracion.seccion`, `configuracion.periodo_academico` y `matricula.matricula`. Se usan como destinos de claves foráneas y no cambian los datos existentes.
+V11 agrega restricciones `UNIQUE` compuestas a `academico.plan_curso`, `configuracion.seccion`, `configuracion.periodo_academico` y `matricula.matricula`. Se usan como destinos de claves foráneas y no cambian los datos existentes.
 
 ## Reglas de aplicación
 
