@@ -25,7 +25,7 @@ src/main/java/com/galiledu/
 ├── estudiantes/    inscripción del estudiante (HU-7)
 └── academico/      catálogo académico: plan curricular, escala de calificación y plan de evaluación (HU-52 a HU-56)
 
-Configuración, matrícula y pagos: por ahora solo tienen BD (paquetes por crear).
+Configuración, matrícula, pagos y horarios: por ahora solo tienen BD (paquetes por crear).
 
 Cada módulo:  dominio/ (entidades JPA, reglas)  aplicacion/ (servicios + DTOs)
               infraestructura/ (repositorios)   web/ (controladores REST)
@@ -50,8 +50,9 @@ Reglas: un esquema de BD por módulo; los controladores no tocan repositorios di
 | `V7__ajustes_integracion.sql` | varios | Grado del estudiante del catálogo, estado ACTIVO/RETIRADO, estructura horaria por nivel, descuento por estudiante, formato del código de matrícula |
 | `V8__configuracion_periodo_sin_estado.sql` | `configuracion` | Elimina `periodo_academico.estado`: el estado del periodo se calcula con las fechas |
 | `V9__parametros_evaluacion_por_anio.sql` | `configuracion`, `academico` | Parámetros globales de evaluación del año; conserva las columnas anteriores del plan como legado |
+| `V10__horarios.sql` | `horarios` | Horario semanal de una sección (`horario_seccion`) y sus bloques asignados (`horario_bloque`) |
 
-Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V10…).
+Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V11…).
 
 ## API (prefijo `/api`)
 
