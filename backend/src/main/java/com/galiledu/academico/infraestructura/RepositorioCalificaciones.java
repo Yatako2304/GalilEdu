@@ -177,6 +177,22 @@ public class RepositorioCalificaciones {
 				.params(planCursoId, seccionId, periodoId, nombre, excepto).query(Boolean.class).single();
 	}
 
+	public void bloquearPlanCurso(UUID planCursoId) {
+		jdbc.sql("SELECT id FROM academico.plan_curso WHERE id = ? FOR UPDATE").param(planCursoId)
+				.query(UUID.class).single();
+	}
+
+	public BigDecimal pesoAsignado(UUID planCursoId, UUID seccionId, UUID periodoId, UUID competenciaId,
+			UUID excepto) {
+		return jdbc.sql("""
+				SELECT COALESCE(sum(ic.peso_porcentaje), 0)
+				FROM academico.item_competencia ic
+				JOIN academico.item_evaluacion ie ON ie.id = ic.item_evaluacion_id
+				WHERE ie.plan_curso_id = ? AND ie.seccion_id = ? AND ie.periodo_academico_id = ?
+				  AND ic.competencia_id = ? AND ie.id IS DISTINCT FROM ?""")
+				.params(planCursoId, seccionId, periodoId, competenciaId, excepto).query(BigDecimal.class).single();
+	}
+
 	public UUID crearItem(UUID planCursoId, UUID seccionId, UUID periodoId, String nombre, String descripcion,
 			String tipo, UUID docenteId) {
 		return jdbc.sql("""
@@ -324,5 +340,15 @@ public class RepositorioCalificaciones {
 				WHERE m.seccion_id = ? AND m.estado = 'MATRICULADO' AND NOT e.eliminado
 				ORDER BY p.apellido_paterno, p.apellido_materno, p.nombres, ie.creado_en, c.orden""")
 				.params(planCursoId, periodoId, seccionId).query(DetalleReporteFila.class).list();
+	}
+
+	public Optional<Integer> notaAprobatoria(LocalDate fecha) {
+		return jdbc.sql("""
+				SELECT n.nota_desde
+				FROM academico.tabla_conversion t
+				JOIN academico.tabla_conversion_nivel n ON n.tabla_id = t.id AND n.nivel = 'A'
+				WHERE t.vigente_desde <= ?
+				ORDER BY t.vigente_desde DESC
+				LIMIT 1""").param(fecha).query(Integer.class).optional();
 	}
 }

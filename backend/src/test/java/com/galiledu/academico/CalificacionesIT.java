@@ -2,6 +2,7 @@ package com.galiledu.academico;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -118,6 +119,8 @@ class CalificacionesIT extends PruebaIntegracion {
 
 	@Test
 	void registraUnItemConLaCompetenciaConfiguradaParaAlgebra() throws Exception {
+		jdbc.sql("UPDATE academico.item_competencia SET peso_porcentaje = 50 WHERE item_evaluacion_id = ?::uuid")
+				.param(item).update();
 		String base = "/calificaciones/docente/cursos/" + plan + "/secciones/" + seccion + "/periodos/" + periodo;
 		String competencia = jdbc.sql("""
 				SELECT competencia_id::text FROM academico.plan_competencia
@@ -129,13 +132,61 @@ class CalificacionesIT extends PruebaIntegracion {
 				  "descripcion": "Operaciones algebraicas",
 				  "tipo": "PRACTICA",
 				  "competencias": [
-				    {"competenciaId": "%s", "pesoPorcentaje": 100}
+				    {"competenciaId": "%s", "pesoPorcentaje": 50}
 				  ]
 				}""".formatted(competencia)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.nombre").value("Prueba de regularidad"))
 				.andExpect(jsonPath("$.competencias[0].competenciaId").value(competencia))
+				.andExpect(jsonPath("$.competencias[0].pesoPorcentaje").value(50));
+	}
+
+	@Test
+	void rechazaUnItemCuandoLaCompetenciaYaTieneCienPorCiento() throws Exception {
+		String competencia = jdbc
+				.sql("SELECT competencia_id::text FROM academico.item_competencia WHERE item_evaluacion_id = ?::uuid")
+				.param(item).query(String.class).single();
+		String base = "/calificaciones/docente/cursos/" + plan + "/secciones/" + seccion + "/periodos/" + periodo;
+		mvc.perform(conToken(post(base + "/items"), docente, """
+				{"nombre":"Examen adicional","descripcion":"Operaciones algebraicas","tipo":"EXAMEN",
+				 "competencias":[{"competenciaId":"%s","pesoPorcentaje":1}]}
+				""".formatted(competencia)))
+				.andExpect(status().isBadRequest())
+				.andExpect(
+						jsonPath("$.message").value(org.hamcrest.Matchers.containsString("no puede superar el 100 %")));
+	}
+
+	@Test
+	void editarNoDuplicaElPesoDelPropioItem() throws Exception {
+		String competencia = jdbc
+				.sql("SELECT competencia_id::text FROM academico.item_competencia WHERE item_evaluacion_id = ?::uuid")
+				.param(item).query(String.class).single();
+		mvc.perform(conToken(put("/calificaciones/docente/items/" + item), docente, """
+				{"nombre":"Práctica corregida","descripcion":"Operaciones algebraicas","tipo":"PRACTICA",
+				 "competencias":[{"competenciaId":"%s","pesoPorcentaje":100}]}
+				""".formatted(competencia)))
+				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.competencias[0].pesoPorcentaje").value(100));
+	}
+
+	@Test
+	void consolidaLosItemsSeleccionadosConPromedioOpcional() throws Exception {
+		String competencia = jdbc
+				.sql("SELECT competencia_id::text FROM academico.item_competencia WHERE item_evaluacion_id = ?::uuid")
+				.param(item).query(String.class).single();
+		mvc.perform(conToken(get("/calificaciones/docente/reportes").param("tipo", "COMPETENCIA")
+				.param("planCursoId", plan).param("seccionId", seccion).param("periodoId", periodo)
+				.param("objetivoId", competencia).param("itemIds", item).param("incluirPromedio", "true"), docente))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.columnas[1].titulo").value("Promedio final"))
+				.andExpect(jsonPath("$.filas[0].valores.resultado").value("17"))
+				.andExpect(jsonPath("$.filas[0].valores.resultado_estado").value("Aprobado"));
+		mvc.perform(conToken(get("/calificaciones/docente/reportes").param("tipo", "COMPETENCIA")
+				.param("planCursoId", plan).param("seccionId", seccion).param("periodoId", periodo)
+				.param("objetivoId", competencia).param("itemIds", item).param("incluirPromedio", "false"), docente))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.columnas.length()").value(1))
+				.andExpect(jsonPath("$.filas[0].valores.resultado").doesNotExist());
 	}
 
 	@Test

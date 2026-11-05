@@ -19,7 +19,8 @@ import { CalificarAlumnos } from './calificar-alumnos';
 import { ItemsEvaluacion } from './items-evaluacion';
 import { ReporteCalificacionesVista } from './reporte-calificaciones';
 
-type Pestana = 'items' | 'calificar' | 'reporte';
+type Vista = 'configuracion' | 'consolidado';
+type Pestana = 'items' | 'calificar';
 
 export const CalificacionesDocente = () => {
   const { data: cursos = [], isLoading } = useCursosDocente();
@@ -30,6 +31,7 @@ export const CalificacionesDocente = () => {
   const [anio, setAnio] = React.useState<number>();
   const [cursoClave, setCursoClave] = React.useState('');
   const [periodoId, setPeriodoId] = React.useState('');
+  const [vista, setVista] = React.useState<Vista>('configuracion');
   const [pestana, setPestana] = React.useState<Pestana>('items');
 
   React.useEffect(() => {
@@ -113,162 +115,196 @@ export const CalificacionesDocente = () => {
 
   return (
     <>
-      <Card className="p-5">
-        <h2 className="mb-4 text-label-1 font-medium text-content-primary">
-          Curso y sección
-        </h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Select
-            label="Año académico"
-            value={String(anio ?? '')}
-            options={anios.map((valor) => ({
-              label: String(valor),
-              value: valor,
-            }))}
-            onChange={(e) => setAnio(Number(e.target.value))}
-          />
-          <Select
-            label="Curso"
-            value={curso.curso}
-            options={nombresCurso.map((nombre) => ({
-              label: nombre,
-              value: nombre,
-            }))}
-            onChange={(e) => {
-              const siguiente = cursosDelAnio.find(
-                (actual) => actual.curso === e.target.value,
-              );
-              if (siguiente) setCursoClave(claveCurso(siguiente));
-            }}
-          />
-          <Select
-            label="Grado"
-            value={curso.gradoCodigo}
-            options={grados}
-            onChange={(e) => {
-              const siguiente = cursosDelNombre.find(
-                (actual) => actual.gradoCodigo === e.target.value,
-              );
-              if (siguiente) setCursoClave(claveCurso(siguiente));
-            }}
-          />
-          <Select
-            label="Sección"
-            value={curso.seccionId}
-            options={secciones.map((actual) => ({
-              label: actual.seccion,
-              value: actual.seccionId,
-            }))}
-            onChange={(e) => {
-              const siguiente = secciones.find(
-                (actual) => actual.seccionId === e.target.value,
-              );
-              if (siguiente) setCursoClave(claveCurso(siguiente));
-            }}
-          />
-          <Select
-            label="Área curricular"
-            value={curso.area}
-            options={[{ label: curso.area, value: curso.area }]}
-            disabled
-            wrapperClassName="sm:col-span-2"
-          />
-        </div>
-      </Card>
+      <Tabs
+        aria-label="Vistas de calificaciones"
+        variant="pill"
+        value={vista}
+        onValueChange={setVista}
+        items={[
+          { value: 'configuracion', label: 'Configuración de ítems' },
+          { value: 'consolidado', label: 'Consolidado de notas' },
+        ]}
+      />
 
-      <section aria-labelledby="periodos-titulo">
-        <h2
-          id="periodos-titulo"
-          className="mb-3 text-label-1 font-medium text-content-primary"
-        >
-          Periodo lectivo
-        </h2>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          {curso.periodos.map((actual) => (
-            <button
-              key={actual.id}
-              type="button"
-              onClick={() => setPeriodoId(actual.id)}
-              className={cn(
-                'rounded-xl border bg-white p-4 text-left transition-colors',
-                actual.id === periodo.id
-                  ? 'border-stroke-accent-primary bg-surface-accent-light'
-                  : 'border-stroke-tertiary hover:bg-surface-primary-hover',
-              )}
+      {vista === 'configuracion' && (
+        <>
+          <Card className="p-5">
+            <h2 className="mb-4 text-label-1 font-medium text-content-primary">
+              Curso y sección
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <Select
+                label="Año académico"
+                value={String(anio ?? '')}
+                options={anios.map((valor) => ({
+                  label: String(valor),
+                  value: valor,
+                }))}
+                onChange={(e) => setAnio(Number(e.target.value))}
+              />
+              <Select
+                label="Curso"
+                value={curso.curso}
+                options={nombresCurso.map((nombre) => ({
+                  label: nombre,
+                  value: nombre,
+                }))}
+                onChange={(e) => {
+                  const siguiente = cursosDelAnio.find(
+                    (actual) => actual.curso === e.target.value,
+                  );
+                  if (siguiente) setCursoClave(claveCurso(siguiente));
+                }}
+              />
+              <Select
+                label="Grado"
+                value={curso.gradoCodigo}
+                options={grados}
+                onChange={(e) => {
+                  const siguiente = cursosDelNombre.find(
+                    (actual) => actual.gradoCodigo === e.target.value,
+                  );
+                  if (siguiente) setCursoClave(claveCurso(siguiente));
+                }}
+              />
+              <Select
+                label="Sección"
+                value={curso.seccionId}
+                options={secciones.map((actual) => ({
+                  label: actual.seccion,
+                  value: actual.seccionId,
+                }))}
+                onChange={(e) => {
+                  const siguiente = secciones.find(
+                    (actual) => actual.seccionId === e.target.value,
+                  );
+                  if (siguiente) setCursoClave(claveCurso(siguiente));
+                }}
+              />
+              <Select
+                label="Área curricular"
+                value={curso.area}
+                options={[{ label: curso.area, value: curso.area }]}
+                disabled
+                wrapperClassName="sm:col-span-2"
+              />
+            </div>
+          </Card>
+
+          <section aria-labelledby="periodos-titulo">
+            <h2
+              id="periodos-titulo"
+              className="mb-3 text-label-1 font-medium text-content-primary"
             >
-              <div className="flex items-start justify-between gap-2">
-                <span className="text-label-2 font-medium text-content-primary">
-                  {actual.nombre}
-                </span>
-                <Tag
-                  size="sm"
-                  color={
-                    actual.estado === 'EN_CURSO'
-                      ? 'success'
-                      : actual.estado === 'PLANIFICADO'
-                        ? 'info'
-                        : 'neutral'
-                  }
+              Periodo lectivo
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {curso.periodos.map((actual) => (
+                <button
+                  key={actual.id}
+                  type="button"
+                  onClick={() => setPeriodoId(actual.id)}
+                  className={cn(
+                    'rounded-xl border bg-white p-4 text-left transition-colors',
+                    actual.id === periodo.id
+                      ? 'border-stroke-accent-primary bg-surface-accent-light'
+                      : 'border-stroke-tertiary hover:bg-surface-primary-hover',
+                  )}
                 >
-                  {actual.estado === 'EN_CURSO'
-                    ? 'En curso'
-                    : actual.estado === 'PLANIFICADO'
-                      ? 'Planificado'
-                      : 'Cerrado'}
-                </Tag>
-              </div>
-              <p className="mt-1 text-caption-1 text-content-quartiary">
-                {rangoFechas(actual.fechaInicio, actual.fechaFin)}
-              </p>
-              <p className="mt-5 text-body-4 text-content-secondary">
-                {actual.competencias} competencias
-              </p>
-              <p className="mt-1 text-body-4 text-content-accent-primary">
-                {actual.items} ítems de calificación
-              </p>
-            </button>
-          ))}
-        </div>
-      </section>
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-label-2 font-medium text-content-primary">
+                      {actual.nombre}
+                    </span>
+                    <Tag
+                      size="sm"
+                      color={
+                        actual.estado === 'EN_CURSO'
+                          ? 'success'
+                          : actual.estado === 'PLANIFICADO'
+                            ? 'info'
+                            : 'neutral'
+                      }
+                    >
+                      {actual.estado === 'EN_CURSO'
+                        ? 'En curso'
+                        : actual.estado === 'PLANIFICADO'
+                          ? 'Planificado'
+                          : 'Cerrado'}
+                    </Tag>
+                  </div>
+                  <p className="mt-1 text-caption-1 text-content-quartiary">
+                    {rangoFechas(actual.fechaInicio, actual.fechaFin)}
+                  </p>
+                  <p className="mt-5 text-body-4 text-content-secondary">
+                    {actual.competencias} competencias
+                  </p>
+                  <p className="mt-1 text-body-4 text-content-accent-primary">
+                    {actual.items} ítems de calificación
+                  </p>
+                </button>
+              ))}
+            </div>
+          </section>
+        </>
+      )}
 
-      <div>
-        <Tabs
-          aria-label="Secciones de calificaciones"
-          fullWidth
-          value={pestana}
-          onValueChange={setPestana}
-          items={[
-            { value: 'items', label: 'Configurar ítems' },
-            { value: 'calificar', label: 'Calificar alumnos' },
-            { value: 'reporte', label: 'Ver calificaciones' },
-          ]}
-        />
-        <div className="mt-5">
-          {pestana === 'items' && (
-            <ItemsEvaluacion
-              seleccion={seleccion}
-              periodo={periodo}
-              competencias={competencias}
-            />
-          )}
-          {pestana === 'calificar' && (
-            <CalificarAlumnos
-              seleccion={seleccion}
-              curso={curso}
-              periodo={periodo}
-              competencias={competencias}
-              items={items}
-            />
-          )}
-          {pestana === 'reporte' && (
-            <ReporteCalificacionesVista
-              seleccion={seleccion}
-              competencias={competencias}
-              items={items}
-            />
-          )}
+      {vista === 'configuracion' ? (
+        <div>
+          <Tabs
+            aria-label="Secciones de calificaciones"
+            fullWidth
+            value={pestana}
+            onValueChange={setPestana}
+            items={[
+              { value: 'items', label: 'Configurar ítems' },
+              { value: 'calificar', label: 'Calificar alumnos' },
+            ]}
+          />
+          <div className="mt-5">
+            {pestana === 'items' && (
+              <ItemsEvaluacion
+                seleccion={seleccion}
+                periodo={periodo}
+                competencias={competencias}
+              />
+            )}
+            {pestana === 'calificar' && (
+              <CalificarAlumnos
+                seleccion={seleccion}
+                curso={curso}
+                periodo={periodo}
+                competencias={competencias}
+                items={items}
+              />
+            )}
+          </div>
         </div>
-      </div>
+      ) : (
+        <ReporteCalificacionesVista
+          seleccion={seleccion}
+          curso={curso}
+          periodo={periodo}
+          anios={anios}
+          cursos={nombresCurso}
+          grados={grados}
+          competencias={competencias}
+          items={items}
+          onAnioChange={setAnio}
+          onCursoChange={(nombre) => {
+            const siguiente = cursosDelAnio.find(
+              (actual) => actual.curso === nombre,
+            );
+            if (siguiente) setCursoClave(claveCurso(siguiente));
+          }}
+          onGradoChange={(grado) => {
+            const siguiente = cursosDelNombre.find(
+              (actual) => actual.gradoCodigo === grado,
+            );
+            if (siguiente) setCursoClave(claveCurso(siguiente));
+          }}
+          onPeriodoChange={setPeriodoId}
+        />
+      )}
     </>
   );
 };
