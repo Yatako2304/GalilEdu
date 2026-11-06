@@ -12,11 +12,10 @@ import {
   datosResumenMatricula,
   fechaPeriodo,
 } from '@/features/matricula/components/consulta-matricula';
-import { useCrearOrdenPago } from '@/features/pagos/api/pago-en-linea';
+import { PagoMatriculaApoderado } from '@/features/pagos/components/pago-matricula-apoderado';
 
 const ApoderadoMatriculaRoute = () => {
   const hijos = useHijosApoderado();
-  const pagar = useCrearOrdenPago();
   const [params] = useSearchParams();
   const [elegido, setElegido] = React.useState<string | undefined>(
     params.get('estudiante') ?? undefined,
@@ -67,8 +66,11 @@ const ApoderadoMatriculaRoute = () => {
         estado={estado.data}
         isLoading={hijos.isLoading || estado.isLoading}
         onElegir={setElegido}
-        onPagarMatricula={(cuotaId) => pagar.mutate([cuotaId])}
-        pagandoMatricula={pagar.isPending}
+        pagoMatricula={
+          estado.data?.pagoMatricula ? (
+            <PagoMatriculaApoderado pago={estado.data.pagoMatricula} />
+          ) : undefined
+        }
       />
     </ContentLayout>
   );

@@ -1,7 +1,7 @@
 # Matrícula
 
 - **HU:** HU-24, 27, 30 (iteración 1) · HU-28, 29, 31, 32 (2) · HU-25, 26, 33, 71, 72 (3)
-- **Estado:** 🚧 en desarrollo: HU-27 y HU-30 completas; HU-24 completa (listado A3, Nueva matrícula, detalle A5/B6/B7 y Cambiar sección, todo conectado a la BD)
+- **Estado:** 🚧 en desarrollo: HU-24, HU-27, HU-30 y HU-31 completas (HU-24: listado A3, Nueva matrícula, detalle A5/B6/B7 y Cambiar sección, todo conectado a la BD)
 - **Última actualización:** 2026-11-05
 
 ## Alcance
@@ -37,8 +37,30 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): hijos y estado (
 - **EN_VALIDACION** se conserva como cuarto estado (el apoderado lo alcanza al subir todo); cuenta como «requiere acción» igual que SECCION_RESERVADA.
 
 - La deuda (HU-30) se pide a Pagos con `ServicioEstadoCuenta.cuotasVencidas` (IEstadoCuenta): pensiones impagas después del vencimiento más los días de gracia, solo del estudiante consultado. Solo bloquea si el periodo tiene `bloquear_por_morosidad`. El estado visible del periodo (PROGRAMADO, ABIERTO o CERRADO) lo calcula Configuración con `ServicioPeriodoMatricula.estadoEn` y el `Clock` de la app.
-- `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula).
+- `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula). En la pantalla del apoderado, con MATRICULADO los 4 pasos se muestran completados (Figma "HU-32 Confirmación de matrícula").
 - Si `periodo.abierto` es false, el frontend no muestra la opción de matricular (RF-59).
+- `pagoMatricula` (HU-31): la cuota de matrícula con `puedePagar` y, si no se puede, el `motivo`. Es null mientras la cuota no exista.
+
+## HU-31 · Derivación a pagos
+
+El apoderado paga la cuota de matrícula con el pago en línea de HU-41 (misma orden, misma pasarela). Cuando Pagos confirma el pago publica `PagoEnLineaAprobado` con `matriculasPagadas`; `EscuchaPagoMatricula` lo recibe **después de guardar el pago** y, para cada matrícula, `ServicioConfirmacionPago`:
+
+1. `matricular`: si sigue en PENDIENTE_PAGO, la pasa a MATRICULADO con el código `MAT-AAAA-NNNN` (correlativo por año, con bloqueo de fila) y `confirmado_en`. Si ya estaba matriculada no hace nada.
+2. `generarPensiones`: crea el cronograma de HU-37.
+
+Cada paso va en su propia transacción: si algo falla se registra en el log, pero el pago ya cobrado nunca se deshace.
+
+| Criterio | Qué se comprueba |
+|---|---|
+| CAHU31-1 | Con la matrícula en PENDIENTE_PAGO y la cuota generada, el apoderado ve "Pago de matrícula" y el botón **Pagar matrícula**. |
+| CAHU31-2 | Solo bloquean las pensiones vencidas **del propio hijo**; la deuda de un hermano no impide pagar la matrícula (reunión con el PO, 30/10). Se valida al mostrar el botón y al crear la orden. |
+| CAHU31-3 | El pago usa el flujo de HU-41 con una orden que contiene solo la cuota de matrícula. |
+| CAHU31-4 | Al confirmarse: MATRICULADO, código `MAT-AAAA-NNNN`, pensiones generadas y paso 4 "Matriculado". |
+| CAHU31-5 | Si el pago se rechaza o expira, la cuota vuelve a pendiente y la matrícula sigue en PENDIENTE_PAGO. |
+| CAHU31-6 | Ya matriculado no hay botón, ni otro código, ni otro cronograma. |
+
+Pruebas: `DerivacionPagosIT` y `EscuchaPagoMatriculaTests` (backend); `pago-matricula-apoderado.test.tsx` y `consulta-matricula.test.tsx` (frontend).
+
 
 ## Pantallas (Figma)
 
@@ -150,6 +172,7 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 
 ## Pendientes
 
+- [x] HU-31: pago de la matrícula en línea, código `MAT-AAAA-NNNN` y pensiones al confirmarse el pago. Ver la [decisión](../decisiones/2026-11-06-galleta159-derivacion-a-pagos.md).
 - [x] Backend de HU-27 y HU-30 (estado de matrícula y deuda del apoderado).
 - [x] Pantalla de HU-27 y tarjeta del Home: consulta periodo, grado, sección, estado y progreso por cada hijo.
 - [x] Pantalla de HU-30: alerta contextual que distingue deuda propia y deuda de otro hijo, detalle de cuotas vencidas por estudiante y total de deuda familiar.
@@ -164,5 +187,4 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 
 - **Decisión de producto (2026-11-06): sección del apoderado.** Mientras la matrícula no esté MATRICULADO, el apoderado no ve la sección: `GET /matricula/apoderado/estudiantes/{id}/estado` devuelve `matricula.seccion = null` y la pantalla muestra "Por definir". El personal administrativo sí ve la sección reservada.
 
-- **Matrícula por pago (HU-31, 2026-11-06).** Al confirmarse el pago en línea de la cuota de matrícula (evento `PagoEnLineaAprobado`), `ConfirmacionMatriculaPorPago` pasa la matrícula de PENDIENTE_PAGO a MATRICULADO en la misma transacción: asigna el código `MAT-AAAA-NNNN` (correlativo del año) y `confirmado_en`. Desde ese momento el apoderado ve su sección. Un pago repetido no cambia nada. Tras el commit, `GeneracionCronogramaAlMatricular` (evento `MatriculaConfirmada`) genera las pensiones con `ServicioCronograma.generarPensiones`; si falla solo se registra y queda el respaldo manual `POST /pagos/matriculas/{id}/cronograma`.
-- **Pantalla del apoderado (Figma páginas 13 y 14).** El estado incluye `cuotaMatricula` (monto, vencimiento, responsable; solo PENDIENTE_PAGO o MATRICULADO) para mostrar "Pagar matrícula", y `matricula.confirmadoEn`. Con la matrícula MATRICULADO aparece **Descargar constancia**: HTML imprimible (guardar como PDF) con alumno, grado, sección, código, fecha de matrícula y cuota pagada. Sin hacer: "Salir", enlace al cronograma y notificación al apoderado.
+- **Pantalla del apoderado (Figma páginas 13 y 14).** La tarjeta "Pago de matrícula" (`pagoMatricula`) va a la derecha de los datos y documentos, como el detalle del colegio. `matricula.confirmadoEn` trae la fecha de confirmación; con la matrícula MATRICULADO aparecen **Descargar constancia** (HTML imprimible, guardar como PDF) y **Ver cronograma de pensiones**. Tras pagar la matrícula, el resultado del pago ofrece **Ver matrícula** del hijo correspondiente (el detalle de la orden trae `estudianteId` y `matricula` por cuota) y "Volver a Pensiones" abre las pensiones del estudiante que pagó (`?estudiante=`). Sin hacer: notificación al apoderado.

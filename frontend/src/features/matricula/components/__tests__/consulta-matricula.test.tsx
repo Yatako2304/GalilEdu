@@ -2,7 +2,7 @@ import { HttpResponse, http } from 'msw';
 
 import { env } from '@/config/env';
 import { server } from '@/testing/mocks/server';
-import { renderApp, screen, userEvent } from '@/testing/test-utils';
+import { renderApp, screen, userEvent, within } from '@/testing/test-utils';
 import { EstadoMatriculaApoderado, HijoApoderado } from '@/types/api';
 
 import { ConsultaMatricula } from '../consulta-matricula';
@@ -64,7 +64,6 @@ const estado: EstadoMatriculaApoderado = {
   puedeContinuar: true,
   impedimentos: [],
   deuda: { total: 0, cuotas: [] },
-  cuotaMatricula: null,
 };
 
 test('muestra el periodo, grado, sección y estado asignados', async () => {
@@ -217,8 +216,41 @@ test('indica cuando la deuda pertenece al hijo seleccionado', async () => {
   );
 });
 
-test('con la documentación validada muestra el aviso con monto y fecha límite y permite pagar la matrícula', async () => {
-  const alPagar = vi.fn();
+test('con la documentación validada avisa de la cuota y muestra el pago', async () => {
+  await renderApp(
+    <ConsultaMatricula
+      hijos={hijos}
+      estudianteId="mateo"
+      estado={{
+        ...estado,
+        matricula: { ...estado.matricula!, estado: 'PENDIENTE_PAGO' },
+        pasoActual: 3,
+        pagoMatricula: {
+          cuotaId: 'cuota-matricula',
+          concepto: 'Matrícula 2027',
+          monto: 850,
+          fechaVencimiento: '2027-01-31',
+          estado: 'PENDIENTE',
+          responsable: 'Luis Paredes',
+          puedePagar: true,
+          motivo: null,
+        },
+      }}
+      isLoading={false}
+      onElegir={vi.fn()}
+      pagoMatricula={<p>Tarjeta de pago</p>}
+    />,
+  );
+
+  expect(screen.getByText('Documentación validada')).toBeInTheDocument();
+  expect(
+    screen.getByText(/Se generó la cuota de matrícula de S\/ 850.00/),
+  ).toBeInTheDocument();
+  expect(screen.getByText('Tarjeta de pago')).toBeInTheDocument();
+});
+
+// Figma > Apoderado > "HU-32 Confirmación de matrícula": ya matriculado, los 4 pasos salen completados.
+test('ya matriculado, el avance muestra los 4 pasos completados', async () => {
   await renderApp(
     <ConsultaMatricula
       hijos={hijos}
@@ -227,52 +259,32 @@ test('con la documentación validada muestra el aviso con monto y fecha límite 
         ...estado,
         matricula: {
           ...estado.matricula!,
-          estado: 'PENDIENTE_PAGO',
-          seccion: null,
+          estado: 'MATRICULADO',
+          codigo: 'MAT-2027-0001',
         },
-        pasoActual: 3,
-        cuotaMatricula: {
-          cuotaId: 'cuota-1',
-          concepto: 'Matrícula 2027',
-          monto: 450,
-          estado: 'PENDIENTE',
-          fechaVencimiento: '2027-02-28',
-          fechaPago: null,
-          responsable: 'Luis Paredes Silva',
-        },
+        pasoActual: 4,
       }}
       isLoading={false}
       onElegir={vi.fn()}
-      onPagarMatricula={alPagar}
     />,
   );
 
-  expect(screen.getByText('Documentación validada')).toBeVisible();
-  expect(screen.getByText('Fecha límite', { exact: false })).toBeVisible();
-  expect(screen.getByText('Matrícula 2027')).toBeVisible();
-  expect(screen.getByText('Luis Paredes Silva')).toBeVisible();
-  await userEvent.click(
-    screen.getByRole('button', { name: 'Pagar matrícula' }),
-  );
-  expect(alPagar).toHaveBeenCalledWith('cuota-1');
-});
-
-test('sin cuota de matrícula no hay botón de pago', async () => {
-  await renderApp(
-    <ConsultaMatricula
-      hijos={hijos}
-      estudianteId="mateo"
-      estado={estado}
-      isLoading={false}
-      onElegir={vi.fn()}
-    />,
-  );
   expect(
-    screen.queryByRole('button', { name: 'Pagar matrícula' }),
-  ).not.toBeInTheDocument();
+    await screen.findByText('Matriculado', { selector: 'p' }),
+  ).toBeInTheDocument();
+  // Ningún paso queda "en curso" ni muestra su número: todos tienen check.
+  const avance = within(
+    screen.getByRole('list', { name: 'Avance de la matrícula' }),
+  );
+  const pasos = avance.getAllByRole('listitem');
+  expect(pasos).toHaveLength(4);
+  pasos.forEach((paso, i) => {
+    expect(paso).not.toHaveAttribute('aria-current');
+    expect(within(paso).queryByText(String(i + 1))).not.toBeInTheDocument();
+  });
 });
 
-test('la constancia solo se puede descargar con la matrícula confirmada', async () => {
+test('la constancia y el cronograma solo se ofrecen con la matrícula confirmada', async () => {
   const props = {
     hijos,
     estudianteId: 'mateo',

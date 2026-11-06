@@ -1,4 +1,5 @@
-import { Banknote, Check, ChevronDown, Download } from 'lucide-react';
+import { Check, ChevronDown, Download } from 'lucide-react';
+import * as React from 'react';
 import { Link } from 'react-router';
 
 import { Alert } from '@/components/ui/alert';
@@ -18,11 +19,9 @@ import { Stepper } from '@/components/ui/stepper';
 import { Tag, TagProps } from '@/components/ui/tag';
 import { paths } from '@/config/paths';
 import {
-  CuotaMatriculaApoderado,
   EstadoMatricula,
   EstadoMatriculaApoderado,
   HijoApoderado,
-  MatriculaActual,
 } from '@/types/api';
 
 import { descargarConstancia } from '../lib/constancia-matricula';
@@ -206,12 +205,20 @@ const PASOS_MATRICULA = [
 ];
 
 // Figma > Apoderado > Matrícula > "Card - Progreso": instancia de Componentes > Stepper.
-const ProgresoMatricula = ({ pasoActual }: { pasoActual: number }) => (
+// Ya matriculado, Figma ("HU-32 Confirmación de matrícula") muestra los 4 pasos completados, con check: el avance
+// pasa del último paso.
+const ProgresoMatricula = ({
+  pasoActual,
+  matriculado,
+}: {
+  pasoActual: number;
+  matriculado: boolean;
+}) => (
   <Card className="p-6">
-    {/* Matriculado es el último paso: ya no queda nada por hacer, así que figura completado. */}
     <Stepper
       steps={PASOS_MATRICULA}
-      current={pasoActual === 4 ? 5 : pasoActual}
+      aria-label="Avance de la matrícula"
+      current={matriculado ? PASOS_MATRICULA.length + 1 : pasoActual}
     />
   </Card>
 );
@@ -265,10 +272,9 @@ const DeudaPendiente = ({
 );
 
 // Figma > HU-29, HU-31 y HU-32: el aviso cambia con la etapa de la matrícula.
-const avisoDelEstado = (
-  matricula?: MatriculaActual | null,
-  cuota?: CuotaMatriculaApoderado | null,
-) => {
+const avisoDelEstado = (estado?: EstadoMatriculaApoderado) => {
+  const matricula = estado?.matricula;
+  const pago = estado?.pagoMatricula;
   switch (matricula?.estado) {
     case 'EN_VALIDACION':
       return (
@@ -280,8 +286,9 @@ const avisoDelEstado = (
     case 'PENDIENTE_PAGO':
       return (
         <Alert type="warning" title="Documentación validada">
-          {cuota
-            ? `Ya puedes pagar la cuota de matrícula de ${soles(cuota.monto)}. Fecha límite: ${fechaDeuda(cuota.fechaVencimiento)}.`
+          {/* Figma > HU-31: monto y fecha de la cuota cuando ya se generó. */}
+          {pago
+            ? `Se generó la cuota de matrícula de ${soles(pago.monto)}. Págala antes del ${fechaDeuda(pago.fechaVencimiento)} para confirmar la matrícula.`
             : 'Ya puedes pagar la cuota de matrícula para completar el proceso.'}
         </Alert>
       );
@@ -299,83 +306,14 @@ const avisoDelEstado = (
   }
 };
 
-const ETIQUETA_CUOTA: Record<
-  CuotaMatriculaApoderado['estado'],
-  { etiqueta: string; color: NonNullable<TagProps['color']> }
-> = {
-  PENDIENTE: { etiqueta: 'Pendiente de pago', color: 'warning' },
-  EN_PROCESO: { etiqueta: 'Pago en proceso', color: 'info' },
-  PAGADA_PARCIAL: { etiqueta: 'Pago parcial', color: 'warning' },
-  PAGADA: { etiqueta: 'Pagada', color: 'success' },
-};
-
-// Figma > Apoderado > "HU-31 Derivación a pagos": concepto, monto, estado y responsable, y el botón "Pagar matrícula".
-const PagoMatricula = ({
-  cuota,
-  onPagar,
-  pagando,
-}: {
-  cuota: CuotaMatriculaApoderado;
-  onPagar?: (cuotaId: string) => void;
-  pagando?: boolean;
-}) => {
-  const estado = ETIQUETA_CUOTA[cuota.estado];
-  const filas: [string, React.ReactNode][] = [
-    ['Concepto', cuota.concepto],
-    ['Monto', soles(cuota.monto)],
-    [
-      'Estado',
-      <Tag key="estado" color={estado.color} size="sm">
-        {estado.etiqueta}
-        {cuota.fechaPago ? ` · ${fechaDeuda(cuota.fechaPago)}` : ''}
-      </Tag>,
-    ],
-    ['Responsable', cuota.responsable ?? '—'],
-  ];
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Pago de matrícula</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <dl className="space-y-2 rounded-[10px] bg-surface-secondary px-5 py-4 text-body-3">
-          {filas.map(([nombre, valor]) => (
-            <div
-              key={nombre}
-              className="flex items-start justify-between gap-4"
-            >
-              <dt className="text-content-quartiary">{nombre}</dt>
-              <dd className="text-right font-medium text-content-primary">
-                {valor}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        {cuota.estado === 'PENDIENTE' && onPagar && (
-          <div className="flex justify-end">
-            <Button
-              icon={<Banknote className="size-4" aria-hidden="true" />}
-              isLoading={pagando}
-              onClick={() => onPagar(cuota.cuotaId)}
-            >
-              Pagar matrícula
-            </Button>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  );
-};
-
 type ConsultaMatriculaProps = {
   hijos: HijoApoderado[];
   estudianteId?: string;
   estado?: EstadoMatriculaApoderado;
   isLoading: boolean;
   onElegir: (id: string) => void;
-  /** Lleva a la pasarela para pagar la cuota de matrícula; lo arma la ruta (un feature no importa de otro). */
-  onPagarMatricula?: (cuotaId: string) => void;
-  pagandoMatricula?: boolean;
+  /** HU-31: tarjeta "Pago de matrícula" (la arma la ruta con el módulo de pagos). */
+  pagoMatricula?: React.ReactNode;
 };
 
 export const ConsultaMatricula = ({
@@ -384,8 +322,7 @@ export const ConsultaMatricula = ({
   estado,
   isLoading,
   onElegir,
-  onPagarMatricula,
-  pagandoMatricula,
+  pagoMatricula,
 }: ConsultaMatriculaProps) => {
   const elegido = hijos.find((hijo) => hijo.id === estudianteId);
   const impedimentos = estado?.impedimentos ?? [];
@@ -446,9 +383,12 @@ export const ConsultaMatricula = ({
         </Alert>
       )}
 
-      {avisoDelEstado(estado?.matricula, estado?.cuotaMatricula)}
+      {avisoDelEstado(estado)}
 
-      <ProgresoMatricula pasoActual={estado?.pasoActual ?? 0} />
+      <ProgresoMatricula
+        pasoActual={estado?.pasoActual ?? 0}
+        matriculado={estado?.matricula?.estado === 'MATRICULADO'}
+      />
 
       {estado && estado.deuda.total > 0 && (
         <DeudaPendiente deuda={estado.deuda} />
@@ -535,13 +475,7 @@ export const ConsultaMatricula = ({
             <DocumentosApoderado estudianteId={estudianteId} />
           )}
         </div>
-        {estado?.cuotaMatricula && (
-          <PagoMatricula
-            cuota={estado.cuotaMatricula}
-            onPagar={onPagarMatricula}
-            pagando={pagandoMatricula}
-          />
-        )}
+        {pagoMatricula}
       </div>
     </div>
   );

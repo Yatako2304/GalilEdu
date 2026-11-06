@@ -144,6 +144,10 @@ public class CompromisoPago {
 		return estudianteId;
 	}
 
+	public UUID getMatriculaId() {
+		return matriculaId;
+	}
+
 	public UUID getAnioEscolarId() {
 		return anioEscolarId;
 	}

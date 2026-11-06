@@ -24,13 +24,10 @@ export const htmlDeLaConstancia = (estado: EstadoMatriculaApoderado) => {
     ['Código de matrícula', m?.codigo ?? '—'],
   ];
   if (m?.confirmadoEn) filas.push(['Matriculado el', fecha(m.confirmadoEn)]);
-  const cuota = estado.cuotaMatricula;
-  if (cuota) {
-    filas.push(['Cuota de matrícula', `S/ ${cuota.monto.toFixed(2)}`]);
-    if (cuota.fechaPago) {
-      filas.push(['Pagada el', fecha(`${cuota.fechaPago}T12:00:00`)]);
-    }
-    if (cuota.responsable) filas.push(['Responsable', cuota.responsable]);
+  const pago = estado.pagoMatricula;
+  if (pago) {
+    filas.push(['Cuota de matrícula', `S/ ${pago.monto.toFixed(2)}`]);
+    filas.push(['Responsable', pago.responsable]);
   }
   const titulo = `Constancia de matrícula ${estado.periodo.anio}`;
   return `<!doctype html><html lang="es"><head><meta charset="utf-8"><title>${escapar(titulo)}</title>

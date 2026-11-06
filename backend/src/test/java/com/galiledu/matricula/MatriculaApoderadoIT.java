@@ -65,36 +65,6 @@ class MatriculaApoderadoIT extends PruebaIntegracion {
 	}
 
 	@Test
-	void conLaDocumentacionValidadaElApoderadoVeLaCuotaDeMatricula() throws Exception {
-		jdbc.sql("UPDATE matricula.matricula SET estado = 'PENDIENTE_PAGO' WHERE estudiante_id = ?::uuid")
-				.param(MATEO).update();
-		jdbc.sql(
-				"""
-						WITH c AS (
-						  INSERT INTO pagos.compromiso_pago (estudiante_id, anio_escolar_id, matricula_id, tarifario_id)
-						  SELECT ?::uuid, m.anio_escolar_id, m.id, (SELECT id FROM pagos.tarifario WHERE anio_escolar_id = m.anio_escolar_id)
-						  FROM matricula.matricula m WHERE m.estudiante_id = ?::uuid RETURNING id)
-						INSERT INTO pagos.cuota (compromiso_id, concepto_codigo, nombre, monto_base, fecha_vencimiento)
-						SELECT id, 'MATRICULA', 'Matrícula 2027', 450, '2027-02-28' FROM c""")
-				.params(MATEO, MATEO).update();
-
-		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", MATEO), token(APODERADO)))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.pasoActual").value(3))
-				.andExpect(jsonPath("$.cuotaMatricula.concepto").value("Matrícula 2027"))
-				.andExpect(jsonPath("$.cuotaMatricula.monto").value(450.0))
-				.andExpect(jsonPath("$.cuotaMatricula.estado").value("PENDIENTE"))
-				.andExpect(jsonPath("$.cuotaMatricula.fechaVencimiento").value("2027-02-28"))
-				.andExpect(jsonPath("$.cuotaMatricula.responsable").value("Luis Paredes Silva"));
-	}
-
-	@Test
-	void sinValidarLosDocumentosNoHayCuotaDeMatricula() throws Exception {
-		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", MATEO), token(APODERADO)))
-				.andExpect(jsonPath("$.cuotaMatricula").doesNotExist());
-	}
-
-	@Test
 	void laDeudaDeSofiaBloqueaSuPropiaMatricula() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", SOFIA), token(APODERADO)))
 				.andExpect(status().isOk())

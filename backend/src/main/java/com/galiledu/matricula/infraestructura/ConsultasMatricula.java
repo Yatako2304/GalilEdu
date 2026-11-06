@@ -1,6 +1,5 @@
 package com.galiledu.matricula.infraestructura;
 
-import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -82,6 +81,39 @@ public class ConsultasMatricula {
 				.query((rs, i) -> new MatriculaFila(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
 						rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class)))
 				.optional();
+	}
+
+	/**
+	 * HU-31: matrícula PENDIENTE_PAGO → MATRICULADO con su código MAT-AAAA-NNNN (correlativo por año) y la fecha de
+	 * confirmación (RF-68). Devuelve el código, o vacío si la matrícula no estaba pendiente de pago.
+	 */
+	public Optional<String> matricularPorPago(UUID matriculaId, OffsetDateTime ahora) {
+		Optional<Integer> anio = jdbc.sql("""
+				SELECT a.anio FROM matricula.matricula m JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
+				WHERE m.id = ? AND m.estado = 'PENDIENTE_PAGO'
+				FOR UPDATE OF m""")
+				.param(matriculaId)
+				.query(Integer.class)
+				.optional();
+		return anio.map(a -> {
+			int numero = jdbc.sql("""
+					INSERT INTO matricula.correlativo_matricula (anio, ultimo) VALUES (:anio, 1)
+					ON CONFLICT (anio) DO UPDATE SET ultimo = matricula.correlativo_matricula.ultimo + 1
+					RETURNING ultimo""")
+					.param("anio", a)
+					.query(Integer.class)
+					.single();
+			String codigo = "MAT-%d-%04d".formatted(a, numero);
+			jdbc.sql("""
+					UPDATE matricula.matricula
+					SET estado = 'MATRICULADO', codigo = :codigo, confirmado_en = :ahora, actualizado_en = :ahora
+					WHERE id = :id""")
+					.param("codigo", codigo)
+					.param("ahora", ahora)
+					.param("id", matriculaId)
+					.update();
+			return codigo;
+		});
 	}
 
 	public int documentosRequeridos(UUID periodoId) {
@@ -354,26 +386,6 @@ public class ConsultasMatricula {
 				.params(matriculaId, documentoRequeridoId)
 				.query((rs, i) -> new ArchivoFila(rs.getString(1), rs.getString(2), rs.getBytes(3)))
 				.optional();
-	}
-
-	/** La cuota de matrícula vigente (no anulada) de la matrícula. */
-	public Optional<CuotaMatriculaFila> cuotaMatricula(UUID matriculaId) {
-		return jdbc.sql("""
-				SELECT q.id, q.nombre, q.monto_final, q.estado, q.fecha_vencimiento, q.fecha_pago
-				FROM matricula.matricula m
-				JOIN pagos.compromiso_pago cp ON cp.matricula_id = m.id
-				    OR (cp.estudiante_id = m.estudiante_id AND cp.anio_escolar_id = m.anio_escolar_id)
-				JOIN pagos.cuota q ON q.compromiso_id = cp.id
-				WHERE m.id = ? AND q.concepto_codigo = 'MATRICULA' AND q.estado <> 'ANULADA'""")
-				.param(matriculaId)
-				.query((rs, i) -> new CuotaMatriculaFila(rs.getObject(1, UUID.class), rs.getString(2),
-						rs.getBigDecimal(3), rs.getString(4), rs.getObject(5, LocalDate.class),
-						rs.getObject(6, LocalDate.class)))
-				.optional();
-	}
-
-	public record CuotaMatriculaFila(UUID cuotaId, String concepto, java.math.BigDecimal monto, String estado,
-			LocalDate fechaVencimiento, LocalDate fechaPago) {
 	}
 
 	/** Documentos subidos que no fueron observados (en revisión o aprobados). */

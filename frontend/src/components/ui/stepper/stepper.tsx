@@ -96,11 +96,21 @@ export type StepperProps = {
   /** Paso actual, empezando en 1. */
   current: number;
   className?: string;
+  /** Nombre accesible de la lista de pasos. */
+  'aria-label'?: string;
 };
 
 // Figma > Componentes > Stepper (N° Steps = 2 a 6)
-export const Stepper = ({ steps, current, className }: StepperProps) => (
-  <ol className={cn('flex w-full items-start', className)}>
+export const Stepper = ({
+  steps,
+  current,
+  className,
+  'aria-label': ariaLabel,
+}: StepperProps) => (
+  <ol
+    aria-label={ariaLabel}
+    className={cn('flex w-full items-start', className)}
+  >
     {steps.map((step, i) => {
       const numero = i + 1;
       const estado: StepState =
