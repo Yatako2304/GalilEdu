@@ -52,3 +52,21 @@ export const SinAsignar: Story = {
   args: { type: 'empty', onAssign: () => {} },
 };
 export const HoraLibre: Story = { args: { type: 'empty' } };
+
+export const AsignadoEditable: Story = {
+  args: {
+    type: 'assigned',
+    courses: [{ name: 'Matemáticas', teacher: 'Prof. Pedro García Ramos' }],
+    room: 'A-502',
+    onSelect: () => {},
+  },
+};
+
+export const ConCruce: Story = {
+  args: {
+    type: 'assigned',
+    courses: [{ name: 'Matemáticas', teacher: 'Prof. Pedro García Ramos' }],
+    room: 'A-502',
+    conflict: 'El docente ya dicta Álgebra en 5.° B a esa hora.',
+  },
+};

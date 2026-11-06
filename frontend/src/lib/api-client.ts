@@ -4,6 +4,16 @@ import { useNotifications } from '@/components/ui/notifications';
 import { env } from '@/config/env';
 import { paths } from '@/config/paths';
 
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    /**
+     * La pantalla muestra el error por su cuenta (un estado vacío, una alerta en la página) o lo ignora a propósito:
+     * el interceptor no lo repite como notificación.
+     */
+    silenciarNotificacion?: boolean;
+  }
+}
+
 // El backend puede autenticar por cookie (withCredentials) o por token Bearer.
 // Si el login devuelve `jwt`, se guarda aquí y se envía en cada petición.
 const TOKEN_KEY = 'galiledu_token';
@@ -94,7 +104,7 @@ api.interceptors.response.use(
       }
     }
 
-    if (!isSessionCheck && !isLogin) {
+    if (!isSessionCheck && !isLogin && !error.config?.silenciarNotificacion) {
       const message = error.response?.data?.message || error.message;
       useNotifications.getState().addNotification({
         type: 'error',

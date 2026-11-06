@@ -1,5 +1,6 @@
 package com.galiledu.horarios.web;
 
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
@@ -12,6 +13,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.galiledu.horarios.aplicacion.DtosHorarios.AnioParaHorarios;
+import com.galiledu.horarios.aplicacion.DtosHorarios.GradoParaHorarios;
 import com.galiledu.horarios.aplicacion.DtosHorarios.HorarioDeSeccion;
 import com.galiledu.horarios.aplicacion.DtosHorarios.OpcionesDeHorario;
 import com.galiledu.horarios.aplicacion.DtosHorarios.SolicitudHorario;
@@ -26,6 +29,26 @@ public class HorarioController {
 
 	public HorarioController(ServicioHorarios servicio) {
 		this.servicio = servicio;
+	}
+
+	/**
+	 * GET /api/horarios/anios-escolares
+	 * Selector de año de la pantalla de asignación: id, año y estado. Configuración los ofrece solo al Personal
+	 * administrativo; el Coordinador los lee aquí.
+	 */
+	@GetMapping("/anios-escolares")
+	public List<AnioParaHorarios> aniosEscolares() {
+		return servicio.aniosEscolares();
+	}
+
+	/**
+	 * GET /api/horarios/anios-escolares/{anioId}/secciones
+	 * Selectores de grado y sección: los grados del catálogo con las secciones que tienen en el año. 404 si el año no
+	 * existe.
+	 */
+	@GetMapping("/anios-escolares/{anioId}/secciones")
+	public List<GradoParaHorarios> seccionesDelAnio(@PathVariable UUID anioId) {
+		return servicio.gradosDelAnio(anioId);
 	}
 
 	/**
