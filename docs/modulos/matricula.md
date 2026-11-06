@@ -37,7 +37,7 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): hijos y estado (
 - **EN_VALIDACION** se conserva como cuarto estado (el apoderado lo alcanza al subir todo); cuenta como «requiere acción» igual que SECCION_RESERVADA.
 
 - La deuda (HU-30) se pide a Pagos con `ServicioEstadoCuenta.cuotasVencidas` (IEstadoCuenta): pensiones impagas después del vencimiento más los días de gracia, solo del estudiante consultado. Solo bloquea si el periodo tiene `bloquear_por_morosidad`. El estado visible del periodo (PROGRAMADO, ABIERTO o CERRADO) lo calcula Configuración con `ServicioPeriodoMatricula.estadoEn` y el `Clock` de la app.
-- `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula).
+- `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula). En la pantalla del apoderado, con MATRICULADO los 4 pasos se muestran completados (Figma "HU-32 Confirmación de matrícula").
 - Si `periodo.abierto` es false, el frontend no muestra la opción de matricular (RF-59).
 - `pagoMatricula` (HU-31): la cuota de matrícula con `puedePagar` y, si no se puede, el `motivo`. Es null mientras la cuota no exista.
 
@@ -172,7 +172,7 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 
 ## Pendientes
 
-- [x] HU-31: pago de la matrícula en línea, código `MAT-AAAA-NNNN` y pensiones al confirmarse el pago.
+- [x] HU-31: pago de la matrícula en línea, código `MAT-AAAA-NNNN` y pensiones al confirmarse el pago. Ver la [decisión](../decisiones/2026-11-06-galleta159-derivacion-a-pagos.md).
 - [x] Backend de HU-27 y HU-30 (estado de matrícula y deuda del apoderado).
 - [x] Pantalla de HU-27 y tarjeta del Home: consulta periodo, grado, sección, estado y progreso por cada hijo.
 - [x] Pantalla de HU-30: alerta contextual que distingue deuda propia y deuda de otro hijo, detalle de cuotas vencidas por estudiante y total de deuda familiar.
