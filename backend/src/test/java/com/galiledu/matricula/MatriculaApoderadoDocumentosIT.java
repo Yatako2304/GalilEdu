@@ -119,6 +119,24 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 	}
 
 	@Test
+	void conUnDocumentoObservadoSoloReemplazaEseYLosAprobadosQuedanBloqueados() throws Exception {
+		abrirPeriodo2027();
+		List<UUID> docs = documentos();
+		for (UUID d : docs.subList(0, 3)) {
+			subir(MATEO, d, "firmado.pdf", "application/pdf", new byte[]{1}).andExpect(status().isOk());
+		}
+		jdbc.sql("UPDATE matricula.documento_matricula SET estado = 'APROBADO' WHERE documento_requerido_id = ?")
+				.param(docs.get(0)).update();
+		jdbc.sql("UPDATE matricula.documento_matricula SET estado = 'OBSERVADO', observacion = 'Borroso' "
+				+ "WHERE documento_requerido_id = ?").param(docs.get(1)).update();
+		subir(MATEO, docs.get(0), "otro.pdf", "application/pdf", new byte[]{2}).andExpect(status().isConflict());
+		subir(MATEO, docs.get(1), "nuevo.pdf", "application/pdf", new byte[]{3})
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.documentos[1].archivo.estado").value("EN_REVISION"))
+				.andExpect(jsonPath("$.documentos[1].archivo.observacion").doesNotExist());
+	}
+
+	@Test
 	void noPuedeEnviarAValidacionSinTodosLosDocumentos() throws Exception {
 		abrirPeriodo2027();
 		subir(MATEO, documentos().getFirst(), "firmado.pdf", "application/pdf", new byte[]{1})

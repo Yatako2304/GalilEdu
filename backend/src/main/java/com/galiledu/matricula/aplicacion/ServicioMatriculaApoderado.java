@@ -80,6 +80,11 @@ public class ServicioMatriculaApoderado {
 		Contexto c = contexto(usuarioId, estudianteId);
 		exigirEditable(c);
 		exigirDocumentoDelPeriodo(c, documentoId);
+		boolean aprobado = consultas.documentosGuardados(c.matricula().id()).stream()
+				.anyMatch(d -> d.documentoRequeridoId().equals(documentoId) && d.estado().equals("APROBADO"));
+		if (aprobado) {
+			throw ExcepcionNegocio.conflicto("Ese documento ya fue aprobado por el colegio.");
+		}
 		PresentacionMatricula.validarArchivo(archivo);
 		escrituras.guardarDocumento(c.matricula().id(), documentoId, archivo, usuarioId);
 		return vista(c);

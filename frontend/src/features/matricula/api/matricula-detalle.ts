@@ -84,3 +84,32 @@ export const abrirDocumentoDeMatricula = async (
   window.open(url, '_blank', 'noopener');
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
+
+// PUT /matricula/matriculas/{id}/documentos/{documentoId}/observacion · el colegio observa un documento
+export const useObservarDocumento = (matriculaId: string) => {
+  const refrescar = useRefrescarDetalle(matriculaId);
+  return useMutation({
+    mutationFn: ({
+      documentoId,
+      observacion,
+    }: {
+      documentoId: string;
+      observacion: string;
+    }): Promise<DetalleMatricula> =>
+      api.put(
+        `/matricula/matriculas/${matriculaId}/documentos/${documentoId}/observacion`,
+        { observacion },
+      ),
+    onSuccess: refrescar,
+  });
+};
+
+// POST /matricula/matriculas/{id}/validar · "¿Aprobar documentación?"
+export const useValidarMatricula = (matriculaId: string) => {
+  const refrescar = useRefrescarDetalle(matriculaId);
+  return useMutation({
+    mutationFn: (): Promise<DetalleMatricula> =>
+      api.post(`/matricula/matriculas/${matriculaId}/validar`),
+    onSuccess: refrescar,
+  });
+};

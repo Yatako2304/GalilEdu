@@ -16,6 +16,10 @@ import { DetalleMatricula } from '../detalle-matricula';
 
 // HU-24 · A5 "Detalle de matrícula": datos, documentos y cambio de sección.
 
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 const API = `${env.API_URL}/matricula/matriculas/m-1`;
 
 const detalle = (extras: Partial<DetalleDto> = {}): DetalleDto => ({
@@ -44,6 +48,7 @@ const detalle = (extras: Partial<DetalleDto> = {}): DetalleDto => ({
   informacionMedica: 'Sin observaciones',
   puedeCambiarSeccion: true,
   puedeEditarDocumentos: true,
+  puedeValidar: false,
   documentos: [
     {
       id: 'd-1',
@@ -92,7 +97,7 @@ const secciones = () =>
     ],
   });
 
-test('muestra datos, estado de cada documento y deja Validar para HU-32', async () => {
+test('muestra datos, estado de cada documento y deja Validar deshabilitado', async () => {
   await renderApp(<DetalleMatricula matricula={detalle()} />);
 
   expect(screen.getByText('1.° A · Tutor: Raúl Vargas')).toBeVisible();
@@ -232,4 +237,118 @@ test('descarga la plantilla de los documentos que la tienen', async () => {
     '/matricula/periodos/periodo-2027/documentos/d-1/plantilla',
     { responseType: 'blob' },
   );
+});
+
+const enValidacion = (extras: Partial<DetalleDto> = {}) =>
+  detalle({
+    estado: 'EN_VALIDACION',
+    puedeValidar: true,
+    documentos: [
+      {
+        id: 'd-1',
+        nombre: 'Ficha de matrícula firmada',
+        descripcion: null,
+        tienePlantilla: false,
+        archivo: {
+          nombre: 'ficha.pdf',
+          tipoMime: 'application/pdf',
+          tamanoBytes: 2048,
+          estado: 'EN_REVISION',
+          observacion: null,
+          subidoEn: '2026-11-01T10:00:00Z',
+        },
+      },
+    ],
+    ...extras,
+  });
+
+test('observa un documento en revisión con su motivo', async () => {
+  let cuerpo: unknown;
+  server.use(
+    http.put(`${API}/documentos/d-1/observacion`, async ({ request }) => {
+      cuerpo = await request.json();
+      return HttpResponse.json(
+        detalle({ estado: 'SECCION_RESERVADA', puedeValidar: false }),
+      );
+    }),
+  );
+  await renderApp(<DetalleMatricula matricula={enValidacion()} />);
+
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Observar Ficha de matrícula firmada' }),
+  );
+  const dialogo = await screen.findByRole('dialog');
+  const observar = within(dialogo).getByRole('button', { name: 'Observar' });
+  expect(observar).toBeDisabled();
+  await userEvent.type(
+    within(dialogo).getByLabelText('Motivo de la observación'),
+    'La firma no se ve',
+  );
+  await userEvent.click(observar);
+
+  await waitFor(() =>
+    expect(cuerpo).toEqual({ observacion: 'La firma no se ve' }),
+  );
+});
+
+test('un documento aprobado u observado no se puede observar', async () => {
+  await renderApp(<DetalleMatricula matricula={detalle()} />);
+  expect(
+    screen.queryByRole('button', { name: /^Observar / }),
+  ).not.toBeInTheDocument();
+});
+
+test('valida la matrícula tras confirmar "¿Aprobar documentación?"', async () => {
+  let llamadas = 0;
+  server.use(
+    http.post(`${API}/validar`, () => {
+      llamadas += 1;
+      return HttpResponse.json(
+        detalle({ estado: 'PENDIENTE_PAGO', pasoActual: 3 }),
+      );
+    }),
+  );
+  await renderApp(<DetalleMatricula matricula={enValidacion()} />);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Validar' }));
+  expect(await screen.findByText('¿Aprobar documentación?')).toBeVisible();
+  await userEvent.click(screen.getByRole('button', { name: 'Aprobar' }));
+
+  await waitFor(() => expect(llamadas).toBe(1));
+});
+
+test('Validar queda deshabilitado mientras haya un documento observado', async () => {
+  await renderApp(
+    <DetalleMatricula matricula={enValidacion({ puedeValidar: false })} />,
+  );
+  expect(screen.getByRole('button', { name: 'Validar' })).toBeDisabled();
+});
+
+test('un documento aprobado ya no se reemplaza ni muestra su plantilla', async () => {
+  const base = enValidacion();
+  const [documento] = base.documentos;
+  await renderApp(
+    <DetalleMatricula
+      matricula={{
+        ...base,
+        documentos: [
+          {
+            ...documento,
+            tienePlantilla: true,
+            archivo: documento.archivo && {
+              ...documento.archivo,
+              estado: 'APROBADO',
+            },
+          },
+        ],
+      }}
+    />,
+  );
+  expect(screen.getByText('Aprobado')).toBeVisible();
+  expect(
+    screen.getByRole('button', { name: 'Ver Ficha de matrícula firmada' }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole('button', { name: /Reemplazar|plantilla/i }),
+  ).not.toBeInTheDocument();
 });
