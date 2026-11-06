@@ -31,6 +31,13 @@ import {
 
 type OpcionGrado = { value: string; label: string };
 
+const NOMBRES_REGLA: Record<string, string> = {
+  PROMEDIO_SIMPLE: 'promedio simple',
+  PROMEDIO_PONDERADO: 'promedio ponderado',
+  NIVEL_MAS_FRECUENTE: 'nivel más frecuente',
+  ULTIMO_NIVEL: 'último nivel',
+};
+
 type Props = {
   seleccion: SeleccionPeriodo;
   curso: CursoDocente;
@@ -60,37 +67,39 @@ export const ReporteCalificacionesVista = ({
   onGradoChange,
   onPeriodoChange,
 }: Props) => {
-  const [competenciaId, setCompetenciaId] = React.useState('');
+  const [competenciaIds, setCompetenciaIds] = React.useState<string[]>([]);
   const [itemIds, setItemIds] = React.useState<string[]>([]);
   const [incluirPromedio, setIncluirPromedio] = React.useState(true);
   const [filtrosGenerados, setFiltrosGenerados] =
     React.useState<FiltrosReporte | null>(null);
 
+  const catalogoCompetencias = competencias
+    .map((competencia) => competencia.id)
+    .join(',');
   React.useEffect(() => {
-    if (!competencias.some((competencia) => competencia.id === competenciaId)) {
-      setCompetenciaId(competencias[0]?.id ?? '');
-    }
-  }, [competenciaId, competencias]);
+    setCompetenciaIds(
+      catalogoCompetencias ? [catalogoCompetencias.split(',')[0]] : [],
+    );
+    setFiltrosGenerados(null);
+  }, [catalogoCompetencias, seleccion.planCursoId, seleccion.seccionId]);
 
   const itemsCompetencia = React.useMemo(
     () =>
       items.filter((item) =>
-        item.competencias.some(
-          (competencia) => competencia.competenciaId === competenciaId,
+        item.competencias.some((competencia) =>
+          competenciaIds.includes(competencia.competenciaId),
         ),
       ),
-    [competenciaId, items],
+    [competenciaIds, items],
   );
-  const idsDisponibles = React.useMemo(
-    () => itemsCompetencia.map((item) => item.id),
-    [itemsCompetencia],
-  );
+  const idsDisponibles = itemsCompetencia.map((item) => item.id).join(',');
+  const seleccionCompetencias = competenciaIds.join(',');
 
   React.useEffect(() => {
-    setItemIds(idsDisponibles);
+    setItemIds(idsDisponibles ? idsDisponibles.split(',') : []);
     setFiltrosGenerados(null);
   }, [
-    competenciaId,
+    seleccionCompetencias,
     idsDisponibles,
     seleccion.periodoId,
     seleccion.planCursoId,
@@ -101,17 +110,18 @@ export const ReporteCalificacionesVista = ({
     useReporteCalificaciones(filtrosGenerados);
 
   const generar = () => {
-    if (!competenciaId || !itemIds.length) return;
+    if (!competenciaIds.length || !itemIds.length) return;
     setFiltrosGenerados({
       ...seleccion,
       tipo: 'COMPETENCIA',
-      objetivoId: competenciaId,
+      competenciaIds: competenciaIds.join(','),
       itemIds: itemIds.join(','),
       incluirPromedio,
     });
   };
 
   const limpiar = () => {
+    setCompetenciaIds([]);
     setItemIds([]);
     setIncluirPromedio(true);
     setFiltrosGenerados(null);
@@ -161,14 +171,15 @@ export const ReporteCalificacionesVista = ({
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <Select
-            label="Competencia"
-            value={competenciaId}
+          <MultiSelect
+            label="Competencias"
+            value={competenciaIds}
             options={competencias.map((competencia) => ({
               label: competencia.nombre,
               value: competencia.id,
             }))}
-            onChange={(evento) => setCompetenciaId(evento.target.value)}
+            onValueChange={setCompetenciaIds}
+            placeholder="Selecciona las competencias"
           />
           <MultiSelect
             label="Ítems de calificación"
@@ -193,8 +204,9 @@ export const ReporteCalificacionesVista = ({
                 Incluir promedio final
               </span>
               <span className="mt-1 block max-w-md text-body-4 text-content-quartiary">
-                Calcula el promedio final con las calificaciones registradas en
-                los ítems seleccionados.
+                Calcula los resultados por competencia y el promedio general de
+                los ítems seleccionados con la regla del año escolar:{' '}
+                {NOMBRES_REGLA[curso.reglaNota] ?? curso.reglaNota}.
               </span>
             </div>
             <Switch
@@ -211,7 +223,7 @@ export const ReporteCalificacionesVista = ({
             <Button
               type="button"
               onClick={generar}
-              disabled={!competenciaId || !itemIds.length}
+              disabled={!competenciaIds.length || !itemIds.length}
               isLoading={isLoading}
             >
               Generar consolidado
@@ -237,7 +249,7 @@ export const ReporteCalificacionesVista = ({
                 filtrosGenerados && exportarReporte(filtrosGenerados)
               }
             >
-              Exportar consolidado
+              Descargar PDF
             </Button>
           </div>
 
@@ -264,83 +276,109 @@ const TablaConsolidado = ({
 }: {
   reporte: ReporteCalificaciones;
   escala: CursoDocente['escala'];
-}) => (
-  <TableElement
-    className="table-fixed"
-    style={{ minWidth: Math.max(760, 260 + reporte.columnas.length * 180) }}
-    aria-label={`${reporte.titulo}. ${reporte.detalle}`}
-  >
-    <colgroup>
-      <col style={{ width: 260 }} />
-      {reporte.columnas.map((columna) => (
-        <col key={columna.clave} style={{ width: 180 }} />
-      ))}
-    </colgroup>
-    <TableHeader className="bg-white">
-      <TableRow>
-        <TableHead />
-        <TableHead
-          colSpan={reporte.columnas.length}
-          className="text-center text-caption-1"
-        >
-          {reporte.titulo}
-        </TableHead>
-      </TableRow>
-      <TableRow>
-        <TableHead>Estudiante</TableHead>
+}) => {
+  const grupos: { clave: string; titulo: string; columnas: number }[] = [];
+  reporte.columnas.forEach((columna) => {
+    const clave = columna.competenciaId ?? 'resumen';
+    const ultimo = grupos.at(-1);
+    if (ultimo?.clave === clave) {
+      ultimo.columnas++;
+    } else {
+      grupos.push({
+        clave,
+        titulo:
+          columna.competencia ??
+          (columna.clave === 'resultado_general'
+            ? 'Resumen del curso'
+            : reporte.titulo),
+        columnas: 1,
+      });
+    }
+  });
+
+  return (
+    <TableElement
+      className="table-fixed"
+      style={{ minWidth: Math.max(760, 260 + reporte.columnas.length * 180) }}
+      aria-label={`${reporte.titulo}. ${reporte.detalle}`}
+    >
+      <colgroup>
+        <col style={{ width: 260 }} />
         {reporte.columnas.map((columna) => (
-          <TableHead key={columna.clave}>{columna.titulo}</TableHead>
+          <col key={columna.clave} style={{ width: 180 }} />
         ))}
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {reporte.filas.map((fila) => (
-        <TableRow key={fila.matriculaId}>
-          <TableCell>
-            <span className="flex items-center gap-3 font-medium text-content-primary">
-              <span
-                aria-hidden="true"
-                className="size-2 shrink-0 rounded-full bg-vibrant-blue-500"
-              />
-              {fila.estudiante}
-            </span>
-          </TableCell>
-          {reporte.columnas.map((columna) => {
-            const valor = fila.valores[columna.clave] ?? '—';
-            const esPromedio = columna.clave === 'resultado';
-            const estado = fila.valores.resultado_estado;
-            return (
-              <TableCell key={columna.clave}>
+      </colgroup>
+      <TableHeader className="bg-white">
+        <TableRow>
+          <TableHead />
+          {grupos.map((grupo) => (
+            <TableHead
+              key={grupo.clave}
+              colSpan={grupo.columnas}
+              scope="colgroup"
+              className="text-center text-caption-1"
+            >
+              {grupo.titulo}
+            </TableHead>
+          ))}
+        </TableRow>
+        <TableRow>
+          <TableHead>Estudiante</TableHead>
+          {reporte.columnas.map((columna) => (
+            <TableHead key={columna.clave}>{columna.titulo}</TableHead>
+          ))}
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {reporte.filas.map((fila) => (
+          <TableRow key={fila.matriculaId}>
+            <TableCell>
+              <span className="flex items-center gap-3 font-medium text-content-primary">
                 <span
-                  className={cn(
-                    'block',
-                    esPromedio && 'font-semibold text-content-primary',
-                  )}
-                >
-                  {formatearNota(valor, escala)}
-                </span>
-                {esPromedio && estado && (
+                  aria-hidden="true"
+                  className="size-2 shrink-0 rounded-full bg-vibrant-blue-500"
+                />
+                {fila.estudiante}
+              </span>
+            </TableCell>
+            {reporte.columnas.map((columna) => {
+              const valor = fila.valores[columna.clave] ?? '—';
+              const esPromedio =
+                columna.promedio ?? columna.clave === 'resultado';
+              const estado = fila.valores[`${columna.clave}_estado`];
+              return (
+                <TableCell key={columna.clave}>
                   <span
                     className={cn(
-                      'mt-1 block text-caption-1',
-                      estado === 'Aprobado'
-                        ? 'text-content-success'
-                        : estado === 'Desaprobado'
-                          ? 'text-content-error'
-                          : 'text-content-quartiary',
+                      'block',
+                      esPromedio && 'font-semibold text-content-primary',
                     )}
                   >
-                    {estado}
+                    {formatearNota(valor, escala)}
                   </span>
-                )}
-              </TableCell>
-            );
-          })}
-        </TableRow>
-      ))}
-    </TableBody>
-  </TableElement>
-);
+                  {esPromedio && estado && (
+                    <span
+                      className={cn(
+                        'mt-1 block text-caption-1',
+                        estado === 'Aprobado'
+                          ? 'text-content-success'
+                          : estado === 'Desaprobado'
+                            ? 'text-content-error'
+                            : 'text-content-quartiary',
+                      )}
+                    >
+                      {estado}
+                    </span>
+                  )}
+                </TableCell>
+              );
+            })}
+          </TableRow>
+        ))}
+      </TableBody>
+    </TableElement>
+  );
+};
 
 const formatearNota = (valor: string, escala: CursoDocente['escala']) => {
   if (valor === '—' || escala !== 'VIGESIMAL') return valor;

@@ -35,7 +35,9 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.PeriodoCurso;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.RegistroCalificacion;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ReporteCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCalificaciones;
+import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCompetenciaItem;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudItem;
+import com.galiledu.academico.infraestructura.ArchivoReporteCalificaciones;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones.CalificacionFila;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones.CompetenciaPeso;
@@ -123,7 +125,7 @@ public class ServicioCalificaciones {
 		PeriodoContexto periodo = periodo(planCursoId, periodoId);
 		exigirAbierto(periodo);
 		repositorio.bloquearPlanCurso(planCursoId);
-		SolicitudItem limpia = validarItem(planCursoId, seccionId, periodoId, solicitud, null);
+		SolicitudItem limpia = validarItem(planCursoId, seccionId, periodoId, solicitud, null, periodo.reglaNota());
 		UUID id = repositorio.crearItem(planCursoId, seccionId, periodoId, limpia.nombre(), limpia.descripcion(),
 				limpia.tipo(), docenteId);
 		repositorio.reemplazarCompetencias(id, planCursoId, limpia.competencias().stream()
@@ -137,7 +139,7 @@ public class ServicioCalificaciones {
 		exigirAbierto(item);
 		repositorio.bloquearPlanCurso(item.planCursoId());
 		SolicitudItem limpia = validarItem(item.planCursoId(), item.seccionId(), item.periodoAcademicoId(), solicitud,
-				id);
+				id, item.reglaNota());
 		repositorio.actualizarItem(id, limpia.nombre(), limpia.descripcion(), limpia.tipo());
 		repositorio.reemplazarCompetencias(id, item.planCursoId(), limpia.competencias().stream()
 				.map(c -> new CompetenciaPeso(c.competenciaId(), c.pesoPorcentaje())).toList());
@@ -251,6 +253,13 @@ public class ServicioCalificaciones {
 	@Transactional(readOnly = true)
 	public ReporteCalificaciones reporte(UUID docenteId, String tipo, UUID planCursoId, UUID seccionId,
 			UUID periodoId, UUID objetivoId, List<UUID> itemIds, boolean incluirPromedio) {
+		return reporte(docenteId, tipo, planCursoId, seccionId, periodoId, objetivoId, itemIds, incluirPromedio,
+				List.of());
+	}
+
+	@Transactional(readOnly = true)
+	public ReporteCalificaciones reporte(UUID docenteId, String tipo, UUID planCursoId, UUID seccionId,
+			UUID periodoId, UUID objetivoId, List<UUID> itemIds, boolean incluirPromedio, List<UUID> competenciaIds) {
 		validarAcceso(docenteId, planCursoId, seccionId);
 		PeriodoContexto periodo = periodo(planCursoId, periodoId);
 		List<DetalleReporteFila> detalles = repositorio.detallesReporte(planCursoId, seccionId, periodoId);
@@ -263,8 +272,11 @@ public class ServicioCalificaciones {
 								.noEncontrado("El ítem no pertenece al curso y periodo seleccionados."));
 				yield reporteItem(detalles, item);
 			}
-			case "COMPETENCIA" -> reporteCompetencia(detalles,
-					exigirObjetivo(objetivoId, "Elige una competencia."), periodo, itemIds, incluirPromedio);
+			case "COMPETENCIA" -> competenciaIds.isEmpty()
+					? reporteCompetencia(detalles, exigirObjetivo(objetivoId, "Elige una competencia."), periodo,
+							itemIds, incluirPromedio)
+					: reporteCompetencias(planCursoId, seccionId, detalles, periodo, competenciaIds, itemIds,
+							incluirPromedio);
 			case "PERIODO" -> reportePeriodo(detalles, periodo.reglaNota());
 			default -> throw ExcepcionNegocio.invalido("El tipo de reporte debe ser ITEM, COMPETENCIA o PERIODO.");
 		};
@@ -279,10 +291,19 @@ public class ServicioCalificaciones {
 	@Transactional(readOnly = true)
 	public byte[] exportarCsv(UUID docenteId, String tipo, UUID planCursoId, UUID seccionId, UUID periodoId,
 			UUID objetivoId, List<UUID> itemIds, boolean incluirPromedio) {
+		return exportarCsv(docenteId, tipo, planCursoId, seccionId, periodoId, objetivoId, itemIds,
+				incluirPromedio, List.of());
+	}
+
+	@Transactional(readOnly = true)
+	public byte[] exportarCsv(UUID docenteId, String tipo, UUID planCursoId, UUID seccionId, UUID periodoId,
+			UUID objetivoId, List<UUID> itemIds, boolean incluirPromedio, List<UUID> competenciaIds) {
 		ReporteCalificaciones reporte = reporte(docenteId, tipo, planCursoId, seccionId, periodoId, objetivoId,
-				itemIds, incluirPromedio);
+				itemIds, incluirPromedio, competenciaIds);
 		StringBuilder csv = new StringBuilder("\uFEFFEstudiante");
-		reporte.columnas().forEach(c -> csv.append(',').append(csv(c.titulo())));
+		reporte.columnas().forEach(c -> csv.append(',').append(csv(c.competencia() == null
+				? c.titulo()
+				: c.competencia() + " · " + c.titulo())));
 		csv.append('\n');
 		for (FilaReporte fila : reporte.filas()) {
 			csv.append(csv(fila.estudiante()));
@@ -292,6 +313,31 @@ public class ServicioCalificaciones {
 			csv.append('\n');
 		}
 		return csv.toString().getBytes(StandardCharsets.UTF_8);
+	}
+
+	@Transactional(readOnly = true)
+	public byte[] exportarPdf(UUID docenteId, String tipo, UUID planCursoId, UUID seccionId, UUID periodoId,
+			UUID objetivoId, List<UUID> itemIds, boolean incluirPromedio, List<UUID> competenciaIds) {
+		ReporteCalificaciones reporte = reporte(docenteId, tipo, planCursoId, seccionId, periodoId, objetivoId,
+				itemIds, incluirPromedio, competenciaIds);
+		CursoFila curso = repositorio.cursos(docenteId).stream()
+				.filter(c -> c.planCursoId().equals(planCursoId) && c.seccionId().equals(seccionId)).findFirst()
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El curso no está asignado al docente."));
+		PeriodoFila periodo = repositorio.periodos(planCursoId, seccionId).stream()
+				.filter(p -> p.id().equals(periodoId)).findFirst()
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El periodo no pertenece al año del curso."));
+		String contexto = curso.curso() + " · " + curso.grado() + " · Sección " + curso.seccion()
+				+ " · Año escolar " + curso.anio() + " · " + periodo.nombre();
+		String regla = switch (curso.reglaNota()) {
+			case "PROMEDIO_PONDERADO" -> "Promedio ponderado";
+			case "PROMEDIO_SIMPLE" -> "Promedio simple";
+			case "NIVEL_MAS_FRECUENTE" -> "Nivel más frecuente";
+			case "ULTIMO_NIVEL" -> "Último nivel";
+			default -> curso.reglaNota();
+		};
+		String parametros = "Escala: " + ("VIGESIMAL".equals(curso.escala()) ? "0 a 20" : "AD, A, B, C")
+				+ " · Regla del año escolar: " + regla;
+		return ArchivoReporteCalificaciones.pdf(reporte, contexto, parametros, curso.escala());
 	}
 
 	private ReporteCalificaciones reporteItem(List<DetalleReporteFila> detalles, ItemFila item) {
@@ -354,6 +400,104 @@ public class ServicioCalificaciones {
 		}).toList();
 		return new ReporteCalificaciones(competencia.get(0).competencia(), "Consolidado de notas", columnas,
 				filas);
+	}
+
+	private ReporteCalificaciones reporteCompetencias(UUID planCursoId, UUID seccionId,
+			List<DetalleReporteFila> detalles, PeriodoContexto periodo, List<UUID> competenciaIds,
+			List<UUID> itemIds, boolean incluirPromedio) {
+		List<UUID> seleccionadas = competenciaIds.stream().distinct().toList();
+		Map<UUID, String> permitidas = repositorio.competencias(planCursoId).stream()
+				.collect(Collectors.toMap(c -> c.id(), c -> c.nombre()));
+		if (!permitidas.keySet().containsAll(seleccionadas)) {
+			throw ExcepcionNegocio.invalido("Una competencia no pertenece al plan del curso.");
+		}
+		List<ItemFila> itemsCurso = repositorio.items(planCursoId, seccionId, periodo.id());
+		List<ItemCompetenciaFila> asociaciones = repositorio
+				.competenciasDeItems(itemsCurso.stream().map(ItemFila::id).toList()).stream()
+				.filter(c -> seleccionadas.contains(c.competenciaId())).toList();
+		Set<UUID> disponibles = asociaciones.stream().map(ItemCompetenciaFila::itemEvaluacionId)
+				.collect(Collectors.toSet());
+		if (!disponibles.containsAll(itemIds)) {
+			throw ExcepcionNegocio.invalido("Uno de los ítems no pertenece a las competencias seleccionadas.");
+		}
+		Set<UUID> elegidos = itemIds.isEmpty() ? disponibles : new HashSet<>(itemIds);
+		List<ItemFila> itemsElegidos = itemsCurso.stream().filter(i -> elegidos.contains(i.id())).toList();
+		if (!itemIds.isEmpty()) {
+			Map<UUID, Integer> orden = new LinkedHashMap<>();
+			for (int indice = 0; indice < itemIds.size(); indice++) {
+				orden.putIfAbsent(itemIds.get(indice), indice);
+			}
+			itemsElegidos = itemsElegidos.stream().sorted(Comparator.comparingInt(i -> orden.get(i.id()))).toList();
+		}
+		List<ColumnaReporte> columnas = new ArrayList<>();
+		for (UUID competenciaId : seleccionadas) {
+			Set<UUID> deCompetencia = asociaciones.stream().filter(c -> c.competenciaId().equals(competenciaId))
+					.map(ItemCompetenciaFila::itemEvaluacionId).collect(Collectors.toSet());
+			for (ItemFila item : itemsElegidos) {
+				if (deCompetencia.contains(item.id())) {
+					columnas.add(new ColumnaReporte(claveReporte(competenciaId, item.id().toString()), item.nombre(),
+							competenciaId, permitidas.get(competenciaId), false));
+				}
+			}
+			if (incluirPromedio) {
+				columnas.add(new ColumnaReporte(claveReporte(competenciaId, "resultado"), "Promedio final",
+						competenciaId, permitidas.get(competenciaId), true));
+			}
+		}
+		boolean promedioGeneral = incluirPromedio && seleccionadas.size() > 1;
+		if (promedioGeneral) {
+			columnas.add(new ColumnaReporte("resultado_general", "Promedio general", null, null, true));
+		}
+		List<DetalleReporteFila> filtrados = detalles.stream().filter(d -> seleccionadas.contains(d.competenciaId())
+				&& elegidos.contains(d.itemId())).toList();
+		Map<UUID, List<DetalleReporteFila>> porEstudiante = filtrados.stream()
+				.collect(Collectors.groupingBy(DetalleReporteFila::matriculaId));
+		int notaAprobatoria = repositorio.notaAprobatoria(periodo.fechaInicio()).orElse(14);
+		List<FilaReporte> filas = repositorio.estudiantes(seccionId).stream().map(estudiante -> {
+			List<DetalleReporteFila> lista = porEstudiante.getOrDefault(estudiante.matriculaId(), List.of());
+			Map<String, String> valores = new LinkedHashMap<>();
+			lista.forEach(d -> valores.put(claveReporte(d.competenciaId(), d.itemId().toString()), valor(d)));
+			if (incluirPromedio) {
+				for (UUID competenciaId : seleccionadas) {
+					String resultado = resultado(lista.stream()
+							.filter(d -> d.competenciaId().equals(competenciaId)).toList(), periodo.reglaNota());
+					registrarResultado(valores, claveReporte(competenciaId, "resultado"), resultado, periodo,
+							notaAprobatoria);
+				}
+				if (promedioGeneral) {
+					registrarResultado(valores, "resultado_general", resultadoDeItemsUnicos(lista, periodo.reglaNota()),
+							periodo, notaAprobatoria);
+				}
+			}
+			return new FilaReporte(estudiante.matriculaId(), estudiante.estudiante(), valores);
+		}).toList();
+		return new ReporteCalificaciones(seleccionadas.size() == 1
+				? permitidas.get(seleccionadas.get(0))
+				: "Competencias seleccionadas", "Consolidado de notas", columnas, filas);
+	}
+
+	private static String claveReporte(UUID competenciaId, String columna) {
+		return competenciaId + ":" + columna;
+	}
+
+	private static void registrarResultado(Map<String, String> valores, String clave, String resultado,
+			PeriodoContexto periodo, int notaAprobatoria) {
+		valores.put(clave, resultado);
+		valores.put(clave + "_estado", estadoResultado(resultado, periodo.escala(), notaAprobatoria));
+	}
+
+	private static String resultadoDeItemsUnicos(List<DetalleReporteFila> detalles, String regla) {
+		Map<UUID, DetalleReporteFila> unicos = new LinkedHashMap<>();
+		for (DetalleReporteFila detalle : detalles) {
+			unicos.merge(detalle.itemId(), detalle, (anterior, actual) -> !"PROMEDIO_PONDERADO".equals(regla)
+					? anterior
+					: new DetalleReporteFila(
+							anterior.matriculaId(), anterior.estudianteId(), anterior.estudiante(), anterior.itemId(),
+							anterior.item(), anterior.competenciaId(), anterior.competencia(),
+							anterior.pesoPorcentaje().add(actual.pesoPorcentaje()), anterior.notaNumerica(),
+							anterior.nivelLogro(), anterior.evidenciaNombre(), anterior.ordenItem()));
+		}
+		return resultado(new ArrayList<>(unicos.values()), regla);
 	}
 
 	private static String estadoResultado(String resultado, String escala, int notaAprobatoria) {
@@ -421,7 +565,8 @@ public class ServicioCalificaciones {
 	}
 
 	private SolicitudItem validarItem(UUID planCursoId, UUID seccionId, UUID periodoId, SolicitudItem solicitud,
-			UUID excepto) {
+			UUID excepto, String reglaNota) {
+		boolean ponderado = "PROMEDIO_PONDERADO".equals(reglaNota);
 		String nombre = solicitud.nombre().strip();
 		String descripcion = solicitud.descripcion().strip();
 		if (repositorio.existeNombre(planCursoId, seccionId, periodoId, nombre, excepto)) {
@@ -437,14 +582,22 @@ public class ServicioCalificaciones {
 			if (!vistas.add(c.competenciaId())) {
 				throw ExcepcionNegocio.invalido("Cada competencia debe asociarse una sola vez.");
 			}
-			BigDecimal asignado = repositorio.pesoAsignado(planCursoId, seccionId, periodoId,
-					c.competenciaId(), excepto);
-			if (asignado.add(c.pesoPorcentaje()).compareTo(PESO_TOTAL) > 0) {
-				throw ExcepcionNegocio.invalido("El peso total de la competencia «"
-						+ permitidas.get(c.competenciaId()) + "» no puede superar el 100 %.");
+			if (ponderado) {
+				if (c.pesoPorcentaje() == null || c.pesoPorcentaje().compareTo(new BigDecimal("0.01")) < 0
+						|| c.pesoPorcentaje().compareTo(PESO_TOTAL) > 0) {
+					throw ExcepcionNegocio.invalido("Ingresa un peso entre 0,01 y 100 % para cada competencia.");
+				}
+				BigDecimal asignado = repositorio.pesoAsignado(planCursoId, seccionId, periodoId,
+						c.competenciaId(), excepto);
+				if (asignado.add(c.pesoPorcentaje()).compareTo(PESO_TOTAL) > 0) {
+					throw ExcepcionNegocio.invalido("El peso total de la competencia «"
+							+ permitidas.get(c.competenciaId()) + "» no puede superar el 100 %.");
+				}
 			}
 		});
-		return new SolicitudItem(nombre, descripcion, solicitud.tipo(), solicitud.competencias());
+		return new SolicitudItem(nombre, descripcion, solicitud.tipo(), solicitud.competencias().stream()
+				.map(c -> new SolicitudCompetenciaItem(c.competenciaId(), ponderado ? c.pesoPorcentaje() : null))
+				.toList());
 	}
 
 	private ItemEvaluacion buscarItem(UUID id, boolean editable) {

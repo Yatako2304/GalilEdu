@@ -56,6 +56,7 @@ Reglas: un esquema de BD por módulo; los controladores no tocan repositorios di
 | `V9__parametros_evaluacion_por_anio.sql` | `configuracion`, `academico` | Parámetros globales de evaluación del año; conserva las columnas anteriores del plan como legado |
 | `V10__horarios.sql` | `horarios` | Horario semanal de una sección (`horario_seccion`) y sus bloques asignados (`horario_bloque`) |
 | `V11__calificaciones_docente.sql` | `academico` | Ítems, competencias evaluadas, calificaciones y evidencias del docente; claves compuestas con curso, periodo, sección y matrícula |
+| `V15__calificaciones_peso_solo_ponderado.sql` | `academico` | Permite `NULL` en `item_competencia.peso_porcentaje` para reglas sin ponderación; conserva porcentajes existentes y su restricción de rango. La aplicación exige pesos solo con promedio ponderado. |
 
 Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V11…).
 
@@ -125,11 +126,12 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/horarios/docente/horario?anioId=` | Docente, Tutor | Sus clases de dictado, un horario por estructura horaria (primaria antes que secundaria) (HU-49): `{anio {id, anio, estado} o null, horarios: [{nivel, titulo, jornada {dias, bloques, recesos}, clases: [{dia, numeroBloque, curso, seccion, ambiente}]}]}`. Sin `anioId`, el año ACTIVO si tiene clases y, si no, el más reciente con clases; con un año sin clases, `horarios` vacío. Si una celda tiene dos clases, se devuelven las dos. 400 si `anioId` no es un UUID; 404 «El año escolar no existe.» |
 | GET | `/calificaciones/docente/cursos` | Docente | Cursos y secciones asignados, con los parámetros del año y sus periodos (HU-57, HU-59, HU-62) |
 | GET | `/calificaciones/docente/cursos/{planCursoId}/secciones/{seccionId}/competencias` | Docente | Competencias del plan del curso asignado |
-| GET · POST | `/calificaciones/docente/cursos/{planCursoId}/secciones/{seccionId}/periodos/{periodoId}/items` | Docente | Lista o registra ítems con criterio, tipo, competencias y pesos |
-| PUT · DELETE | `/calificaciones/docente/items/{itemId}` | Docente | Edita o elimina un ítem; no elimina si ya tiene notas |
+| GET · POST | `/calificaciones/docente/cursos/{planCursoId}/secciones/{seccionId}/periodos/{periodoId}/items` | Docente | Lista o registra ítems con criterio, tipo y competencias; `pesoPorcentaje` se exige solo en promedio ponderado y es anulable en las respuestas |
+| PUT · DELETE | `/calificaciones/docente/items/{itemId}` | Docente | Edita según la regla anual o elimina un ítem; sin ponderación normaliza los pesos a `NULL`; no elimina si ya tiene notas |
 | GET · PUT | `/calificaciones/docente/items/{itemId}/calificaciones` | Docente | Lista estudiantes y guarda sus notas según la escala del año |
 | POST · GET · DELETE | `/calificaciones/docente/items/{itemId}/calificaciones/{matriculaId}/evidencia` | Docente | Sube, descarga o elimina una evidencia PDF, DOC, DOCX, JPG o PNG de hasta 10 MB |
-| GET | `/calificaciones/docente/reportes` · `/reportes/exportar` | Docente | Consolidado JSON o CSV: `tipo=COMPETENCIA`, `objetivoId`, `itemIds` separados por coma e `incluirPromedio`; conserva las variantes ITEM y PERIODO |
+| GET | `/calificaciones/docente/reportes` · `/reportes/exportar` | Docente | Consolidado JSON o CSV: `tipo=COMPETENCIA`, `competenciaIds` e `itemIds` separados por coma e `incluirPromedio`; resultados por competencia y promedio general con la regla anual. Mantiene `objetivoId` individual y las variantes ITEM y PERIODO; [detalle del contrato](../docs/modulos/calificaciones.md#api) |
+| GET | `/calificaciones/docente/reportes/exportar-pdf` | Docente | Descarga `consolidado-notas.pdf` (`application/pdf`) con los mismos filtros y resultados; tabla agrupada, contexto académico, promedios, estados y paginación. Es el formato ofrecido por la interfaz. |
 | GET | `/pagos/estado-cuenta?anio=` | Personal adm. | P2 · Estado de cuenta (HU-37): compromisos del año (por defecto el ACTIVO) con sección, antigüedad y deuda vencida de cada alumno, y las tarjetas comprometido, cobrado (%), deuda vencida y cuotas vencidas (solo compromisos VIGENTES) |
 | GET | `/pagos/estudiantes/{estudianteId}/compromisos` | Personal adm. | Compromisos de pago del estudiante, del año más reciente al más antiguo (selector de P8, HU-37) |
 | GET | `/pagos/compromisos/{id}` | Personal adm. | Resumen (total anual, capital pagado, descuento, pensión, saldo) y cronograma de cuotas; `vencida` se calcula con los días de gracia y cada cuota trae `diasAtraso` y `recargo` (HU-37, RF-84, RF-91, RF-92) |

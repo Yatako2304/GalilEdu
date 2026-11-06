@@ -77,6 +77,13 @@
 			<version>5.5.1</version>
 		</dependency>
 
+		<!-- Reporte de calificaciones con tablas y paginación en PDF (HU-62). -->
+		<dependency>
+			<groupId>org.apache.pdfbox</groupId>
+			<artifactId>pdfbox</artifactId>
+			<version>3.0.8</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
