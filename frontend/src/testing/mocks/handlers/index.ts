@@ -5,6 +5,7 @@ import { env } from '@/config/env';
 import { networkDelay } from '../utils';
 
 import { authHandlers } from './auth';
+import { horarioDocenteHandlers } from './horario-docente';
 import { horariosBrowserHandlers, horariosHandlers } from './horarios';
 import {
   cruceHandler,
@@ -27,6 +28,7 @@ export const browserHandlers = [
 export const handlers = [
   ...authHandlers,
   ...horariosHandlers,
+  ...horarioDocenteHandlers,
   ...horariosCoordinadorHandlers,
   ...browserHandlers.filter(
     (h) => !horariosBrowserHandlers.includes(h) && h !== cruceHandler,

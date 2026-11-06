@@ -125,8 +125,8 @@ export const ScheduleBlock = ({
             Subgrupos
           </p>
         )}
-        {courses.map((c) => (
-          <React.Fragment key={c.name}>
+        {courses.map((c, i) => (
+          <React.Fragment key={`${c.name}-${i}`}>
             <Titulo warning={!!conflict}>{c.name}</Titulo>
             {c.teacher && (
               <p className="text-caption-1 text-content-tertiary">

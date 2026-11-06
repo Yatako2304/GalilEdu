@@ -3,7 +3,7 @@
 - **Autor:** royal-22
 - **Fecha:** 2026-11-06
 - **HU / tarea:** HU-49
-- **Estado:** terminado (backend)
+- **Estado:** terminado (backend y frontend)
 
 ## Qué hice
 
@@ -45,7 +45,7 @@ Agregué el backend del horario semanal del Docente y del Tutor: ven solo las cl
 
 ## Pendientes / problemas conocidos
 
-- [ ] Falta el frontend: `/app/docente/horario` y `/app/tutor/horario` (Figma 393:18119).
+- [x] Falta el frontend: `/app/docente/horario` y `/app/tutor/horario` (Figma 393:18119). Resuelto (2026-11-06): ver docs/modulos/horarios.md
 - [ ] Consultar al PO si el tutor debe ver además el horario de la sección que tutorea.
 - [ ] Diferencias con Figma: «Prof. …» en cada celda sobra, el menú lateral dice «Administrador» y la sección se ve «3A» (el backend usa «1.° A»).
 
