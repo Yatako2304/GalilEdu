@@ -25,7 +25,14 @@ const etiquetas = {
   ANULADA: 'Anulada',
 } as const;
 
-export const PagoMatriculaCard = ({ matriculaId }: { matriculaId: string }) => {
+export const PagoMatriculaCard = ({
+  matriculaId,
+  codigoMatricula,
+}: {
+  matriculaId: string;
+  /** Código de la matrícula, una vez matriculado (Figma B7). */
+  codigoMatricula?: string | null;
+}) => {
   const consulta = useCuotaMatricula(matriculaId);
   const generar = useGenerarCuotaMatricula(matriculaId);
   const cuota = consulta.data;
@@ -70,6 +77,9 @@ export const PagoMatriculaCard = ({ matriculaId }: { matriculaId: string }) => {
                 valor={fecha(cuota.fechaVencimiento)}
               />
               <Dato nombre="Responsable" valor={cuota.responsable} />
+              {codigoMatricula && (
+                <Dato nombre="Código de matrícula" valor={codigoMatricula} />
+              )}
             </dl>
             <Button
               asChild

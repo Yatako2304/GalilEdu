@@ -460,7 +460,10 @@ export const DetalleMatricula = ({
       </Alert>
 
       <Card className="p-6">
-        <Stepper steps={PASOS} current={matricula.pasoActual} />
+        <Stepper
+          steps={PASOS}
+          current={matricula.pasoActual === 4 ? 5 : matricula.pasoActual}
+        />
       </Card>
 
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">

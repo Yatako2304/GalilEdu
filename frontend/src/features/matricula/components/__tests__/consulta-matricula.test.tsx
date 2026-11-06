@@ -54,10 +54,11 @@ const estado: EstadoMatriculaApoderado = {
     id: 'matricula-mateo',
     estado: 'SECCION_RESERVADA',
     grado: '1.° de primaria',
-    seccion: 'A',
+    seccion: null,
     codigo: null,
     documentosRequeridos: 4,
     documentosEntregados: 0,
+    confirmadoEn: null,
   },
   pasoActual: 1,
   puedeContinuar: true,
@@ -78,7 +79,7 @@ test('muestra el periodo, grado, sección y estado asignados', async () => {
 
   expect(screen.getByText('Periodo abierto')).toBeInTheDocument();
   expect(screen.getAllByText('1.° de primaria')).not.toHaveLength(0);
-  expect(screen.getByText('A')).toBeInTheDocument();
+  expect(screen.getByText('Por definir')).toBeInTheDocument();
   expect(screen.getByText('Sección reservada')).toBeInTheDocument();
   expect(screen.getByText('31 ene 2027')).toBeInTheDocument();
 });
@@ -123,7 +124,7 @@ test('informa cuando el periodo cerró y aún no existe una sección', async () 
   );
 
   expect(screen.getByText('Periodo cerrado')).toBeInTheDocument();
-  expect(screen.getByText('Se asigna al confirmar')).toBeInTheDocument();
+  expect(screen.getByText('Por definir')).toBeInTheDocument();
   expect(screen.getByText('Pendiente de asignación')).toBeInTheDocument();
   expect(
     screen.getByText('El periodo de matrícula está cerrado.'),
@@ -281,4 +282,42 @@ test('ya matriculado, el avance muestra los 4 pasos completados', async () => {
     expect(paso).not.toHaveAttribute('aria-current');
     expect(within(paso).queryByText(String(i + 1))).not.toBeInTheDocument();
   });
+});
+
+test('la constancia y el cronograma solo se ofrecen con la matrícula confirmada', async () => {
+  const props = {
+    hijos,
+    estudianteId: 'mateo',
+    isLoading: false,
+    onElegir: vi.fn(),
+  };
+  const { unmount } = await renderApp(
+    <ConsultaMatricula {...props} estado={estado} />,
+  );
+  expect(
+    screen.queryByRole('button', { name: /Descargar constancia/ }),
+  ).not.toBeInTheDocument();
+  unmount();
+
+  await renderApp(
+    <ConsultaMatricula
+      {...props}
+      estado={{
+        ...estado,
+        matricula: {
+          ...estado.matricula!,
+          estado: 'MATRICULADO',
+          seccion: 'A',
+          codigo: 'MAT-2027-0001',
+          confirmadoEn: '2027-01-10T15:00:00Z',
+        },
+      }}
+    />,
+  );
+  expect(
+    screen.getByRole('button', { name: /Descargar constancia/ }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('link', { name: 'Ver cronograma de pensiones' }),
+  ).toHaveAttribute('href', '/app/apoderado/pensiones');
 });

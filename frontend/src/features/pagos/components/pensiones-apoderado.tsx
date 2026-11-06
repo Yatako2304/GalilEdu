@@ -1,6 +1,8 @@
 import { Banknote, Check, ChevronDown } from 'lucide-react';
 import * as React from 'react';
+import { useSearchParams } from 'react-router';
 
+import { ContentLayout } from '@/components/layouts';
 import { Avatar } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -236,7 +238,10 @@ export const PensionesApoderado = () => {
   const porPagar = useCuotasPorPagar();
   const seleccion = useSeleccionCuotas(porPagar.data);
   const crear = useCrearOrdenPago();
-  const [estudianteId, setEstudianteId] = React.useState('');
+  const [params] = useSearchParams();
+  const [estudianteId, setEstudianteId] = React.useState(
+    params.get('estudiante') ?? '',
+  );
   const [compromisoId, setCompromisoId] = React.useState('');
   const [pestana, setPestana] = React.useState<Pestana>('cronograma');
   const compromisos = useCompromisosApoderado(estudianteId);
@@ -246,7 +251,10 @@ export const PensionesApoderado = () => {
   );
 
   React.useEffect(() => {
-    if (!estudianteId && hijos.data?.length)
+    if (
+      hijos.data?.length &&
+      !hijos.data.some((hijo) => hijo.estudianteId === estudianteId)
+    )
       setEstudianteId(hijos.data[0].estudianteId);
   }, [estudianteId, hijos.data]);
 
@@ -263,41 +271,52 @@ export const PensionesApoderado = () => {
     setPestana('cronograma');
   };
 
+  const pagina = (children: React.ReactNode, actions?: React.ReactNode) => (
+    <ContentLayout
+      title="Pensiones"
+      subtitle="Consulta el cronograma de cuotas, paga las pendientes y descarga tus constancias."
+      breadcrumbs={['Pensiones', 'Cronograma de cuotas']}
+      actions={actions}
+    >
+      {children}
+    </ContentLayout>
+  );
+
   if (hijos.isLoading) {
-    return (
+    return pagina(
       <div className="flex h-60 items-center justify-center">
         <Spinner size="lg" />
-      </div>
+      </div>,
     );
   }
 
   if (!hijos.data?.length) {
-    return (
+    return pagina(
       <Card className="p-8 text-center text-body-3 text-content-tertiary">
         No hay estudiantes asociados a tu cuenta.
-      </Card>
+      </Card>,
     );
   }
 
   const elegido = hijos.data.find((hijo) => hijo.estudianteId === estudianteId);
 
-  return (
-    <div className="flex flex-col gap-5">
-      <div className="flex justify-end">
-        <Select
-          aria-label="Compromiso"
-          options={(compromisos.data ?? []).map((item) => ({
-            label: `Compromiso ${item.anio}`,
-            value: item.id,
-          }))}
-          placeholder={compromisos.isLoading ? 'Cargando…' : 'Sin compromisos'}
-          value={compromisoId}
-          disabled={compromisos.isLoading || !compromisos.data?.length}
-          onChange={(evento) => setCompromisoId(evento.target.value)}
-          wrapperClassName="w-52"
-        />
-      </div>
+  const selectorCompromiso = (
+    <Select
+      aria-label="Compromiso"
+      options={(compromisos.data ?? []).map((item) => ({
+        label: `Compromiso ${item.anio}`,
+        value: item.id,
+      }))}
+      placeholder={compromisos.isLoading ? 'Cargando…' : 'Sin compromisos'}
+      value={compromisoId}
+      disabled={compromisos.isLoading || !compromisos.data?.length}
+      onChange={(evento) => setCompromisoId(evento.target.value)}
+      wrapperClassName="w-52"
+    />
+  );
 
+  return pagina(
+    <div className="flex flex-col gap-5">
       <SelectorEstudiante
         hijos={hijos.data}
         elegido={elegido}
@@ -372,6 +391,7 @@ export const PensionesApoderado = () => {
           </Card>
         </>
       )}
-    </div>
+    </div>,
+    selectorCompromiso,
   );
 };

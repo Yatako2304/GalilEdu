@@ -628,6 +628,7 @@ export type MatriculaActual = {
   codigo: string | null;
   documentosRequeridos: number;
   documentosEntregados: number;
+  confirmadoEn: string | null;
 };
 
 export type ImpedimentoMatricula = {
@@ -1463,8 +1464,10 @@ export type OrdenPagoDetalle = {
   urlPago: string | null;
   cuotas: {
     cuotaId: string;
+    estudianteId: string;
     estudiante: string;
     nombre: string;
+    matricula: boolean;
     capital: number;
     recargo: number;
   }[];

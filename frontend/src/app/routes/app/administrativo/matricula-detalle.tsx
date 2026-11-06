@@ -47,7 +47,12 @@ const AdministrativoMatriculaDetalleRoute = () => {
     >
       <DetalleMatricula
         matricula={matricula}
-        pagoMatricula={<PagoMatriculaCard matriculaId={matricula.id} />}
+        pagoMatricula={
+          <PagoMatriculaCard
+            matriculaId={matricula.id}
+            codigoMatricula={matricula.codigo}
+          />
+        }
       />
     </ContentLayout>
   );

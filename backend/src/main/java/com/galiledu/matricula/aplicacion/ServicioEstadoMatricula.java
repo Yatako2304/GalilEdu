@@ -83,8 +83,9 @@ public class ServicioEstadoMatricula {
 		}
 
 		MatriculaActual matricula = periodoFila.flatMap(p -> consultas.matricula(estudianteId, p.anioEscolarId())
-				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), m.seccion(), m.codigo(),
-						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()))))
+				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), seccionVisible(m), m.codigo(),
+						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()),
+						m.confirmadoEn())))
 				.orElse(null);
 		if (periodo != null && matricula == null) {
 			impedimentos.add(new Impedimento("SIN_SECCION", "El colegio aún no reserva una sección para "
@@ -176,5 +177,10 @@ public class ServicioEstadoMatricula {
 
 	private static String soles(BigDecimal monto) {
 		return String.format(Locale.US, "S/ %,.2f", monto);
+	}
+
+	/** El apoderado ve la sección solo con la matrícula confirmada; antes figura como "Por definir". */
+	private static String seccionVisible(MatriculaFila m) {
+		return "MATRICULADO".equals(m.estado()) ? m.seccion() : null;
 	}
 }
