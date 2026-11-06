@@ -1501,3 +1501,161 @@ export type ReporteCalificaciones = {
     valores: Record<string, string>;
   }[];
 };
+
+// ---------- Matrícula · Personal administrativo (HU-24, A3 "Matrículas del periodo") ----------
+// Backend: matricula/aplicacion/DtosMatricula.java (PeriodoMatriculas, FilaMatriculaPeriodo).
+
+export type IndicadoresPeriodo = {
+  estudiantes: number;
+  matriculados: number;
+  enProceso: number;
+  requierenAccion: number;
+};
+
+/** Aviso del periodo (PROGRAMADO, ABIERTO o CERRADO, lo calcula el backend) e indicadores. */
+export type PeriodoMatriculas = {
+  id: string;
+  anio: number;
+  inicio: string;
+  cierre: string;
+  estado: EstadoVisiblePeriodoMatricula;
+  permiteExtemporanea: boolean;
+  indicadores: IndicadoresPeriodo;
+};
+
+/** Fila de la tabla: solo estudiantes que ya tienen matrícula. `seccion` es null si aún no se asigna. */
+export type FilaMatriculaPeriodo = {
+  id: string;
+  estudianteId: string;
+  nombre: string;
+  documento: string;
+  gradoCodigo: string;
+  grado: string;
+  seccion: string | null;
+  estado: EstadoMatricula;
+  codigo: string | null;
+  tipo: 'NUEVO' | 'CONTINUADOR';
+};
+
+// ---------- Matrícula · Nueva matrícula del Personal administrativo (HU-24, A6) ----------
+
+/** Resultado del buscador: inscritos para el año del periodo que aún no tienen matrícula. */
+export type EstudianteSinMatricula = {
+  id: string;
+  nombre: string;
+  documento: string;
+  gradoCodigo: string;
+  grado: string;
+};
+
+/** Sección que el sistema asignaría: la primera del grado con cupo (orden alfabético). */
+export type SeccionAsignada = {
+  id: string;
+  etiqueta: string;
+  tutor: string | null;
+  capacidad: number;
+  ocupadas: number;
+};
+
+export type DocumentoPedido = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tienePlantilla: boolean;
+};
+
+/** Lo que muestra el modal al elegir al alumno. `seccion` es null si el grado no tiene cupo en ninguna sección. */
+export type PreparacionMatricula = {
+  estudianteId: string;
+  nombre: string;
+  documento: string;
+  gradoCodigo: string;
+  grado: string;
+  tipo: 'NUEVO' | 'CONTINUADOR';
+  seccion: SeccionAsignada | null;
+  apoderado: string | null;
+  contacto: string | null;
+  contactoEmergencia: string | null;
+  informacionMedica: string;
+  documentos: DocumentoPedido[];
+};
+
+export type MatriculaCreada = {
+  id: string;
+  estado: EstadoMatricula;
+  seccion: string;
+  documentosSubidos: number;
+  seccionReasignada: boolean;
+};
+
+export type SeccionOpcion = {
+  id: string;
+  etiqueta: string;
+  tutor: string | null;
+  capacidad: number;
+  ocupadas: number;
+};
+
+export type SeccionesDelGrado = {
+  grado: string;
+  /** La sección actual (o la propuesta, en Nueva matrícula). */
+  seleccionadaId: string | null;
+  secciones: SeccionOpcion[];
+};
+
+export type ArchivoGuardado = {
+  nombre: string;
+  tipoMime: string;
+  tamanoBytes: number;
+  estado: 'EN_REVISION' | 'APROBADO' | 'OBSERVADO';
+  observacion: string | null;
+  subidoEn: string;
+};
+
+export type DocumentoDeMatricula = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tienePlantilla: boolean;
+  archivo: ArchivoGuardado | null;
+};
+
+export type DetalleMatricula = {
+  id: string;
+  periodoId: string;
+  anio: number;
+  estudianteId: string;
+  nombre: string;
+  documento: string;
+  tipo: 'NUEVO' | 'CONTINUADOR';
+  gradoCodigo: string;
+  grado: string;
+  seccion: SeccionAsignada | null;
+  estado: EstadoMatricula;
+  codigo: string | null;
+  pasoActual: number;
+  apoderado: string | null;
+  contacto: string | null;
+  contactoEmergencia: string | null;
+  informacionMedica: string;
+  puedeCambiarSeccion: boolean;
+  puedeEditarDocumentos: boolean;
+  documentos: DocumentoDeMatricula[];
+};
+
+// ---------- Documentos de matrícula del apoderado (HU-28, HU-29) ----------
+// Iguales a DocumentoApoderado y DocumentosApoderado de backend/.../matricula/aplicacion/DtosMatricula.java
+
+export type DocumentoApoderado = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tienePlantilla: boolean;
+  archivo: ArchivoGuardado | null;
+};
+
+export type DocumentosApoderado = {
+  estado: EstadoMatricula;
+  puedeSubir: boolean;
+  documentos: DocumentoApoderado[];
+};

@@ -4,7 +4,7 @@ import { DocumentoRequeridoVista } from '@/types/api';
 import { getPlantilla } from './periodos-matricula';
 
 // Plantillas de los documentos requeridos (HU-23). Se suben después de guardar el periodo, con los ids de
-// documento que devuelve; solo con el periodo PROGRAMADO. XLSX, XLS o CSV de hasta 10 MB.
+// documento que devuelve; solo con el periodo PROGRAMADO. PDF, DOCX, JPG o PNG de hasta 10 MB.
 
 const rutaPlantilla = (periodoId: string, documentoId: string) =>
   `/configuracion/periodos-matricula/${periodoId}/documentos/${documentoId}/plantilla`;

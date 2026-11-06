@@ -1,8 +1,8 @@
 # Matrícula
 
 - **HU:** HU-24, 27, 30 (iteración 1) · HU-28, 29, 31, 32 (2) · HU-25, 26, 33, 71, 72 (3)
-- **Estado:** 🚧 en desarrollo: HU-27 y HU-30 completas; falta HU-24
-- **Última actualización:** 2026-11-04
+- **Estado:** 🚧 en desarrollo: HU-27 y HU-30 completas; HU-24 completa (listado A3, Nueva matrícula, detalle A5/B6/B7 y Cambiar sección, todo conectado a la BD)
+- **Última actualización:** 2026-11-05
 
 ## Alcance
 
@@ -23,7 +23,18 @@ MATRICULADO (código MAT-…, cronograma de pensiones, HU-37)          · tambi�
 
 ## Endpoints (apoderado)
 
-Ver la tabla de [`backend/README.md`](../../backend/README.md): `GET /matricula/apoderado/estudiantes` y `GET /matricula/apoderado/estudiantes/{id}/estado`.
+Ver la tabla de [`backend/README.md`](../../backend/README.md): hijos y estado (`GET /matricula/apoderado/estudiantes` y `/{id}/estado`) y documentos (HU-28 y HU-29: `GET .../documentos`, descargar plantilla, ver archivo, `PUT .../documentos/{id}` para subir o reemplazar y `POST .../enviar-validacion`). El apoderado solo actúa sobre sus hijos, con la sección reservada y el periodo abierto. Si el colegio completa todos los documentos (al crear la matrícula o al subir el último), la matrícula pasa sola a EN_VALIDACION.
+
+## Endpoints (personal administrativo · HU-24)
+
+`GET /matricula/periodos/{periodoId}` y `GET /matricula/periodos/{periodoId}/matriculas` alimentan la pantalla A3 «Matrículas del periodo» (`/app/administrativo/matricula/periodos/:periodoId/matriculas`). Ya no usa datos de ejemplo: el aviso (abierto o cerrado, con la fecha de cierre real), los cuatro indicadores, el buscador, el filtro de grado y estado, el orden y la paginación vienen del servidor.
+
+- **Solo lista a quienes ya tienen matrícula.** Un estudiante inscrito sin matrícula no aparece ni cuenta en los indicadores; se matricula con «Nueva matrícula» (pendiente).
+- **Indicadores:** *en proceso* = no matriculados; *requieren acción* = sección reservada o en validación (lo que espera el colegio).
+- **Nueva matrícula (A6):** el botón abre el modal «Nueva matrícula» (paso 1): se busca al alumno por nombre o DNI, se ven sus datos, su sección y los 4 documentos pendientes, y «Guardar» crea la matrícula en `SECCION_RESERVADA`. La sección se asigna sola: la primera del grado con cupo en orden alfabético (si A está llena pasa a B; sin cupo en ninguna, no se puede guardar). Solo con el periodo ABIERTO; con el periodo cerrado el botón queda desactivado hasta que exista la matrícula extemporánea (HU-25). Los documentos se pueden subir ahora o después. El tipo es CONTINUADOR si el estudiante estuvo matriculado en un año anterior; si no, NUEVO. Solo se ofrecen estudiantes cuyo año académico es el del periodo.
+- **Cambiar sección (A5 y A6):** el modal lista las secciones del grado con tutor, vacantes libres y ocupación `n/capacidad`; la actual va marcada, las llenas no se pueden elegir y se muestra el «Efecto en las vacantes» (se libera una en el origen y se ocupa una en el destino). Al confirmar «¿Cambiar sección?» la matrícula se mueve y queda un registro en `matricula.cambio_seccion` **sin motivo** (decisión del equipo; el historial es HU-26). En Nueva matrícula la elección se envía con «Guardar» (`seccionId`); si entre tanto la sección se llenó, se reasigna a la primera con cupo y se avisa. Con el periodo cerrado solo se puede cambiar de sección a quienes ya están `MATRICULADO`.
+- **Detalle (A5, B6, B7):** `GET /matricula/matriculas/{id}` alimenta la pantalla real para todos los estados (stepper con `pasoActual`, alerta según el estado, datos del estudiante y apoderado, documentos con su estado EN_REVISION/APROBADO/OBSERVADO). Los documentos se pueden **ver** y **subir o reemplazar** (el reemplazo vuelve a `EN_REVISION`); retirada o anulada no admite cambios. **Validar** sigue desactivado: es HU-32. En PENDIENTE_PAGO y MATRICULADO se integra la tarjeta de pago de HU-36/37.
+- **EN_VALIDACION** se conserva como cuarto estado (el apoderado lo alcanza al subir todo); cuenta como «requiere acción» igual que SECCION_RESERVADA.
 
 - La deuda (HU-30) se pide a Pagos con `ServicioEstadoCuenta.cuotasVencidas` (IEstadoCuenta): pensiones impagas después del vencimiento más los días de gracia, solo del estudiante consultado. Solo bloquea si el periodo tiene `bloquear_por_morosidad`. El estado visible del periodo (PROGRAMADO, ABIERTO o CERRADO) lo calcula Configuración con `ServicioPeriodoMatricula.estadoEn` y el `Clock` de la app.
 - `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula).
@@ -66,8 +77,10 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 - **El año de la pantalla viene del periodo de matrícula:** el título muestra "Matrícula 2027" porque ese es el año escolar del periodo consultado, aunque sus fechas de apertura y cierre estén en 2026. En los datos de prueba, el periodo 2027 está habilitado del **15 de septiembre al 31 de octubre de 2026**. El frontend no calcula el año desde la fecha actual.
 - **Sofía y Mateo tienen situaciones diferentes en 2027:** Mateo tiene una sección reservada en 1.° A; Sofía está matriculada en 4.° A de 2026, pero no tiene una matrícula creada para 2027, por lo que en el periodo consultado aparece pendiente de asignación.
 - **La deuda se valida por estudiante (HU-30, corregida en la iteración 2):** la pensión vencida de S/ 600 pertenece a Sofía y solo bloquea la matrícula de Sofía. Mateo no tiene deuda propia, así que la deuda de su hermana ya no lo bloquea.
-- **HU-36 tiene un acceso temporal:** como el listado y detalle administrativo de HU-24 aún no existen, la tarjeta "Pago de matrícula" se prueba pasando `matriculaId` en la URL. Cuando HU-24 esté disponible, la misma tarjeta debe integrarse en su detalle.
-- **Flujo visual administrativo disponible:** se añadieron las pantallas de apoyo A3, A5, B6 y B7 para poder navegar desde el periodo hasta cada estado de matrícula. El listado, los documentos y los datos personales son estáticos; no implementan HU-24, HU-25, HU-26, HU-28, HU-29, HU-31 ni HU-32. Sus acciones permanecen desactivadas. Solo las tarjetas ya entregadas de HU-36 y HU-37 consultan la API.
+- **Tarjeta de pago (HU-36/37):** ya está integrada en el detalle real de HU-24 (estados PENDIENTE_PAGO y MATRICULADO).
+- **Pantallas administrativas:** A3, A5, B6 y B7 son reales (HU-24). Siguen sin implementar HU-25, HU-26 (historial), HU-28, HU-29, HU-31 y HU-32 (validar documentos).
+- **Plantillas para el personal administrativo:** Nueva matrícula y el detalle muestran «Plantilla» en cada documento que la tiene (`GET /matricula/periodos/{id}/documentos/{id}/plantilla`).
+- **Pantalla del apoderado (HU-28 y HU-29):** «Matrícula 2027» muestra la tarjeta «Documentos de matrícula»: descarga de plantilla, subir o reemplazar el firmado, ver el archivo y «Enviar a validación» (habilitado con todos los documentos). Los avisos cambian según la etapa (en validación, documentación validada, matriculado). Siguen pendientes la tarjeta de pago del apoderado (HU-31), la constancia y los datos del estudiante y apoderado dentro de esta pantalla.
 - **HU-37 solo corresponde a estudiantes matriculados:** Sofía tiene el cronograma 2026 de los datos de prueba. Mateo todavía está en `SECCION_RESERVADA`, así que no debe tener pensiones generadas hasta completar la matrícula.
 - **Figma es la fuente visual; la API es la fuente de los datos:** textos, jerarquía y componentes siguen los frames indicados arriba. Año, fechas, grado, sección, deuda, montos y estados se muestran desde el backend.
 
@@ -144,4 +157,5 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 - [x] Código de matrícula: `MAT-AAAA-NNNN`, correlativo por año. La BD lo exige (V7).
 - [x] Al matricular se cobra solo la cuota de matrícula del tarifario (S/ 450 en 2027); el S/ 850 de la pantalla del apoderado no se usa. La cuota de ingreso va aparte. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).
 - [ ] Al quedar matriculado, crear la cuenta del estudiante y enviar las credenciales al apoderado (V7).
+- [x] Decisión de producto (2026-11-06): los documentos los suben el apoderado **y** el personal administrativo (el colegio matricula cuando los padres no pueden). Las plantillas que descarga el apoderado son PDF, DOCX, JPG o PNG (antes XLSX/XLS/CSV, que no se firman).
 - [ ] La información adicional de HU-32 (dirección, contacto de emergencia, alergias y seguro) ya existe en `estudiantes.*`. Matrícula la muestra y la actualiza; no la duplica.

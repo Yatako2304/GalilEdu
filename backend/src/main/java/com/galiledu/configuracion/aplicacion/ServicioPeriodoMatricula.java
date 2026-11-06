@@ -236,7 +236,8 @@ public class ServicioPeriodoMatricula {
 	// ---------- Plantillas ----------
 
 	/**
-	 * Sube o reemplaza la plantilla de un documento. Solo con el periodo PROGRAMADO; XLSX, XLS o CSV de hasta 10 MB.
+	 * Sube o reemplaza la plantilla de un documento. Solo con el periodo PROGRAMADO; PDF, DOCX, JPG o PNG de hasta 10
+	 * MB.
 	 */
 	@Transactional
 	public DocumentoVista subirPlantilla(UUID periodoId, UUID documentoId, String nombreArchivo, byte[] contenido) {
