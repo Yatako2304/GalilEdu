@@ -88,7 +88,8 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[0].archivo").doesNotExist())
 				// Los datos de prueba tienen el periodo ya vencido: solo se cambia sección a los matriculados.
 				.andExpect(jsonPath("$.puedeCambiarSeccion").value(false))
-				.andExpect(jsonPath("$.puedeEditarDocumentos").value(true));
+				.andExpect(jsonPath("$.puedeEditarDocumentos").value(true))
+				.andExpect(jsonPath("$.puedeValidar").value(false));
 	}
 
 	@Test
@@ -177,6 +178,96 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 		mvc.perform(conToken(multipart(HttpMethod.PUT, "/matricula/matriculas/{id}/documentos/{d}", matricula,
 				documentos.getLast()).file(new MockMultipartFile("archivo", "f.pdf", "application/pdf", new byte[]{1})),
 				token(PERSONAL_ADMINISTRATIVO))).andExpect(jsonPath("$.estado").value("EN_VALIDACION"));
+	}
+
+	private java.util.List<UUID> documentosDelPeriodo() {
+		return jdbc.sql("""
+				SELECT d.id FROM matricula.documento_requerido d
+				JOIN matricula.periodo_matricula p ON p.id = d.periodo_matricula_id
+				WHERE p.anio_escolar_id = '30000000-0000-0000-0000-000000002027' ORDER BY d.orden""")
+				.query(UUID.class).list();
+	}
+
+	/** El colegio sube todos los documentos de Mateo: la matrícula queda EN_VALIDACION. */
+	private void dejarEnValidacion() throws Exception {
+		for (UUID documento : documentosDelPeriodo()) {
+			mvc.perform(conToken(multipart(HttpMethod.PUT, "/matricula/matriculas/{id}/documentos/{d}",
+					matriculaDeMateo(), documento).file(
+							new MockMultipartFile("archivo", "f.pdf", "application/pdf",
+									new byte[]{1})),
+					token(PERSONAL_ADMINISTRATIVO))).andExpect(status().isOk());
+		}
+	}
+
+	private ResultActions observar(UUID documento, String observacion) throws Exception {
+		return mvc.perform(conToken(put("/matricula/matriculas/{id}/documentos/{d}/observacion", matriculaDeMateo(),
+				documento).contentType(MediaType.APPLICATION_JSON)
+				.content("{\"observacion\":\"" + observacion + "\"}"), token(PERSONAL_ADMINISTRATIVO)));
+	}
+
+	private ResultActions validar() throws Exception {
+		return mvc.perform(conToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+				.post("/matricula/matriculas/{id}/validar", matriculaDeMateo()), token(PERSONAL_ADMINISTRATIVO)));
+	}
+
+	@Test
+	void observarUnDocumentoDevuelveLaMatriculaAlApoderadoYSoloEseDocumentoQuedaObservado() throws Exception {
+		dejarEnValidacion();
+		mvc.perform(conToken(get("/matricula/matriculas/{id}", matriculaDeMateo()), token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(jsonPath("$.estado").value("EN_VALIDACION"))
+				.andExpect(jsonPath("$.puedeValidar").value(true));
+		observar(documentosDelPeriodo().getFirst(), "La firma no se ve")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.estado").value("SECCION_RESERVADA"))
+				.andExpect(jsonPath("$.puedeValidar").value(false))
+				.andExpect(jsonPath("$.documentos[0].archivo.estado").value("OBSERVADO"))
+				.andExpect(jsonPath("$.documentos[0].archivo.observacion").value("La firma no se ve"))
+				.andExpect(jsonPath("$.documentos[1].archivo.estado").value("EN_REVISION"));
+	}
+
+	@Test
+	void alReemplazarElDocumentoObservadoLaMatriculaVuelveAValidacion() throws Exception {
+		dejarEnValidacion();
+		observar(documentosDelPeriodo().getFirst(), "Borroso").andExpect(status().isOk());
+		subir(new MockMultipartFile("archivo", "nuevo.pdf", "application/pdf", new byte[]{7}))
+				.andExpect(jsonPath("$.estado").value("EN_VALIDACION"))
+				.andExpect(jsonPath("$.documentos[0].archivo.estado").value("EN_REVISION"))
+				.andExpect(jsonPath("$.puedeValidar").value(true));
+	}
+
+	@Test
+	void noSeObservaSinMotivoNiFueraDeValidacion() throws Exception {
+		observar(primerDocumento(), "Algo").andExpect(status().isConflict());
+		dejarEnValidacion();
+		observar(primerDocumento(), "  ").andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void validarApruebaLosDocumentosYDejaLaMatriculaPendienteDePago() throws Exception {
+		dejarEnValidacion();
+		validar().andExpect(status().isOk())
+				.andExpect(jsonPath("$.estado").value("PENDIENTE_PAGO"))
+				.andExpect(jsonPath("$.pasoActual").value(3))
+				.andExpect(jsonPath("$.documentos[0].archivo.estado").value("APROBADO"))
+				.andExpect(jsonPath("$.documentos[3].archivo.estado").value("APROBADO"));
+		validar().andExpect(status().isConflict());
+	}
+
+	@Test
+	void noSeValidaUnaMatriculaConDocumentosObservadosONoEnValidacion() throws Exception {
+		validar().andExpect(status().isConflict());
+		dejarEnValidacion();
+		jdbc.sql("UPDATE matricula.documento_matricula SET estado = 'OBSERVADO', observacion = 'x' "
+				+ "WHERE documento_requerido_id = ?").param(primerDocumento()).update();
+		validar().andExpect(status().isConflict());
+	}
+
+	@Test
+	void unDocumentoAprobadoNoSeReemplaza() throws Exception {
+		dejarEnValidacion();
+		validar().andExpect(status().isOk());
+		subir(new MockMultipartFile("archivo", "otro.pdf", "application/pdf", new byte[]{5}))
+				.andExpect(status().isConflict());
 	}
 
 	@Test

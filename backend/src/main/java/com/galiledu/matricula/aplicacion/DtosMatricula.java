@@ -135,7 +135,7 @@ public final class DtosMatricula {
 	public record DetalleMatricula(UUID id, UUID periodoId, int anio, UUID estudianteId, String nombre,
 			String documento, String tipo, String gradoCodigo, String grado, SeccionAsignada seccion, String estado,
 			String codigo, int pasoActual, String apoderado, String contacto, String contactoEmergencia,
-			String informacionMedica, boolean puedeCambiarSeccion, boolean puedeEditarDocumentos,
+			String informacionMedica, boolean puedeCambiarSeccion, boolean puedeEditarDocumentos, boolean puedeValidar,
 			List<DocumentoDeMatricula> documentos) {
 	}
 

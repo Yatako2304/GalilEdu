@@ -170,3 +170,31 @@ test('en validación solo se ven los documentos, sin acciones de carga', async (
     screen.queryByRole('button', { name: 'Enviar a validación' }),
   ).not.toBeInTheDocument();
 });
+
+test('con un documento observado solo se reemplaza ese y no deja enviar hasta corregirlo', async () => {
+  const base = subido('d-2', 'DNI del estudiante', 'OBSERVADO');
+  const observado = {
+    ...base,
+    archivo: { ...base.archivo, observacion: 'La foto está borrosa' },
+  };
+  servir({
+    estado: 'SECCION_RESERVADA',
+    puedeSubir: true,
+    documentos: [subido('d-1', 'Ficha de matrícula', 'APROBADO'), observado],
+  });
+  await abrir();
+
+  expect(
+    await screen.findByText('El colegio observó 1 documento(s)'),
+  ).toBeVisible();
+  expect(screen.getByText(/La foto está borrosa/)).toBeVisible();
+  expect(
+    screen.queryByRole('button', { name: 'Reemplazar Ficha de matrícula' }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Reemplazar DNI del estudiante' }),
+  ).toBeEnabled();
+  expect(
+    screen.getByRole('button', { name: 'Enviar a validación' }),
+  ).toBeDisabled();
+});
