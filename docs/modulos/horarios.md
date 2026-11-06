@@ -1,32 +1,38 @@
 # Horarios
 
-- **HU:** HU-45, HU-46, HU-49 · (HU-47, HU-48, HU-50, HU-51)
-- **Estado:** 🚧 HU-46 hecha (backend); HU-45 y HU-49 por completar
-- **Última actualización:** 2026-11-05
+- **HU:** HU-45 (iteración 2) · HU-46 (2) · HU-49, 50, 51 · (HU-47, 48 en la 3)
+- **Estado:** 🚧 HU-45 hecha (backend y pantalla del Coordinador) y HU-46 hecha (backend)
+- **Última actualización:** 2026-11-06
 
 ## Alcance
 
-El Coordinador arma el horario semanal de cada sección: elige para cada día y bloque de la jornada un curso del plan y un ambiente. El docente de cada celda no se elige: es el titular del curso en esa sección (`academico.docente_seccion`). Esta ficha detalla la **detección de cruces (HU-46)**, que impide que un docente o un ambiente estén en dos lugares a la vez. Las partes de la HU-45 (matriz, modal, versiones) y de la HU-49 (horario del docente y del tutor) están por completar.
+El Coordinador arma el horario semanal de cada sección: elige el curso del plan de evaluación y el ambiente de cada bloque. Un **bloque** no es una fila de catálogo: es el par (día, número de bloque) dentro de la jornada de la estructura horaria, y sus horas se calculan (`CalculadoraJornada` de Configuración). El docente de un bloque **no se guarda**: es el de `academico.docente_seccion` para (curso del plan, sección).
 
-## Historias de usuario
+Figma: Coordinador › «HU-45: Asignación de docente y curso a un bloque de horario» (619:2757, 286:14702, 248:9344) y su modal «Asignar bloque horario» (863:56080). HU-46: modal con cruce (296:17801). HU-49: horario del docente y del tutor (393:18119), en `/app/docente/horario` y `/app/tutor/horario`. El horario de lectura de Estudiante y Apoderado (HU-50/51) es otro endpoint y todavía usa datos simulados.
 
-| HU | Qué | Estado | Notas |
-| --- | --- | --- | --- |
-| HU-45 | Armar el horario de una sección | 🚧 | Por completar (Valeria). El backend (GET, opciones y PUT) está en la [tabla de API](../../backend/README.md). |
-| HU-46 | Detectar cruces de docente y de ambiente | ✅ backend | Cubre el RF-117 y el RF-118. Ver [Cruces de horario](#cruces-de-horario-hu-46). Falta el modal del frontend, que llamará al endpoint con el borrador. |
-| HU-49 | Horario del docente y del tutor | ⏳ | Por completar. |
+## Base de datos
 
-## Pantallas (Figma)
+- **Esquema:** `horarios` · **Migración:** `V10__horarios.sql`
 
-Archivo de Figma `l8nXzicItzBnvPjFQP4G9O` (nodos):
+| Tabla | Para qué |
+| --- | --- |
+| `horarios.horario_seccion` | Cabecera: una por sección (`UNIQUE`), con su estructura horaria (`ON DELETE RESTRICT`), `version` para el bloqueo optimista y `creado_en`/`actualizado_en`. Nace al primer guardado y muere con la sección (`CASCADE`). |
+| `horarios.horario_bloque` | Un curso en (día, número de bloque) de un horario, con su ambiente. `UNIQUE (horario_seccion_id, dia, numero_bloque)`; el plan y el ambiente son `RESTRICT`. |
 
-| Pantalla | Nodo en Figma | Ruta |
+## Endpoints (rol Coordinador)
+
+| Método | Ruta | Qué hace |
 | --- | --- | --- |
-| Asignación de horarios, vacía | `619:2757` | `/app/coordinador/horarios` (hoy un marcador de posición) |
-| Asignación de horarios, con datos | `248:9344` | `/app/coordinador/horarios` |
-| Modal «Asignar bloque horario» | `802:12011` | `/app/coordinador/horarios` |
-| Modal con cruce (HU-46) | `296:17801` | `/app/coordinador/horarios` |
-| Horario del docente y del tutor (HU-49) | `393:18119` | `/app/docente/horario` y `/app/tutor/horario` |
+| GET | `/horarios/anios-escolares` | Años para el selector: `{id, anio, estado}` (los de `/configuracion` son solo del Personal administrativo) |
+| GET | `/horarios/anios-escolares/{anioId}/secciones` | Los grados del catálogo con sus secciones del año. 404 si el año no existe |
+| GET | `/horarios/secciones/{seccionId}` | La matriz: sección, `version` (null si no hay horario), `editable` (false con el año cerrado), estructura, jornada y celdas con curso, docente, ambiente y `cruces`. Sin horario guardado usa la estructura principal del nivel y no escribe nada. 404; 409 si no hay horario ni principal |
+| GET | `/horarios/secciones/{seccionId}/opciones` | Cursos del plan con `horasSemanales`, `horasAsignadas` y docente, y ambientes activos |
+| PUT | `/horarios/secciones/{seccionId}` | Guarda la matriz **completa** `{version, celdas}` en una transacción con el bloqueo del año. La cabecera nueva nace con `version = 0` y cada guardado con cambios sube 1. 400/404/409 (ver la tabla de `backend/README.md`) |
+| POST | `/horarios/secciones/{seccionId}/cruces` | Cruces de un borrador de celdas antes de guardar (HU-46): `{celdas}` → lista de cruces, vacía si no hay. No escribe ni bloquea el año. Está en `CrucesHorarioController`, no en `HorarioController`. 400/404/409 (ver [Cruces de horario](#cruces-de-horario-hu-46)) |
+
+## Reglas que valida el PUT (`ReglasDelHorario`)
+
+Celda repetida (400), día no lectivo (400), bloque fuera de la jornada (400), curso de otro año o grado (400), ambiente inexistente o inactivo (400), curso sin docente (409), horas semanales superadas, con 1 bloque = 1 hora (409), año cerrado (409), versión desactualizada (409) y, al final, los **cruces** (409 con el mensaje del primero).
 
 ## Cruces de horario (HU-46)
 
@@ -97,7 +103,7 @@ Rol Coordinador. Avisa de los cruces de unas celdas **antes de guardar**, inclus
 
 - **PUT** `/horarios/secciones/{id}`: calcula los cruces de la matriz completa y responde **409 con el primero**, con título: «Docente no disponible: …» o «Ambiente no disponible: …». No guarda nada.
 - **GET** `/horarios/secciones/{id}`: cada celda trae sus `cruces`, para marcarlos en la matriz (por ejemplo, un cruce que apareció porque otra sección se guardó después).
-- **Modal «Asignar bloque horario»** (frontend, pendiente): llama a este endpoint con el borrador de celdas antes de guardar.
+- **Modal «Asignar bloque horario»** (frontend): llama a este endpoint con el borrador de celdas (`useCruces`, `api/cruces.ts`) y deshabilita «Asignar» si hay cruces para ese bloque.
 
 ### Concurrencia
 
@@ -110,40 +116,19 @@ El PUT toma el **bloqueo del año** (`bloquearAnioParaHorarios`) **antes** de le
 - **RF-122 adelantado.** El RF-122 (espacios especiales: una sección o subgrupo por bloque) es de la HU-48; la misma comparación de ambientes lo deja adelantado.
 - **Diferencias con Figma.** (a) El texto de Figma dice «Seleccione otro docente», pero en el modal el docente no se elige: es el titular de `docente_seccion`; el frontend mostrará otra ayuda. (b) `OcupacionHorariosSql` llena el ambiente con su **nombre** y la matriz de Figma muestra el **código** (A-502): queda pendiente para Valeria.
 
-## Base de datos
-
-- **Esquema:** `horarios` · **Migraciones:** `V10__horarios.sql`
-
-| Tabla | Para qué |
-| --- | --- |
-| `horarios.horario_seccion` | Cabecera del horario de una sección: su estructura horaria y su `version` |
-| `horarios.horario_bloque` | Bloques asignados: día, número de bloque, curso del plan y ambiente |
-
-La HU-46 no agrega tablas ni migraciones: lee `horarios`, `academico.docente_seccion`, `configuracion` y `personas` (nombre del docente).
-
-## API
-
-| Método | Ruta | Rol | Qué hace |
-| --- | --- | --- | --- |
-| GET | `/horarios/secciones/{seccionId}` | Coordinador | Matriz de la sección, con los `cruces` de cada celda (HU-45) |
-| GET | `/horarios/secciones/{seccionId}/opciones` | Coordinador | Cursos y ambientes del modal (HU-45) |
-| PUT | `/horarios/secciones/{seccionId}` | Coordinador | Guarda la matriz completa; 409 con el primer cruce (HU-45, HU-46) |
-| POST | `/horarios/secciones/{seccionId}/cruces` | Coordinador | Cruces de un borrador de celdas, sin guardar (HU-46) |
-
-El detalle de los tres primeros está en [`backend/README.md`](../../backend/README.md).
-
 ## Código
 
-- Backend: `backend/src/main/java/com/galiledu/horarios/`
-  - HU-46: `aplicacion/ValidadorCruces` (interfaz), `ValidadorCrucesHorario` (lógica pura y consulta), `MensajesCruce`, `CruceDetectado`, `TipoCruce`, `ServicioCrucesHorario`, `SolicitudCruces`; `infraestructura/OcupacionHorariosSql` (bloques ocupados con las horas de la estructura de cada sección); `web/CrucesHorarioController`.
-- Frontend: `frontend/src/features/horarios/` (por completar)
-- Pruebas: `backend/src/test/java/com/galiledu/horarios/`
-  - HU-46: `aplicacion/ValidadorCrucesHorarioTests` y `ServicioCrucesHorarioTests` (sin Spring ni BD), `CrucesHorarioIT` (endpoint), `HorarioConValidadorRealIT` (PUT y GET con el validador real), `CrucesConcurrenciaIT` (dos guardados a la vez). `HorarioCrucesIT` sigue usando un validador de mentira para probar el PUT y el GET de la HU-45.
+- Backend: `backend/src/main/java/com/galiledu/horarios/` (`dominio`: `HorarioSeccion`, `HorarioBloque`; `aplicacion`: `ServicioHorarios`, `ReglasDelHorario`, `ResolutorDeJornada`, `ConversorDeBloquesDeJornada`, `DtosHorarios` y las interfaces `ValidadorCruces`, `OcupacionHorarios` y `ConversorDeBloques`; `infraestructura`: repositorios y los adaptadores SQL de solo lectura `DatosDeSeccionSql`, `PlanDeSeccionSql`, `AmbientesActivosSql`, `AniosYSeccionesSql`, `OcupacionHorariosSql` y `JornadaDeSeccionConfiguracion`; `web`: `HorarioController`). HU-46: `ValidadorCrucesHorario`, `MensajesCruce`, `ServicioCrucesHorario` y `SolicitudCruces` (en `aplicacion`, el validador reemplaza a `ValidadorCrucesStub`) y `web/CrucesHorarioController`. Configuración consulta el uso de una estructura con `UsoDeEstructura` (`UsoDeEstructuraSql`): ver [Configuración](configuracion.md#estructuras-con-horarios-armados-hu-45).
+- Frontend: `frontend/src/features/horarios/` (`asignacion-horarios`, `matriz-coordinador`, `dialogo-asignar-bloque`, `barra-acciones`, `datos-del-horario` y las llamadas de `api/`). Ruta: `app/routes/app/coordinador/horarios.tsx`. Los tipos del coordinador están en el feature (`types.ts`): `types/api.ts` tiene los del horario de lectura de la P2.
+- Pruebas: `backend/src/test/java/com/galiledu/horarios/` y `frontend/src/features/horarios/`. HU-46: `aplicacion/ValidadorCrucesHorarioTests`, `MensajesCruceTests` y `ServicioCrucesHorarioTests` (sin Spring ni BD), `CrucesHorarioIT` (endpoint), `HorarioConValidadorRealIT` (PUT y GET con el validador real) y `CrucesConcurrenciaIT` (dos guardados a la vez). `HorarioCrucesIT` sigue usando un validador de mentira para el PUT y el GET de la HU-45.
 
 ## Pendientes
 
-- [ ] Completar la parte de la HU-45 (Valeria): alcance, reglas del horario, pantallas y frontend.
-- [ ] Completar la HU-49 (horario del docente y del tutor).
-- [ ] Valeria: que `OcupacionHorariosSql` (y la matriz) muestren el código del ambiente, como en Figma, y no su nombre.
-- [ ] Frontend de la HU-46: marcar los cruces en la matriz y llamar al endpoint desde el modal con el borrador.
-- [ ] Decidir con Académico cómo avisar al Coordinador cuando un cambio de titular crea un cruce.
+- [x] **HU-46 (backend):** `ValidadorCruces` real y `POST /horarios/secciones/{id}/cruces`.
+- [ ] Decidir con el PO si el PUT debe rechazar solo los cruces de las celdas nuevas o modificadas. Hoy rechaza cualquier cruce de la matriz (decisión 4 de Valeria).
+- [ ] Mostrar el ambiente con su código (A-502, como en Figma) en vez de su nombre: `OcupacionHorariosSql` y la matriz.
+- [ ] Avisar al Coordinador cuando un cambio de titular en Académico crea un cruce.
+- [ ] Horario de lectura de Estudiante y Apoderado (HU-50/51) con datos reales; hoy usa MSW.
+- [ ] Subgrupos (HU-47, iteración 3): traerán su propia migración (tabla `grupo`, `horario_bloque.grupo_id` y `docente_id`).
+- [ ] Código automático de la estructura horaria y la regla de «principal compatible» (ver [Configuración](configuracion.md)).
+- [ ] Registrar en una sola entrada de `docs/decisiones/` las decisiones de la HU-45 (docente derivado, versión, cascade, `DiaSemana` compartido, reglas de Configuración con horarios armados y el hueco de editar hora de entrada, duración o recesos).

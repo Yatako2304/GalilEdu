@@ -18,32 +18,40 @@ import { Tag } from '@/components/ui/tag';
 import { CompromisoDetalle } from '@/types/api';
 import { formatDay } from '@/utils/format';
 
+import { DescuentoCompromiso } from './descuento-compromiso';
 import { etiquetaCuota, soles } from './formato';
+import { MorosidadCompromiso } from './morosidad-compromiso';
+import { PagosCompromiso } from './pagos-compromiso';
 
-const PESTANAS = [
-  'Cronograma de cuotas',
-  'Pagos',
-  'Descuento',
-  'Morosidad',
-] as const;
+type PestanaCompromiso = 'cronograma' | 'pagos' | 'descuento' | 'morosidad';
 
 const Indicador = ({
   etiqueta,
   valor,
   detalle,
+  valorError = false,
 }: {
   etiqueta: string;
   valor: string;
   detalle: string;
+  valorError?: boolean;
 }) => (
   <div className="flex flex-1 flex-col gap-1 px-5 py-4">
     <p className="text-body-4 text-content-tertiary">{etiqueta}</p>
-    <p className="text-h6 font-semibold text-content-primary">{valor}</p>
+    <p
+      className={
+        valorError
+          ? 'text-h6 font-semibold text-content-error'
+          : 'text-h6 font-semibold text-content-primary'
+      }
+    >
+      {valor}
+    </p>
     <p className="text-body-4 text-content-tertiary">{detalle}</p>
   </div>
 );
 
-const ResumenCompromiso = ({
+export const ResumenCompromiso = ({
   compromiso,
 }: {
   compromiso: CompromisoDetalle;
@@ -57,7 +65,7 @@ const ResumenCompromiso = ({
         detalle={`${r.cuotasActivas} cuotas activas`}
       />
       <Indicador
-        etiqueta="Capital pagado"
+        etiqueta="Monto pagado"
         valor={soles(r.capitalPagado)}
         detalle={`${r.pensionesPagadas} de ${r.pensionesTotal} pensiones`}
       />
@@ -74,6 +82,7 @@ const ResumenCompromiso = ({
       <Indicador
         etiqueta="Saldo pendiente"
         valor={soles(r.saldoPendiente)}
+        valorError={r.cuotasVencidas > 0}
         detalle={
           r.cuotasVencidas > 0
             ? `${r.cuotasVencidas} cuota(s) vencida(s)`
@@ -84,7 +93,11 @@ const ResumenCompromiso = ({
   );
 };
 
-const TablaCuotas = ({ compromiso }: { compromiso: CompromisoDetalle }) => (
+export const TablaCuotas = ({
+  compromiso,
+}: {
+  compromiso: CompromisoDetalle;
+}) => (
   <TableElement className="whitespace-nowrap">
     <TableHeader>
       <TableRow>
@@ -93,7 +106,8 @@ const TablaCuotas = ({ compromiso }: { compromiso: CompromisoDetalle }) => (
         <TableHead className="text-right">Monto base</TableHead>
         <TableHead className="text-right">Descuento</TableHead>
         <TableHead className="text-right">Monto final</TableHead>
-        <TableHead className="text-right">Capital pagado</TableHead>
+        <TableHead className="text-right">Recargo por mora</TableHead>
+        <TableHead className="text-right">Monto pagado</TableHead>
         <TableHead>Estado</TableHead>
       </TableRow>
     </TableHeader>
@@ -126,6 +140,9 @@ const TablaCuotas = ({ compromiso }: { compromiso: CompromisoDetalle }) => (
             <TableCell className="text-right font-semibold text-content-primary">
               {soles(cuota.montoFinal)}
             </TableCell>
+            <TableCell className="text-right text-content-error">
+              {cuota.recargo > 0 ? `+ ${soles(cuota.recargo)}` : '—'}
+            </TableCell>
             <TableCell className="text-right">
               {soles(cuota.montoPagado)}
             </TableCell>
@@ -153,6 +170,16 @@ const TablaCuotas = ({ compromiso }: { compromiso: CompromisoDetalle }) => (
         <TableCell className="text-right font-semibold text-content-primary">
           {soles(compromiso.resumen.totalAnual)}
         </TableCell>
+        <TableCell className="text-right font-semibold text-content-error">
+          {compromiso.cuotas.some((cuota) => cuota.recargo > 0)
+            ? `+ ${soles(
+                compromiso.cuotas.reduce(
+                  (total, cuota) => total + cuota.recargo,
+                  0,
+                ),
+              )}`
+            : '—'}
+        </TableCell>
         <TableCell className="text-right font-semibold text-content-primary">
           {soles(compromiso.resumen.capitalPagado)}
         </TableCell>
@@ -170,9 +197,7 @@ export const CronogramaCuotas = ({
   compromiso?: CompromisoDetalle;
   isLoading: boolean;
 }) => {
-  const [pestana, setPestana] = React.useState<(typeof PESTANAS)[number]>(
-    'Cronograma de cuotas',
-  );
+  const [pestana, setPestana] = React.useState<PestanaCompromiso>('cronograma');
 
   if (isLoading) {
     return (
@@ -199,16 +224,26 @@ export const CronogramaCuotas = ({
           size="md"
           aria-label="Detalle del compromiso"
           className="border-b border-stroke-tertiary pb-4"
-          items={PESTANAS.map((p) => ({ value: p, label: p }))}
+          items={[
+            { value: 'cronograma', label: 'Cronograma de cuotas' },
+            { value: 'pagos', label: 'Pagos' },
+            { value: 'descuento', label: 'Descuento' },
+            {
+              value: 'morosidad',
+              label: `Morosidad (${compromiso.resumen.cuotasVencidas})`,
+            },
+          ]}
           value={pestana}
           onValueChange={setPestana}
         />
-        {pestana === 'Cronograma de cuotas' ? (
+        {pestana === 'cronograma' ? (
           <TablaCuotas compromiso={compromiso} />
+        ) : pestana === 'pagos' ? (
+          <PagosCompromiso compromisoId={compromiso.id} />
+        ) : pestana === 'descuento' ? (
+          <DescuentoCompromiso compromisoId={compromiso.id} />
         ) : (
-          <p className="py-10 text-center text-body-3 text-content-tertiary">
-            Esta sección estará disponible pronto.
-          </p>
+          <MorosidadCompromiso compromisoId={compromiso.id} />
         )}
       </Card>
 

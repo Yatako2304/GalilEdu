@@ -39,6 +39,10 @@ Reemplacé el `ValidadorCrucesStub`, que no detectaba nada, por el validador rea
   **Por qué:** acordado con Valeria: el error exacto lo da el PUT, y el aviso no debe fallar mientras el Coordinador aún arma el borrador. Sin estructura principal ni horario guardado sí responde 409, igual que el GET.
   **Alternativas descartadas:** responder 400 o 409 por la primera celda inválida; devolver `[]` también en el 409.
 
+- **Decisión:** en esta iteración el PUT valida los cruces de toda la matriz, no solo de las celdas cambiadas.
+  **Por qué:** es lo más seguro y el GET marca en la celda los cruces existentes; el Coordinador los resuelve moviendo o quitando el bloque.
+  **Alternativas descartadas:** validar solo las celdas nuevas o modificadas (pendiente de consultar al PO).
+
 - **Decisión:** esta entrega cubre el RF-117 (cruce de docente: bloquear y mostrar la sección y el curso en conflicto) y el RF-118 (cruce de aula: bloquear e indicar qué sección la ocupa).
   **Por qué:** son los requisitos que respaldan la detección de cruces de la HU-46. El RF-122 (espacios especiales, una sección o subgrupo por bloque) es de la HU-48 y queda adelantado.
   **Alternativas descartadas:** ninguna.

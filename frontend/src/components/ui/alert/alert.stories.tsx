@@ -42,3 +42,13 @@ export const ConAccion: Story = {
 export const Toast: Story = {
   args: { type: 'success', title: 'Cambios guardados', onClose: () => {} },
 };
+
+export const Pequeno: Story = {
+  args: {
+    type: 'warning',
+    size: 'sm',
+    title:
+      'Sin docente (9 cursos): Aritmética, Arte y Cultura, Biología y 6 más',
+    action: <a href="#plan">Ir a Plan de evaluación</a>,
+  },
+};

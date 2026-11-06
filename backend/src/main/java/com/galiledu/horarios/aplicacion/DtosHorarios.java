@@ -78,4 +78,21 @@ public final class DtosHorarios {
 	public record SolicitudHorario(Long version,
 			@NotNull(message = "Envía las celdas del horario.") @Valid List<@NotNull(message = "Hay una celda vacía.") @Valid SolicitudCelda> celdas) {
 	}
+
+	// ---------- Selectores de año, grado y sección (el Coordinador no entra a /configuracion) ----------
+
+	/** GET /horarios/anios-escolares: lo que el selector de año necesita. */
+	public record AnioParaHorarios(UUID id, int anio, String estado) {
+	}
+
+	public record SeccionParaHorarios(UUID id, String nombre, String estado) {
+	}
+
+	/**
+	 * GET /horarios/anios-escolares/{anioId}/secciones: los grados del catálogo con las secciones que tienen en el año
+	 * (con la misma forma que los grados de Configuración, pero solo con lo que usa el selector).
+	 */
+	public record GradoParaHorarios(String codigo, String nombre, String nivel, int numero,
+			int cantidadSeccionesActivas, List<SeccionParaHorarios> secciones) {
+	}
 }

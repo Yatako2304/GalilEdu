@@ -1,14 +1,14 @@
 import { ContentLayout } from '@/components/layouts';
-import { ModulePlaceholder } from '@/components/module-placeholder';
+import { AsignacionHorarios } from '@/features/horarios/components/asignacion-horarios';
 
+// Figma > Coordinador > "HU-45: Asignación de docente y curso a un bloque de horario" (619:2757, 286:14702, 248:9344).
 const CoordinadorHorariosRoute = () => {
   return (
-    <ContentLayout title="Horarios">
-      <ModulePlaceholder
-        feature="horarios"
-        historias={['HU-44', 'HU-45', 'HU-46', 'HU-47']}
-        figmaNodeId="248:9344"
-      />
+    <ContentLayout
+      title="Asignación de horarios"
+      breadcrumbs={['Horarios', 'Asignación de horarios']}
+    >
+      <AsignacionHorarios />
     </ContentLayout>
   );
 };

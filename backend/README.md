@@ -23,9 +23,13 @@ src/main/java/com/galiledu/
 ├── personas/       persona (datos personales, validaciones RF-12/14/23)
 ├── usuarios/       login (HU-1), gestión de cuentas (HU-6, HU-9, HU-12) y carga masiva (HU-8)
 ├── estudiantes/    inscripción del estudiante (HU-7)
-└── academico/      catálogo académico: plan curricular, escala de calificación y plan de evaluación (HU-52 a HU-56)
+├── configuracion/  año escolar y periodos, secciones y tutores, estructuras horarias, periodo de matrícula y tarifario (HU-74, HU-75, HU-44, HU-23, HU-34)
+├── academico/      catálogo académico (plan curricular, escala de calificación y plan de evaluación: HU-52 a HU-56) y calificaciones del docente (HU-57, HU-59, HU-62)
+├── matricula/      matrícula del apoderado: consulta y estado (HU-27, HU-30)
+├── pagos/          compromisos, cuotas, descuentos y deuda del apoderado (HU-36, HU-37, HU-35, HU-38 a HU-40)
+└── horarios/       horario semanal de una sección, para el Coordinador (HU-45) y la detección de cruces (HU-46)
 
-Configuración, matrícula y pagos: por ahora solo tienen BD (paquetes por crear). Horarios ya tiene su paquete (`horarios`).
+Asistencia todavía no tiene paquete (iteración 3).
 
 Cada módulo:  dominio/ (entidades JPA, reglas)  aplicacion/ (servicios + DTOs)
               infraestructura/ (repositorios)   web/ (controladores REST)
@@ -109,6 +113,8 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/planes-evaluacion/copias` | Personal adm. · Coordinador | Copia `{anioEscolarId, gradoCodigo, origenAnioEscolarId, origenGradoCodigo}` a un grado vacío, sin docentes |
 | GET · PUT · DELETE | `/planes-evaluacion/{id}` | Personal adm. · Coordinador | Detalle del curso en el plan · `{horasSemanales, competencias}` · quitarlo del plan. 409 si el año está cerrado |
 | GET · PUT | `/planes-evaluacion/{id}/docentes` | Personal adm. · Coordinador | Docente de cada sección `{asignaciones: [{seccionId, docenteId}]}` (`docenteId` null = sin docente) |
+| GET | `/horarios/anios-escolares` | Coordinador | Selector de año de la pantalla de asignación de horarios: `[{id, anio, estado}]`, del más reciente al más antiguo. Es la lectura de Horarios porque `/configuracion/anios-escolares` es solo del Personal administrativo |
+| GET | `/horarios/anios-escolares/{anioId}/secciones` | Coordinador | Selectores de grado y sección: los 11 grados del catálogo `[{codigo, nombre, nivel, numero, cantidadSeccionesActivas, secciones: [{id, nombre, estado}]}]` con las secciones que tienen en el año (los de primaria, vacíos, si no las tienen). 404 si el año no existe |
 | GET | `/horarios/secciones/{seccionId}` | Coordinador | Matriz del horario de la sección (HU-45): `{seccion, version, editable, estructura, jornada, celdas}`. Con horario guardado usa su estructura (aunque ya no sea la principal); sin él, la principal del nivel, `version = null` y sin celdas (no escribe nada). `editable` es false con el año CERRADO (sigue siendo 200). Cada celda trae curso, docente (o null), ambiente y `cruces`. 404 si la sección no existe; 409 si no hay horario ni estructura principal del nivel |
 | GET | `/horarios/secciones/{seccionId}/opciones` | Coordinador | Modal «Asignar bloque horario»: `{ambientePorDefectoId, cursos, ambientes}`. Cursos del plan del grado y año con `horasSemanales`, `horasAsignadas` (bloques ya guardados) y docente (o null); ambientes activos. 404 si la sección no existe |
 | PUT | `/horarios/secciones/{seccionId}` | Coordinador | Guarda la matriz COMPLETA `{version, celdas: [{dia, numeroBloque, planCursoId, ambienteId}]}` y responde como el GET. `version` es la que devolvió el GET (null si no había horario). Una transacción con el bloqueo del año; aplica por diferencia (los bloques sin cambios conservan su id); la cabecera nueva nace con `version = 0` y cada guardado con cambios la sube exactamente 1; uno idéntico no la sube. 400 por celda repetida, día no lectivo, bloque fuera de la jornada, curso de otro año o grado o ambiente inexistente o inactivo; 404 si la sección no existe; 409 si el año está cerrado, la versión cambió («Otra persona modificó el horario…»), el curso no tiene docente, supera sus horas semanales, hay cruces o falta la estructura principal |

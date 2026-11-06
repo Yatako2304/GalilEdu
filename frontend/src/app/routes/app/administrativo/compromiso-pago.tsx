@@ -10,12 +10,14 @@ import {
   useCompromisosEstudiante,
 } from '@/features/pagos/api/compromisos';
 import { CronogramaCuotas } from '@/features/pagos/components/cronograma-cuotas';
+import { DialogoAplicarDescuento } from '@/features/pagos/components/dialogo-aplicar-descuento';
 
 // Figma > Personal Administrativo > "P8 · Compromiso 2026 — Cronograma de cuotas" (HU-37)
 const CompromisoPagoRoute = () => {
   const { estudianteId = '' } = useParams();
   const compromisos = useCompromisosEstudiante(estudianteId);
   const [elegido, setElegido] = React.useState<string>();
+  const [dialogoDescuento, setDialogoDescuento] = React.useState(false);
   const compromisoId = elegido ?? compromisos.data?.[0]?.id;
   const compromiso = useCompromiso(compromisoId);
   const e = compromiso.data?.estudiante;
@@ -50,8 +52,9 @@ const CompromisoPagoRoute = () => {
           </Button>
           <Button
             variant="primary"
-            disabled
+            disabled={!compromisoId || compromiso.data?.estado !== 'VIGENTE'}
             icon={<Percent className="size-4" />}
+            onClick={() => setDialogoDescuento(true)}
           >
             Añadir descuento
           </Button>
@@ -62,6 +65,13 @@ const CompromisoPagoRoute = () => {
         compromiso={compromiso.data}
         isLoading={compromisos.isLoading || compromiso.isLoading}
       />
+      {compromisoId && (
+        <DialogoAplicarDescuento
+          abierto={dialogoDescuento}
+          onOpenChange={setDialogoDescuento}
+          compromisoId={compromisoId}
+        />
+      )}
     </ContentLayout>
   );
 };

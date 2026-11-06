@@ -24,16 +24,19 @@ import com.galiledu.configuracion.dominio.DiaSemana;
 import com.galiledu.horarios.aplicacion.AmbientesActivos.AmbienteDisponible;
 import com.galiledu.horarios.aplicacion.DatosDeSeccion.DatosSeccion;
 import com.galiledu.horarios.aplicacion.DtosHorarios.AmbienteOpcion;
+import com.galiledu.horarios.aplicacion.DtosHorarios.AnioParaHorarios;
 import com.galiledu.horarios.aplicacion.DtosHorarios.BloqueJornada;
 import com.galiledu.horarios.aplicacion.DtosHorarios.CeldaDelHorario;
 import com.galiledu.horarios.aplicacion.DtosHorarios.CursoOpcion;
 import com.galiledu.horarios.aplicacion.DtosHorarios.EstructuraDelHorario;
+import com.galiledu.horarios.aplicacion.DtosHorarios.GradoParaHorarios;
 import com.galiledu.horarios.aplicacion.DtosHorarios.HorarioDeSeccion;
 import com.galiledu.horarios.aplicacion.DtosHorarios.JornadaDelDia;
 import com.galiledu.horarios.aplicacion.DtosHorarios.OpcionesDeHorario;
 import com.galiledu.horarios.aplicacion.DtosHorarios.RecesoJornada;
 import com.galiledu.horarios.aplicacion.DtosHorarios.Referencia;
 import com.galiledu.horarios.aplicacion.DtosHorarios.SeccionDelHorario;
+import com.galiledu.horarios.aplicacion.DtosHorarios.SeccionParaHorarios;
 import com.galiledu.horarios.aplicacion.DtosHorarios.SolicitudHorario;
 import com.galiledu.horarios.aplicacion.JornadaDeSeccion.JornadaEstructura;
 import com.galiledu.horarios.aplicacion.PlanDeSeccion.CursoDelPlan;
@@ -66,11 +69,12 @@ public class ServicioHorarios {
 	private final ValidadorCruces validadorCruces;
 	private final ReglasDelHorario reglas;
 	private final ServicioEstructurasHorarias estructuras;
+	private final AniosYSecciones aniosYSecciones;
 
 	public ServicioHorarios(DatosDeSeccion secciones, HorarioSeccionRepositorio horarios,
 			HorarioBloqueRepositorio bloques, ResolutorDeJornada resolutor, PlanDeSeccion plan,
 			AmbientesActivos ambientes, ConversorDeBloques conversor, ValidadorCruces validadorCruces,
-			ReglasDelHorario reglas, ServicioEstructurasHorarias estructuras) {
+			ReglasDelHorario reglas, ServicioEstructurasHorarias estructuras, AniosYSecciones aniosYSecciones) {
 		this.secciones = secciones;
 		this.horarios = horarios;
 		this.bloques = bloques;
@@ -81,6 +85,25 @@ public class ServicioHorarios {
 		this.validadorCruces = validadorCruces;
 		this.reglas = reglas;
 		this.estructuras = estructuras;
+		this.aniosYSecciones = aniosYSecciones;
+	}
+
+	/** Los años escolares para el selector del Coordinador, del más reciente al más antiguo. */
+	@Transactional(readOnly = true)
+	public List<AnioParaHorarios> aniosEscolares() {
+		return aniosYSecciones.anios().stream().map(a -> new AnioParaHorarios(a.id(), a.anio(), a.estado())).toList();
+	}
+
+	/** Los grados del año con sus secciones para los selectores del Coordinador. 404 si el año no existe. */
+	@Transactional(readOnly = true)
+	public List<GradoParaHorarios> gradosDelAnio(UUID anioId) {
+		return aniosYSecciones.gradosDelAnio(anioId)
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El año escolar no existe.")).stream()
+				.map(g -> new GradoParaHorarios(g.codigo(), g.nombre(), g.nivel(), g.numero(),
+						(int) g.secciones().stream().filter(x -> "ACTIVA".equals(x.estado())).count(),
+						g.secciones().stream().map(x -> new SeccionParaHorarios(x.id(), x.nombre(), x.estado()))
+								.toList()))
+				.toList();
 	}
 
 	/**
