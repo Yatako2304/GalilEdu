@@ -53,3 +53,23 @@ test('genera la cuota cuando todavía no existe', async () => {
   );
   expect(await screen.findByText('S/ 450.00')).toBeInTheDocument();
 });
+
+test('con la matrícula confirmada muestra su código', async () => {
+  server.use(
+    http.get(`${env.API_URL}/pagos/matriculas/:id/cuota-matricula`, () =>
+      HttpResponse.json({
+        ...cuota,
+        estado: 'PAGADA',
+        fechaPago: '2026-11-06',
+      }),
+    ),
+  );
+  await renderApp(
+    <PagoMatriculaCard
+      matriculaId="matricula-1"
+      codigoMatricula="MAT-2027-0001"
+    />,
+  );
+  expect(await screen.findByText('MAT-2027-0001')).toBeInTheDocument();
+  expect(screen.getByText('Código de matrícula')).toBeInTheDocument();
+});

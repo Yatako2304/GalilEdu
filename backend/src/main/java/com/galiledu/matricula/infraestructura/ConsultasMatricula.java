@@ -1,5 +1,6 @@
 package com.galiledu.matricula.infraestructura;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -28,7 +29,8 @@ public class ConsultasMatricula {
 			String estado, boolean bloquearPorMorosidad) {
 	}
 
-	public record MatriculaFila(UUID id, String estado, String grado, String seccion, String codigo) {
+	public record MatriculaFila(UUID id, String estado, String grado, String seccion, String codigo,
+			OffsetDateTime confirmadoEn) {
 	}
 
 	public Optional<UUID> personaDeUsuario(UUID usuarioId) {
@@ -71,14 +73,14 @@ public class ConsultasMatricula {
 
 	public Optional<MatriculaFila> matricula(UUID estudianteId, UUID anioEscolarId) {
 		return jdbc.sql("""
-				SELECT m.id, m.estado, g.nombre, g.numero || '.° ' || s.nombre, m.codigo
+				SELECT m.id, m.estado, g.nombre, g.numero || '.° ' || s.nombre, m.codigo, m.confirmado_en
 				FROM matricula.matricula m
 				JOIN configuracion.grado g ON g.codigo = m.grado_codigo
 				LEFT JOIN configuracion.seccion s ON s.id = m.seccion_id
 				WHERE m.estudiante_id = ? AND m.anio_escolar_id = ?""")
 				.params(estudianteId, anioEscolarId)
 				.query((rs, i) -> new MatriculaFila(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
-						rs.getString(4), rs.getString(5)))
+						rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class)))
 				.optional();
 	}
 
@@ -352,6 +354,26 @@ public class ConsultasMatricula {
 				.params(matriculaId, documentoRequeridoId)
 				.query((rs, i) -> new ArchivoFila(rs.getString(1), rs.getString(2), rs.getBytes(3)))
 				.optional();
+	}
+
+	/** La cuota de matrícula vigente (no anulada) de la matrícula. */
+	public Optional<CuotaMatriculaFila> cuotaMatricula(UUID matriculaId) {
+		return jdbc.sql("""
+				SELECT q.id, q.nombre, q.monto_final, q.estado, q.fecha_vencimiento, q.fecha_pago
+				FROM matricula.matricula m
+				JOIN pagos.compromiso_pago cp ON cp.matricula_id = m.id
+				    OR (cp.estudiante_id = m.estudiante_id AND cp.anio_escolar_id = m.anio_escolar_id)
+				JOIN pagos.cuota q ON q.compromiso_id = cp.id
+				WHERE m.id = ? AND q.concepto_codigo = 'MATRICULA' AND q.estado <> 'ANULADA'""")
+				.param(matriculaId)
+				.query((rs, i) -> new CuotaMatriculaFila(rs.getObject(1, UUID.class), rs.getString(2),
+						rs.getBigDecimal(3), rs.getString(4), rs.getObject(5, LocalDate.class),
+						rs.getObject(6, LocalDate.class)))
+				.optional();
+	}
+
+	public record CuotaMatriculaFila(UUID cuotaId, String concepto, java.math.BigDecimal monto, String estado,
+			LocalDate fechaVencimiento, LocalDate fechaPago) {
 	}
 
 	/** Documentos subidos que no fueron observados (en revisión o aprobados). */

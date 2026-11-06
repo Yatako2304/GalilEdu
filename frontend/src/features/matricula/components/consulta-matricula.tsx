@@ -1,7 +1,9 @@
-import { Check, ChevronDown } from 'lucide-react';
+import { Banknote, Check, ChevronDown, Download } from 'lucide-react';
+import { Link } from 'react-router';
 
 import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -14,12 +16,16 @@ import {
 import { Spinner } from '@/components/ui/spinner';
 import { Stepper } from '@/components/ui/stepper';
 import { Tag, TagProps } from '@/components/ui/tag';
+import { paths } from '@/config/paths';
 import {
+  CuotaMatriculaApoderado,
   EstadoMatricula,
   EstadoMatriculaApoderado,
   HijoApoderado,
   MatriculaActual,
 } from '@/types/api';
+
+import { descargarConstancia } from '../lib/constancia-matricula';
 
 import { DocumentosApoderado } from './documentos-apoderado';
 
@@ -202,7 +208,11 @@ const PASOS_MATRICULA = [
 // Figma > Apoderado > Matrícula > "Card - Progreso": instancia de Componentes > Stepper.
 const ProgresoMatricula = ({ pasoActual }: { pasoActual: number }) => (
   <Card className="p-6">
-    <Stepper steps={PASOS_MATRICULA} current={pasoActual} />
+    {/* Matriculado es el último paso: ya no queda nada por hacer, así que figura completado. */}
+    <Stepper
+      steps={PASOS_MATRICULA}
+      current={pasoActual === 4 ? 5 : pasoActual}
+    />
   </Card>
 );
 
@@ -255,7 +265,10 @@ const DeudaPendiente = ({
 );
 
 // Figma > HU-29, HU-31 y HU-32: el aviso cambia con la etapa de la matrícula.
-const avisoDelEstado = (matricula?: MatriculaActual | null) => {
+const avisoDelEstado = (
+  matricula?: MatriculaActual | null,
+  cuota?: CuotaMatriculaApoderado | null,
+) => {
   switch (matricula?.estado) {
     case 'EN_VALIDACION':
       return (
@@ -267,7 +280,9 @@ const avisoDelEstado = (matricula?: MatriculaActual | null) => {
     case 'PENDIENTE_PAGO':
       return (
         <Alert type="warning" title="Documentación validada">
-          Ya puedes pagar la cuota de matrícula para completar el proceso.
+          {cuota
+            ? `Ya puedes pagar la cuota de matrícula de ${soles(cuota.monto)}. Fecha límite: ${fechaDeuda(cuota.fechaVencimiento)}.`
+            : 'Ya puedes pagar la cuota de matrícula para completar el proceso.'}
         </Alert>
       );
     case 'MATRICULADO':
@@ -284,12 +299,83 @@ const avisoDelEstado = (matricula?: MatriculaActual | null) => {
   }
 };
 
+const ETIQUETA_CUOTA: Record<
+  CuotaMatriculaApoderado['estado'],
+  { etiqueta: string; color: NonNullable<TagProps['color']> }
+> = {
+  PENDIENTE: { etiqueta: 'Pendiente de pago', color: 'warning' },
+  EN_PROCESO: { etiqueta: 'Pago en proceso', color: 'info' },
+  PAGADA_PARCIAL: { etiqueta: 'Pago parcial', color: 'warning' },
+  PAGADA: { etiqueta: 'Pagada', color: 'success' },
+};
+
+// Figma > Apoderado > "HU-31 Derivación a pagos": concepto, monto, estado y responsable, y el botón "Pagar matrícula".
+const PagoMatricula = ({
+  cuota,
+  onPagar,
+  pagando,
+}: {
+  cuota: CuotaMatriculaApoderado;
+  onPagar?: (cuotaId: string) => void;
+  pagando?: boolean;
+}) => {
+  const estado = ETIQUETA_CUOTA[cuota.estado];
+  const filas: [string, React.ReactNode][] = [
+    ['Concepto', cuota.concepto],
+    ['Monto', soles(cuota.monto)],
+    [
+      'Estado',
+      <Tag key="estado" color={estado.color} size="sm">
+        {estado.etiqueta}
+        {cuota.fechaPago ? ` · ${fechaDeuda(cuota.fechaPago)}` : ''}
+      </Tag>,
+    ],
+    ['Responsable', cuota.responsable ?? '—'],
+  ];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Pago de matrícula</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <dl className="space-y-2 rounded-[10px] bg-surface-secondary px-5 py-4 text-body-3">
+          {filas.map(([nombre, valor]) => (
+            <div
+              key={nombre}
+              className="flex items-start justify-between gap-4"
+            >
+              <dt className="text-content-quartiary">{nombre}</dt>
+              <dd className="text-right font-medium text-content-primary">
+                {valor}
+              </dd>
+            </div>
+          ))}
+        </dl>
+        {cuota.estado === 'PENDIENTE' && onPagar && (
+          <div className="flex justify-end">
+            <Button
+              icon={<Banknote className="size-4" aria-hidden="true" />}
+              isLoading={pagando}
+              onClick={() => onPagar(cuota.cuotaId)}
+            >
+              Pagar matrícula
+            </Button>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 type ConsultaMatriculaProps = {
   hijos: HijoApoderado[];
   estudianteId?: string;
   estado?: EstadoMatriculaApoderado;
   isLoading: boolean;
   onElegir: (id: string) => void;
+  /** Lleva a la pasarela para pagar la cuota de matrícula; lo arma la ruta (un feature no importa de otro). */
+  onPagarMatricula?: (cuotaId: string) => void;
+  pagandoMatricula?: boolean;
 };
 
 export const ConsultaMatricula = ({
@@ -298,6 +384,8 @@ export const ConsultaMatricula = ({
   estado,
   isLoading,
   onElegir,
+  onPagarMatricula,
+  pagandoMatricula,
 }: ConsultaMatriculaProps) => {
   const elegido = hijos.find((hijo) => hijo.id === estudianteId);
   const impedimentos = estado?.impedimentos ?? [];
@@ -358,7 +446,7 @@ export const ConsultaMatricula = ({
         </Alert>
       )}
 
-      {avisoDelEstado(estado?.matricula)}
+      {avisoDelEstado(estado?.matricula, estado?.cuotaMatricula)}
 
       <ProgresoMatricula pasoActual={estado?.pasoActual ?? 0} />
 
@@ -366,60 +454,95 @@ export const ConsultaMatricula = ({
         <DeudaPendiente deuda={estado.deuda} />
       )}
 
-      {estado?.matricula && estudianteId && (
-        <DocumentosApoderado estudianteId={estudianteId} />
-      )}
+      {/* Mismo orden que el detalle de matrícula del colegio: datos y documentos a la izquierda, pago a la derecha. */}
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(280px,420px)]">
+        <div className="flex flex-col gap-6">
+          <Card>
+            <CardHeader>
+              <div>
+                <CardTitle>Estado de matrícula</CardTitle>
+                <p className="mt-1 text-body-3 text-content-quartiary">
+                  Información asignada para el periodo {estado?.periodo.anio}
+                </p>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+                <div>
+                  <dt className="text-caption-1 text-content-quartiary">
+                    Grado
+                  </dt>
+                  <dd className="mt-1 text-body-3 font-medium text-content-primary">
+                    {estado?.matricula?.grado ??
+                      estado?.estudiante.grado ??
+                      '—'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-caption-1 text-content-quartiary">
+                    Sección
+                  </dt>
+                  <dd className="mt-1 text-body-3 font-medium text-content-primary">
+                    {estado?.matricula?.seccion ?? 'Por definir'}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-caption-1 text-content-quartiary">
+                    Estado
+                  </dt>
+                  <dd className="mt-1">
+                    <Tag color={estadoActual.color} size="md">
+                      {estadoActual.etiqueta}
+                    </Tag>
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-caption-1 text-content-quartiary">
+                    Cierre del periodo
+                  </dt>
+                  <dd className="mt-1 text-body-3 font-medium text-content-primary">
+                    {fechaPeriodo(estado?.periodo.cierre)}
+                  </dd>
+                </div>
+              </dl>
+              {estado?.matricula?.codigo && (
+                <p className="mt-5 border-t border-stroke-tertiary pt-4 text-body-3 text-content-secondary">
+                  Código de matrícula:{' '}
+                  <strong className="text-content-primary">
+                    {estado.matricula.codigo}
+                  </strong>
+                </p>
+              )}
+              {estado?.matricula?.estado === 'MATRICULADO' && (
+                <div className="mt-4 flex flex-wrap gap-3">
+                  <Button
+                    icon={<Download className="size-4" aria-hidden="true" />}
+                    onClick={() => descargarConstancia(estado)}
+                  >
+                    Descargar constancia
+                  </Button>
+                  <Button asChild variant="primary-light">
+                    <Link to={paths.app.apoderado.pensiones.getHref()}>
+                      Ver cronograma de pensiones
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>Estado de matrícula</CardTitle>
-            <p className="mt-1 text-body-3 text-content-quartiary">
-              Información asignada para el periodo {estado?.periodo.anio}
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            <div>
-              <dt className="text-caption-1 text-content-quartiary">Grado</dt>
-              <dd className="mt-1 text-body-3 font-medium text-content-primary">
-                {estado?.matricula?.grado ?? estado?.estudiante.grado ?? '—'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-caption-1 text-content-quartiary">Sección</dt>
-              <dd className="mt-1 text-body-3 font-medium text-content-primary">
-                {estado?.matricula?.seccion ?? 'Se asigna al confirmar'}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-caption-1 text-content-quartiary">Estado</dt>
-              <dd className="mt-1">
-                <Tag color={estadoActual.color} size="md">
-                  {estadoActual.etiqueta}
-                </Tag>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-caption-1 text-content-quartiary">
-                Cierre del periodo
-              </dt>
-              <dd className="mt-1 text-body-3 font-medium text-content-primary">
-                {fechaPeriodo(estado?.periodo.cierre)}
-              </dd>
-            </div>
-          </dl>
-          {estado?.matricula?.codigo && (
-            <p className="mt-5 border-t border-stroke-tertiary pt-4 text-body-3 text-content-secondary">
-              Código de matrícula:{' '}
-              <strong className="text-content-primary">
-                {estado.matricula.codigo}
-              </strong>
-            </p>
+          {estado?.matricula && estudianteId && (
+            <DocumentosApoderado estudianteId={estudianteId} />
           )}
-        </CardContent>
-      </Card>
+        </div>
+        {estado?.cuotaMatricula && (
+          <PagoMatricula
+            cuota={estado.cuotaMatricula}
+            onPagar={onPagarMatricula}
+            pagando={pagandoMatricula}
+          />
+        )}
+      </div>
     </div>
   );
 };

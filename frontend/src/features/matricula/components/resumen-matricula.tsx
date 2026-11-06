@@ -43,7 +43,7 @@ export const ResumenMatricula = ({
               <dt className="text-caption-1 text-content-quartiary">Grado</dt>
               <dd className="text-body-3 text-content-primary">
                 {estado.matricula?.grado ?? estado.estudiante.grado} ·{' '}
-                {estado.matricula?.seccion ?? 'sección al confirmar'}
+                {estado.matricula?.seccion ?? 'sección por definir'}
               </dd>
             </div>
           </div>

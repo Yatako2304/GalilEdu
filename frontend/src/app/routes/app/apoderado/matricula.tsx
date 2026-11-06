@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useSearchParams } from 'react-router';
 
 import { ContentLayout } from '@/components/layouts';
 import { Tag } from '@/components/ui/tag';
@@ -11,10 +12,15 @@ import {
   datosResumenMatricula,
   fechaPeriodo,
 } from '@/features/matricula/components/consulta-matricula';
+import { useCrearOrdenPago } from '@/features/pagos/api/pago-en-linea';
 
 const ApoderadoMatriculaRoute = () => {
   const hijos = useHijosApoderado();
-  const [elegido, setElegido] = React.useState<string>();
+  const pagar = useCrearOrdenPago();
+  const [params] = useSearchParams();
+  const [elegido, setElegido] = React.useState<string | undefined>(
+    params.get('estudiante') ?? undefined,
+  );
   const estudianteId = elegido ?? hijos.data?.[0]?.id;
   const estado = useEstadoMatriculaApoderado(estudianteId);
   const datosEstado = datosResumenMatricula(
@@ -61,6 +67,8 @@ const ApoderadoMatriculaRoute = () => {
         estado={estado.data}
         isLoading={hijos.isLoading || estado.isLoading}
         onElegir={setElegido}
+        onPagarMatricula={(cuotaId) => pagar.mutate([cuotaId])}
+        pagandoMatricula={pagar.isPending}
       />
     </ContentLayout>
   );

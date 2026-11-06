@@ -352,8 +352,9 @@ public class ServicioPagoEnLinea {
 		List<LineaOrden> lineas = orden.getLineas().stream()
 				.map(l -> {
 					Cuota q = porId.get(l.getCuotaId());
-					return new LineaOrden(l.getCuotaId(), q.getCompromiso().getEstudianteNombre(), q.getNombre(),
-							l.getCapital(), l.getRecargo());
+					return new LineaOrden(l.getCuotaId(), q.getCompromiso().getEstudianteId(),
+							q.getCompromiso().getEstudianteNombre(), q.getNombre(), q.esMatricula(), l.getCapital(),
+							l.getRecargo());
 				})
 				.toList();
 		List<ConstanciaEmitida> constancias = pagos.findByOrdenPagoId(orden.getId()).stream()

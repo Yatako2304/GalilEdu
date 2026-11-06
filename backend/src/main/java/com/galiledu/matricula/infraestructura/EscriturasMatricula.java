@@ -109,4 +109,42 @@ public class EscriturasMatricula {
 				UPDATE matricula.matricula SET estado = 'PENDIENTE_PAGO', actualizado_en = now()
 				WHERE id = ? AND estado = 'EN_VALIDACION'""").param(matriculaId).update();
 	}
+
+	public record MatriculaConfirmada(UUID id, String codigo) {
+	}
+
+	/**
+	 * Matricula al estudiante cuando se paga la cuota de matrícula (HU-31): la matrícula pendiente de pago pasa a
+	 * MATRICULADO con su código correlativo del año. Devuelve la matrícula y su código, o vacío si esa cuota no es de
+	 * matrícula o la
+	 * matrícula ya no está pendiente de pago (por ejemplo, ya matriculada).
+	 */
+	public java.util.Optional<MatriculaConfirmada> matricularPorCuotaPagada(UUID cuotaId) {
+		java.util.Optional<UUID> matriculaId = jdbc.sql("""
+				SELECT m.id
+				FROM pagos.cuota q
+				JOIN pagos.compromiso_pago cp ON cp.id = q.compromiso_id
+				JOIN matricula.matricula m ON m.id = cp.matricula_id
+				    OR (m.estudiante_id = cp.estudiante_id AND m.anio_escolar_id = cp.anio_escolar_id)
+				WHERE q.id = ? AND q.concepto_codigo = 'MATRICULA' AND q.estado = 'PAGADA'
+				  AND m.estado = 'PENDIENTE_PAGO'
+				FOR UPDATE OF m""").param(cuotaId).query(UUID.class).optional();
+		if (matriculaId.isEmpty()) {
+			return java.util.Optional.empty();
+		}
+		int numero = jdbc.sql("""
+				INSERT INTO matricula.correlativo_matricula (anio, ultimo)
+				SELECT a.anio, 1 FROM matricula.matricula m
+				JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id WHERE m.id = ?
+				ON CONFLICT (anio) DO UPDATE SET ultimo = matricula.correlativo_matricula.ultimo + 1
+				RETURNING ultimo""").param(matriculaId.get()).query(Integer.class).single();
+		return jdbc.sql("""
+				UPDATE matricula.matricula m
+				SET estado = 'MATRICULADO', codigo = 'MAT-' || a.anio || '-' || lpad(?::text, 4, '0'),
+				    confirmado_en = now(), actualizado_en = now()
+				FROM configuracion.anio_escolar a
+				WHERE m.id = ? AND a.id = m.anio_escolar_id
+				RETURNING m.id, m.codigo""").params(numero, matriculaId.get())
+				.query((rs, i) -> new MatriculaConfirmada(rs.getObject(1, UUID.class), rs.getString(2))).optional();
+	}
 }

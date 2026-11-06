@@ -628,6 +628,7 @@ export type MatriculaActual = {
   codigo: string | null;
   documentosRequeridos: number;
   documentosEntregados: number;
+  confirmadoEn: string | null;
 };
 
 export type ImpedimentoMatricula = {
@@ -651,6 +652,18 @@ export type EstadoMatriculaApoderado = {
   puedeContinuar: boolean;
   impedimentos: ImpedimentoMatricula[];
   deuda: { total: number; cuotas: CuotaDeudaFamiliar[] };
+  /** Solo con la documentación validada (PENDIENTE_PAGO) o ya matriculado. */
+  cuotaMatricula: CuotaMatriculaApoderado | null;
+};
+
+export type CuotaMatriculaApoderado = {
+  cuotaId: string;
+  concepto: string;
+  monto: number;
+  estado: 'PENDIENTE' | 'EN_PROCESO' | 'PAGADA_PARCIAL' | 'PAGADA';
+  fechaVencimiento: string;
+  fechaPago: string | null;
+  responsable: string | null;
 };
 
 // ---------- Pagos y pensiones (HU-37) ----------
@@ -1449,8 +1462,10 @@ export type OrdenPagoDetalle = {
   urlPago: string | null;
   cuotas: {
     cuotaId: string;
+    estudianteId: string;
     estudiante: string;
     nombre: string;
+    matricula: boolean;
     capital: number;
     recargo: number;
   }[];

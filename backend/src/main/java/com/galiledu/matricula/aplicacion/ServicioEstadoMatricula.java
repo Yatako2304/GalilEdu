@@ -15,6 +15,7 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.configuracion.aplicacion.ServicioPeriodoMatricula;
 import com.galiledu.configuracion.dominio.EstadoVisiblePeriodoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.CuotaDeuda;
+import com.galiledu.matricula.aplicacion.DtosMatricula.CuotaMatriculaApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DeudaFamiliar;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstadoMatriculaApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstudianteMatricula;
@@ -23,6 +24,7 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.Impedimento;
 import com.galiledu.matricula.aplicacion.DtosMatricula.MatriculaActual;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PeriodoMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
+import com.galiledu.matricula.infraestructura.ConsultasMatricula.ApoderadoFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.HijoFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.MatriculaFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.PeriodoFila;
@@ -77,8 +79,9 @@ public class ServicioEstadoMatricula {
 		}
 
 		MatriculaActual matricula = periodoFila.flatMap(p -> consultas.matricula(estudianteId, p.anioEscolarId())
-				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), m.seccion(), m.codigo(),
-						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()))))
+				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), seccionVisible(m), m.codigo(),
+						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()),
+						m.confirmadoEn())))
 				.orElse(null);
 		if (periodo != null && matricula == null) {
 			impedimentos.add(new Impedimento("SIN_SECCION", "El colegio aún no reserva una sección para "
@@ -103,7 +106,19 @@ public class ServicioEstadoMatricula {
 		boolean puedeContinuar = impedimentos.isEmpty() && matricula != null
 				&& !"MATRICULADO".equals(matricula.estado());
 		return new EstadoMatriculaApoderado(new EstudianteMatricula(hijo.estudianteId(), hijo.nombre(), hijo.grado()),
-				periodo, matricula, paso, puedeContinuar, impedimentos, deuda);
+				periodo, matricula, paso, puedeContinuar, impedimentos, deuda,
+				cuotaMatricula(matricula, hijo.estudianteId()));
+	}
+
+	/** La cuota de matrícula, solo desde que el colegio valida los documentos (PENDIENTE_PAGO) y ya matriculado. */
+	private CuotaMatriculaApoderado cuotaMatricula(MatriculaActual matricula, UUID estudianteId) {
+		if (matricula == null
+				|| !("PENDIENTE_PAGO".equals(matricula.estado()) || "MATRICULADO".equals(matricula.estado()))) {
+			return null;
+		}
+		String responsable = consultas.responsableDe(estudianteId).map(ApoderadoFila::nombre).orElse(null);
+		return consultas.cuotaMatricula(matricula.id()).map(c -> new CuotaMatriculaApoderado(c.cuotaId(),
+				c.concepto(), c.monto(), c.estado(), c.fechaVencimiento(), c.fechaPago(), responsable)).orElse(null);
 	}
 
 	private List<HijoFila> hijosDelUsuario(UUID usuarioId) {
@@ -141,5 +156,10 @@ public class ServicioEstadoMatricula {
 
 	private static String soles(BigDecimal monto) {
 		return String.format(Locale.US, "S/ %,.2f", monto);
+	}
+
+	/** El apoderado ve la sección solo con la matrícula confirmada; antes figura como "Por definir". */
+	private static String seccionVisible(MatriculaFila m) {
+		return "MATRICULADO".equals(m.estado()) ? m.seccion() : null;
 	}
 }

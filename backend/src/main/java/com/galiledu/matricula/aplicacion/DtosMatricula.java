@@ -23,7 +23,19 @@ public final class DtosMatricula {
 			int pasoActual,
 			boolean puedeContinuar,
 			List<Impedimento> impedimentos,
-			DeudaFamiliar deuda) {
+			DeudaFamiliar deuda,
+			CuotaMatriculaApoderado cuotaMatricula) {
+	}
+
+	/**
+	 * Figma Apoderado › "Matrícula 2027 · pendiente de pago" (HU-31): la cuota de matrícula del estudiante, para
+	 * mostrar
+	 * su monto y vencimiento y pagarla. {@code estado}: PENDIENTE, EN_PROCESO, PAGADA_PARCIAL o PAGADA;
+	 * {@code fechaPago}
+	 * solo si está pagada.
+	 */
+	public record CuotaMatriculaApoderado(UUID cuotaId, String concepto, BigDecimal monto, String estado,
+			LocalDate fechaVencimiento, LocalDate fechaPago, String responsable) {
 	}
 
 	public record EstudianteMatricula(UUID id, String nombre, String grado) {
@@ -37,9 +49,13 @@ public final class DtosMatricula {
 			boolean abierto) {
 	}
 
-	/** {@code seccion} es null mientras no se asigne ("se asigna al confirmar la matrícula"). */
+	/**
+	 * {@code seccion} es null hasta que la matrícula esté MATRICULADO: el apoderado ve "Por definir".
+	 * {@code confirmadoEn}
+	 * es la fecha y hora exacta de la confirmación (solo MATRICULADO).
+	 */
 	public record MatriculaActual(UUID id, String estado, String grado, String seccion, String codigo,
-			int documentosRequeridos, int documentosEntregados) {
+			int documentosRequeridos, int documentosEntregados, OffsetDateTime confirmadoEn) {
 	}
 
 	/** RF-60: motivo por el que no puede continuar. tipo: PERIODO, SIN_SECCION, DOCUMENTOS o DEUDA. */

@@ -54,15 +54,17 @@ const estado: EstadoMatriculaApoderado = {
     id: 'matricula-mateo',
     estado: 'SECCION_RESERVADA',
     grado: '1.° de primaria',
-    seccion: 'A',
+    seccion: null,
     codigo: null,
     documentosRequeridos: 4,
     documentosEntregados: 0,
+    confirmadoEn: null,
   },
   pasoActual: 1,
   puedeContinuar: true,
   impedimentos: [],
   deuda: { total: 0, cuotas: [] },
+  cuotaMatricula: null,
 };
 
 test('muestra el periodo, grado, sección y estado asignados', async () => {
@@ -78,7 +80,7 @@ test('muestra el periodo, grado, sección y estado asignados', async () => {
 
   expect(screen.getByText('Periodo abierto')).toBeInTheDocument();
   expect(screen.getAllByText('1.° de primaria')).not.toHaveLength(0);
-  expect(screen.getByText('A')).toBeInTheDocument();
+  expect(screen.getByText('Por definir')).toBeInTheDocument();
   expect(screen.getByText('Sección reservada')).toBeInTheDocument();
   expect(screen.getByText('31 ene 2027')).toBeInTheDocument();
 });
@@ -123,7 +125,7 @@ test('informa cuando el periodo cerró y aún no existe una sección', async () 
   );
 
   expect(screen.getByText('Periodo cerrado')).toBeInTheDocument();
-  expect(screen.getByText('Se asigna al confirmar')).toBeInTheDocument();
+  expect(screen.getByText('Por definir')).toBeInTheDocument();
   expect(screen.getByText('Pendiente de asignación')).toBeInTheDocument();
   expect(
     screen.getByText('El periodo de matrícula está cerrado.'),
@@ -213,4 +215,97 @@ test('indica cuando la deuda pertenece al hijo seleccionado', async () => {
   expect(screen.getByRole('alert')).toHaveTextContent(
     'Sofía Paredes tiene una deuda pendiente de S/ 600.00',
   );
+});
+
+test('con la documentación validada muestra el aviso con monto y fecha límite y permite pagar la matrícula', async () => {
+  const alPagar = vi.fn();
+  await renderApp(
+    <ConsultaMatricula
+      hijos={hijos}
+      estudianteId="mateo"
+      estado={{
+        ...estado,
+        matricula: {
+          ...estado.matricula!,
+          estado: 'PENDIENTE_PAGO',
+          seccion: null,
+        },
+        pasoActual: 3,
+        cuotaMatricula: {
+          cuotaId: 'cuota-1',
+          concepto: 'Matrícula 2027',
+          monto: 450,
+          estado: 'PENDIENTE',
+          fechaVencimiento: '2027-02-28',
+          fechaPago: null,
+          responsable: 'Luis Paredes Silva',
+        },
+      }}
+      isLoading={false}
+      onElegir={vi.fn()}
+      onPagarMatricula={alPagar}
+    />,
+  );
+
+  expect(screen.getByText('Documentación validada')).toBeVisible();
+  expect(screen.getByText('Fecha límite', { exact: false })).toBeVisible();
+  expect(screen.getByText('Matrícula 2027')).toBeVisible();
+  expect(screen.getByText('Luis Paredes Silva')).toBeVisible();
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Pagar matrícula' }),
+  );
+  expect(alPagar).toHaveBeenCalledWith('cuota-1');
+});
+
+test('sin cuota de matrícula no hay botón de pago', async () => {
+  await renderApp(
+    <ConsultaMatricula
+      hijos={hijos}
+      estudianteId="mateo"
+      estado={estado}
+      isLoading={false}
+      onElegir={vi.fn()}
+    />,
+  );
+  expect(
+    screen.queryByRole('button', { name: 'Pagar matrícula' }),
+  ).not.toBeInTheDocument();
+});
+
+test('la constancia solo se puede descargar con la matrícula confirmada', async () => {
+  const props = {
+    hijos,
+    estudianteId: 'mateo',
+    isLoading: false,
+    onElegir: vi.fn(),
+  };
+  const { unmount } = await renderApp(
+    <ConsultaMatricula {...props} estado={estado} />,
+  );
+  expect(
+    screen.queryByRole('button', { name: /Descargar constancia/ }),
+  ).not.toBeInTheDocument();
+  unmount();
+
+  await renderApp(
+    <ConsultaMatricula
+      {...props}
+      estado={{
+        ...estado,
+        matricula: {
+          ...estado.matricula!,
+          estado: 'MATRICULADO',
+          seccion: 'A',
+          codigo: 'MAT-2027-0001',
+          confirmadoEn: '2027-01-10T15:00:00Z',
+        },
+      }}
+    />,
+  );
+  expect(
+    screen.getByRole('button', { name: /Descargar constancia/ }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('link', { name: 'Ver cronograma de pensiones' }),
+  ).toHaveAttribute('href', '/app/apoderado/pensiones');
 });
