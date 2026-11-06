@@ -361,6 +361,7 @@ export type CursoSesion = {
   curso: string;
   docente: string;
   aula: string;
+  seccion?: string;
 };
 
 export type SesionClase = {
