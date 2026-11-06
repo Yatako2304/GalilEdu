@@ -29,6 +29,12 @@ const Sesion = ({ sesion }: { sesion?: SesionClase }) =>
         teacher: c.docente,
       }))}
       room={sesion.cursos.map((c) => c.aula).join(' · ')}
+      section={
+        sesion.cursos
+          .map((c) => c.seccion)
+          .filter(Boolean)
+          .join(' · ') || undefined
+      }
     />
   );
 

@@ -1,16 +1,7 @@
-import { ContentLayout } from '@/components/layouts';
-import { ModulePlaceholder } from '@/components/module-placeholder';
+import { HorarioDocente } from '@/features/horarios/components/horario-docente';
 
 const TutorHorarioRoute = () => {
-  return (
-    <ContentLayout title="Horario">
-      <ModulePlaceholder
-        feature="horarios"
-        historias={['HU-49']}
-        figmaNodeId="393:18119"
-      />
-    </ContentLayout>
-  );
+  return <HorarioDocente />;
 };
 
 export default TutorHorarioRoute;
