@@ -12,6 +12,7 @@ import {
   DocenteOpcion,
   DocenteSeccion,
   OrigenPlan,
+  PesosCompetencia,
   PlanCursoDetalle,
   PlanGrado,
   SolicitudConfigurarCurso,
@@ -79,6 +80,16 @@ export const useOrigenesPlan = (filtro: GradoAnio, habilitado: boolean) =>
       queryFn: (): Promise<OrigenPlan[]> =>
         api.get('/planes-evaluacion/origenes', { params: filtro }),
       enabled: habilitado,
+    }),
+  );
+
+// GET /planes-evaluacion/pesos-competencias?anioEscolarId=&grado=
+export const usePesosCompetencias = (filtro: GradoAnio) =>
+  useQuery(
+    queryOptions({
+      queryKey: ['plan-evaluacion', 'pesos', filtro],
+      queryFn: (): Promise<PesosCompetencia[]> =>
+        api.get('/planes-evaluacion/pesos-competencias', { params: filtro }),
     }),
   );
 

@@ -34,6 +34,7 @@ import {
   DialogoDocentes,
   DialogoQuitarCurso,
 } from './dialogos-plan-evaluacion';
+import { PesosCompetencias } from './pesos-competencias';
 
 const ESTADO_ANIO: Record<
   EstadoAnioEscolar,
@@ -393,6 +394,8 @@ const ContenidoPlan = ({
           />
         </Card>
       )}
+
+      {!vacio && <PesosCompetencias plan={plan} />}
     </>
   );
 };

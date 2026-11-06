@@ -32,10 +32,12 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.CursoDocente;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.EvidenciaResumen;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.FilaCalificacion;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ItemEvaluacion;
+import com.galiledu.academico.aplicacion.DtosCalificaciones.NotaFinalCompetencia;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ReporteCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudItem;
 import com.galiledu.academico.aplicacion.ServicioCalificaciones;
+import com.galiledu.academico.aplicacion.ServicioNotaCompetencia;
 import com.galiledu.compartido.seguridad.ServicioJwt;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 
@@ -45,9 +47,11 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 @PreAuthorize("hasRole('DOCENTE')")
 public class CalificacionController {
 	private final ServicioCalificaciones servicio;
+	private final ServicioNotaCompetencia notaCompetencia;
 
-	public CalificacionController(ServicioCalificaciones servicio) {
+	public CalificacionController(ServicioCalificaciones servicio, ServicioNotaCompetencia notaCompetencia) {
 		this.servicio = servicio;
+		this.notaCompetencia = notaCompetencia;
 	}
 
 	@GetMapping("/cursos")
@@ -59,6 +63,14 @@ public class CalificacionController {
 	public List<CompetenciaOpcion> competencias(@PathVariable UUID planCursoId, @PathVariable UUID seccionId,
 			Authentication autenticacion) {
 		return servicio.competencias(ServicioJwt.usuarioActual(autenticacion), planCursoId, seccionId);
+	}
+
+	/** Nota final de la competencia en la sección, entre todos los cursos del grado que la evalúan. */
+	@GetMapping("/cursos/{planCursoId}/secciones/{seccionId}/competencias/{competenciaId}/nota-final")
+	public NotaFinalCompetencia notaFinal(@PathVariable UUID planCursoId, @PathVariable UUID seccionId,
+			@PathVariable UUID competenciaId, Authentication autenticacion) {
+		return notaCompetencia.notaFinal(ServicioJwt.usuarioActual(autenticacion), planCursoId, seccionId,
+				competenciaId);
 	}
 
 	@GetMapping("/cursos/{planCursoId}/secciones/{seccionId}/periodos/{periodoId}/items")

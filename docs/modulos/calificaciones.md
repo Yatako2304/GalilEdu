@@ -2,7 +2,7 @@
 
 - **HU:** HU-57, HU-59 y HU-62
 - **Estado:** ✅ terminado: backend, frontend, pruebas automatizadas y validación manual implementados
-- **Última actualización:** 2026-11-05
+- **Última actualización:** 2026-11-06
 
 ## Alcance
 
@@ -10,7 +10,8 @@ El Docente trabaja únicamente con los cursos y secciones que tiene asignados en
 
 - registrar ítems de evaluación con un criterio, tipo, competencias y peso;
 - calificar a cada estudiante matriculado y adjuntar una evidencia pedagógica;
-- consultar resultados por ítem, competencia o periodo y exportarlos en CSV.
+- consultar resultados por ítem, competencia o periodo y exportarlos en CSV;
+- ver la nota final de una competencia en el año, entre todos los cursos del grado que la evalúan.
 
 Aunque los frames revisados muestran «Personal administrativo» o «Administrador» en la barra lateral, están ubicados en la página `🌟 Docente` de Figma y corresponden al flujo del usuario Docente. La ruta implementada es `/app/docente/calificaciones` y la API exige el rol `DOCENTE`.
 
@@ -22,7 +23,7 @@ La escala, la regla de cálculo y la consolidación no se eligen en esta pantall
 | --- | --- | --- | --- |
 | HU-57 | Registro de criterios e ítems de evaluación de un curso | ✅ | El ítem pertenece a un curso, sección y periodo. Tiene nombre, criterio, tipo y una o más competencias del plan; cada asociación lleva un peso de 0,01 a 100 y la suma por competencia no supera 100 %. |
 | HU-59 | Registro de calificación de un ítem | ✅ | Una nota por estudiante matriculado e ítem. VIGESIMAL admite 0–20; CUALITATIVA admite AD, A, B o C. Puede adjuntar un PDF, DOC, DOCX, JPG o PNG de hasta 10 MB. |
-| HU-62 | Consolidado de notas de un curso | ✅ | Selecciona los ítems de una competencia, muestra sus notas y, cuando se solicita, calcula el promedio final con la regla del año; permite exportar CSV. |
+| HU-62 | Consolidado de notas de un curso | ✅ | Selecciona los ítems de una competencia, muestra sus notas y, cuando se solicita, calcula el promedio final con la regla del año; permite exportar CSV. También muestra la nota final de la competencia entre cursos. |
 
 ## Pantallas (Figma)
 
@@ -31,6 +32,8 @@ La escala, la regla de cálculo y la consolidación no se eligen en esta pantall
 | Configurar ítems | `738:20655` y modal `738:20344` | Botón **Configuración de ítems** → **Configurar ítems**, con vistas **Ítems de evaluación** e **Ítems por competencia** |
 | Calificar alumnos | `631:14676`, con estados previos `629:11540` y `629:11893` | Botón **Configuración de ítems** → pestaña **Calificar alumnos** |
 | Consolidar y exportar notas | `648:17853` y detalle `631:16187` | Botón **Consolidado de notas**, con los filtros, selección múltiple de ítems, interruptor de promedio final y tabla agrupada de Figma |
+
+La tarjeta **Nota final de la competencia**, al final del consolidado, no sale de los frames de esta tabla y falta revisarla contra Figma, según la [decisión de la nota final](../decisiones/2026-11-06-alex-sanchezz-nota-final-competencia.md).
 
 Debajo del encabezado **Calificaciones**, dos pestañas con apariencia de botón separan **Configuración de ítems** y **Consolidado de notas**, según el ajuste solicitado por josezavaleta. La primera contiene los filtros de curso y sección, las tarjetas de periodos y las pestañas **Configurar ítems** y **Calificar alumnos**; la segunda muestra únicamente el flujo del consolidado.
 
@@ -63,6 +66,24 @@ V11 agrega restricciones `UNIQUE` compuestas a `academico.plan_curso`, `configur
 - Para la escala vigesimal, el estado Aprobado empieza en el rango A de la tabla de conversión vigente en la fecha de inicio del periodo. Para la escala cualitativa, A y AD son aprobatorios.
 - Las descargas usan el tipo MIME real del archivo: CSV para reportes y el tipo guardado para evidencias.
 
+### Nota final de la competencia
+
+Se calcula al consultarla y no se guarda. Es distinta del «Promedio final» del consolidado, que es de un curso en un periodo. Se calcula por sección, en tres pasos:
+
+1. **Ítems → periodo:** la regla de nota del año, sobre los ítems calificados de ese curso, sección, periodo y competencia.
+2. **Periodos → curso:** `consolidacion_periodos`. `PROMEDIO_PERIODOS` promedia los periodos con notas (en la escala cualitativa aplica la regla de nota a sus niveles); `ULTIMO_PERIODO` toma el último con notas.
+3. **Cursos → competencia:** con `PROMEDIO_PONDERADO`, usa el peso de cada curso en el plan (`peso_curso`) y normaliza por los pesos de los cursos con notas. Con `PROMEDIO_SIMPLE` los cursos pesan igual. Las reglas cualitativas se aplican entre los cursos.
+
+Ejemplo con pesos de 40 % y 60 %: Álgebra 20 y Geometría 10 dan (20 × 40 + 10 × 60) / 100 = 14. El peso de los ítems dentro de cada curso no se mezcla con el peso de los cursos: un examen de 15 % en Álgebra y otro de 100 % en Geometría no se contradicen.
+
+| Situación | Resultado |
+| --- | --- |
+| Falta una nota que influye: un curso o periodo sin notas, o un ítem pendiente | Se calcula con lo que hay y se marca **Parcial** |
+| `PROMEDIO_PONDERADO` con pesos incompletos | Sin nota final («—», Pendiente) y con un aviso; las notas por curso sí se ven |
+| Ningún curso tiene notas | «—», Pendiente |
+
+El estado usa la nota aprobatoria de la tabla de conversión vigente al inicio del último periodo del año. Los pasos intermedios no se redondean; se muestra con hasta 2 decimales.
+
 ## API
 
 Todas las rutas usan el prefijo `/api/calificaciones/docente` y requieren rol Docente.
@@ -71,6 +92,7 @@ Todas las rutas usan el prefijo `/api/calificaciones/docente` y requieren rol Do
 | --- | --- | --- |
 | GET | `/cursos` | Cursos y secciones asignados, parámetros del año y periodos con estado y conteos. |
 | GET | `/cursos/{planCursoId}/secciones/{seccionId}/competencias` | Competencias seleccionadas en el plan del curso. |
+| GET | `/cursos/{planCursoId}/secciones/{seccionId}/competencias/{competenciaId}/nota-final` | Nota final de la competencia en la sección: cursos con su peso y, por estudiante, la nota de cada curso, la nota final, el estado y si es parcial. |
 | GET · POST | `/cursos/{planCursoId}/secciones/{seccionId}/periodos/{periodoId}/items` | Lista o crea ítems del periodo. |
 | PUT · DELETE | `/items/{itemId}` | Edita o elimina un ítem. |
 | GET · PUT | `/items/{itemId}/calificaciones` | Lista estudiantes con su nota y guarda el lote de calificaciones. |
@@ -80,12 +102,13 @@ Todas las rutas usan el prefijo `/api/calificaciones/docente` y requieren rol Do
 
 ## Código y pruebas
 
-- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioCalificaciones`, `RepositorioCalificaciones`, `CalificacionController` y DTO).
+- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioCalificaciones`, `ServicioNotaCompetencia`, `CalculoNotas`, `RepositorioCalificaciones`, `CalificacionController` y DTO).
 - Frontend: `frontend/src/features/calificaciones/` y la ruta `frontend/src/app/routes/app/docente/calificaciones.tsx`.
-- Pruebas: `backend/src/test/java/com/galiledu/academico/ServicioCalificacionesTests.java`, `CalificacionesIT.java` y `frontend/src/features/calificaciones/components/__tests__/calificaciones-docente.test.tsx`.
+- Pruebas: `backend/src/test/java/com/galiledu/academico/ServicioCalificacionesTests.java`, `CalculoNotasTests.java`, `CalificacionesIT.java`, `NotaFinalCompetenciaIT.java` y `frontend/src/features/calificaciones/components/__tests__/calificaciones-docente.test.tsx`.
 
 **Datos de prueba:** María Fernández (`U20260004`, contraseña común del repositorio) dicta Álgebra en 1.° A. Las pruebas de integración crean sus propios estudiantes, ítems y calificaciones dentro de una transacción para no alterar los conteos ni las secciones compartidas del año escolar.
 
 ## Fuera de alcance
 
 - [ ] Las HU-60, HU-63, HU-64 y HU-69 quedan fuera de este alcance.
+- [ ] La nota final de la competencia solo la ve el Docente y no se exporta a CSV.

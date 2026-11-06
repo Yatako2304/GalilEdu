@@ -2,13 +2,13 @@
 
 - **HU:** HU-52, 53, 54, 55, 56 (iteración 1) · HU-43 (3)
 - **Estado:** 🚧 en desarrollo: la iteración 1 (HU-52 a HU-56) está hecha; falta HU-43 (iteración 3)
-- **Última actualización:** 2026-11-04
+- **Última actualización:** 2026-11-06
 
 ## Alcance
 
 El Personal administrativo arma el catálogo curricular. Cada **área** agrupa sus **competencias** y sus **cursos**. Para cada año escolar define el **plan de evaluación**:
 - qué cursos se dictan en cada grado y cuántas horas tienen;
-- qué competencias evalúa cada curso; la escala, la regla de nota final y la consolidación de periodos se toman del año escolar;
+- qué competencias evalúa cada curso y cuánto aporta a la nota de cada una; la escala, la regla de nota final y la consolidación de periodos se toman del año escolar;
 - qué docente dicta cada curso en cada sección.
 
 También mantiene la **tabla de conversión** de vigesimal a AD/A/B/C, que tiene versiones, y el catálogo de **ambientes físicos**.
@@ -19,6 +19,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 - RF-130 a RF-132 dicen que el plan lo configura el Coordinador; en Figma está en el menú del Personal administrativo. **Excepción a "manda Figma" (2026-10-20, a pedido del equipo):** lo tienen los dos roles, con los mismos permisos. El Coordinador lo ve en su menú como "Plan de evaluación" (`/app/coordinador/plan-evaluacion`).
 - RF-126 pide una descripción obligatoria para el área; en Figma es opcional. Aquí manda Figma.
 - El modal de Figma muestra escala, agregación de ítems y consolidación por competencia. Esta parte fue reemplazada por la [decisión de parámetros de evaluación por año](../decisiones/2026-11-04-josezavaleta-parametros-evaluacion-por-anio.md): el modal solo permite indicar horas semanales y marcar competencias.
+- El modal de Figma no tiene el campo «Peso en %» ni la tabla «Peso de cada curso por competencia». Se agregaron por la [decisión del peso por curso](../decisiones/2026-11-05-alex-sanchezz-peso-curso-competencia.md).
 
 ## Historias de usuario
 
@@ -51,7 +52,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan, y ento
 | `academico.curso` | Curso de un área. |
 | `academico.curso_grado` | Grados en los que se dicta el curso. |
 | `academico.plan_curso` | Curso que se dicta en un grado y año, con sus horas semanales (de 1 a 20). La BD impide planificar un curso en un grado donde no se dicta. |
-| `academico.plan_competencia` | Competencia que evalúa el curso en ese plan. Desde V9 la relación efectiva solo necesita `plan_curso_id` y `competencia_id`. Las columnas anteriores de escala, regla y consolidación se conservan temporalmente para no perder información, pero la aplicación ya no las usa. |
+| `academico.plan_competencia` | Competencia que evalúa el curso en ese plan. Desde V9 la relación efectiva solo necesita `plan_curso_id` y `competencia_id`. Las columnas anteriores de escala, regla y consolidación se conservan temporalmente para no perder información, pero la aplicación ya no las usa. `peso_curso` (V13) dice cuánto aporta el curso a la nota de la competencia; `NULL` significa sin definir. |
 | `academico.docente_seccion` | Docente que dicta un curso del plan en una sección. |
 | `academico.tabla_conversion`, `tabla_conversion_nivel` | Versiones de la tabla de conversión, con su fecha de vigencia y los rangos de AD, A, B y C (de 0 a 20). |
 | `configuracion.ambiente` | Aula regular (aforo máximo 45) o espacio especial, con sus recursos. Además, `configuracion.seccion.ambiente_id` indica el aula de cada sección. |
@@ -84,7 +85,8 @@ El backend ya no recibe, lee ni decide estos tres valores por competencia. `acad
 - Al configurar un curso se insertan y eliminan únicamente las competencias que cambiaron; las que permanecen seleccionadas conservan sus ítems. Una competencia que ya tiene ítems de evaluación no se puede quitar del plan.
 - La suma de horas del grado no supera los bloques semanales de la estructura horaria principal de su nivel (bloques por día × días lectivos). Si el año aún no tiene estructura, no hay límite.
 - La sección del docente es del mismo grado y año, y el docente es un usuario activo con rol Docente.
-- Solo se copia a un grado sin cursos. Se copian los cursos y las competencias que siguen activos, sin los docentes.
+- El peso de un curso en una competencia es opcional y va de 0,01 a 100, con hasta 2 decimales. Los pesos de una competencia no superan 100 % entre los cursos del mismo grado y año. Está completa si todos los cursos tienen peso y suman 100 %. El peso se usa en la [nota final de la competencia](calificaciones.md#nota-final-de-la-competencia); con pesos incompletos y promedio ponderado, esa nota no se calcula.
+- Solo se copia a un grado sin cursos. Se copian los cursos, las competencias que siguen activos y sus pesos, sin los docentes.
 - Un año escolar CERRADO no se modifica.
 
 **Lo validará el servicio (HU-43):**
@@ -119,8 +121,9 @@ Rol: Personal administrativo; las rutas de `/planes-evaluacion` también las usa
 | GET | `/planes-evaluacion/anios` · `/docentes` | Años escolares para el selector · docentes activos |
 | GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Cursos que se pueden agregar, con las competencias activas de su área |
 | GET | `/planes-evaluacion/origenes?anioEscolarId=&grado=` | Planes que se pueden copiar |
-| POST | `/planes-evaluacion` · `/planes-evaluacion/copias` | Agrega un curso con `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId}]}` · copia otro plan a un grado vacío |
-| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Detalle del curso en el plan · cambia `{horasSemanales, competencias: [{competenciaId}]}` · quitarlo |
+| GET | `/planes-evaluacion/pesos-competencias?anioEscolarId=&grado=` | Competencias del grado con el peso de cada curso, su total y si están completas |
+| POST | `/planes-evaluacion` · `/planes-evaluacion/copias` | Agrega un curso con `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId, pesoCurso}]}` · copia otro plan a un grado vacío |
+| GET · PUT · DELETE | `/planes-evaluacion/{id}` | Detalle del curso en el plan · cambia `{horasSemanales, competencias: [{competenciaId, pesoCurso}]}` · quitarlo |
 | GET · PUT | `/planes-evaluacion/{id}/docentes` | Docente de cada sección |
 
 ## Código

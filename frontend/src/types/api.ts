@@ -531,6 +531,24 @@ export type CompetenciaPlan = {
   nombre: string;
   estado: EstadoArea;
   seleccionada: boolean;
+  /** Cuánto aporta el curso a la nota de la competencia; null = sin definir. */
+  pesoCurso: number | null;
+};
+
+export type PesoCurso = {
+  planCursoId: string;
+  curso: string;
+  pesoCurso: number | null;
+};
+
+export type PesosCompetencia = {
+  competenciaId: string;
+  competencia: string;
+  area: string;
+  total: number;
+  /** Todos los cursos tienen peso y suman 100 %. */
+  completo: boolean;
+  cursos: PesoCurso[];
 };
 
 export type PlanCursoDetalle = {
@@ -564,6 +582,7 @@ export type OrigenPlan = {
 
 export type SolicitudCompetenciaPlan = {
   competenciaId: string;
+  pesoCurso: number | null;
 };
 
 export type SolicitudPlanCurso = {
@@ -1339,6 +1358,31 @@ export type FilaCalificacion = {
 };
 
 export type TipoReporteCalificaciones = 'ITEM' | 'COMPETENCIA' | 'PERIODO';
+
+/** Nota de una competencia en el año, entre todos los cursos del grado que la evalúan. */
+export type NotaFinalCompetencia = {
+  competenciaId: string;
+  competencia: string;
+  escala: 'VIGESIMAL' | 'CUALITATIVA';
+  reglaNota:
+    | 'PROMEDIO_SIMPLE'
+    | 'PROMEDIO_PONDERADO'
+    | 'NIVEL_MAS_FRECUENTE'
+    | 'ULTIMO_NIVEL';
+  consolidacion: 'PROMEDIO_PERIODOS' | 'ULTIMO_PERIODO';
+  pesosCompletos: boolean;
+  cursos: { planCursoId: string; curso: string; pesoCurso: number | null }[];
+  filas: {
+    matriculaId: string;
+    estudiante: string;
+    /** Resultado de cada curso, por planCursoId. */
+    cursos: Record<string, string>;
+    notaFinal: string;
+    estado: 'Aprobado' | 'Desaprobado' | 'Pendiente';
+    /** Falta alguna nota que puede cambiar la nota final. */
+    parcial: boolean;
+  }[];
+};
 
 export type ReporteCalificaciones = {
   titulo: string;

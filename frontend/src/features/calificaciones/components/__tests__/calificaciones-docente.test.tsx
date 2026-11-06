@@ -5,7 +5,33 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CalificacionesDocente } from '../calificaciones-docente';
 
 const crearItem = vi.fn();
-const { filasVacias } = vi.hoisted(() => ({ filasVacias: [] }));
+const { filasVacias, notaFinal } = vi.hoisted(() => ({
+  filasVacias: [],
+  notaFinal: { actual: undefined as unknown },
+}));
+
+const NOTA_FINAL = {
+  competenciaId: 'competencia-1',
+  competencia: 'Resuelve problemas de cantidad',
+  escala: 'VIGESIMAL',
+  reglaNota: 'PROMEDIO_PONDERADO',
+  consolidacion: 'PROMEDIO_PERIODOS',
+  pesosCompletos: true,
+  cursos: [
+    { planCursoId: 'plan-1', curso: 'Álgebra', pesoCurso: 33.33 },
+    { planCursoId: 'plan-2', curso: 'Geometría', pesoCurso: 66.67 },
+  ],
+  filas: [
+    {
+      matriculaId: 'matricula-1',
+      estudiante: 'Ana García',
+      cursos: { 'plan-1': '17.5', 'plan-2': '—' },
+      notaFinal: '17.5',
+      estado: 'Aprobado',
+      parcial: true,
+    },
+  ],
+};
 
 vi.mock('../../api/calificaciones', () => ({
   useCursosDocente: () => ({
@@ -99,11 +125,18 @@ vi.mock('../../api/calificaciones', () => ({
         }
       : undefined,
   }),
+  useNotaFinalCompetencia: (seleccion: unknown) => ({
+    isLoading: false,
+    data: seleccion ? notaFinal.actual : undefined,
+  }),
   exportarReporte: vi.fn(),
 }));
 
 describe('Calificaciones del docente', () => {
-  beforeEach(() => crearItem.mockReset().mockResolvedValue({}));
+  beforeEach(() => {
+    crearItem.mockReset().mockResolvedValue({});
+    notaFinal.actual = NOTA_FINAL;
+  });
 
   it('agrupa configuración y calificación bajo el primer botón y separa el consolidado', async () => {
     render(<CalificacionesDocente />);
@@ -201,7 +234,7 @@ describe('Calificaciones del docente', () => {
     const tabla = await screen.findByRole('table', {
       name: 'Resuelve problemas de cantidad. Consolidado de notas',
     });
-    expect(screen.getByText('Ana García')).toBeVisible();
+    expect(within(tabla).getByText('Ana García')).toBeVisible();
     expect(
       within(tabla).getByRole('columnheader', { name: 'Promedio final' }),
     ).toBeVisible();
@@ -210,6 +243,91 @@ describe('Calificaciones del docente', () => {
     expect(
       screen.getByRole('button', { name: 'Exportar consolidado' }),
     ).toBeEnabled();
+  });
+
+  it('muestra la nota final de la competencia con cada curso y su peso', async () => {
+    const usuario = userEvent.setup();
+    render(<CalificacionesDocente />);
+
+    await usuario.click(
+      screen.getByRole('tab', { name: 'Consolidado de notas' }),
+    );
+
+    const tabla = await screen.findByRole('table', {
+      name: 'Nota final de Resuelve problemas de cantidad',
+    });
+    expect(
+      within(tabla).getByRole('columnheader', { name: /Álgebra.*33,33 %/ }),
+    ).toBeVisible();
+    expect(
+      within(tabla).getByRole('columnheader', { name: /Geometría.*66,67 %/ }),
+    ).toBeVisible();
+    expect(within(tabla).getAllByText('17,5/20')).toHaveLength(2);
+    expect(within(tabla).getByText('Aprobado')).toBeVisible();
+    expect(within(tabla).getByText('Parcial')).toBeVisible();
+    expect(
+      screen.getByText(/combina los cursos según su peso en el plan/),
+    ).toBeVisible();
+  });
+
+  it('avisa que faltan pesos y no muestra una nota final sin calcular como aprobada', async () => {
+    notaFinal.actual = {
+      ...NOTA_FINAL,
+      pesosCompletos: false,
+      cursos: [
+        { planCursoId: 'plan-1', curso: 'Álgebra', pesoCurso: 15 },
+        { planCursoId: 'plan-2', curso: 'Geometría', pesoCurso: null },
+      ],
+      filas: [
+        {
+          ...NOTA_FINAL.filas[0],
+          notaFinal: '—',
+          estado: 'Pendiente',
+          parcial: false,
+        },
+      ],
+    };
+    const usuario = userEvent.setup();
+    render(<CalificacionesDocente />);
+
+    await usuario.click(
+      screen.getByRole('tab', { name: 'Consolidado de notas' }),
+    );
+
+    expect(
+      await screen.findByText(/pesos de esta competencia están incompletos/),
+    ).toBeVisible();
+    const tabla = screen.getByRole('table', {
+      name: 'Nota final de Resuelve problemas de cantidad',
+    });
+    expect(within(tabla).getByText('sin peso')).toBeVisible();
+    expect(within(tabla).getByText('Pendiente')).toBeVisible();
+    expect(within(tabla).queryByText('Parcial')).not.toBeInTheDocument();
+  });
+
+  it('con promedio simple no muestra pesos ni avisa que faltan', async () => {
+    notaFinal.actual = {
+      ...NOTA_FINAL,
+      reglaNota: 'PROMEDIO_SIMPLE',
+      pesosCompletos: false,
+    };
+    const usuario = userEvent.setup();
+    render(<CalificacionesDocente />);
+
+    await usuario.click(
+      screen.getByRole('tab', { name: 'Consolidado de notas' }),
+    );
+
+    const tabla = await screen.findByRole('table', {
+      name: 'Nota final de Resuelve problemas de cantidad',
+    });
+    expect(within(tabla).queryByText('33,33 %')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/pesos de esta competencia están incompletos/),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.getByText(/promedia los cursos, que pesan igual/),
+    ).toBeVisible();
   });
 
   it('permite volver a calificar alumnos después de abrir el consolidado', async () => {

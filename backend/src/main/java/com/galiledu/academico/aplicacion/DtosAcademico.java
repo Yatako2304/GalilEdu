@@ -1,5 +1,6 @@
 package com.galiledu.academico.aplicacion;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -7,6 +8,9 @@ import java.util.Set;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -136,8 +140,21 @@ public final class DtosAcademico {
 			List<PlanCursoResumen> cursos) {
 	}
 
-	/** Competencia del área en el modal de configuración; el curso solo decide si la evalúa. */
-	public record CompetenciaPlan(UUID competenciaId, String nombre, EstadoArea estado, boolean seleccionada) {
+	/**
+	 * Competencia del área en el modal de configuración: si el curso la evalúa y cuánto aporta a su nota (null = sin
+	 * definir).
+	 */
+	public record CompetenciaPlan(UUID competenciaId, String nombre, EstadoArea estado, boolean seleccionada,
+			BigDecimal pesoCurso) {
+	}
+
+	/** Un curso que evalúa la competencia, con su peso (null = sin definir). */
+	public record PesoCurso(UUID planCursoId, String curso, BigDecimal pesoCurso) {
+	}
+
+	/** Pesos de una competencia entre los cursos de un grado y año. Completa si todos tienen peso y suman 100 %. */
+	public record PesosCompetencia(UUID competenciaId, String competencia, String area, BigDecimal total,
+			boolean completo, List<PesoCurso> cursos) {
 	}
 
 	/** Modal "Aritmética · 1.° de secundaria". */
@@ -154,8 +171,10 @@ public final class DtosAcademico {
 			int competencias) {
 	}
 
+	/** pesoCurso es opcional: sin él, la competencia queda con los pesos incompletos hasta definirlo. */
 	public record SolicitudCompetenciaPlan(
-			@NotNull(message = "Falta la competencia.") UUID competenciaId) {
+			@NotNull(message = "Falta la competencia.") UUID competenciaId,
+			@DecimalMin(value = "0.01", message = "El peso del curso va de 0,01 a 100.") @DecimalMax(value = "100", message = "El peso del curso va de 0,01 a 100.") @Digits(integer = 3, fraction = 2, message = "El peso del curso admite hasta 2 decimales.") BigDecimal pesoCurso) {
 	}
 
 	/** Modal "Agregar curso a 3.° de secundaria". */

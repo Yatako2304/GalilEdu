@@ -365,8 +365,9 @@ JOIN (VALUES ('Álgebra', 3), ('Geometría', 2), ('Aritmética', 2), ('Comunicac
 ON CONFLICT DO NOTHING;
 
 -- Competencias de los cursos de Matemática y Comunicación (Aritmética evalúa 2, como en el modal de Figma).
-INSERT INTO academico.plan_competencia (plan_curso_id, competencia_id, escala, regla_nota, consolidacion)
-SELECT pc.id, co.id, 'VIGESIMAL', 'PROMEDIO_PONDERADO', 'PROMEDIO_PERIODOS'
+-- Cada competencia está en un solo curso de 1.° de secundaria, así que ese curso aporta el 100 % de su nota.
+INSERT INTO academico.plan_competencia (plan_curso_id, competencia_id, escala, regla_nota, consolidacion, peso_curso)
+SELECT pc.id, co.id, 'VIGESIMAL', 'PROMEDIO_PONDERADO', 'PROMEDIO_PERIODOS', 100
 FROM academico.plan_curso pc
 JOIN academico.curso cu ON cu.id = pc.curso_id
 JOIN (VALUES ('Álgebra', 'Resuelve problemas de regularidad, equivalencia y cambio'),
@@ -378,8 +379,8 @@ JOIN academico.competencia co ON co.nombre = x.competencia
 WHERE pc.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND pc.grado_codigo = 'SEC-1'
 ON CONFLICT DO NOTHING;
 
-INSERT INTO academico.plan_competencia (plan_curso_id, competencia_id, escala, regla_nota, consolidacion)
-SELECT pc.id, co.id, 'CUALITATIVA', 'NIVEL_MAS_FRECUENTE', 'ULTIMO_PERIODO'
+INSERT INTO academico.plan_competencia (plan_curso_id, competencia_id, escala, regla_nota, consolidacion, peso_curso)
+SELECT pc.id, co.id, 'CUALITATIVA', 'NIVEL_MAS_FRECUENTE', 'ULTIMO_PERIODO', 100
 FROM academico.plan_curso pc
 JOIN academico.curso cu ON cu.id = pc.curso_id AND cu.nombre = 'Comunicación'
 JOIN academico.competencia co ON co.area_id = cu.area_id

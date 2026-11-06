@@ -29,6 +29,8 @@ import {
   useReporteCalificaciones,
 } from '../api/calificaciones';
 
+import { NotaFinalCompetenciaVista } from './nota-final-competencia';
+
 type OpcionGrado = { value: string; label: string };
 
 type Props = {
@@ -254,6 +256,14 @@ export const ReporteCalificacionesVista = ({
           )}
         </Card>
       )}
+
+      <NotaFinalCompetenciaVista
+        seleccion={{
+          planCursoId: seleccion.planCursoId,
+          seccionId: seleccion.seccionId,
+        }}
+        competenciaId={competenciaId}
+      />
     </div>
   );
 };

@@ -12,6 +12,7 @@ import {
   EvidenciaCalificacion,
   FilaCalificacion,
   ItemEvaluacion,
+  NotaFinalCompetencia,
   ReporteCalificaciones,
   SolicitudItemEvaluacion,
   TipoReporteCalificaciones,
@@ -173,6 +174,20 @@ export const useReporteCalificaciones = (filtros: FiltrosReporte | null) =>
       enabled:
         !!filtros &&
         (filtros.tipo === 'PERIODO' || Boolean(filtros.objetivoId)),
+    }),
+  );
+
+export const useNotaFinalCompetencia = (
+  seleccion: (SeleccionCurso & { competenciaId: string }) | null,
+) =>
+  useQuery(
+    queryOptions({
+      queryKey: ['calificaciones-docente', 'nota-final', seleccion],
+      queryFn: (): Promise<NotaFinalCompetencia> =>
+        api.get(
+          `${base}/cursos/${seleccion?.planCursoId}/secciones/${seleccion?.seccionId}/competencias/${seleccion?.competenciaId}/nota-final`,
+        ),
+      enabled: !!seleccion,
     }),
   );
 

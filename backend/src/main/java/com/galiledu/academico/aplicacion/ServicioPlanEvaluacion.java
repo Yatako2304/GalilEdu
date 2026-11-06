@@ -1,11 +1,14 @@
 package com.galiledu.academico.aplicacion;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -22,6 +25,8 @@ import com.galiledu.academico.aplicacion.DtosAcademico.CursoDisponible;
 import com.galiledu.academico.aplicacion.DtosAcademico.DocenteOpcion;
 import com.galiledu.academico.aplicacion.DtosAcademico.DocenteSeccion;
 import com.galiledu.academico.aplicacion.DtosAcademico.OrigenPlan;
+import com.galiledu.academico.aplicacion.DtosAcademico.PesoCurso;
+import com.galiledu.academico.aplicacion.DtosAcademico.PesosCompetencia;
 import com.galiledu.academico.aplicacion.DtosAcademico.PlanCursoDetalle;
 import com.galiledu.academico.aplicacion.DtosAcademico.PlanCursoResumen;
 import com.galiledu.academico.aplicacion.DtosAcademico.PlanGrado;
@@ -32,6 +37,7 @@ import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudCopiaPlan;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudDocentes;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudPlanCurso;
 import com.galiledu.academico.dominio.Area;
+import com.galiledu.academico.dominio.CalculoNotas;
 import com.galiledu.academico.dominio.Competencia;
 import com.galiledu.academico.dominio.CompetenciaEvaluada;
 import com.galiledu.academico.dominio.Curso;
@@ -44,27 +50,34 @@ import com.galiledu.academico.infraestructura.ConsultasCatalogo.AnioEscolar;
 import com.galiledu.academico.infraestructura.ConsultasCatalogo.SeccionGrado;
 import com.galiledu.academico.infraestructura.CursoRepositorio;
 import com.galiledu.academico.infraestructura.PlanCursoRepositorio;
+import com.galiledu.academico.infraestructura.RepositorioPesosPlan;
+import com.galiledu.academico.infraestructura.RepositorioPesosPlan.PesoFila;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 
 /**
  * Plan de evaluación de cada grado y año (Figma CI-17 y CI-20, HU-56): qué cursos se dictan y cuántas horas, qué
- * competencias evalúan y qué docente los dicta en cada sección. La escala y las reglas son únicas por año.
+ * competencias evalúan, cuánto aporta cada curso a la nota de la competencia y qué docente los dicta en cada sección.
+ * La escala y las reglas son únicas por año.
  */
 @Service
 public class ServicioPlanEvaluacion {
+	private static final BigDecimal PESO_TOTAL = new BigDecimal("100");
+
 	private final PlanCursoRepositorio planes;
 	private final CursoRepositorio cursos;
 	private final AreaRepositorio areas;
 	private final CompetenciaRepositorio competencias;
 	private final ConsultasCatalogo consultas;
+	private final RepositorioPesosPlan pesos;
 
 	public ServicioPlanEvaluacion(PlanCursoRepositorio planes, CursoRepositorio cursos, AreaRepositorio areas,
-			CompetenciaRepositorio competencias, ConsultasCatalogo consultas) {
+			CompetenciaRepositorio competencias, ConsultasCatalogo consultas, RepositorioPesosPlan pesos) {
 		this.planes = planes;
 		this.cursos = cursos;
 		this.areas = areas;
 		this.competencias = competencias;
 		this.consultas = consultas;
+		this.pesos = pesos;
 	}
 
 	// ---------- Consultas ----------
@@ -123,17 +136,34 @@ public class ServicioPlanEvaluacion {
 		Curso curso = obtenerCurso(plan.getCursoId());
 		Map<UUID, CompetenciaEvaluada> elegidas = porId(plan.getCompetencias(),
 				CompetenciaEvaluada::getCompetenciaId);
+		Map<UUID, BigDecimal> pesosDelCurso = pesos.delCurso(plan.getId());
 		List<CompetenciaPlan> filas = competencias.findByAreaIdOrderByOrdenAscNombreAsc(curso.getAreaId()).stream()
 				.filter(c -> c.estaActiva() || elegidas.containsKey(c.getId()))
-				.map(c -> {
-					return new CompetenciaPlan(c.getId(), c.getNombre(), c.getEstado(),
-							elegidas.containsKey(c.getId()));
-				})
+				.map(c -> new CompetenciaPlan(c.getId(), c.getNombre(), c.getEstado(),
+						elegidas.containsKey(c.getId()), pesosDelCurso.get(c.getId())))
 				.toList();
 		return new PlanCursoDetalle(plan.getId(), curso.getId(), curso.getNombre(),
 				obtenerArea(curso.getAreaId()).getNombre(), obtenerAnio(plan.getAnioEscolarId()).anio(),
 				consultas.nombreDeGrado(plan.getGradoCodigo()), plan.getHorasSemanales(), plan.getActualizadoEn(),
 				filas);
+	}
+
+	/** Cuánto aporta cada curso del grado y año a cada competencia que evalúa. */
+	@Transactional(readOnly = true)
+	public List<PesosCompetencia> pesosCompetencias(UUID anioEscolarId, String gradoCodigo) {
+		obtenerAnio(anioEscolarId);
+		validarGrado(gradoCodigo);
+		Map<UUID, List<PesoFila>> porCompetencia = pesos.delGrado(anioEscolarId, gradoCodigo).stream()
+				.collect(Collectors.groupingBy(PesoFila::competenciaId, LinkedHashMap::new, Collectors.toList()));
+		return porCompetencia.values().stream().map(filas -> {
+			PesoFila primera = filas.get(0);
+			BigDecimal total = filas.stream().map(PesoFila::pesoCurso).filter(Objects::nonNull)
+					.reduce(BigDecimal.ZERO, BigDecimal::add);
+			boolean completo = CalculoNotas.pesosCompletos(filas.stream().map(PesoFila::pesoCurso).toList());
+			return new PesosCompetencia(primera.competenciaId(), primera.competencia(), primera.area(), total,
+					completo,
+					filas.stream().map(f -> new PesoCurso(f.planCursoId(), f.curso(), f.pesoCurso())).toList());
+		}).toList();
 	}
 
 	/** Figma: "Solo aparecen cursos activos que aún no están en el plan del grado." */
@@ -210,8 +240,12 @@ public class ServicioPlanEvaluacion {
 		}
 		validarHoras(anio.id(), grado, null, solicitud.horasSemanales());
 		var evaluadas = competenciasEvaluadas(curso, solicitud.competencias(), Set.of());
+		pesos.bloquearGrado(anio.id(), grado);
+		validarPesos(anio.id(), grado, null, solicitud.competencias());
 		PlanCurso plan = planes.save(new PlanCurso(anio.id(), grado, curso.getId(), solicitud.horasSemanales(),
 				evaluadas));
+		planes.flush();
+		guardarPesos(plan.getId(), solicitud.competencias());
 		return detalle(plan.getId());
 	}
 
@@ -234,8 +268,11 @@ public class ServicioPlanEvaluacion {
 							"No se puede quitar la competencia \"%s\" porque ya tiene ítems de evaluación."
 									.formatted(nombre));
 				});
+		pesos.bloquearGrado(plan.getAnioEscolarId(), plan.getGradoCodigo());
+		validarPesos(plan.getAnioEscolarId(), plan.getGradoCodigo(), plan.getId(), solicitud.competencias());
 		plan.configurar(solicitud.horasSemanales(), nuevas);
 		planes.flush();
+		guardarPesos(plan.getId(), solicitud.competencias());
 		return detalle(plan.getId());
 	}
 
@@ -280,8 +317,9 @@ public class ServicioPlanEvaluacion {
 	}
 
 	/**
-	 * Copia al grado vacío los cursos de otro plan que siguen activos (y se dictan en el grado), sus horas y sus
-	 * competencias activas. Los docentes no se copian (Figma: "Los docentes se asignan después").
+	 * Copia al grado vacío los cursos de otro plan que siguen activos (y se dictan en el grado), sus horas, sus
+	 * competencias activas y el peso de cada curso en ellas. Los docentes no se copian (Figma: "Los docentes se asignan
+	 * después"). Si se salta un curso, sus competencias quedan con los pesos incompletos, nunca excedidos.
 	 */
 	@Transactional
 	public PlanGrado copiarPlan(SolicitudCopiaPlan solicitud) {
@@ -289,6 +327,7 @@ public class ServicioPlanEvaluacion {
 		String grado = solicitud.gradoCodigo();
 		validarGrado(grado);
 		obtenerAnio(solicitud.origenAnioEscolarId());
+		pesos.bloquearGrado(anio.id(), grado);
 		if (!planes.findByAnioEscolarIdAndGradoCodigo(anio.id(), grado).isEmpty()) {
 			throw ExcepcionNegocio.conflicto("%s ya tiene cursos en %d: solo se copia a un plan vacío."
 					.formatted(consultas.nombreDeGrado(grado), anio.anio()));
@@ -302,6 +341,7 @@ public class ServicioPlanEvaluacion {
 		Map<UUID, Area> areasPorId = porId(areas.findAll(), Area::getId);
 		Map<UUID, Competencia> competenciasPorId = porId(competencias.findAll(), Competencia::getId);
 		List<PlanCurso> copias = new ArrayList<>();
+		Map<PlanCurso, UUID> origenDeCopia = new HashMap<>();
 		for (PlanCurso p : origen) {
 			Curso curso = cursosPorId.get(p.getCursoId());
 			if (!curso.estaActivo() || !areasPorId.get(curso.getAreaId()).estaActiva()
@@ -312,7 +352,9 @@ public class ServicioPlanEvaluacion {
 					.filter(c -> competenciasPorId.get(c.getCompetenciaId()).estaActiva())
 					.map(c -> new CompetenciaEvaluada(c.getCompetenciaId()))
 					.toList();
-			copias.add(new PlanCurso(anio.id(), grado, curso.getId(), p.getHorasSemanales(), activas));
+			PlanCurso copia = new PlanCurso(anio.id(), grado, curso.getId(), p.getHorasSemanales(), activas);
+			copias.add(copia);
+			origenDeCopia.put(copia, p.getId());
 		}
 		if (copias.isEmpty()) {
 			throw ExcepcionNegocio.conflicto(
@@ -327,6 +369,11 @@ public class ServicioPlanEvaluacion {
 		});
 		planes.saveAll(copias);
 		planes.flush();
+		for (PlanCurso copia : copias) {
+			Map<UUID, BigDecimal> pesosOrigen = pesos.delCurso(origenDeCopia.get(copia));
+			copia.getCompetencias().stream().map(CompetenciaEvaluada::getCompetenciaId)
+					.forEach(c -> pesos.guardar(copia.getId(), c, pesosOrigen.get(c)));
+		}
 		return plan(anio.id(), grado);
 	}
 
@@ -357,6 +404,33 @@ public class ServicioPlanEvaluacion {
 			resultado.add(new CompetenciaEvaluada(c.getId()));
 		}
 		return resultado;
+	}
+
+	/**
+	 * Los pesos de una competencia no suman más de 100 % entre los cursos del grado y año. Una suma menor se permite.
+	 */
+	private void validarPesos(UUID anioEscolarId, String grado, UUID excepto, List<SolicitudCompetenciaPlan> pedidas) {
+		for (SolicitudCompetenciaPlan p : pedidas) {
+			if (p.pesoCurso() == null) {
+				continue;
+			}
+			BigDecimal otros = pesos.deOtrosCursos(anioEscolarId, grado, p.competenciaId(), excepto);
+			if (otros.add(p.pesoCurso()).compareTo(PESO_TOTAL) > 0) {
+				String nombre = competencias.findById(p.competenciaId()).map(Competencia::getNombre)
+						.orElse("seleccionada");
+				throw ExcepcionNegocio.invalido(
+						"Los pesos de la competencia \"%s\" no pueden superar 100 %% entre los cursos de %s. Disponible para este curso: %s %%."
+								.formatted(nombre, consultas.nombreDeGrado(grado), texto(PESO_TOTAL.subtract(otros))));
+			}
+		}
+	}
+
+	private void guardarPesos(UUID planCursoId, List<SolicitudCompetenciaPlan> pedidas) {
+		pedidas.forEach(p -> pesos.guardar(planCursoId, p.competenciaId(), p.pesoCurso()));
+	}
+
+	private static String texto(BigDecimal valor) {
+		return valor.stripTrailingZeros().toPlainString();
 	}
 
 	/** Las horas del grado no superan los bloques semanales de su estructura horaria (Figma: "Disponibles: 45"). */

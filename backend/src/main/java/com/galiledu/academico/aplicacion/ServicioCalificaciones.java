@@ -3,7 +3,6 @@ package com.galiledu.academico.aplicacion;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -36,6 +35,7 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.RegistroCalificacion
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ReporteCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudItem;
+import com.galiledu.academico.dominio.CalculoNotas;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones.CalificacionFila;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones.CompetenciaPeso;
@@ -55,7 +55,6 @@ public class ServicioCalificaciones {
 	private static final BigDecimal PESO_TOTAL = new BigDecimal("100.00");
 	private static final Set<String> TIPOS_EVIDENCIA = Set.of("application/pdf", "application/msword",
 			"application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/png");
-	private static final Map<String, Integer> ORDEN_NIVEL = Map.of("C", 0, "B", 1, "A", 2, "AD", 3);
 
 	private final RepositorioCalificaciones repositorio;
 	private final Clock reloj;
@@ -390,34 +389,9 @@ public class ServicioCalificaciones {
 	}
 
 	private static String resultado(List<DetalleReporteFila> detalles, String regla) {
-		List<DetalleReporteFila> calificados = detalles.stream()
-				.filter(d -> d.notaNumerica() != null || d.nivelLogro() != null).toList();
-		if (calificados.isEmpty()) {
-			return "—";
-		}
-		if (calificados.get(0).notaNumerica() != null) {
-			BigDecimal suma;
-			BigDecimal divisor;
-			if ("PROMEDIO_PONDERADO".equals(regla)) {
-				suma = calificados.stream().map(d -> d.notaNumerica().multiply(d.pesoPorcentaje()))
-						.reduce(BigDecimal.ZERO, BigDecimal::add);
-				divisor = calificados.stream().map(DetalleReporteFila::pesoPorcentaje).reduce(BigDecimal.ZERO,
-						BigDecimal::add);
-			} else {
-				suma = calificados.stream().map(DetalleReporteFila::notaNumerica).reduce(BigDecimal.ZERO,
-						BigDecimal::add);
-				divisor = BigDecimal.valueOf(calificados.size());
-			}
-			return suma.divide(divisor, 2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
-		}
-		if ("ULTIMO_NIVEL".equals(regla)) {
-			return calificados.stream().max(Comparator.comparing(DetalleReporteFila::ordenItem)).orElseThrow()
-					.nivelLogro();
-		}
-		Map<String, Long> conteo = calificados.stream()
-				.collect(Collectors.groupingBy(DetalleReporteFila::nivelLogro, Collectors.counting()));
-		return conteo.entrySet().stream().max(Map.Entry.<String, Long>comparingByValue()
-				.thenComparing(e -> ORDEN_NIVEL.getOrDefault(e.getKey(), -1))).orElseThrow().getKey();
+		return CalculoNotas.combinar(detalles.stream()
+				.map(d -> new CalculoNotas.Nota(d.pesoPorcentaje(), d.notaNumerica(), d.nivelLogro(), d.ordenItem()))
+				.toList(), regla).map(CalculoNotas::texto).orElse("—");
 	}
 
 	private SolicitudItem validarItem(UUID planCursoId, UUID seccionId, UUID periodoId, SolicitudItem solicitud,

@@ -1,5 +1,7 @@
 package com.galiledu.academico;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.endsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -11,6 +13,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import org.springframework.test.web.servlet.ResultActions;
 
 import com.galiledu.PruebaIntegracion;
 import com.jayway.jsonpath.JsonPath;
@@ -23,6 +26,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 	private static final String ANIO_2026 = "30000000-0000-0000-0000-000000002026";
 	private static final String ANIO_2027 = "30000000-0000-0000-0000-000000002027";
 	private static final String MARIA_FERNANDEZ = "10000000-0000-0000-0000-000000000004";
+	private static final String REGULARIDAD = "Resuelve problemas de regularidad, equivalencia y cambio";
 
 	@Autowired
 	private JdbcClient jdbc;
@@ -319,6 +323,113 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cursos.length()").value(15));
 	}
 
+	// ---------- Peso de cada curso en la competencia ----------
+
+	private static String conPeso(String competenciaId, String peso) {
+		return """
+				{"competenciaId":"%s","pesoCurso":%s}""".formatted(competenciaId, peso);
+	}
+
+	private ResultActions configurar(String curso, int horas, String competencias) throws Exception {
+		return mvc.perform(conToken(put("/planes-evaluacion/" + idPlan(curso)), personal, """
+				{"horasSemanales":%d,"competencias":[%s]}""".formatted(horas, competencias)));
+	}
+
+	private ResultActions pesos(String anio) throws Exception {
+		return mvc.perform(conToken(get("/planes-evaluacion/pesos-competencias").param("anioEscolarId", anio)
+				.param("grado", "SEC-1"), personal));
+	}
+
+	private static String deRegularidad(String campo) {
+		return "$[?(@.competencia == '%s')].%s".formatted(REGULARIDAD, campo);
+	}
+
+	@Test
+	void elDetalleTraeElPesoDelCursoEnCadaCompetencia() throws Exception {
+		String regularidad = idCompetencia(REGULARIDAD);
+		mvc.perform(conToken(get("/planes-evaluacion/" + idPlan("Álgebra")), personal))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.competencias[?(@.competenciaId == '%s')].pesoCurso".formatted(regularidad))
+						.value(contains(100.0)));
+	}
+
+	@Test
+	void losPesosDeUnaCompetenciaNoSuperan100EntreLosCursosDelGrado() throws Exception {
+		String regularidad = idCompetencia(REGULARIDAD);
+
+		configurar("Geometría", 2, conPeso(regularidad, "10"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(
+						"Los pesos de la competencia \"%s\" no pueden superar 100 %% entre los cursos de 1.° de secundaria. Disponible para este curso: 0 %%."
+								.formatted(REGULARIDAD)));
+
+		configurar("Álgebra", 3, conPeso(regularidad, "60")).andExpect(status().isOk());
+		configurar("Geometría", 2, conPeso(regularidad, "40.5"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message", endsWith("Disponible para este curso: 40 %.")));
+		configurar("Geometría", 2, conPeso(regularidad, "40")).andExpect(status().isOk());
+
+		pesos(ANIO_2026).andExpect(status().isOk())
+				.andExpect(jsonPath(deRegularidad("total")).value(contains(100.0)))
+				.andExpect(jsonPath(deRegularidad("completo")).value(contains(true)))
+				.andExpect(jsonPath(deRegularidad("cursos[*].curso")).value(contains("Álgebra", "Geometría")));
+	}
+
+	@Test
+	void editarNoCuentaDosVecesElPesoDelPropioCurso() throws Exception {
+		configurar("Álgebra", 3, conPeso(idCompetencia(REGULARIDAD), "100")).andExpect(status().isOk());
+	}
+
+	@Test
+	void unCursoSinPesoDejaLaCompetenciaIncompletaAunqueSume100() throws Exception {
+		configurar("Geometría", 2, competencia(idCompetencia(REGULARIDAD))).andExpect(status().isOk());
+
+		pesos(ANIO_2026)
+				.andExpect(jsonPath(deRegularidad("total")).value(contains(100.0)))
+				.andExpect(jsonPath(deRegularidad("completo")).value(contains(false)));
+	}
+
+	@Test
+	void cambiaElPesoDeUnaCompetenciaQueYaTieneItems() throws Exception {
+		crearItemDeAlgebra();
+		String regularidad = idCompetencia(REGULARIDAD);
+		configurar("Álgebra", 3, conPeso(regularidad, "75"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.competencias[?(@.competenciaId == '%s')].pesoCurso".formatted(regularidad))
+						.value(contains(75.0)));
+	}
+
+	@Test
+	void rechazaPesosFueraDeRango() throws Exception {
+		String regularidad = idCompetencia(REGULARIDAD);
+		configurar("Álgebra", 3, conPeso(regularidad, "0")).andExpect(status().isBadRequest());
+		configurar("Álgebra", 3, conPeso(regularidad, "100.01")).andExpect(status().isBadRequest());
+		configurar("Álgebra", 3, conPeso(regularidad, "10.123")).andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void agregaUnCursoConElPesoDeSuCompetencia() throws Exception {
+		String indaga = idCompetencia("Indaga mediante métodos científicos para construir sus conocimientos");
+		mvc.perform(conToken(post("/planes-evaluacion"), personal, """
+				{"anioEscolarId":"%s","gradoCodigo":"SEC-3","cursoId":"%s","horasSemanales":2,"competencias":[%s]}"""
+				.formatted(ANIO_2027, idCurso("Física"), conPeso(indaga, "55.5"))))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.competencias[?(@.competenciaId == '%s')].pesoCurso".formatted(indaga))
+						.value(contains(55.5)));
+	}
+
+	@Test
+	void copiarElPlanConservaLosPesos() throws Exception {
+		configurar("Álgebra", 3, conPeso(idCompetencia(REGULARIDAD), "60")).andExpect(status().isOk());
+		mvc.perform(conToken(post("/planes-evaluacion/copias"), personal, """
+				{"anioEscolarId":"%s","gradoCodigo":"SEC-1","origenAnioEscolarId":"%s","origenGradoCodigo":"SEC-1"}"""
+				.formatted(ANIO_2027, ANIO_2026))).andExpect(status().isCreated());
+
+		pesos(ANIO_2027)
+				.andExpect(jsonPath(deRegularidad("total")).value(contains(60.0)))
+				.andExpect(jsonPath(deRegularidad("completo")).value(contains(false)));
+	}
+
 	@Test
 	void elCoordinadorTambienGestionaElPlan() throws Exception {
 		String coordinador = token(COORDINADOR);
@@ -333,6 +444,8 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 	@Test
 	void otrosRolesReciben403() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion/anios"), token(DOCENTE))).andExpect(status().isForbidden());
+		mvc.perform(conToken(get("/planes-evaluacion/pesos-competencias").param("anioEscolarId", ANIO_2026)
+				.param("grado", "SEC-1"), token(DOCENTE))).andExpect(status().isForbidden());
 		mvc.perform(conToken(delete("/planes-evaluacion/" + idPlan("Computación")), token(ADMIN)))
 				.andExpect(status().isForbidden());
 	}

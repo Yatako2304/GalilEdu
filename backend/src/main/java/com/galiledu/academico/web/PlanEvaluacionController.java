@@ -23,6 +23,7 @@ import com.galiledu.academico.aplicacion.DtosAcademico.CursoDisponible;
 import com.galiledu.academico.aplicacion.DtosAcademico.DocenteOpcion;
 import com.galiledu.academico.aplicacion.DtosAcademico.DocenteSeccion;
 import com.galiledu.academico.aplicacion.DtosAcademico.OrigenPlan;
+import com.galiledu.academico.aplicacion.DtosAcademico.PesosCompetencia;
 import com.galiledu.academico.aplicacion.DtosAcademico.PlanCursoDetalle;
 import com.galiledu.academico.aplicacion.DtosAcademico.PlanGrado;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudConfigurarCurso;
@@ -70,6 +71,12 @@ public class PlanEvaluacionController {
 	@GetMapping("/origenes")
 	public List<OrigenPlan> origenes(@RequestParam UUID anioEscolarId, @RequestParam String grado) {
 		return servicio.origenes(anioEscolarId, grado);
+	}
+
+	/** Vista "Peso de cada curso por competencia": cuánto aporta cada curso del grado a cada competencia. */
+	@GetMapping("/pesos-competencias")
+	public List<PesosCompetencia> pesosCompetencias(@RequestParam UUID anioEscolarId, @RequestParam String grado) {
+		return servicio.pesosCompetencias(anioEscolarId, grado);
 	}
 
 	@PostMapping("/copias")

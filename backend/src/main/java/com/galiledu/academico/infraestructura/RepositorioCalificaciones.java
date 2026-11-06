@@ -64,6 +64,18 @@ public class RepositorioCalificaciones {
 			String nivelLogro, String evidenciaNombre, Instant ordenItem) {
 	}
 
+	public record ParametrosPlan(UUID anioEscolarId, String gradoCodigo, String escala, String reglaNota,
+			String consolidacion) {
+	}
+
+	public record PeriodoAnio(UUID id, LocalDate fechaInicio) {
+	}
+
+	/** Un ítem de la competencia para un estudiante: sin nota ni nivel, todavía no está calificado. */
+	public record NotaCompetenciaFila(UUID matriculaId, UUID planCursoId, UUID periodoId, BigDecimal pesoPorcentaje,
+			BigDecimal notaNumerica, String nivelLogro, Instant ordenItem) {
+	}
+
 	public List<CursoFila> cursos(UUID docenteId) {
 		return jdbc.sql("""
 				SELECT pc.id AS plan_curso_id, ds.seccion_id, ae.id AS anio_escolar_id, ae.anio,
@@ -340,6 +352,37 @@ public class RepositorioCalificaciones {
 				WHERE m.seccion_id = ? AND m.estado = 'MATRICULADO' AND NOT e.eliminado
 				ORDER BY p.apellido_paterno, p.apellido_materno, p.nombres, ie.creado_en, c.orden""")
 				.params(planCursoId, periodoId, seccionId).query(DetalleReporteFila.class).list();
+	}
+
+	public ParametrosPlan parametrosPlan(UUID planCursoId) {
+		return jdbc.sql("""
+				SELECT pc.anio_escolar_id, pc.grado_codigo, ae.escala_evaluacion AS escala, ae.regla_nota,
+				       ae.consolidacion_periodos AS consolidacion
+				FROM academico.plan_curso pc
+				JOIN configuracion.anio_escolar ae ON ae.id = pc.anio_escolar_id
+				WHERE pc.id = ?""").param(planCursoId).query(ParametrosPlan.class).single();
+	}
+
+	public List<PeriodoAnio> periodosDelAnio(UUID anioEscolarId) {
+		return jdbc.sql("""
+				SELECT id, fecha_inicio FROM configuracion.periodo_academico
+				WHERE anio_escolar_id = ? ORDER BY numero""").param(anioEscolarId).query(PeriodoAnio.class).list();
+	}
+
+	/** Ítems de una competencia en todos los cursos y periodos del año, para los estudiantes de una sección. */
+	public List<NotaCompetenciaFila> notasDeCompetencia(UUID anioEscolarId, String gradoCodigo, UUID seccionId,
+			UUID competenciaId) {
+		return jdbc.sql("""
+				SELECT m.id AS matricula_id, ie.plan_curso_id, ie.periodo_academico_id AS periodo_id,
+				       ic.peso_porcentaje, ci.nota_numerica, ci.nivel_logro, ie.creado_en AS orden_item
+				FROM academico.item_evaluacion ie
+				JOIN academico.item_competencia ic ON ic.item_evaluacion_id = ie.id AND ic.competencia_id = ?
+				JOIN matricula.matricula m ON m.seccion_id = ie.seccion_id AND m.estado = 'MATRICULADO'
+				LEFT JOIN academico.calificacion_item ci
+				  ON ci.item_evaluacion_id = ie.id AND ci.matricula_id = m.id
+				WHERE ie.anio_escolar_id = ? AND ie.grado_codigo = ? AND ie.seccion_id = ?
+				ORDER BY ie.creado_en""").params(competenciaId, anioEscolarId, gradoCodigo, seccionId)
+				.query(NotaCompetenciaFila.class).list();
 	}
 
 	public Optional<Integer> notaAprobatoria(LocalDate fecha) {

@@ -74,6 +74,20 @@ public final class DtosCalificaciones {
 			List<FilaReporte> filas) {
 	}
 
+	/** Curso que evalúa la competencia, con su peso en el plan (null = sin definir). */
+	public record CursoNotaFinal(UUID planCursoId, String curso, BigDecimal pesoCurso) {
+	}
+
+	/** cursos: resultado de cada curso, por planCursoId. parcial: falta alguna nota que puede cambiar la nota final. */
+	public record FilaNotaFinal(UUID matriculaId, String estudiante, Map<String, String> cursos, String notaFinal,
+			String estado, boolean parcial) {
+	}
+
+	/** Nota final de una competencia en una sección, entre todos los cursos del grado que la evalúan. */
+	public record NotaFinalCompetencia(UUID competenciaId, String competencia, String escala, String reglaNota,
+			String consolidacion, boolean pesosCompletos, List<CursoNotaFinal> cursos, List<FilaNotaFinal> filas) {
+	}
+
 	public record ArchivoEvidencia(String nombreArchivo, String tipoMime, byte[] contenido) {
 	}
 }
