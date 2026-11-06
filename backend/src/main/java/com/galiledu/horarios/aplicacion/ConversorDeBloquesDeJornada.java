@@ -18,8 +18,8 @@ import com.galiledu.horarios.infraestructura.HorarioSeccionRepositorio;
 /**
  * Pasa las celdas a bloques con las horas reales (inicio y fin del bloque en la jornada de la estructura de la
  * sección) y el docente de academico.docente_seccion. Una celda sin docente no se incluye: no puede cruzarse por
- * docente y el servicio que guarda ya valida que cada curso tenga uno. Una celda cuyo bloque no existe en la jornada
- * tampoco: eso lo rechaza el servicio de guardado antes de llegar aquí.
+ * docente y el servicio que guarda ya valida que cada curso tenga uno. Una celda cuyo día no es lectivo o cuyo bloque
+ * no existe en la jornada tampoco: eso lo rechaza el servicio de guardado antes de llegar aquí.
  */
 @Service
 public class ConversorDeBloquesDeJornada implements ConversorDeBloques {
@@ -55,7 +55,8 @@ public class ConversorDeBloquesDeJornada implements ConversorDeBloques {
 		for (CeldaHorario celda : celdas) {
 			BloqueDeJornada bloque = bloques.get(celda.numeroBloque());
 			CursoDelPlan curso = cursos.get(celda.planCursoId());
-			if (bloque == null || curso == null || curso.docenteId() == null) {
+			boolean diaLectivo = jornada.dias().contains(celda.dia());
+			if (!diaLectivo || bloque == null || curso == null || curso.docenteId() == null) {
 				continue;
 			}
 			solicitados.add(new BloqueSolicitado(celda.dia(), celda.numeroBloque(), bloque.inicio(), bloque.fin(),

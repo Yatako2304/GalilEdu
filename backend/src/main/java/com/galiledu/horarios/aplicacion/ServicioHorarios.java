@@ -22,7 +22,9 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.configuracion.aplicacion.ServicioEstructurasHorarias;
 import com.galiledu.configuracion.dominio.DiaSemana;
 import com.galiledu.horarios.aplicacion.AmbientesActivos.AmbienteDisponible;
+import com.galiledu.horarios.aplicacion.AmbientesActivos.DatosAmbiente;
 import com.galiledu.horarios.aplicacion.DatosDeSeccion.DatosSeccion;
+import com.galiledu.horarios.aplicacion.DtosHorarios.AmbienteDelHorario;
 import com.galiledu.horarios.aplicacion.DtosHorarios.AmbienteOpcion;
 import com.galiledu.horarios.aplicacion.DtosHorarios.AnioParaHorarios;
 import com.galiledu.horarios.aplicacion.DtosHorarios.BloqueJornada;
@@ -162,8 +164,8 @@ public class ServicioHorarios {
 				.toList();
 
 		Map<UUID, CursoDelPlan> cursos = cursosPorId(seccionId, guardados);
-		Map<UUID, String> nombresAmbiente = ambientes
-				.nombresPorId(guardados.stream().map(HorarioBloque::getAmbienteId).distinct().toList());
+		Map<UUID, DatosAmbiente> datosAmbiente = ambientes
+				.datosPorId(guardados.stream().map(HorarioBloque::getAmbienteId).distinct().toList());
 		Map<String, List<CruceDetectado>> cruces = crucesPorCelda(datos, guardados);
 
 		List<CeldaDelHorario> celdas = new ArrayList<>();
@@ -174,7 +176,7 @@ public class ServicioHorarios {
 					: new Referencia(curso.docenteId(), curso.docenteNombre());
 			celdas.add(new CeldaDelHorario(b.getDia(), b.getNumeroBloque(), b.getPlanCursoId(),
 					curso == null ? null : curso.nombre(), docente,
-					new Referencia(b.getAmbienteId(), nombresAmbiente.get(b.getAmbienteId())),
+					ambienteDe(b.getAmbienteId(), datosAmbiente.get(b.getAmbienteId())),
 					cruces.getOrDefault(clave(b.getDia(), b.getNumeroBloque()), List.of())));
 		}
 		return new HorarioDeSeccion(seccionDe(datos), cabecera.map(HorarioSeccion::getVersion).orElse(null),
@@ -197,7 +199,8 @@ public class ServicioHorarios {
 						c.docenteId() == null ? null : new Referencia(c.docenteId(), c.docenteNombre())))
 				.toList();
 		List<AmbienteOpcion> opcionesAmbiente = ambientes.activos().stream()
-				.map((AmbienteDisponible a) -> new AmbienteOpcion(a.id(), a.nombre(), a.tipo(), a.aforoMaximo()))
+				.map((AmbienteDisponible a) -> new AmbienteOpcion(a.id(), a.nombre(), a.codigo(), a.tipo(),
+						a.aforoMaximo()))
 				.toList();
 		return new OpcionesDeHorario(datos.ambienteId(), cursos, opcionesAmbiente);
 	}
@@ -337,6 +340,10 @@ public class ServicioHorarios {
 
 	private static String clave(DiaSemana dia, int numeroBloque) {
 		return dia + ":" + numeroBloque;
+	}
+
+	private static AmbienteDelHorario ambienteDe(UUID id, DatosAmbiente datos) {
+		return new AmbienteDelHorario(id, datos == null ? null : datos.nombre(), datos == null ? null : datos.codigo());
 	}
 
 	private static SeccionDelHorario seccionDe(DatosSeccion d) {

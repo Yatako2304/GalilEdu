@@ -145,7 +145,7 @@ class CrucesConcurrenciaIT extends PruebaHorarios {
 				() -> enviar(seccionDos, new Celda("LUN", 1, algebra, aulaUno))));
 
 		verUnoGanaYElOtroPierde(resultados, "Ambiente no disponible: 1.° C",
-				" ya usa Aula TMP-A1 para Álgebra el lunes de 8:00 a 8:45.");
+				" ya usa TMP-A1 para Álgebra el lunes de 8:00 a 8:45.");
 		assertThat(bloquesGuardados()).isEqualTo(1);
 		assertThat(jdbc.sql("""
 				SELECT count(*) FROM horarios.horario_bloque
