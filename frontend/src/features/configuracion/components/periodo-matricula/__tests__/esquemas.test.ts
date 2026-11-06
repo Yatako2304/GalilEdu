@@ -194,7 +194,7 @@ describe('validarDocumento', () => {
 });
 
 test('solicitudDePeriodo arma el cuerpo del POST: vacantes en número y documentos sin la plantilla', () => {
-  const archivo = new File(['a'], 'ficha.csv');
+  const archivo = new File(['a'], 'ficha.pdf');
 
   const solicitud = solicitudDePeriodo(valido, [
     {

@@ -177,8 +177,8 @@ const agregarDocumento = async (
   );
 };
 
-const csv = (nombre = 'ficha.csv') =>
-  new File(['nombre,dni\nAna,1\n'], nombre, { type: 'text/csv' });
+const csv = (nombre = 'ficha.pdf') =>
+  new File(['nombre,dni\nAna,1\n'], nombre, { type: 'application/pdf' });
 
 const cuerpoEsperado = (extras: Record<string, unknown> = {}) => ({
   anioEscolarId: 'anio-2027',
@@ -496,14 +496,14 @@ describe('documentos requeridos', () => {
     const usuario = userEvent.setup({ applyAccept: false });
     const entrada = screen.getByLabelText('Seleccionar archivo');
 
-    await usuario.upload(entrada, new File(['x'], 'ficha.pdf'));
+    await usuario.upload(entrada, new File(['x'], 'ficha.xlsx'));
     expect(
       await screen.findByText(
-        'La plantilla debe ser un archivo XLSX, XLS o CSV.',
+        'La plantilla debe ser un archivo PDF, DOCX, JPG o PNG.',
       ),
     ).toBeInTheDocument();
 
-    const grande = new File(['x'], 'grande.csv');
+    const grande = new File(['x'], 'grande.pdf');
     Object.defineProperty(grande, 'size', { value: 11 * 1024 * 1024 });
     await usuario.upload(entrada, grande);
     expect(
@@ -518,9 +518,9 @@ describe('documentos requeridos', () => {
 
     await userEvent.upload(
       screen.getByLabelText('Seleccionar archivo'),
-      csv('ficha.csv'),
+      csv('ficha.pdf'),
     );
-    expect(screen.getByText('ficha.csv')).toBeInTheDocument();
+    expect(screen.getByText('ficha.pdf')).toBeInTheDocument();
     await userEvent.type(
       screen.getByLabelText('Nombre del documento'),
       'Ficha de matrícula',
@@ -529,7 +529,7 @@ describe('documentos requeridos', () => {
       screen.getByRole('button', { name: 'Agregar documento' }),
     );
 
-    expect(screen.getByText('Plantilla: ficha.csv')).toBeInTheDocument();
+    expect(screen.getByText('Plantilla: ficha.pdf')).toBeInTheDocument();
   });
 });
 
@@ -643,7 +643,7 @@ describe('guardar', () => {
     await mostrar();
     await cargado();
     await llenarFechas();
-    await agregarDocumento('Ficha de matrícula', '', csv('ficha.csv'));
+    await agregarDocumento('Ficha de matrícula', '', csv('ficha.pdf'));
     await agregarDocumento('DNI del estudiante'); // sin plantilla: no se sube nada
 
     await guardar();
@@ -680,8 +680,7 @@ describe('guardar', () => {
       http.post(`${API}/periodo-2027/documentos/doc-ficha/plantilla`, () =>
         HttpResponse.json(
           {
-            message:
-              'El contenido del archivo no corresponde a un XLSX válido.',
+            message: 'El contenido del archivo no corresponde a un PDF válido.',
           },
           { status: 400 },
         ),
@@ -690,7 +689,7 @@ describe('guardar', () => {
     await mostrar();
     await cargado();
     await llenarFechas();
-    await agregarDocumento('Ficha de matrícula', '', csv('ficha.csv'));
+    await agregarDocumento('Ficha de matrícula', '', csv('ficha.pdf'));
 
     await guardar();
 
@@ -709,7 +708,7 @@ describe('guardar', () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        'El contenido del archivo no corresponde a un XLSX válido.',
+        'El contenido del archivo no corresponde a un PDF válido.',
       ),
     ).toBeInTheDocument();
   });
