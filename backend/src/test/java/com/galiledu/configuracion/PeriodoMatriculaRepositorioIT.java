@@ -148,17 +148,17 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 		byte[] contenido = "nombre,dni\nAna,1\n".getBytes();
 
 		assertThat(consultas.plantilla(documento)).isEmpty();
-		assertThat(consultas.guardarPlantilla(documento, "ficha.csv", "text/csv", contenido)).isTrue();
+		assertThat(consultas.guardarPlantilla(documento, "ficha.pdf", "application/pdf", contenido)).isTrue();
 
 		var guardada = consultas.plantilla(documento).orElseThrow();
-		assertThat(guardada.nombreArchivo()).isEqualTo("ficha.csv");
-		assertThat(guardada.tipoMime()).isEqualTo("text/csv");
+		assertThat(guardada.nombreArchivo()).isEqualTo("ficha.pdf");
+		assertThat(guardada.tipoMime()).isEqualTo("application/pdf");
 		assertThat(guardada.contenido()).isEqualTo(contenido);
 		entityManager.clear();
 		DocumentoRequerido leido = periodo(ANIO_2027).getDocumentos().getFirst();
 		assertThat(leido.tienePlantilla()).isTrue();
-		assertThat(leido.getPlantillaNombreArchivo()).isEqualTo("ficha.csv");
-		assertThat(leido.getPlantillaTipoMime()).isEqualTo("text/csv");
+		assertThat(leido.getPlantillaNombreArchivo()).isEqualTo("ficha.pdf");
+		assertThat(leido.getPlantillaTipoMime()).isEqualTo("application/pdf");
 
 		assertThat(consultas.guardarPlantilla(documento, "ficha.xls", "application/vnd.ms-excel", new byte[]{1, 2, 3}))
 				.isTrue();
@@ -172,7 +172,8 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 
 	@Test
 	void guardarLaPlantillaDeUnDocumentoQueNoExisteDevuelveFalse() {
-		assertThat(consultas.guardarPlantilla(UUID.randomUUID(), "ficha.csv", "text/csv", new byte[]{1})).isFalse();
+		assertThat(consultas.guardarPlantilla(UUID.randomUUID(), "ficha.pdf", "application/pdf", new byte[]{1}))
+				.isFalse();
 	}
 
 	@Test
@@ -180,7 +181,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 		UUID anio = anioPorSql(2028, "PLANIFICADO");
 		PeriodoMatricula nuevo = periodos.saveAndFlush(periodoNuevo(anio, doc("Ficha"), doc("DNI")));
 		UUID ficha = nuevo.getDocumentos().getFirst().getId();
-		consultas.guardarPlantilla(ficha, "ficha.csv", "text/csv", new byte[]{1, 2});
+		consultas.guardarPlantilla(ficha, "ficha.pdf", "application/pdf", new byte[]{1, 2});
 		entityManager.clear();
 
 		PeriodoMatricula p = periodo(anio);

@@ -39,7 +39,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 	private static final String ID_2026 = "30000000-0000-0000-0000-000000002026";
 	private static final String ID_2027 = "30000000-0000-0000-0000-000000002027";
 	private static final String RUTA = "/configuracion/periodos-matricula";
-	private static final byte[] CSV = "nombre,dni\nAna,1\n".getBytes();
+	private static final byte[] PDF = "%PDF-1.4\n%fin\n".getBytes();
 
 	@Autowired
 	private JdbcClient jdbc;
@@ -457,18 +457,18 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		String documento = documentoDe(periodo);
 		String ruta = RUTA + "/" + periodo + "/documentos/" + documento + "/plantilla";
 
-		subir(periodo, documento, "ficha.csv", CSV)
+		subir(periodo, documento, "ficha.pdf", PDF)
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.id").value(documento))
 				.andExpect(jsonPath("$.tienePlantilla").value(true))
-				.andExpect(jsonPath("$.plantillaNombreArchivo").value("ficha.csv"));
+				.andExpect(jsonPath("$.plantillaNombreArchivo").value("ficha.pdf"));
 
 		mvc.perform(conToken(get(ruta), personal))
 				.andExpect(status().isOk())
-				.andExpect(content().contentType("text/csv"))
+				.andExpect(content().contentType("application/pdf"))
 				.andExpect(header().string("Content-Disposition", containsString("attachment")))
-				.andExpect(header().string("Content-Disposition", containsString("ficha.csv")))
-				.andExpect(content().bytes(CSV));
+				.andExpect(header().string("Content-Disposition", containsString("ficha.pdf")))
+				.andExpect(content().bytes(PDF));
 		mvc.perform(conToken(get(RUTA + "/" + periodo), personal))
 				.andExpect(jsonPath("$.documentos[0].tienePlantilla").value(true));
 
@@ -486,13 +486,13 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		String periodo = periodoDe(ID_2027);
 		String documento = documentoDe(periodo);
 
-		subir(periodo, documento, "ficha.pdf", CSV)
+		subir(periodo, documento, "ficha.xlsx", PDF)
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value("La plantilla debe ser un archivo XLSX, XLS o CSV."));
-		subir(periodo, documento, "ficha.xlsx", CSV)
+				.andExpect(jsonPath("$.message").value("La plantilla debe ser un archivo PDF, DOCX, JPG o PNG."));
+		subir(periodo, documento, "ficha.pdf", "no es un pdf".getBytes())
 				.andExpect(status().isBadRequest())
-				.andExpect(jsonPath("$.message").value("El contenido del archivo no corresponde a un XLSX válido."));
-		subir(periodo, documento, "vacio.csv", new byte[0])
+				.andExpect(jsonPath("$.message").value("El contenido del archivo no corresponde a un PDF válido."));
+		subir(periodo, documento, "vacio.pdf", new byte[0])
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("Selecciona un archivo para la plantilla."));
 		mvc.perform(conToken(multipart(RUTA + "/" + periodo + "/documentos/" + documento + "/plantilla"), personal))
@@ -508,17 +508,17 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		reloj.fijarEn(fecha(2026, 9, 1));
 		String periodo = periodoDe(ID_2027);
 		String documento = documentoDe(periodo);
-		subir(periodo, documento, "ficha.csv", CSV).andExpect(status().isOk());
+		subir(periodo, documento, "ficha.pdf", PDF).andExpect(status().isOk());
 
 		reloj.fijarEn(fecha(2026, 10, 1)); // ABIERTO
-		subir(periodo, documento, "otra.csv", CSV)
+		subir(periodo, documento, "otra.pdf", PDF)
 				.andExpect(status().isConflict())
 				.andExpect(jsonPath("$.message").value("Solo se puede cambiar la plantilla de un periodo programado."));
 		mvc.perform(conToken(delete(RUTA + "/" + periodo + "/documentos/" + documento + "/plantilla"), personal))
 				.andExpect(status().isConflict());
 		mvc.perform(conToken(get(RUTA + "/" + periodo + "/documentos/" + documento + "/plantilla"), personal))
 				.andExpect(status().isOk())
-				.andExpect(content().bytes(CSV));
+				.andExpect(content().bytes(PDF));
 	}
 
 	@Test
@@ -527,12 +527,12 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		String periodo = periodoDe(ID_2027);
 		String documento2026 = documentoDe(periodoDe(ID_2026));
 
-		subir(periodo, documento2026, "ficha.csv", CSV)
+		subir(periodo, documento2026, "ficha.pdf", PDF)
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.message").value("El documento no existe."));
 		mvc.perform(conToken(get(RUTA + "/" + periodo + "/documentos/" + UUID.randomUUID() + "/plantilla"), personal))
 				.andExpect(status().isNotFound());
-		subir(UUID.randomUUID().toString(), documento2026, "ficha.csv", CSV)
+		subir(UUID.randomUUID().toString(), documento2026, "ficha.pdf", PDF)
 				.andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.message").value("El periodo de matrícula no existe."));
 	}
@@ -557,7 +557,8 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 			mvc.perform(conToken(post(RUTA), token, cuerpo)).andExpect(status().isForbidden());
 			mvc.perform(conToken(put(RUTA + "/" + periodo), token, cuerpo)).andExpect(status().isForbidden());
 			mvc.perform(conToken(delete(RUTA + "/" + periodo), token)).andExpect(status().isForbidden());
-			mvc.perform(conToken(multipart(plantilla).file(new MockMultipartFile("archivo", "f.csv", "text/csv", CSV)),
+			mvc.perform(conToken(
+					multipart(plantilla).file(new MockMultipartFile("archivo", "f.pdf", "application/pdf", PDF)),
 					token)).andExpect(status().isForbidden());
 			mvc.perform(conToken(get(plantilla), token)).andExpect(status().isForbidden());
 			mvc.perform(conToken(delete(plantilla), token)).andExpect(status().isForbidden());
@@ -578,7 +579,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		mvc.perform(put(RUTA + "/" + periodo).contentType("application/json").content(cuerpoValido(ID_2027)))
 				.andExpect(status().isUnauthorized());
 		mvc.perform(delete(RUTA + "/" + periodo)).andExpect(status().isUnauthorized());
-		mvc.perform(multipart(plantilla).file(new MockMultipartFile("archivo", "f.csv", "text/csv", CSV)))
+		mvc.perform(multipart(plantilla).file(new MockMultipartFile("archivo", "f.pdf", "application/pdf", PDF)))
 				.andExpect(status().isUnauthorized());
 		mvc.perform(get(plantilla)).andExpect(status().isUnauthorized());
 		mvc.perform(delete(plantilla)).andExpect(status().isUnauthorized());

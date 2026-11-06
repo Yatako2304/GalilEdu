@@ -1,7 +1,7 @@
-// Plantilla de un documento requerido (HU-23): XLSX, XLS o CSV de hasta 10 MB. Es la misma regla del backend, con sus
+// Plantilla de un documento requerido (HU-23): PDF, DOCX, JPG o PNG de hasta 10 MB. Es la misma regla del backend, con sus
 // mismos mensajes; el backend vuelve a comprobarla (también el contenido del archivo) al recibirla.
 
-export const EXTENSIONES_PLANTILLA = ['xlsx', 'xls', 'csv'];
+export const EXTENSIONES_PLANTILLA = ['pdf', 'docx', 'jpg', 'jpeg', 'png'];
 export const FORMATOS_PLANTILLA = EXTENSIONES_PLANTILLA.map(
   (extension) => `.${extension}`,
 ).join(',');
@@ -17,7 +17,7 @@ export const validarPlantilla = (archivo: {
   const extension =
     punto >= 0 ? archivo.name.slice(punto + 1).toLowerCase() : '';
   if (!EXTENSIONES_PLANTILLA.includes(extension)) {
-    return 'La plantilla debe ser un archivo XLSX, XLS o CSV.';
+    return 'La plantilla debe ser un archivo PDF, DOCX, JPG o PNG.';
   }
   if (archivo.size > TAMANO_MAXIMO_PLANTILLA) {
     return 'La plantilla no puede pesar más de 10 MB.';
