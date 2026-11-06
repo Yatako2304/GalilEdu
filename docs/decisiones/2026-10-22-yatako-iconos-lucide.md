@@ -42,6 +42,7 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `search` | `Search` | Buscadores |
 | `visibility` / `visibility_off` | `Eye` / `EyeOff` | Ver, mostrar contraseña |
 | `file_download` | `Download` | Descargar |
+| `picture_as_pdf` | `FileDown` | Descargar Horario (HU-51, Apoderado) |
 | `file_upload` / `cloud_upload` | `Upload` / `CloudUpload` | Subir archivo, dropzone |
 | `attach_file` | `Paperclip` | Adjuntar documento |
 | `folder` | `Folder` | Accordion v2 |
