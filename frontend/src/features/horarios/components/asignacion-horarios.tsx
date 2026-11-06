@@ -47,12 +47,8 @@ export const AsignacionHorarios = () => {
   // ---------- Selectores en cascada ----------
   const aniosQuery = useAniosParaHorarios();
   const anios = React.useMemo(() => aniosQuery.data ?? [], [aniosQuery.data]);
-  const [anioElegido, setAnioElegido] = React.useState('');
-  // Abre con el año activo (o el primero de la lista) y el usuario lo cambia cuando quiera.
-  const anioId =
-    anioElegido ||
-    (anios.find((a) => a.estado === 'ACTIVO') ?? anios[0])?.id ||
-    '';
+  // El año no viene elegido: el grado y la sección se habilitan cuando el usuario lo elige.
+  const [anioId, setAnioId] = React.useState('');
   const [gradoCodigo, setGradoCodigo] = React.useState('');
   const [seccionId, setSeccionId] = React.useState('');
   const gradosQuery = useGradosParaHorarios(anioId || undefined);
@@ -110,7 +106,7 @@ export const AsignacionHorarios = () => {
   const aplicar = ({ campo, valor }: Cambio) => {
     salirDeLaEdicion();
     if (campo === 'anio') {
-      setAnioElegido(valor);
+      setAnioId(valor);
       setGradoCodigo('');
       setSeccionId('');
     } else if (campo === 'grado') {
@@ -204,7 +200,7 @@ export const AsignacionHorarios = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Matriz horaria</CardTitle>
+          <CardTitle size="body-1">Matriz horaria</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 p-6">
           {errorDeGuardado && (

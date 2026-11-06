@@ -49,6 +49,22 @@ type DialogoAsignarBloqueProps = {
 };
 
 const ESPERA_CRUCES_MS = 300;
+const CURSOS_VISIBLES = 3;
+
+/**
+ * «Sin docente: Geometría» o, con muchos, «Sin docente (9 cursos): Aritmética, Arte y Cultura, Biología y 6 más».
+ * `resumido = false` da la lista completa (para el título del aviso, que se ve al pasar el mouse).
+ */
+const textoSinDocente = (cursos: { nombre: string }[], resumido: boolean) => {
+  const nombres = cursos.map((c) => c.nombre);
+  if (nombres.length <= CURSOS_VISIBLES) {
+    return `Sin docente: ${nombres.join(', ')}`;
+  }
+  const encabezado = `Sin docente (${nombres.length} cursos): `;
+  if (!resumido) return encabezado + nombres.join(', ');
+  const resto = nombres.length - CURSOS_VISIBLES;
+  return `${encabezado}${nombres.slice(0, CURSOS_VISIBLES).join(', ')} y ${resto} más`;
+};
 
 // Figma > HU-45 > "Asignar bloque horario" (modal sin subgrupos, 863:56080). Diferencias acordadas con Figma: el botón
 // se llama «Asignar» o «Actualizar» (no «Guardar cambios»: solo cambia el borrador), el docente es un campo
@@ -154,62 +170,79 @@ export const DialogoAsignarBloque = ({
           ) : (
             <>
               <div className="space-y-2">
+                {cursosSinDocente.length > 0 && (
+                  <Alert
+                    type="warning"
+                    size="sm"
+                    title={
+                      <span title={textoSinDocente(cursosSinDocente, false)}>
+                        {textoSinDocente(cursosSinDocente, true)}
+                      </span>
+                    }
+                    action={
+                      <Link
+                        to={paths.app.coordinador.planEvaluacion.getHref()}
+                        className="text-caption-1 text-content-tertiary underline underline-offset-2 hover:text-content-accent-secondary"
+                      >
+                        Ir a Plan de evaluación
+                      </Link>
+                    }
+                  />
+                )}
                 <p
                   className="text-label-3 text-content-tertiary"
                   id="curso-titulo"
                 >
                   Curso
                 </p>
-                <div
-                  role="group"
-                  aria-labelledby="curso-titulo"
-                  className="flex flex-wrap gap-2"
-                >
-                  {opciones.cursos.map((c) => {
-                    const asignadas = horasAsignadasEnBorrador(
-                      c,
-                      guardadas,
-                      borrador,
-                      existente,
-                    );
-                    const agotado = asignadas >= c.horasSemanales;
-                    return (
-                      <SelectableTag
-                        key={c.planCursoId}
-                        size="md"
-                        selected={c.planCursoId === planCursoId}
-                        disabled={!c.docente || agotado}
-                        aria-pressed={c.planCursoId === planCursoId}
-                        onClick={() => setPlanCursoId(c.planCursoId)}
-                      >
-                        {c.nombre} · {asignadas}/{c.horasSemanales} h
-                      </SelectableTag>
-                    );
-                  })}
-                </div>
-                {cursosSinDocente.length > 0 && (
+                {opciones.cursos.length === 0 ? (
                   <Alert
-                    type="warning"
-                    title={`Sin docente: ${cursosSinDocente.map((c) => c.nombre).join(', ')}`}
+                    type="info"
+                    size="sm"
+                    title="Esta sección no tiene cursos en el plan de evaluación."
                     action={
                       <Link
                         to={paths.app.coordinador.planEvaluacion.getHref()}
-                        className="text-label-2 font-medium text-content-accent-secondary underline-offset-4 hover:underline"
+                        className="text-caption-1 text-content-tertiary underline underline-offset-2 hover:text-content-accent-secondary"
                       >
                         Ir a Plan de evaluación
                       </Link>
                     }
+                  />
+                ) : (
+                  <div
+                    role="group"
+                    aria-labelledby="curso-titulo"
+                    className="flex flex-wrap gap-2"
                   >
-                    Asigna un docente en Plan de evaluación para poder ubicar el
-                    curso en el horario.
-                  </Alert>
+                    {opciones.cursos.map((c) => {
+                      const asignadas = horasAsignadasEnBorrador(
+                        c,
+                        guardadas,
+                        borrador,
+                        existente,
+                      );
+                      const agotado = asignadas >= c.horasSemanales;
+                      return (
+                        <SelectableTag
+                          key={c.planCursoId}
+                          size="md"
+                          selected={c.planCursoId === planCursoId}
+                          disabled={!c.docente || agotado}
+                          aria-pressed={c.planCursoId === planCursoId}
+                          onClick={() => setPlanCursoId(c.planCursoId)}
+                        >
+                          {c.nombre} · {asignadas}/{c.horasSemanales} h
+                        </SelectableTag>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
 
               <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
                 <Select
                   label="Docente"
-                  placeholder="Docente"
                   disabled
                   value={curso?.docente?.id ?? ''}
                   onChange={() => undefined}
@@ -226,7 +259,6 @@ export const DialogoAsignarBloque = ({
                 />
                 <Select
                   label="Ambiente"
-                  placeholder="Ambiente"
                   value={ambienteId}
                   onChange={(e) => setAmbienteId(e.target.value)}
                   options={opciones.ambientes.map((a) => ({
@@ -237,7 +269,7 @@ export const DialogoAsignarBloque = ({
               </div>
 
               {crucesDelBloque.length > 0 && (
-                <Alert type="warning" title="Cruce de horario">
+                <Alert type="warning" size="sm" title="Cruce de horario">
                   {crucesDelBloque.map((c) => (
                     <span key={`${c.tipo}-${c.mensaje}`} className="block">
                       {c.mensaje}

@@ -19,7 +19,8 @@ type DatosDelHorarioProps = {
 };
 
 // Figma > HU-45 > "Datos del Horario": año académico, grado, sección y tutor. En cascada: el grado se habilita con el
-// año y la sección con el grado. El tutor es de solo lectura y sale de la sección (en Figma se dibuja como un select).
+// año y la sección con el grado; ninguno trae un valor puesto (sin placeholders: la etiqueta va dentro del campo y sube
+// al elegir). El tutor es de solo lectura y sale de la sección (en Figma se dibuja como un select).
 export const DatosDelHorario = ({
   anios,
   grados,
@@ -32,7 +33,11 @@ export const DatosDelHorario = ({
   onGrado,
   onSeccion,
 }: DatosDelHorarioProps) => {
-  const grado = grados.find((g) => g.codigo === gradoCodigo);
+  // Solo los grados que tienen secciones para elegir: el backend devuelve los 11 (los de primaria, vacíos).
+  const gradosConSecciones = grados.filter(
+    (g) => g.cantidadSeccionesActivas > 0,
+  );
+  const grado = gradosConSecciones.find((g) => g.codigo === gradoCodigo);
   const secciones = (grado?.secciones ?? []).filter(
     (s) => s.estado === 'ACTIVA',
   );
@@ -40,7 +45,7 @@ export const DatosDelHorario = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Datos del Horario</CardTitle>
+        <CardTitle size="body-1">Datos del Horario</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-1 gap-6 pb-6 sm:grid-cols-2 lg:grid-cols-4">
         <Select
@@ -52,20 +57,16 @@ export const DatosDelHorario = ({
         />
         <Select
           label="Grado"
-          placeholder="Elige un grado"
-          disabled={bloqueado || !anioId}
+          disabled={bloqueado || gradosConSecciones.length === 0}
           value={gradoCodigo}
           onChange={(e) => onGrado(e.target.value)}
-          options={grados.map((g) => ({
+          options={gradosConSecciones.map((g) => ({
             label: g.nombre,
             value: g.codigo,
-            // Un grado sin secciones activas no tiene horario que armar.
-            disabled: g.cantidadSeccionesActivas === 0,
           }))}
         />
         <Select
           label="Sección"
-          placeholder="Elige una sección"
           disabled={bloqueado || !gradoCodigo}
           value={seccionId}
           onChange={(e) => onSeccion(e.target.value)}

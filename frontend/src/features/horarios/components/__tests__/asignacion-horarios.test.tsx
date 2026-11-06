@@ -10,8 +10,10 @@ import {
   PLAN_MATEMATICA,
   SECCION_5A,
   SECCION_5B,
+  gradosCoordinador,
   horarioDe,
   mensajeDeVersion,
+  opcionesCoordinador,
 } from '@/testing/mocks/fixtures/horarios-coordinador';
 import { server } from '@/testing/mocks/server';
 import {
@@ -64,12 +66,15 @@ const elegir = async (
   opcionElegida: string,
   raiz: HTMLElement = document.body,
 ) => {
+  // El grado y la sección se habilitan cuando llegan sus opciones.
+  await waitFor(() => expect(botonDelSelect(etiqueta, raiz)).toBeEnabled());
   await userEvent.click(botonDelSelect(etiqueta, raiz));
   await userEvent.click(await opcionDeLaLista(opcionElegida));
 };
 
 /** Abre la sección (el año activo ya viene elegido): 5.° de secundaria y la letra. */
 const abrirSeccion = async (letra: 'A' | 'B' | 'C' | 'D') => {
+  await elegir('Año académico', '2026');
   await elegir('Grado', '5.° de secundaria');
   await elegir('Sección', letra);
   await screen.findByRole('table', { name: 'Matriz horaria' });
@@ -96,25 +101,26 @@ const etiquetaDeCurso = (dialogo: HTMLElement, texto: string) =>
 
 const SIN_CAMBIOS = 'Tienes cambios sin guardar';
 
-test('los selectores van en cascada: la sección se habilita con el grado y el tutor sale de la sección', async () => {
+test('los selectores van en cascada: nada viene elegido y cada uno se habilita con el anterior', async () => {
   await mostrar();
   await screen.findByRole('heading', { name: 'Datos del Horario' });
 
-  // El año activo ya viene elegido; el grado está habilitado y la sección todavía no.
-  expect(selectNativo('Grado')).toBeEnabled();
+  // Al abrir, el año está vacío: el grado y la sección esperan.
+  expect(await screen.findByText('Año académico')).toBeInTheDocument();
+  expect(selectNativo('Año académico')).toHaveValue('');
+  expect(selectNativo('Año académico')).toBeEnabled();
+  expect(selectNativo('Grado')).toBeDisabled();
   expect(selectNativo('Sección')).toBeDisabled();
   expect(
     screen.getByText(/Elige un año, un grado y una sección/),
   ).toBeInTheDocument();
 
-  await userEvent.click(botonDelSelect('Grado'));
-  // Un grado sin secciones activas no se puede elegir.
-  expect(await opcionDeLaLista('1.° de primaria')).toHaveAttribute(
-    'aria-disabled',
-    'true',
-  );
-  await userEvent.click(await opcionDeLaLista('5.° de secundaria'));
-  expect(selectNativo('Sección')).toBeEnabled();
+  await elegir('Año académico', '2026');
+  await waitFor(() => expect(selectNativo('Grado')).toBeEnabled());
+  expect(selectNativo('Sección')).toBeDisabled();
+
+  await elegir('Grado', '5.° de secundaria');
+  await waitFor(() => expect(selectNativo('Sección')).toBeEnabled());
 
   await elegir('Sección', 'A');
   await screen.findByRole('table', { name: 'Matriz horaria' });
@@ -125,6 +131,81 @@ test('los selectores van en cascada: la sección se habilita con el grado y el t
   await waitFor(() =>
     expect(screen.getByLabelText('Tutor')).toHaveValue('Sin asignar'),
   );
+});
+
+test('el selector de grado solo ofrece los grados con secciones', async () => {
+  await mostrar();
+  await elegir('Año académico', '2026');
+
+  await waitFor(() => expect(botonDelSelect('Grado')).toBeEnabled());
+  await userEvent.click(botonDelSelect('Grado'));
+  const lista = await screen.findByRole('listbox');
+  // El backend manda los 11 grados; los de primaria no tienen secciones y no se ofrecen.
+  expect(
+    within(lista)
+      .getAllByRole('option')
+      .map((o) => o.textContent),
+  ).toEqual(['4.° de secundaria', '5.° de secundaria']);
+});
+
+test('si el año no tiene grados con secciones, el selector de grado queda sin opciones y deshabilitado', async () => {
+  server.use(
+    http.get(`${API}/horarios/anios-escolares/:anioId/secciones`, () =>
+      HttpResponse.json(
+        gradosCoordinador.map((g) => ({
+          ...g,
+          cantidadSeccionesActivas: 0,
+          secciones: [],
+        })),
+      ),
+    ),
+  );
+  await mostrar();
+  await elegir('Año académico', '2027');
+
+  await waitFor(() => expect(selectNativo('Grado')).toBeDisabled());
+  expect(within(selectNativo('Grado')).queryAllByRole('option')).toHaveLength(
+    0,
+  );
+});
+
+test('las tarjetas llevan su título en Body/Body-1/Medium (18 px, medium)', async () => {
+  await mostrar();
+  const datos = await screen.findByRole('heading', {
+    name: 'Datos del Horario',
+  });
+  await abrirSeccion('A');
+  const matriz = screen.getByRole('heading', { name: 'Matriz horaria' });
+
+  for (const titulo of [datos, matriz]) {
+    expect(titulo).toHaveClass('text-body-1', 'font-medium');
+    expect(titulo).not.toHaveClass('text-h6');
+  }
+});
+
+test('ningún campo de la pantalla usa placeholder: los vacíos muestran solo su etiqueta', async () => {
+  await mostrar();
+  await screen.findByText('Año académico');
+
+  expect(
+    screen.queryByText(/Elige un grado|Elige una sección/),
+  ).not.toBeInTheDocument();
+  // Los selectores vacíos no muestran texto en el campo, solo la etiqueta que lo acompaña.
+  for (const etiqueta of ['Año académico', 'Grado', 'Sección']) {
+    expect(botonDelSelect(etiqueta)).toHaveTextContent('');
+  }
+  expect(screen.getByLabelText('Tutor')).not.toHaveAttribute(
+    'placeholder',
+    'Tutor',
+  );
+  // La única opción "vacía" de cada select es la oculta, sin texto.
+  screen
+    .getAllByRole('option', { hidden: true })
+    .filter((o) => (o as HTMLOptionElement).value === '')
+    .forEach((opcion) => {
+      expect(opcion).toHaveTextContent('');
+      expect(opcion).toHaveAttribute('hidden');
+    });
 });
 
 test('modo lectura: celdas asignadas con curso, docente y aula; las vacías son grises, sin «+» y no se abren', async () => {
@@ -204,6 +285,7 @@ test('un horario con cruces marca la celda y avisa en la página con el mensaje 
 
 test('sin horario ni estructura principal muestra el mensaje del backend como estado vacío', async () => {
   const { container } = await mostrar();
+  await elegir('Año académico', '2026');
   await elegir('Grado', '4.° de secundaria');
   await elegir('Sección', 'A');
 
@@ -225,6 +307,7 @@ test('una sección que no existe muestra el mensaje del backend', async () => {
     ),
   );
   await mostrar();
+  await elegir('Año académico', '2026');
   await elegir('Grado', '5.° de secundaria');
   await elegir('Sección', 'B');
 
@@ -728,4 +811,161 @@ test('no aparece nada de subgrupos en la pantalla', async () => {
   expect(container).not.toHaveTextContent(/subgrupo/i);
   const dialogo = await abrirBloque('Martes', 1);
   expect(dialogo).not.toHaveTextContent(/subgrupo/i);
+});
+
+test('modal: el campo Docente vacío muestra solo su etiqueta, sin texto de placeholder', async () => {
+  await mostrar();
+  await abrirSeccion('A');
+  await editar();
+
+  const dialogo = await abrirBloque('Martes', 1);
+  // Antes de elegir curso: deshabilitado y vacío; «Docente» aparece una sola vez (la etiqueta).
+  expect(selectNativo('Docente', dialogo)).toBeDisabled();
+  expect(botonDelSelect('Docente', dialogo)).toHaveTextContent('');
+  expect(within(dialogo).getAllByText('Docente')).toHaveLength(1);
+  // Con valor, el campo muestra el nombre.
+  await userEvent.click(etiquetaDeCurso(dialogo, 'Matemática · 1/3 h'));
+  expect(botonDelSelect('Docente', dialogo)).toHaveTextContent(
+    'Pedro García Ramos',
+  );
+});
+
+test('modal: con muchos cursos sin docente el aviso es compacto y la lista completa va en el título', async () => {
+  const nombres = [
+    'Aritmética',
+    'Arte y Cultura',
+    'Biología',
+    'Comunicación',
+    'Educación Física',
+    'Física',
+    'Geometría',
+    'Historia',
+    'Inglés',
+  ];
+  server.use(
+    http.get(`${API}/horarios/secciones/${SECCION_5A}/opciones`, () =>
+      HttpResponse.json({
+        ...opcionesCoordinador(SECCION_5A),
+        cursos: nombres.map((nombre, i) => ({
+          planCursoId: `plan-${i}`,
+          nombre,
+          horasSemanales: 2,
+          horasAsignadas: 0,
+          docente: null,
+        })),
+      }),
+    ),
+  );
+  await mostrar();
+  await abrirSeccion('A');
+  await editar();
+
+  const dialogo = await abrirBloque('Martes', 1);
+  const resumen = within(dialogo).getByText(
+    'Sin docente (9 cursos): Aritmética, Arte y Cultura, Biología y 6 más',
+  );
+  expect(resumen).toHaveAttribute(
+    'title',
+    `Sin docente (9 cursos): ${nombres.join(', ')}`,
+  );
+  // El aviso es la variante pequeña: letra y relleno reducidos, con el enlace discreto.
+  const aviso = within(dialogo).getByRole('alert');
+  expect(aviso).toHaveClass('py-1.5');
+  expect(resumen.closest('p')).toHaveClass('text-label-3');
+  expect(
+    within(aviso).getByRole('link', { name: 'Ir a Plan de evaluación' }),
+  ).toHaveClass('text-caption-1');
+});
+
+test('modal: el aviso de cruce también es la variante pequeña', async () => {
+  await mostrar();
+  await abrirSeccion('B');
+  await editar();
+
+  const dialogo = await abrirBloque('Lunes', 1);
+  await userEvent.click(etiquetaDeCurso(dialogo, 'Física · 0/2 h'));
+  await elegir('Ambiente', 'Laboratorio de ciencias', dialogo);
+
+  const aviso = await within(dialogo).findByText(
+    CRUCE_DE_AMBIENTE_NUEVO,
+    undefined,
+    {
+      timeout: 3000,
+    },
+  );
+  expect(aviso.closest('[role="alert"]')).toHaveClass('py-1.5');
+});
+
+test('modal: la lista del Ambiente flota fuera del diálogo (en el body) y elegir una opción no cierra el modal', async () => {
+  await mostrar();
+  await abrirSeccion('A');
+  await editar();
+
+  const dialogo = await abrirBloque('Martes', 1);
+  await userEvent.click(botonDelSelect('Ambiente', dialogo));
+
+  const lista = await screen.findByRole('listbox');
+  // Cuelga del body y no del diálogo: no le suma altura ni scroll, y el borde del modal no la recorta.
+  expect(dialogo.contains(lista)).toBe(false);
+  expect(lista.parentElement).toBe(document.body);
+  expect(lista).toHaveClass('fixed');
+  expect(
+    Number(getComputedStyle(lista).maxHeight.replace('px', '')),
+  ).toBeGreaterThan(0);
+
+  await userEvent.click(await opcionDeLaLista('A-401'));
+  expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
+  expect(screen.getByRole('dialog')).toBeInTheDocument();
+  expect(selectNativo('Ambiente', dialogo)).toHaveValue(AMBIENTE_A401);
+});
+
+test('modal: el aviso de cursos sin docente va arriba de los cursos', async () => {
+  await mostrar();
+  await abrirSeccion('A');
+  await editar();
+
+  const dialogo = await abrirBloque('Martes', 1);
+  const aviso = within(dialogo).getByRole('alert');
+  const cursos = within(dialogo).getByRole('group', { name: 'Curso' });
+  expect(aviso).toHaveTextContent('Sin docente: Geometría');
+
+  // El aviso está antes que el título «Curso» y que las etiquetas de los cursos.
+  expect(
+    aviso.compareDocumentPosition(cursos) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    aviso.compareDocumentPosition(within(dialogo).getByText('Curso')) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+});
+
+test('modal: si la sección no tiene cursos en el plan muestra el mensaje y el enlace a Plan de evaluación', async () => {
+  server.use(
+    http.get(`${API}/horarios/secciones/${SECCION_5A}/opciones`, () =>
+      HttpResponse.json({ ...opcionesCoordinador(SECCION_5A), cursos: [] }),
+    ),
+  );
+  await mostrar();
+  await abrirSeccion('A');
+  await editar();
+
+  await userEvent.click(within(celda('Martes', 1)).getByRole('button'));
+  const dialogo = await modal();
+
+  expect(
+    await within(dialogo).findByText(
+      'Esta sección no tiene cursos en el plan de evaluación.',
+    ),
+  ).toBeVisible();
+  expect(
+    within(dialogo).getByRole('link', { name: 'Ir a Plan de evaluación' }),
+  ).toHaveAttribute('href', expect.stringContaining('plan-evaluacion'));
+  // No hay etiquetas de cursos ni aviso de «sin docente», y no se puede asignar nada.
+  expect(
+    within(dialogo).queryByRole('group', { name: 'Curso' }),
+  ).not.toBeInTheDocument();
+  expect(within(dialogo).queryByText(/Sin docente/)).not.toBeInTheDocument();
+  expect(
+    within(dialogo).getByRole('button', { name: 'Asignar' }),
+  ).toBeDisabled();
 });

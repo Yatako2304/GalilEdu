@@ -10,6 +10,7 @@ import {
 } from '@/testing/test-utils';
 
 import { Accordion } from '../accordion';
+import { Card, CardHeader, CardTitle } from '../card';
 import { Calendar, DatePicker } from '../date-picker';
 import { Form, Input, Select, TagField, Textarea } from '../form';
 import { ProgressBar } from '../progress-bar';
@@ -455,4 +456,26 @@ test('ScheduleBlock: con un cruce se marca como advertencia y muestra su mensaje
   );
   expect(mensaje).toBeVisible();
   expect(mensaje.closest('div')).toHaveClass('border-stroke-warning');
+});
+
+test('CardTitle: por defecto es el título de Figma (h6, regular) y con size="body-1" es Body/Body-1/Medium', () => {
+  rtlRender(
+    <Card>
+      <CardHeader>
+        <CardTitle>Título por defecto</CardTitle>
+        <CardTitle size="body-1">Título Body-1</CardTitle>
+      </CardHeader>
+    </Card>,
+  );
+
+  expect(
+    screen.getByRole('heading', { name: 'Título por defecto' }),
+  ).toHaveClass('text-h6', 'font-normal');
+  const medio = screen.getByRole('heading', { name: 'Título Body-1' });
+  expect(medio).toHaveClass(
+    'text-body-1',
+    'font-medium',
+    'text-content-primary',
+  );
+  expect(medio).not.toHaveClass('text-h6');
 });
