@@ -1,14 +1,14 @@
 # Horarios
 
 - **HU:** HU-45 (iteración 2) · HU-46 (2) · HU-49, 50, 51 · (HU-47, 48 en la 3)
-- **Estado:** 🚧 HU-45 hecha (backend y pantalla del Coordinador) y HU-46 hecha (backend)
+- **Estado:** 🚧 HU-45 hecha (backend y pantalla del Coordinador); HU-46 hecha (backend); HU-51 hecha (horario del Apoderado)
 - **Última actualización:** 2026-11-06
 
 ## Alcance
 
 El Coordinador arma el horario semanal de cada sección: elige el curso del plan de evaluación y el ambiente de cada bloque. Un **bloque** no es una fila de catálogo: es el par (día, número de bloque) dentro de la jornada de la estructura horaria, y sus horas se calculan (`CalculadoraJornada` de Configuración). El docente de un bloque **no se guarda**: es el de `academico.docente_seccion` para (curso del plan, sección).
 
-Figma: Coordinador › «HU-45: Asignación de docente y curso a un bloque de horario» (619:2757, 286:14702, 248:9344) y su modal «Asignar bloque horario» (863:56080). HU-46: modal con cruce (296:17801). HU-49: horario del docente y del tutor (393:18119), en `/app/docente/horario` y `/app/tutor/horario`. El horario de lectura de Estudiante y Apoderado (HU-50/51) es otro endpoint y todavía usa datos simulados.
+Figma: Coordinador › «HU-45: Asignación de docente y curso a un bloque de horario» (619:2757, 286:14702, 248:9344) y su modal «Asignar bloque horario» (863:56080). HU-46: modal con cruce (296:17801). HU-49: horario del docente y del tutor (393:18119), en `/app/docente/horario` y `/app/tutor/horario`. El horario de lectura del Apoderado (HU-51) tiene sus propios endpoints (ver abajo); el del Estudiante (HU-50, Could) todavía usa datos simulados.
 
 ## Base de datos
 
@@ -29,6 +29,21 @@ Figma: Coordinador › «HU-45: Asignación de docente y curso a un bloque de ho
 | GET | `/horarios/secciones/{seccionId}/opciones` | Cursos del plan con `horasSemanales`, `horasAsignadas` y docente, y ambientes activos |
 | PUT | `/horarios/secciones/{seccionId}` | Guarda la matriz **completa** `{version, celdas}` en una transacción con el bloqueo del año. La cabecera nueva nace con `version = 0` y cada guardado con cambios sube 1. 400/404/409 (ver la tabla de `backend/README.md`) |
 | POST | `/horarios/secciones/{seccionId}/cruces` | Cruces de un borrador de celdas antes de guardar (HU-46): `{celdas}` → lista de cruces, vacía si no hay. No escribe ni bloquea el año. Está en `CrucesHorarioController`, no en `HorarioController`. 400/404/409 (ver [Cruces de horario](#cruces-de-horario-hu-46)) |
+
+## Horario del apoderado (HU-51, scuro-star)
+
+Figma: Apoderado (real) › «Horario» (1069:3629: selector del hijo, «Descargar Horario» y matriz) y Apoderado › «HU-51 Consulta de horario de clases de sección para el Apoderado» (429:1456: «Datos del horario» con año académico, grado y sección, y tutora con teléfono y correo). Solo lectura; no toca nada del Coordinador.
+
+| Método | Ruta | Qué hace |
+| --- | --- | --- |
+| GET | `/horarios/apoderado/estudiantes` | Hijos **matriculados** (estado MATRICULADO) del usuario, con sus matrículas `{anio, grado, nivel, seccion}` del año más reciente al más antiguo |
+| GET | `/horarios/apoderado/estudiantes/{id}/horario?anio=` | Horario de la sección del hijo ese año (sin `anio`, el más reciente), con el tutor (nombre, celular y correo), la `jornada` y las `clases` (curso, docente y aula). `disponible = false` si el Coordinador aún no guardó el horario. 404 «No encontramos el horario de este estudiante.» si no es su hijo o no está matriculado ese año |
+
+- **Rol APODERADO** (`HorarioApoderadoController`). Un hijo es un estudiante no eliminado vinculado al usuario como padre, madre o apoderado (persona no fallecida).
+- **Sin migración.** `HijosDelApoderado` (`HijosDelApoderadoSql`) lee por SQL de solo lectura usuario, vínculo familiar, matrícula y sección, como los demás adaptadores del módulo. La matriz la arma `ServicioHorarios.horarioDeSeccion` (la misma del Coordinador, sin cambios) y `ServicioHorarioApoderado` la reduce a lo que ve el apoderado: sin versión, cruces ni ids del plan.
+- **Frontend:** `features/horarios/components/horario-apoderado.tsx` (arma su encabezado porque «Descargar Horario» depende del horario elegido), `api/horario-apoderado.ts` y `lib/horario-apoderado.ts` (pasa la jornada y las clases a la forma de `MatrizHoraria` y arma la página para descargar). Ruta: `app/routes/app/apoderado/horarios.tsx`. La vista del Estudiante (`mi-horario.tsx`, HU-50) no cambió.
+- **«Descargar Horario»** abre el horario en una pestaña nueva y el diálogo de impresión del navegador, donde se guarda como PDF (no se agregó una librería de PDF). Deshabilitado si el horario no está disponible.
+- **Subgrupos** (HU-47, iteración 3): no se muestran; cada bloque tiene un solo curso.
 
 ## Reglas que valida el PUT (`ReglasDelHorario`)
 
@@ -120,15 +135,16 @@ El PUT toma el **bloqueo del año** (`bloquearAnioParaHorarios`) **antes** de le
 
 - Backend: `backend/src/main/java/com/galiledu/horarios/` (`dominio`: `HorarioSeccion`, `HorarioBloque`; `aplicacion`: `ServicioHorarios`, `ReglasDelHorario`, `ResolutorDeJornada`, `ConversorDeBloquesDeJornada`, `DtosHorarios` y las interfaces `ValidadorCruces`, `OcupacionHorarios` y `ConversorDeBloques`; `infraestructura`: repositorios y los adaptadores SQL de solo lectura `DatosDeSeccionSql`, `PlanDeSeccionSql`, `AmbientesActivosSql`, `AniosYSeccionesSql`, `OcupacionHorariosSql` y `JornadaDeSeccionConfiguracion`; `web`: `HorarioController`). HU-46: `ValidadorCrucesHorario`, `MensajesCruce`, `ServicioCrucesHorario` y `SolicitudCruces` (en `aplicacion`, el validador reemplaza a `ValidadorCrucesStub`) y `web/CrucesHorarioController`. Configuración consulta el uso de una estructura con `UsoDeEstructura` (`UsoDeEstructuraSql`): ver [Configuración](configuracion.md#estructuras-con-horarios-armados-hu-45).
 - Frontend: `frontend/src/features/horarios/` (`asignacion-horarios`, `matriz-coordinador`, `dialogo-asignar-bloque`, `barra-acciones`, `datos-del-horario` y las llamadas de `api/`). Ruta: `app/routes/app/coordinador/horarios.tsx`. Los tipos del coordinador están en el feature (`types.ts`): `types/api.ts` tiene los del horario de lectura de la P2.
-- Pruebas: `backend/src/test/java/com/galiledu/horarios/` y `frontend/src/features/horarios/`. HU-46: `aplicacion/ValidadorCrucesHorarioTests`, `MensajesCruceTests` y `ServicioCrucesHorarioTests` (sin Spring ni BD), `CrucesHorarioIT` (endpoint), `HorarioConValidadorRealIT` (PUT y GET con el validador real) y `CrucesConcurrenciaIT` (dos guardados a la vez). `HorarioCrucesIT` sigue usando un validador de mentira para el PUT y el GET de la HU-45.
+- Pruebas: `backend/src/test/java/com/galiledu/horarios/` y `frontend/src/features/horarios/`. HU-46: `aplicacion/ValidadorCrucesHorarioTests`, `MensajesCruceTests` y `ServicioCrucesHorarioTests` (sin Spring ni BD), `CrucesHorarioIT` (endpoint), `HorarioConValidadorRealIT` (PUT y GET con el validador real) y `CrucesConcurrenciaIT` (dos guardados a la vez). `HorarioCrucesIT` sigue usando un validador de mentira para el PUT y el GET de la HU-45. HU-51: `HorarioApoderadoIT`, `horario-apoderado.test.tsx` y `lib/__tests__/horario-apoderado.test.ts`.
 
 ## Pendientes
 
 - [x] **HU-46 (backend):** `ValidadorCruces` real y `POST /horarios/secciones/{id}/cruces`.
+- [x] Horario del Apoderado (HU-51) con datos reales.
+- [ ] Horario del Estudiante (HU-50, Could): sigue con MSW (`/horarios/mi-seccion`).
 - [ ] Decidir con el PO si el PUT debe rechazar solo los cruces de las celdas nuevas o modificadas. Hoy rechaza cualquier cruce de la matriz (decisión 4 de Valeria).
 - [ ] Mostrar el ambiente con su código (A-502, como en Figma) en vez de su nombre: `OcupacionHorariosSql` y la matriz.
 - [ ] Avisar al Coordinador cuando un cambio de titular en Académico crea un cruce.
-- [ ] Horario de lectura de Estudiante y Apoderado (HU-50/51) con datos reales; hoy usa MSW.
 - [ ] Subgrupos (HU-47, iteración 3): traerán su propia migración (tabla `grupo`, `horario_bloque.grupo_id` y `docente_id`).
 - [ ] Código automático de la estructura horaria y la regla de «principal compatible» (ver [Configuración](configuracion.md)).
 - [ ] Registrar en una sola entrada de `docs/decisiones/` las decisiones de la HU-45 (docente derivado, versión, cascade, `DiaSemana` compartido, reglas de Configuración con horarios armados y el hueco de editar hora de entrada, duración o recesos).

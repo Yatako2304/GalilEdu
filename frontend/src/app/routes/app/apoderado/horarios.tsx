@@ -1,13 +1,9 @@
-import { ContentLayout } from '@/components/layouts';
-import { MiHorario } from '@/features/horarios/components/mi-horario';
+import { HorarioApoderado } from '@/features/horarios/components/horario-apoderado';
 
-// Figma: HU-51 Consulta de horario de clases de sección para el Apoderado
+// Figma: Apoderado (real) > "Horario" y Apoderado > "HU-51 Consulta de horario de clases de sección para el
+// Apoderado". El encabezado lo arma el feature (el botón "Descargar Horario" depende del horario elegido).
 const ApoderadoHorariosRoute = () => {
-  return (
-    <ContentLayout title="Horario">
-      <MiHorario />
-    </ContentLayout>
-  );
+  return <HorarioApoderado />;
 };
 
 export default ApoderadoHorariosRoute;
