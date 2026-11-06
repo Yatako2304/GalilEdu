@@ -155,6 +155,10 @@ public class Usuario {
 		roles.add(rol);
 	}
 
+	public void quitarRol(Rol rol) {
+		roles.remove(rol);
+	}
+
 	public void reemplazarRoles(Set<Rol> nuevos) {
 		roles.clear();
 		roles.addAll(nuevos);

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -138,24 +139,62 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 						.value("El estudiante está matriculado: no se puede cambiar el grado ni el año académico"));
 	}
 
+	/** Validación de la iteración 1 con el PO: cada familiar presente tiene cuenta, sea o no el responsable. */
 	@Test
-	void alCambiarElResponsableElNuevoTieneCuentaYLaDelAnteriorQuedaInactiva() throws Exception {
+	void alCambiarElResponsableAmbosConservanSuCuenta() throws Exception {
 		String id = inscribir();
+		assertThat(estadoCuenta(CORREO_MADRE)).isEqualTo("ACTIVO");
+		assertThat(estadoCuenta(CORREO_APODERADA)).isEqualTo("ACTIVO");
+
 		editar(id, d -> d.set("$.responsable", "APODERADO")
 				.set("$.correoResponsable", CORREO_APODERADA)
 				.set("$.celularResponsable", "999888777"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.cuentaNueva").value(true));
+				// La apoderada ya tenía cuenta desde la inscripción.
+				.andExpect(jsonPath("$.cuentaNueva").value(false));
 
 		assertThat(estadoCuenta(CORREO_APODERADA)).isEqualTo("ACTIVO");
+		assertThat(estadoCuenta(CORREO_MADRE)).isEqualTo("ACTIVO");
+	}
+
+	@Test
+	void quienDejaDeSerFamiliarPresenteQuedaInactivoYSiVuelveSeReactiva() throws Exception {
+		String id = inscribir();
+		// La madre pasa a "no registra" y la apoderada es la responsable.
+		editar(id, d -> d.set("$.madre", Map.of("noRegistra", true, "motivo", "No se conoce"))
+				.set("$.responsable", "APODERADO")
+				.set("$.correoResponsable", CORREO_APODERADA)
+				.set("$.celularResponsable", "999888777"))
+				.andExpect(status().isOk());
 		assertThat(estadoCuenta(CORREO_MADRE)).isEqualTo("INACTIVO");
 
-		// Si vuelve a ser responsable, su cuenta se reactiva.
-		editar(id, d -> d.set("$.responsable", "MADRE")
-				.set("$.correoResponsable", CORREO_MADRE)
-				.set("$.celularResponsable", "987333444"))
+		// Se vuelve a registrar a la madre (ya registrada: solo se vincula) y su cuenta se reactiva.
+		String personaMadre = JsonPath.read(mvc.perform(conToken(get("/estudiantes/personas")
+				.param("documento", "42345678"), personal)).andReturn().getResponse().getContentAsString(),
+				"$.personaId");
+		editar(id, d -> d.set("$.madre", Map.of("noRegistra", false, "personaId", personaMadre)))
 				.andExpect(status().isOk());
 		assertThat(estadoCuenta(CORREO_MADRE)).isEqualTo("ACTIVO");
+	}
+
+	@Test
+	void siSeMarcaFallecidaSuCuentaQuedaInactivaYDejaDeSerResponsable() throws Exception {
+		String id = inscribir();
+		// Siendo responsable, no se puede marcar fallecida.
+		editar(id, d -> d.set("$.madre.fallecido", true))
+				.andExpect(status().isBadRequest())
+				.andExpect(
+						jsonPath("$.message").value("El responsable de matrícula no puede ser una persona fallecida"));
+
+		editar(id, d -> d.set("$.madre.fallecido", true)
+				.set("$.responsable", "APODERADO")
+				.set("$.correoResponsable", CORREO_APODERADA)
+				.set("$.celularResponsable", "999888777"))
+				.andExpect(status().isOk());
+		assertThat(estadoCuenta(CORREO_MADRE)).isEqualTo("INACTIVO");
+		mvc.perform(conToken(get("/estudiantes/" + id), personal))
+				.andExpect(jsonPath("$.familia[?(@.parentesco == 'MADRE')].fallecido").value(true))
+				.andExpect(jsonPath("$.familia[?(@.parentesco == 'MADRE')].viveConEstudiante").value(false));
 	}
 
 	@Test

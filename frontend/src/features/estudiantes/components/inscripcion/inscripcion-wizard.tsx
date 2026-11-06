@@ -25,6 +25,7 @@ import {
   desdeEdicion,
   inscripcionSchema,
   inscripcionVacia,
+  presente,
   registra,
 } from './esquema';
 import { PasoEstudiante, PasoFichaMedica } from './pasos-estudiante';
@@ -63,11 +64,14 @@ const PasoResponsable = ({
       ['MADRE', 'Madre', v.madre],
       ['APODERADO', 'Apoderado', v.incluirApoderado ? v.apoderado : null],
     ] as const
-  ).filter(([, , f]) => f && registra(f)) as [string, string, FamiliarForm][];
+  )
+    // Un fallecido no puede ser responsable de matrícula.
+    .filter(([, , f]) => f && presente(f)) as [string, string, FamiliarForm][];
 
   const elegido = candidatos.find(([clave]) => clave === v.responsable)?.[2];
 
-  // Empieza marcado el primero de la lista; si el elegido ya no está (se cambió el Paso 3), vuelve al primero.
+  // Empieza marcado el primero de la lista; si el elegido ya no está (se cambió el Paso 3, por ejemplo se marcó
+  // fallecido), vuelve al primero.
   React.useEffect(() => {
     if (!elegido) {
       setValue(
@@ -91,8 +95,28 @@ const PasoResponsable = ({
     !aplica
       ? 'No aplica'
       : registra(f)
-        ? `${nombre(f)} · DNI ${f.persona.numeroDocumento} ${f.personaId ? '(ya registrado, vinculado)' : '(nuevo)'}`
+        ? `${nombre(f)} · DNI ${f.persona.numeroDocumento} ${f.personaId ? '(ya registrado, vinculado)' : '(nuevo)'}${f.fallecido ? ' · Fallecido(a)' : ''}`
         : `No registra${f.motivo ? ` · ${f.motivo}` : ''}`;
+
+  // Validación de la iteración 1 con el PO: cada padre, madre o apoderado presente tiene su usuario, no solo el
+  // responsable. El fallecido no tiene usuario.
+  const usuarios = (
+    [
+      ['Padre', v.padre],
+      ['Madre', v.madre],
+      ['Apoderado', v.incluirApoderado ? v.apoderado : null],
+    ] as const
+  )
+    .filter(([, f]) => f && registra(f))
+    .map(([rol, f]) => {
+      const familiar = f as FamiliarForm;
+      const estado = familiar.fallecido
+        ? 'fallecido(a): no tendrá usuario'
+        : familiar.tieneCuenta
+          ? 'ya tiene usuario'
+          : `se creará su usuario y las credenciales llegarán a ${familiar.persona.correo || 'su correo'}`;
+      return { rol, texto: `${nombre(familiar)} (${rol}): ${estado}.` };
+    });
 
   const resumen: [string, string][] = [
     [
@@ -127,19 +151,14 @@ const PasoResponsable = ({
       'Autorizados a recoger',
       `${v.autorizados.filter((a) => a.nombreCompleto).length + candidatos.length} personas`,
     ],
-    [
-      'Responsable de matrícula',
-      elegido
-        ? `${nombre(elegido)} ${elegido.tieneCuenta ? '(cuenta existente)' : '(se creará su usuario)'}`
-        : '—',
-    ],
+    ['Responsable de matrícula', elegido ? nombre(elegido) : '—'],
   ];
 
   return (
     <>
       <SeccionPaso
         titulo="Responsable de matrícula"
-        descripcion="Firma la matrícula, recibe las boletas y tiene el usuario en GalilEdu (un usuario por familia). Se elige entre el padre, la madre o el apoderado."
+        descripcion="Firma la matrícula y recibe las boletas. Se elige entre el padre, la madre o el apoderado presentes (no fallecidos)."
       >
         <div className="flex flex-col gap-3">
           {candidatos.map(([clave, rol, f]) => (
@@ -149,7 +168,7 @@ const PasoResponsable = ({
               label={`${nombre(f)} — ${rol}`}
               helperText={
                 f.tieneCuenta
-                  ? `Ya tiene usuario${f.aCargo.length ? `: es responsable de ${f.aCargo.join(', ')}` : ''}.`
+                  ? `Ya tiene usuario${f.aCargo.length ? `: está vinculado a ${f.aCargo.join(', ')}` : ''}.`
                   : 'No tiene usuario: se creará uno nuevo con su correo.'
               }
               {...register('responsable')}
@@ -179,6 +198,19 @@ const PasoResponsable = ({
             error={errores.celularResponsable}
           />
         </div>
+      </SeccionPaso>
+
+      <SeccionPaso
+        titulo="Usuarios en GalilEdu"
+        descripcion="Cada padre, madre o apoderado tiene su propio usuario."
+      >
+        <ul className="flex flex-col gap-2">
+          {usuarios.map(({ rol, texto }) => (
+            <li key={rol} className="text-body-3 text-content-secondary">
+              {texto}
+            </li>
+          ))}
+        </ul>
       </SeccionPaso>
 
       <SeccionPaso
@@ -317,6 +349,9 @@ export const InscripcionWizard = ({
       (clave) =>
         (clave !== 'apoderado' || v.incluirApoderado) &&
         registra(v[clave]) &&
+        // Un fallecido no tiene correo (no se pide).
+        !v[clave].fallecido &&
+        (v[clave].persona.correo ?? '').trim() !== '' &&
         (!v[clave].personaId ||
           correoGuardado.get(v[clave].personaId!) !==
             (v[clave].persona.correo ?? '').trim().toLowerCase()),

@@ -67,6 +67,20 @@ public record DatosPersona(
 		exigir(direccion, "Ingresa la dirección");
 	}
 
+	/**
+	 * Datos obligatorios de una persona que no tendrá cuenta ni contacto con el colegio (padre o madre fallecido en la
+	 * inscripción): sus datos de identidad, todos salvo el apellido materno. Documento, apellido paterno y nombres ya
+	 * los exigen las anotaciones.
+	 */
+	public void exigirIdentidad() {
+		exigir(fechaNacimiento, "Ingresa la fecha de nacimiento");
+		exigir(nacionalidad, "Selecciona la nacionalidad");
+		exigir(lugarNacimiento, "Selecciona el país de nacimiento");
+		exigir(sexo, "Selecciona el sexo");
+		exigir(estadoCivil, "Selecciona el estado civil");
+		exigir(gradoInstruccion, "Selecciona el grado de instrucción");
+	}
+
 	/** Copia los datos a la entidad, normalizando textos vacíos a null. */
 	public void aplicarA(Persona p) {
 		p.setTipoDocumento(tipoDocumento);

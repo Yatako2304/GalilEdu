@@ -67,3 +67,40 @@ test('el número de documento espera a que se elija el tipo', async () => {
   await renderApp(<Vacio />);
   expect(screen.getByLabelText(/n\.° de documento/i)).toBeDisabled();
 });
+
+// Validación de la iteración 1 con el PO: exalumno solo se pide a padres y apoderados.
+test('pide si es exalumno por defecto y lo oculta con sinExalumno', async () => {
+  const ConExalumno = ({ sinExalumno }: { sinExalumno?: boolean }) => {
+    const form = useForm({ defaultValues: { persona: personaVacia() } });
+    return (
+      <PersonaFields
+        register={form.register}
+        prefix="persona"
+        sinExalumno={sinExalumno}
+      />
+    );
+  };
+
+  const { unmount } = await renderApp(<ConExalumno />);
+  expect(
+    screen.getByLabelText('Es exalumno(a) del colegio'),
+  ).toBeInTheDocument();
+  unmount();
+
+  await renderApp(<ConExalumno sinExalumno />);
+  expect(
+    screen.queryByLabelText('Es exalumno(a) del colegio'),
+  ).not.toBeInTheDocument();
+});
+
+// Apellido materno y teléfono de casa siempre son opcionales y lo dicen (padre, madre, apoderado y usuarios).
+test('apellido materno y teléfono de casa dicen "(opcional)"; el celular no', async () => {
+  await renderApp(<Formulario tipoDocumento="DNI" />);
+  expect(
+    screen.getByLabelText('Apellido materno (opcional)'),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByLabelText('Teléfono de casa (opcional)'),
+  ).toBeInTheDocument();
+  expect(screen.getByLabelText('Celular')).toBeInTheDocument();
+});
