@@ -82,6 +82,39 @@ public class ConsultasMatricula {
 				.optional();
 	}
 
+	/**
+	 * HU-31: matrícula PENDIENTE_PAGO → MATRICULADO con su código MAT-AAAA-NNNN (correlativo por año) y la fecha de
+	 * confirmación (RF-68). Devuelve el código, o vacío si la matrícula no estaba pendiente de pago.
+	 */
+	public Optional<String> matricularPorPago(UUID matriculaId, OffsetDateTime ahora) {
+		Optional<Integer> anio = jdbc.sql("""
+				SELECT a.anio FROM matricula.matricula m JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
+				WHERE m.id = ? AND m.estado = 'PENDIENTE_PAGO'
+				FOR UPDATE OF m""")
+				.param(matriculaId)
+				.query(Integer.class)
+				.optional();
+		return anio.map(a -> {
+			int numero = jdbc.sql("""
+					INSERT INTO matricula.correlativo_matricula (anio, ultimo) VALUES (:anio, 1)
+					ON CONFLICT (anio) DO UPDATE SET ultimo = matricula.correlativo_matricula.ultimo + 1
+					RETURNING ultimo""")
+					.param("anio", a)
+					.query(Integer.class)
+					.single();
+			String codigo = "MAT-%d-%04d".formatted(a, numero);
+			jdbc.sql("""
+					UPDATE matricula.matricula
+					SET estado = 'MATRICULADO', codigo = :codigo, confirmado_en = :ahora, actualizado_en = :ahora
+					WHERE id = :id""")
+					.param("codigo", codigo)
+					.param("ahora", ahora)
+					.param("id", matriculaId)
+					.update();
+			return codigo;
+		});
+	}
+
 	public int documentosRequeridos(UUID periodoId) {
 		return jdbc.sql("SELECT count(*) FROM matricula.documento_requerido WHERE periodo_matricula_id = ?")
 				.param(periodoId)

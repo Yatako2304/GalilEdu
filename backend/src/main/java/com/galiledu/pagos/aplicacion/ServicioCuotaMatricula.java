@@ -20,7 +20,6 @@ import com.galiledu.pagos.dominio.EstadoCuota;
 import com.galiledu.pagos.infraestructura.CompromisoPagoRepositorio;
 import com.galiledu.pagos.infraestructura.ConsultasPagos;
 import com.galiledu.pagos.infraestructura.ConsultasPagos.DescuentoActivo;
-import com.galiledu.pagos.infraestructura.ConsultasPagos.FilaCuotaMatricula;
 import com.galiledu.pagos.infraestructura.ConsultasPagos.MatriculaParaPagos;
 
 /**
@@ -86,10 +85,16 @@ public class ServicioCuotaMatricula {
 	/** RF-80: estado de la cuota de matrícula; 404 si todavía no se generó. */
 	@Transactional(readOnly = true)
 	public CuotaMatriculaDetalle consultar(UUID matriculaId) {
-		FilaCuotaMatricula f = consultas.cuotaMatricula(matriculaId)
+		return buscar(matriculaId)
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("La matrícula aún no tiene cuota de matrícula."));
-		return new CuotaMatriculaDetalle(f.cuotaId(), f.compromisoId(), f.estudianteId(), f.anio(), f.concepto(),
-				f.montoBase(), f.montoDescuento(), f.montoFinal(), f.montoPagado(), f.fechaVencimiento(),
-				EstadoCuota.valueOf(f.estado()), f.fechaPago(), f.responsable());
+	}
+
+	/** Igual que {@link #consultar}, sin error si aún no existe (la usa Matrícula para HU-31). */
+	@Transactional(readOnly = true)
+	public Optional<CuotaMatriculaDetalle> buscar(UUID matriculaId) {
+		return consultas.cuotaMatricula(matriculaId)
+				.map(f -> new CuotaMatriculaDetalle(f.cuotaId(), f.compromisoId(), f.estudianteId(), f.anio(),
+						f.concepto(), f.montoBase(), f.montoDescuento(), f.montoFinal(), f.montoPagado(),
+						f.fechaVencimiento(), EstadoCuota.valueOf(f.estado()), f.fechaPago(), f.responsable()));
 	}
 }

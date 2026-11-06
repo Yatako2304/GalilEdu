@@ -1,4 +1,5 @@
 import { Check, ChevronDown } from 'lucide-react';
+import * as React from 'react';
 
 import { Alert } from '@/components/ui/alert';
 import { Avatar } from '@/components/ui/avatar';
@@ -18,7 +19,6 @@ import {
   EstadoMatricula,
   EstadoMatriculaApoderado,
   HijoApoderado,
-  MatriculaActual,
 } from '@/types/api';
 
 import { DocumentosApoderado } from './documentos-apoderado';
@@ -255,7 +255,9 @@ const DeudaPendiente = ({
 );
 
 // Figma > HU-29, HU-31 y HU-32: el aviso cambia con la etapa de la matrícula.
-const avisoDelEstado = (matricula?: MatriculaActual | null) => {
+const avisoDelEstado = (estado?: EstadoMatriculaApoderado) => {
+  const matricula = estado?.matricula;
+  const pago = estado?.pagoMatricula;
   switch (matricula?.estado) {
     case 'EN_VALIDACION':
       return (
@@ -267,7 +269,10 @@ const avisoDelEstado = (matricula?: MatriculaActual | null) => {
     case 'PENDIENTE_PAGO':
       return (
         <Alert type="warning" title="Documentación validada">
-          Ya puedes pagar la cuota de matrícula para completar el proceso.
+          {/* Figma > HU-31: monto y fecha de la cuota cuando ya se generó. */}
+          {pago
+            ? `Se generó la cuota de matrícula de ${soles(pago.monto)}. Págala antes del ${fechaDeuda(pago.fechaVencimiento)} para confirmar la matrícula.`
+            : 'Ya puedes pagar la cuota de matrícula para completar el proceso.'}
         </Alert>
       );
     case 'MATRICULADO':
@@ -290,6 +295,8 @@ type ConsultaMatriculaProps = {
   estado?: EstadoMatriculaApoderado;
   isLoading: boolean;
   onElegir: (id: string) => void;
+  /** HU-31: tarjeta "Pago de matrícula" (la arma la ruta con el módulo de pagos). */
+  pagoMatricula?: React.ReactNode;
 };
 
 export const ConsultaMatricula = ({
@@ -298,6 +305,7 @@ export const ConsultaMatricula = ({
   estado,
   isLoading,
   onElegir,
+  pagoMatricula,
 }: ConsultaMatriculaProps) => {
   const elegido = hijos.find((hijo) => hijo.id === estudianteId);
   const impedimentos = estado?.impedimentos ?? [];
@@ -358,9 +366,11 @@ export const ConsultaMatricula = ({
         </Alert>
       )}
 
-      {avisoDelEstado(estado?.matricula)}
+      {avisoDelEstado(estado)}
 
       <ProgresoMatricula pasoActual={estado?.pasoActual ?? 0} />
+
+      {pagoMatricula}
 
       {estado && estado.deuda.total > 0 && (
         <DeudaPendiente deuda={estado.deuda} />
