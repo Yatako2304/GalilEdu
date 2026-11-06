@@ -63,7 +63,8 @@ class HorarioCrucesIT extends PruebaHorarios {
 		asignarDocente(algebra, seccion, docente());
 
 		guardar(seccion, COORDINADOR, null, new Celda("MAR", 2, algebra, aula), new Celda("LUN", 1, algebra, aula))
-				.andExpect(status().isConflict()).andExpect(jsonPath("$.message").value(MENSAJE));
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("Docente no disponible: " + MENSAJE));
 
 		assertThat(cabeceras()).isZero();
 		assertThat(bloquesGuardados()).isZero();

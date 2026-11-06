@@ -213,7 +213,7 @@ public class ServicioHorarios {
 		List<CruceDetectado> cruces = validadorCruces.buscarCruces(datos.anioEscolarId(), datos.id(), solicitados);
 		if (!cruces.isEmpty()) {
 			// Con varios cruces se muestra el primero: el mensaje se presenta tal cual en una sola notificación.
-			throw ExcepcionNegocio.conflicto(cruces.get(0).mensaje());
+			throw ExcepcionNegocio.conflicto(MensajesCruce.conTitulo(cruces.get(0)));
 		}
 	}
 
