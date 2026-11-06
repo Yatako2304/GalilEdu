@@ -525,7 +525,7 @@ test('modal: un cruce que devuelve el backend se muestra y deshabilita «Asignar
       timeout: 3000,
     }),
   ).toBeVisible();
-  expect(within(dialogo).getByText('Cruce de horario')).toBeVisible();
+  expect(within(dialogo).getByText('Ambiente no disponible')).toBeVisible();
   expect(
     within(dialogo).getByRole('button', { name: 'Asignar' }),
   ).toBeDisabled();
@@ -548,7 +548,7 @@ test('modal: si la consulta de cruces falla (404 o red) no hay alerta ni notific
   // Se espera a que la consulta termine (pausa de 300 ms + respuesta) y no pasa nada.
   await new Promise((resolver) => setTimeout(resolver, 900));
   expect(
-    within(dialogo).queryByText('Cruce de horario'),
+    within(dialogo).queryByText('Ambiente no disponible'),
   ).not.toBeInTheDocument();
   expect(screen.queryByText('No encontrado')).not.toBeInTheDocument();
   expect(

@@ -28,7 +28,8 @@ import { networkDelay } from '../utils';
 //   GET  /horarios/secciones/{id}           -> la matriz (con y sin horario guardado, con cruces, sin docente, año cerrado)
 //   GET  /horarios/secciones/{id}/opciones  -> cursos del plan y ambientes activos
 //   PUT  /horarios/secciones/{id}           -> guarda la matriz completa: 200 (misma forma que el GET), 409 de versión, 400
-//   POST /horarios/secciones/{id}/cruces    -> AÚN NO EXISTE en el backend (lo hace HU-46): solo este simulador
+//   POST /horarios/secciones/{id}/cruces    -> HU-46, ya existe en el backend (CrucesHorarioController): este simulador
+//                                              responde con los mismos mensajes y la misma forma que el real
 //
 // No guardan nada entre peticiones: el PUT responde según lo que recibe y la versión de la sección en los fixtures.
 

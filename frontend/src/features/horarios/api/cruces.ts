@@ -6,10 +6,11 @@ import { CeldaSolicitada, CruceDetectado } from '../types';
 
 import { CLAVE_HORARIOS } from './horario-seccion';
 
-// POST /horarios/secciones/{seccionId}/cruces (lo implementa HU-46; aún no existe en el backend). Cuerpo
-// `{ celdas }` con el borrador completo; responde la lista de cruces con la forma de `celda.cruces`.
+// POST /horarios/secciones/{seccionId}/cruces (HU-46, ya está en el backend). Cuerpo `{ celdas }` con el borrador
+// completo; responde la lista de cruces con la forma de `celda.cruces`.
 //
-// Si la llamada falla (404 mientras no exista, o la red) NO se avisa ni se bloquea nada: el PUT vuelve a validar todo.
+// Si la llamada falla (404 si la sección no existe, 409 si no tiene estructura principal, o la red) NO se avisa ni se
+// bloquea nada: el PUT vuelve a validar todo.
 export const consultarCruces = (
   seccionId: string,
   celdas: CeldaSolicitada[],

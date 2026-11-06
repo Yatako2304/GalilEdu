@@ -1,7 +1,7 @@
 # Horarios
 
 - **HU:** HU-45 (iteración 2) · HU-46 (2) · HU-49, 50, 51 · (HU-47, 48 en la 3)
-- **Estado:** 🚧 HU-45 hecha (backend y pantalla del Coordinador); HU-46 hecha (backend); HU-49 hecha (backend; falta el frontend); HU-51 hecha (horario del Apoderado)
+- **Estado:** 🚧 HU-45 hecha (backend y pantalla del Coordinador); HU-46 hecha (backend y frontend); HU-49 hecha (backend; falta el frontend); HU-51 hecha (horario del Apoderado)
 - **Última actualización:** 2026-11-06
 
 ## Alcance
@@ -118,7 +118,12 @@ Rol Coordinador. Avisa de los cruces de unas celdas **antes de guardar**, inclus
 
 - **PUT** `/horarios/secciones/{id}`: calcula los cruces de la matriz completa y responde **409 con el primero**, con título: «Docente no disponible: …» o «Ambiente no disponible: …». No guarda nada.
 - **GET** `/horarios/secciones/{id}`: cada celda trae sus `cruces`, para marcarlos en la matriz (por ejemplo, un cruce que apareció porque otra sección se guardó después).
-- **Modal «Asignar bloque horario»** (frontend): llama a este endpoint con el borrador de celdas (`useCruces`, `api/cruces.ts`) y deshabilita «Asignar» si hay cruces para ese bloque.
+- **Modal «Asignar bloque horario»** (frontend): llama a este endpoint con el borrador de celdas (`useCruces`, `api/cruces.ts`) y deshabilita «Asignar» si hay cruces para ese bloque. La alerta (`dialogo-asignar-bloque.tsx`):
+  - Hay **una alerta por tipo** de cruce presente, en rojo (`Alert type="error"`, variante pequeña), primero la de docente y luego la de ambiente. El título sale de `TITULO_CRUCE` (`features/horarios/lib/cruces.ts`, la única fuente): «Docente no disponible» o «Ambiente no disponible». Debajo van los mensajes de ese tipo, tal como los manda el backend.
+  - Si hay un cruce de docente, debajo de las alertas aparece la ayuda «Elige otro bloque o cambia el titular en Plan de evaluación.».
+  - El campo en conflicto (Docente o Ambiente) se marca con el borde rojo y `aria-invalid="true"`, sin texto de error de formulario. Si la consulta falla, no hay alerta ni se bloquea nada.
+  - Pruebas: `alerta-cruces.test.tsx`.
+- **Matriz** (frontend): la celda con cruces sigue marcada en amarillo (`ScheduleBlock`, prop `conflict`) y la página muestra «Este horario tiene cruces».
 
 ### Concurrencia
 
@@ -129,7 +134,7 @@ El PUT toma el **bloqueo del año** (`bloquearAnioParaHorarios`) **antes** de le
 - **Cambio de titular en Académico.** Si se cambia el docente de un curso en una sección que ya tiene horario, el cruce no se impide (Académico no consulta Horarios), pero el GET lo muestra en la celda.
 - **El día no se valida en el endpoint.** El conversor no compara el día con los días lectivos de la estructura; una celda en un día no lectivo puede dar cruces. Lo valida el PUT («día no lectivo», 400).
 - **RF-122 adelantado.** El RF-122 (espacios especiales: una sección o subgrupo por bloque) es de la HU-48; la misma comparación de ambientes lo deja adelantado.
-- **Diferencias con Figma.** (a) El texto de Figma dice «Seleccione otro docente», pero en el modal el docente no se elige: es el titular de `docente_seccion`; el frontend mostrará otra ayuda. (b) `OcupacionHorariosSql` llena el ambiente con su **nombre** y la matriz de Figma muestra el **código** (A-502): queda pendiente para Valeria.
+- **Diferencias con Figma.** (a) **Resuelto:** el texto de Figma dice «Seleccione otro docente», pero en el modal el docente no se elige (es el titular de `docente_seccion`); se reemplazó por la ayuda «Elige otro bloque o cambia el titular en Plan de evaluación.». (b) El cruce en la celda de la matriz sigue en **amarillo** (advertencia) porque Figma no diseña ese estado; la alerta del modal sí es roja, como en Figma. (c) `OcupacionHorariosSql` llena el ambiente con su **nombre** y la matriz de Figma muestra el **código** (A-502): queda pendiente para Valeria.
 
 ## Horario del docente (HU-49)
 
@@ -177,12 +182,13 @@ Sin `anioId`: el año **ACTIVO** si el docente tiene clases en él; si no, el **
 ## Código
 
 - Backend: `backend/src/main/java/com/galiledu/horarios/` (`dominio`: `HorarioSeccion`, `HorarioBloque`; `aplicacion`: `ServicioHorarios`, `ReglasDelHorario`, `ResolutorDeJornada`, `ConversorDeBloquesDeJornada`, `DtosHorarios` y las interfaces `ValidadorCruces`, `OcupacionHorarios` y `ConversorDeBloques`; `infraestructura`: repositorios y los adaptadores SQL de solo lectura `DatosDeSeccionSql`, `PlanDeSeccionSql`, `AmbientesActivosSql`, `AniosYSeccionesSql`, `OcupacionHorariosSql` y `JornadaDeSeccionConfiguracion`; `web`: `HorarioController`). HU-46: `ValidadorCrucesHorario`, `MensajesCruce`, `ServicioCrucesHorario` y `SolicitudCruces` (en `aplicacion`, el validador reemplaza a `ValidadorCrucesStub`) y `web/CrucesHorarioController`. HU-49: `ClasesDelDocente`, `ServicioHorarioDocente` y `DtosHorarioDocente` (en `aplicacion`), `ClasesDelDocenteSql` (en `infraestructura`) y `web/HorarioDocenteController`. Configuración consulta el uso de una estructura con `UsoDeEstructura` (`UsoDeEstructuraSql`): ver [Configuración](configuracion.md#estructuras-con-horarios-armados-hu-45).
-- Frontend: `frontend/src/features/horarios/` (`asignacion-horarios`, `matriz-coordinador`, `dialogo-asignar-bloque`, `barra-acciones`, `datos-del-horario` y las llamadas de `api/`). Ruta: `app/routes/app/coordinador/horarios.tsx`. Los tipos del coordinador están en el feature (`types.ts`): `types/api.ts` tiene los del horario de lectura de la P2.
-- Pruebas: `backend/src/test/java/com/galiledu/horarios/` y `frontend/src/features/horarios/`. HU-46: `aplicacion/ValidadorCrucesHorarioTests`, `MensajesCruceTests` y `ServicioCrucesHorarioTests` (sin Spring ni BD), `CrucesHorarioIT` (endpoint), `HorarioConValidadorRealIT` (PUT y GET con el validador real) y `CrucesConcurrenciaIT` (dos guardados a la vez). `HorarioCrucesIT` sigue usando un validador de mentira para el PUT y el GET de la HU-45. HU-49: `ClasesDelDocenteIT` (el puerto contra la BD), `aplicacion/ServicioHorarioDocenteTests` (sin Spring ni BD) y `HorarioDocenteIT` (los dos endpoints). HU-51: `HorarioApoderadoIT`, `horario-apoderado.test.tsx` y `lib/__tests__/horario-apoderado.test.ts`.
+- Frontend: `frontend/src/features/horarios/` (`asignacion-horarios`, `matriz-coordinador`, `dialogo-asignar-bloque`, `barra-acciones`, `datos-del-horario` y las llamadas de `api/`; `lib/cruces.ts` tiene los títulos de las alertas de cruce). Ruta: `app/routes/app/coordinador/horarios.tsx`. Los tipos del coordinador están en el feature (`types.ts`): `types/api.ts` tiene los del horario de lectura de la P2.
+- Pruebas: `backend/src/test/java/com/galiledu/horarios/` y `frontend/src/features/horarios/`. HU-46: `aplicacion/ValidadorCrucesHorarioTests`, `MensajesCruceTests` y `ServicioCrucesHorarioTests` (sin Spring ni BD), `CrucesHorarioIT` (endpoint), `HorarioConValidadorRealIT` (PUT y GET con el validador real) y `CrucesConcurrenciaIT` (dos guardados a la vez); en el frontend, `alerta-cruces.test.tsx`. `HorarioCrucesIT` sigue usando un validador de mentira para el PUT y el GET de la HU-45. HU-49: `ClasesDelDocenteIT` (el puerto contra la BD), `aplicacion/ServicioHorarioDocenteTests` (sin Spring ni BD) y `HorarioDocenteIT` (los dos endpoints). HU-51: `HorarioApoderadoIT`, `horario-apoderado.test.tsx` y `lib/__tests__/horario-apoderado.test.ts`.
 
 ## Pendientes
 
 - [x] **HU-46 (backend):** `ValidadorCruces` real y `POST /horarios/secciones/{id}/cruces`.
+- [x] **HU-46 (frontend):** alertas por tipo con título, ayuda del docente y campo en conflicto marcado en el modal.
 - [x] Horario del Apoderado (HU-51) con datos reales.
 - [x] **HU-49 (backend):** `GET /horarios/docente/anios` y `GET /horarios/docente/horario`.
 - [ ] **HU-49 (frontend):** pantallas `/app/docente/horario` y `/app/tutor/horario` (Figma 393:18119) con los endpoints nuevos.

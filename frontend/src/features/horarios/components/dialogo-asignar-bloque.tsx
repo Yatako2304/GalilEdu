@@ -24,6 +24,7 @@ import {
   horasAsignadasEnBorrador,
   sinCelda,
 } from '../lib/borrador';
+import { ORDEN_DE_CRUCES, TITULO_CRUCE } from '../lib/cruces';
 import { formatRango } from '../lib/formato';
 import {
   BloqueDeJornada,
@@ -128,6 +129,8 @@ export const DialogoAsignarBloque = ({
           (c) => c.dia === dia && c.numeroBloque === bloque.numero,
         )
       : [];
+  const hayCruceDeDocente = crucesDelBloque.some((c) => c.tipo === 'DOCENTE');
+  const hayCruceDeAmbiente = crucesDelBloque.some((c) => c.tipo === 'AMBIENTE');
 
   const asignar = () => {
     if (!curso || !ambiente) return;
@@ -243,6 +246,7 @@ export const DialogoAsignarBloque = ({
               <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
                 <Select
                   label="Docente"
+                  error={hayCruceDeDocente ? { type: 'cruce' } : undefined}
                   disabled
                   value={curso?.docente?.id ?? ''}
                   onChange={() => undefined}
@@ -259,6 +263,7 @@ export const DialogoAsignarBloque = ({
                 />
                 <Select
                   label="Ambiente"
+                  error={hayCruceDeAmbiente ? { type: 'cruce' } : undefined}
                   value={ambienteId}
                   onChange={(e) => setAmbienteId(e.target.value)}
                   options={opciones.ambientes.map((a) => ({
@@ -269,13 +274,32 @@ export const DialogoAsignarBloque = ({
               </div>
 
               {crucesDelBloque.length > 0 && (
-                <Alert type="warning" size="sm" title="Cruce de horario">
-                  {crucesDelBloque.map((c) => (
-                    <span key={`${c.tipo}-${c.mensaje}`} className="block">
-                      {c.mensaje}
-                    </span>
+                <div className="space-y-2">
+                  {ORDEN_DE_CRUCES.filter((tipo) =>
+                    crucesDelBloque.some((c) => c.tipo === tipo),
+                  ).map((tipo) => (
+                    <Alert
+                      key={tipo}
+                      type="error"
+                      size="sm"
+                      title={TITULO_CRUCE[tipo]}
+                    >
+                      {crucesDelBloque
+                        .filter((c) => c.tipo === tipo)
+                        .map((c) => (
+                          <span key={c.mensaje} className="block">
+                            {c.mensaje}
+                          </span>
+                        ))}
+                    </Alert>
                   ))}
-                </Alert>
+                  {hayCruceDeDocente && (
+                    <p className="text-caption-1 text-content-tertiary">
+                      Elige otro bloque o cambia el titular en Plan de
+                      evaluación.
+                    </p>
+                  )}
+                </div>
               )}
             </>
           )}
