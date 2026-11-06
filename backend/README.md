@@ -27,7 +27,7 @@ src/main/java/com/galiledu/
 ├── academico/      catálogo académico (plan curricular, escala de calificación y plan de evaluación: HU-52 a HU-56) y calificaciones del docente (HU-57, HU-59, HU-62)
 ├── matricula/      matrícula del apoderado: consulta y estado (HU-27, HU-30)
 ├── pagos/          compromisos, cuotas, descuentos y deuda del apoderado (HU-36, HU-37, HU-35, HU-38 a HU-40)
-└── horarios/       horario semanal de una sección, para el Coordinador (HU-45) y la detección de cruces (HU-46)
+└── horarios/       horario semanal de una sección para el Coordinador (HU-45), detección de cruces (HU-46), horario del docente y del tutor (HU-49) y del apoderado (HU-51)
 
 Asistencia todavía no tiene paquete (iteración 3).
 
@@ -121,6 +121,8 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/horarios/secciones/{seccionId}/cruces` | Coordinador | Avisa de los cruces de un borrador antes de guardar (HU-46). Cuerpo `{celdas: [{dia, numeroBloque, planCursoId, ambienteId}]}` (obligatoria, máximo 72); responde `[{tipo, dia, numeroBloque, mensaje, seccion, curso}]`, vacía si no hay. Cruce = otra sección del año, mismo día, horas reales superpuestas (los contiguos no cuentan) y mismo docente o ambiente. Solo lee: no bloquea el año. Ignora las celdas que no puede convertir (curso sin docente, bloque fuera de la jornada). 400 por celda inválida; 404 si la sección no existe; 409 si no hay horario ni estructura principal del nivel |
 | GET | `/horarios/apoderado/estudiantes` | Apoderado | Hijos matriculados (HU-51): `[{estudianteId, nombreCompleto, matriculas: [{anio, grado, nivel, seccion}]}]`. Solo matrículas MATRICULADO de los estudiantes vinculados al usuario (padre, madre o apoderado no fallecido), del año más reciente al más antiguo |
 | GET | `/horarios/apoderado/estudiantes/{id}/horario?anio=` | Apoderado | Horario de la sección del hijo ese año (sin `anio`, el más reciente): `{estudianteId, nombreCompleto, anio, grado, nivel, seccion, tutor {nombre, celular, correo}, disponible, jornada, clases: [{dia, numeroBloque, curso, docente, aula}]}`. `disponible = false` (sin jornada ni clases) si el Coordinador aún no guardó el horario. 404 si no es su hijo o no está matriculado ese año |
+| GET | `/horarios/docente/anios` | Docente, Tutor | Años en que el usuario que inició sesión tiene al menos un bloque como titular de `docente_seccion` (HU-49): `[{id, anio, estado}]`, del más reciente al más antiguo; `[]` si no dicta |
+| GET | `/horarios/docente/horario?anioId=` | Docente, Tutor | Sus clases de dictado, un horario por estructura horaria (primaria antes que secundaria) (HU-49): `{anio {id, anio, estado} o null, horarios: [{nivel, titulo, jornada {dias, bloques, recesos}, clases: [{dia, numeroBloque, curso, seccion, ambiente}]}]}`. Sin `anioId`, el año ACTIVO si tiene clases y, si no, el más reciente con clases; con un año sin clases, `horarios` vacío. Si una celda tiene dos clases, se devuelven las dos. 400 si `anioId` no es un UUID; 404 «El año escolar no existe.» |
 | GET | `/calificaciones/docente/cursos` | Docente | Cursos y secciones asignados, con los parámetros del año y sus periodos (HU-57, HU-59, HU-62) |
 | GET | `/calificaciones/docente/cursos/{planCursoId}/secciones/{seccionId}/competencias` | Docente | Competencias del plan del curso asignado |
 | GET · POST | `/calificaciones/docente/cursos/{planCursoId}/secciones/{seccionId}/periodos/{periodoId}/items` | Docente | Lista o registra ítems con criterio, tipo, competencias y pesos |

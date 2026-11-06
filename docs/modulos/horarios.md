@@ -1,7 +1,7 @@
 # Horarios
 
 - **HU:** HU-45 (iteración 2) · HU-46 (2) · HU-49, 50, 51 · (HU-47, 48 en la 3)
-- **Estado:** 🚧 HU-45 hecha (backend y pantalla del Coordinador); HU-46 hecha (backend); HU-51 hecha (horario del Apoderado)
+- **Estado:** 🚧 HU-45 hecha (backend y pantalla del Coordinador); HU-46 hecha (backend); HU-49 hecha (backend; falta el frontend); HU-51 hecha (horario del Apoderado)
 - **Última actualización:** 2026-11-06
 
 ## Alcance
@@ -131,16 +131,62 @@ El PUT toma el **bloqueo del año** (`bloquearAnioParaHorarios`) **antes** de le
 - **RF-122 adelantado.** El RF-122 (espacios especiales: una sección o subgrupo por bloque) es de la HU-48; la misma comparación de ambientes lo deja adelantado.
 - **Diferencias con Figma.** (a) El texto de Figma dice «Seleccione otro docente», pero en el modal el docente no se elige: es el titular de `docente_seccion`; el frontend mostrará otra ayuda. (b) `OcupacionHorariosSql` llena el ambiente con su **nombre** y la matriz de Figma muestra el **código** (A-502): queda pendiente para Valeria.
 
+## Horario del docente (HU-49)
+
+Figma: Docente › Horario (393:18119), en `/app/docente/horario` y `/app/tutor/horario` (el mismo frame para las dos rutas). Solo lectura; no toca nada del Coordinador ni del Apoderado.
+
+### Qué ve
+
+- **Solo las clases que dicta:** los bloques guardados donde el usuario es el **titular actual** en `academico.docente_seccion` para (curso, sección). Si Académico cambia el titular, el bloque pasa al nuevo titular y sale del anterior.
+- **DOCENTE y TUTOR ven lo mismo:** sus clases de dictado. Un tutor que no dicta ve el estado vacío (`anio` null y `horarios` vacío). **El horario de la sección que tutorea queda fuera de esta HU** (pendiente para consultar al PO).
+- **El docente es siempre el usuario que inició sesión** (`ServicioJwt.usuarioActual`); nunca viene en la URL.
+- **Ambiente por nombre**, como el resto del módulo.
+
+### Un horario por estructura horaria
+
+La respuesta trae **un horario por estructura**, no uno solo, porque primaria y secundaria pueden tener jornadas distintas (por ejemplo, entrada a las 7:45 y a las 7:30) y porque un horario guardado puede usar una estructura que ya no es la principal. Cada horario trae la jornada de su estructura (`JornadaDeSeccion.deEstructura`) y solo sus clases, para que el frontend no mezcle horas de jornadas distintas en una misma matriz.
+
+- **Orden:** primaria antes que secundaria.
+- **Título:** «Primaria» o «Secundaria»; si el docente tiene dos estructuras del mismo nivel, con el código: «Secundaria · EH-SEC-26».
+- **Dos clases en una celda:** si un cruce quedó guardado y el docente tiene dos clases en el mismo día y bloque, se devuelven las dos; no se filtran.
+
+### Año por defecto
+
+Sin `anioId`: el año **ACTIVO** si el docente tiene clases en él; si no, el **más reciente con clases**; si no tiene clases en ningún año, `anio` es null y `horarios` está vacío.
+
+### Endpoints (roles DOCENTE y TUTOR, `HorarioDocenteController`)
+
+| Método | Ruta | Respuesta |
+| --- | --- | --- |
+| GET | `/horarios/docente/anios` | `[{id, anio, estado}]` con los años en que tiene al menos un bloque como titular, del más reciente al más antiguo (`[]` si no tiene). 200, 401, 403 |
+| GET | `/horarios/docente/horario?anioId=` | `{anio: {id, anio, estado} \| null, horarios: [{nivel, titulo, jornada: {dias, bloques: [{numero, inicio, fin}], recesos: [{despuesDeBloque, inicio, fin}]}, clases: [{dia, numeroBloque, curso, seccion, ambiente}]}]}`. `anioId` es opcional; con un año sin clases responde 200 con los datos del año y `horarios` vacío. 200; 400 si `anioId` no es un UUID; 401; 403; 404 «El año escolar no existe.» |
+
+`seccion` es la etiqueta «1.° A» (número del grado y nombre de la sección) y `nivel` es `PRIMARIA` o `SECUNDARIA`.
+
+### Diferencias con Figma (393:18119)
+
+- Figma muestra «Prof. …» en cada celda; sobra, porque el docente es el propio usuario. La respuesta no trae el nombre del docente.
+- El menú lateral de Figma dice «Administrador»; debería mostrar el rol de quien inició sesión.
+- Figma muestra la sección como «3A»; el backend usa «1.° A», como el resto del módulo.
+
+### Cómo se arma
+
+- **Sin migración.** `ClasesDelDocente` (puerto) y `ClasesDelDocenteSql` (lectura SQL con una sola consulta) traen los bloques del titular y los años en que tiene clases; `ServicioHorarioDocente` los agrupa por estructura, pide cada jornada y arma la respuesta. No usa ni modifica `ServicioHorarios`: el mapeo de la jornada a los DTOs públicos de `DtosHorarios` está en el propio servicio.
+- **Año inexistente:** `ServicioHorarioDocente` lo consulta con `AniosYSecciones` (el puerto del selector de años del Coordinador).
+
 ## Código
 
-- Backend: `backend/src/main/java/com/galiledu/horarios/` (`dominio`: `HorarioSeccion`, `HorarioBloque`; `aplicacion`: `ServicioHorarios`, `ReglasDelHorario`, `ResolutorDeJornada`, `ConversorDeBloquesDeJornada`, `DtosHorarios` y las interfaces `ValidadorCruces`, `OcupacionHorarios` y `ConversorDeBloques`; `infraestructura`: repositorios y los adaptadores SQL de solo lectura `DatosDeSeccionSql`, `PlanDeSeccionSql`, `AmbientesActivosSql`, `AniosYSeccionesSql`, `OcupacionHorariosSql` y `JornadaDeSeccionConfiguracion`; `web`: `HorarioController`). HU-46: `ValidadorCrucesHorario`, `MensajesCruce`, `ServicioCrucesHorario` y `SolicitudCruces` (en `aplicacion`, el validador reemplaza a `ValidadorCrucesStub`) y `web/CrucesHorarioController`. Configuración consulta el uso de una estructura con `UsoDeEstructura` (`UsoDeEstructuraSql`): ver [Configuración](configuracion.md#estructuras-con-horarios-armados-hu-45).
+- Backend: `backend/src/main/java/com/galiledu/horarios/` (`dominio`: `HorarioSeccion`, `HorarioBloque`; `aplicacion`: `ServicioHorarios`, `ReglasDelHorario`, `ResolutorDeJornada`, `ConversorDeBloquesDeJornada`, `DtosHorarios` y las interfaces `ValidadorCruces`, `OcupacionHorarios` y `ConversorDeBloques`; `infraestructura`: repositorios y los adaptadores SQL de solo lectura `DatosDeSeccionSql`, `PlanDeSeccionSql`, `AmbientesActivosSql`, `AniosYSeccionesSql`, `OcupacionHorariosSql` y `JornadaDeSeccionConfiguracion`; `web`: `HorarioController`). HU-46: `ValidadorCrucesHorario`, `MensajesCruce`, `ServicioCrucesHorario` y `SolicitudCruces` (en `aplicacion`, el validador reemplaza a `ValidadorCrucesStub`) y `web/CrucesHorarioController`. HU-49: `ClasesDelDocente`, `ServicioHorarioDocente` y `DtosHorarioDocente` (en `aplicacion`), `ClasesDelDocenteSql` (en `infraestructura`) y `web/HorarioDocenteController`. Configuración consulta el uso de una estructura con `UsoDeEstructura` (`UsoDeEstructuraSql`): ver [Configuración](configuracion.md#estructuras-con-horarios-armados-hu-45).
 - Frontend: `frontend/src/features/horarios/` (`asignacion-horarios`, `matriz-coordinador`, `dialogo-asignar-bloque`, `barra-acciones`, `datos-del-horario` y las llamadas de `api/`). Ruta: `app/routes/app/coordinador/horarios.tsx`. Los tipos del coordinador están en el feature (`types.ts`): `types/api.ts` tiene los del horario de lectura de la P2.
-- Pruebas: `backend/src/test/java/com/galiledu/horarios/` y `frontend/src/features/horarios/`. HU-46: `aplicacion/ValidadorCrucesHorarioTests`, `MensajesCruceTests` y `ServicioCrucesHorarioTests` (sin Spring ni BD), `CrucesHorarioIT` (endpoint), `HorarioConValidadorRealIT` (PUT y GET con el validador real) y `CrucesConcurrenciaIT` (dos guardados a la vez). `HorarioCrucesIT` sigue usando un validador de mentira para el PUT y el GET de la HU-45. HU-51: `HorarioApoderadoIT`, `horario-apoderado.test.tsx` y `lib/__tests__/horario-apoderado.test.ts`.
+- Pruebas: `backend/src/test/java/com/galiledu/horarios/` y `frontend/src/features/horarios/`. HU-46: `aplicacion/ValidadorCrucesHorarioTests`, `MensajesCruceTests` y `ServicioCrucesHorarioTests` (sin Spring ni BD), `CrucesHorarioIT` (endpoint), `HorarioConValidadorRealIT` (PUT y GET con el validador real) y `CrucesConcurrenciaIT` (dos guardados a la vez). `HorarioCrucesIT` sigue usando un validador de mentira para el PUT y el GET de la HU-45. HU-49: `ClasesDelDocenteIT` (el puerto contra la BD), `aplicacion/ServicioHorarioDocenteTests` (sin Spring ni BD) y `HorarioDocenteIT` (los dos endpoints). HU-51: `HorarioApoderadoIT`, `horario-apoderado.test.tsx` y `lib/__tests__/horario-apoderado.test.ts`.
 
 ## Pendientes
 
 - [x] **HU-46 (backend):** `ValidadorCruces` real y `POST /horarios/secciones/{id}/cruces`.
 - [x] Horario del Apoderado (HU-51) con datos reales.
+- [x] **HU-49 (backend):** `GET /horarios/docente/anios` y `GET /horarios/docente/horario`.
+- [ ] **HU-49 (frontend):** pantallas `/app/docente/horario` y `/app/tutor/horario` (Figma 393:18119) con los endpoints nuevos.
+- [ ] Consultar al PO si el tutor debe ver además el horario de la sección que tutorea (hoy solo ve sus clases de dictado).
 - [ ] Horario del Estudiante (HU-50, Could): sigue con MSW (`/horarios/mi-seccion`).
 - [ ] Decidir con el PO si el PUT debe rechazar solo los cruces de las celdas nuevas o modificadas. Hoy rechaza cualquier cruce de la matriz (decisión 4 de Valeria).
 - [ ] Mostrar el ambiente con su código (A-502, como en Figma) en vez de su nombre: `OcupacionHorariosSql` y la matriz.
