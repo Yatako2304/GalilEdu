@@ -15,13 +15,10 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import com.galiledu.PruebaIntegracion;
 import com.galiledu.configuracion.aplicacion.UsoDeEstructura;
 import com.galiledu.configuracion.dominio.DiaSemana;
-import com.galiledu.horarios.aplicacion.BloqueOcupado;
-import com.galiledu.horarios.aplicacion.BloqueSolicitado;
 import com.galiledu.horarios.aplicacion.CeldaHorario;
 import com.galiledu.horarios.aplicacion.ConversorDeBloques;
 import com.galiledu.horarios.aplicacion.OcupacionHorarios;
 import com.galiledu.horarios.aplicacion.ServicioHorarios;
-import com.galiledu.horarios.aplicacion.ValidadorCruces;
 import com.galiledu.horarios.dominio.HorarioBloque;
 import com.galiledu.horarios.dominio.HorarioSeccion;
 import com.galiledu.horarios.infraestructura.HorarioBloqueRepositorio;
@@ -42,8 +39,6 @@ class HorarioRepositorioIT extends PruebaIntegracion {
 	private EntityManager entityManager;
 	@Autowired
 	private JdbcClient jdbc;
-	@Autowired
-	private ValidadorCruces validadorCruces;
 	@Autowired
 	private OcupacionHorarios ocupacionHorarios;
 	@Autowired
@@ -113,8 +108,6 @@ class HorarioRepositorioIT extends PruebaIntegracion {
 	@Test
 	void losStubsDelContratoSeInyectanYNoHacenNada() {
 		UUID id = UUID.randomUUID();
-		assertThat(validadorCruces.buscarCruces(id, id, List.<BloqueSolicitado>of())).isEmpty();
-		assertThat(validadorCruces.compararCruces(List.<BloqueSolicitado>of(), List.<BloqueOcupado>of())).isEmpty();
 		assertThat(ocupacionHorarios.bloquesOcupados(id, id)).isEmpty();
 		assertThat(conversorDeBloques.aBloquesSolicitados(id, List.<CeldaHorario>of())).isEmpty();
 		assertThat(servicioHorarios.bloquesDeCurso(id, id)).isZero();
