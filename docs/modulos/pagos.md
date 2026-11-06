@@ -1,8 +1,8 @@
 # Pagos y pensiones
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** 🚧 en desarrollo: HU-36 y 37 hechas; backend de HU-35, 38, 39 y 40 hecho (falta su front); falta integrar la tarjeta de HU-36 al detalle de HU-24
-- **Última actualización:** 2026-11-04
+- **Estado:** 🚧 en desarrollo: HU-35, 36, 37, 38, 39 y 40 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
+- **Última actualización:** 2026-11-05
 
 ## Alcance
 
@@ -38,6 +38,10 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 - HU-36: cuando el colegio aprueba los documentos (HU-29/HU-72), Matrícula debe llamar a `ServicioCuotaMatricula.generar(matriculaId, usuarioId)`; para saber si ya se pagó (HU-31) usa `ServicioCuotaMatricula.consultar(matriculaId)`. Mientras tanto, el personal la genera con el `POST`. Como el cronograma, exige el tarifario del año CONFIRMADO (P19, HU-34): en los datos de prueba el de 2027 está EN_CONFIGURACION, así que hay que confirmarlo antes de generar la cuota de Mateo. La tarjeta "Pago de matrícula" de B6/B7 usa el `GET` (404 = todavía no generada) y su enlace "Ver compromiso de pago" lleva a P8 con el `estudianteId` de la respuesta.
 - Al confirmarse el pago de la matrícula (HU-31), Matrícula debe llamar a `ServicioCronograma.generarPensiones(matriculaId, usuarioId)`. Ver la [decisión](../decisiones/2026-10-20-leonardo-cronograma-pensiones.md).
 - Flujo de la HU-37: menú **Pensiones** → P2 ("Todos los alumnos") → ⋮ del alumno → **Ver cronograma** (P8, `/app/administrativo/pensiones/{estudianteId}`) o **Registrar retiro** (modal, fecha de hoy). Falta el enlace desde B7 ("Ver compromiso de pago") cuando exista ese detalle de matrícula.
+- En P8 ya están operativas las pestañas **Pagos** (P9), **Descuento** (P10) y **Morosidad** (P11). El catálogo global de descuentos se abre desde **Configuración de pensiones → Catálogo de descuentos** (P21).
+- P8 muestra el **recargo por mora** en la misma fila de cada cuota vencida. En los textos de la interfaz se usa **monto pagado**, **monto de cuotas** y **monto pendiente**; `capital` se conserva únicamente como nombre técnico del contrato con el backend.
+- En P21 los tramos por hermanos pueden quitarse mientras quede una fila editable. Antes de guardar se exige un mínimo de dos tramos y se rechazan rangos superpuestos, sin importar el orden en que se ingresen.
+- La vista **Apoderado → Pensiones** permite cambiar de hijo y compromiso, consultar el cronograma con mora y revisar pagos. Las casillas y el botón de pago permanecen deshabilitados porque corresponden a HU-41.
 - Las pestañas "Compromisos vigentes" (P1, HU-38) y "Cuotas vencidas" (P3, HU-39) se ven desactivadas.
 
 ## Pantallas (Figma)
@@ -76,13 +80,16 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 
 - [x] HU-37: generar, consultar y anular por retiro el cronograma de pensiones.
 - [x] HU-39 (backend): morosidad del compromiso (`GET /pagos/compromisos/{id}/morosidad`), como Figma P11.
-- [ ] HU-39 (front): pestaña "Morosidad (n)" en P8.
+- [x] HU-39 (front): pestaña "Morosidad (n)" en P8, con monto pendiente y recargo separados.
 - [x] HU-36 (backend): generar y consultar la cuota de matrícula.
 - [x] HU-36 (front): tarjeta reutilizable "Pago de matrícula" de B6/B7; se abre con `?matriculaId=` hasta que HU-24 aporte el detalle administrativo.
 - [x] La pensión vence el último día de cada mes (diciembre, el 15), como en el tarifario; el "día 05" del cronograma del apoderado no se usa. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).
 - [x] HU-35 (backend): catálogo de descuentos, tramos por hermanos, activación y límite de la institución.
 - [x] HU-38 (backend): descuentos aplicables, aplicar con reemplazo confirmado, recálculo de cuotas pendientes, consulta y revocación.
 - [x] HU-40 (backend): hijos con saldo y cuotas vencidas, cronograma con recargo e historial de pagos del apoderado.
-- [ ] Front de HU-35 (P21), HU-38 (P10) y HU-40 (Apoderado › Pensiones), con sus tipos en `frontend/src/types/api.ts` (`CuotaDetalle` ahora trae `diasAtraso` y `recargo`).
+- [x] HU-35 (front): catálogo P21, alta/edición, tramos por hermanos y activación/desactivación.
+- [x] HU-38 (front): descuentos aplicables, reemplazo, ficha P10 y revocación con motivo.
+- [x] HU-40 (front): selector de hijos y compromisos, cronograma con recargo e historial de pagos.
+- [x] P9: historial de pagos del compromiso para personal administrativo.
 - [ ] Pasarela de pagos real: hoy la orden solo guarda la referencia y el resultado; falta elegir el proveedor.
 - [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).

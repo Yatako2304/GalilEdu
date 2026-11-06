@@ -15,16 +15,25 @@ import { SelectorAnio } from './selector-anio';
 
 const PARAMETRO_ANIO = 'anioEscolarId';
 
-// Figma > Personal Administrativo > "P19 · Tarifario y calendario" (HU-34). La pestaña "Catálogo de descuentos" es de
-// HU-35 y todavía no está disponible.
-//
 // Lo escrito y no confirmado se pierde (no hay "Guardar"), así que se protege al salir de la pantalla (enlaces, atrás
 // del navegador), al cerrar o recargar la pestaña y al cambiar de año en el selector.
-export const ConfiguracionPensiones = () => {
+export type PestanaConfiguracionPensiones = 'tarifario' | 'descuentos';
+
+export const ConfiguracionPensiones = ({
+  pestana = 'tarifario',
+  onPestanaChange,
+  catalogoDescuentos,
+}: {
+  pestana?: PestanaConfiguracionPensiones;
+  onPestanaChange?: (pestana: PestanaConfiguracionPensiones) => void;
+  catalogoDescuentos?: React.ReactNode;
+}) => {
   const [parametros, setParametros] = useSearchParams();
   const anios = useAniosEscolares();
   const [hayPendientes, setHayPendientes] = React.useState(false);
   const [anioPedido, setAnioPedido] = React.useState<string | null>(null);
+  const [pestanaPedida, setPestanaPedida] =
+    React.useState<PestanaConfiguracionPensiones | null>(null);
 
   // Abre con el año de `?anioEscolarId=` y, si no viene, con el que se está preparando.
   const anio = anioPorDefecto(anios.data ?? [], parametros.get(PARAMETRO_ANIO));
@@ -32,18 +41,20 @@ export const ConfiguracionPensiones = () => {
 
   const blocker = useBlocker(
     ({ currentLocation, nextLocation }) =>
-      hayPendientes && currentLocation.pathname !== nextLocation.pathname,
+      pestana === 'tarifario' &&
+      hayPendientes &&
+      currentLocation.pathname !== nextLocation.pathname,
   );
 
   React.useEffect(() => {
-    if (!hayPendientes) return;
+    if (!hayPendientes || pestana !== 'tarifario') return;
     const avisar = (e: BeforeUnloadEvent) => {
       e.preventDefault();
       e.returnValue = '';
     };
     window.addEventListener('beforeunload', avisar);
     return () => window.removeEventListener('beforeunload', avisar);
-  }, [hayPendientes]);
+  }, [hayPendientes, pestana]);
 
   const cambiarAnio = (anioEscolarId: string) =>
     setParametros({ [PARAMETRO_ANIO]: anioEscolarId }, { replace: true });
@@ -54,26 +65,31 @@ export const ConfiguracionPensiones = () => {
     else cambiarAnio(anioEscolarId);
   };
 
+  const elegirPestana = (valor: PestanaConfiguracionPensiones) => {
+    if (valor === pestana) return;
+    if (pestana === 'tarifario' && hayPendientes) setPestanaPedida(valor);
+    else onPestanaChange?.(valor);
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <Tabs
         variant="pill"
         size="lg"
         aria-label="Configuración de pensiones"
-        value="tarifario"
-        onValueChange={() => undefined}
+        value={pestana}
+        onValueChange={(valor) =>
+          elegirPestana(valor as PestanaConfiguracionPensiones)
+        }
         items={[
           { value: 'tarifario', label: 'Tarifario y calendario' },
-          {
-            value: 'descuentos',
-            label: 'Catálogo de descuentos',
-            disabled: true,
-            title: 'Disponible pronto',
-          },
+          { value: 'descuentos', label: 'Catálogo de descuentos' },
         ]}
       />
 
-      {anios.isLoading ? (
+      {pestana === 'descuentos' ? (
+        catalogoDescuentos
+      ) : anios.isLoading ? (
         <div className="flex h-60 items-center justify-center">
           <Spinner />
         </div>
@@ -128,6 +144,16 @@ export const ConfiguracionPensiones = () => {
         onSalir={() => {
           if (anioPedido) cambiarAnio(anioPedido);
           setAnioPedido(null);
+        }}
+      />
+      <DialogoCambiosSinConfirmar
+        abierto={pestanaPedida !== null}
+        titulo="¿Cambiar de pestaña sin confirmar?"
+        textoSalir="Cambiar de pestaña"
+        onSeguir={() => setPestanaPedida(null)}
+        onSalir={() => {
+          if (pestanaPedida) onPestanaChange?.(pestanaPedida);
+          setPestanaPedida(null);
         }}
       />
     </div>
