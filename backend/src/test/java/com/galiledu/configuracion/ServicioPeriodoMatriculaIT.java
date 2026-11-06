@@ -650,26 +650,25 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// ---------- Plantillas ----------
 
-	private static final byte[] CSV = "nombre,dni\nAna,1\n".getBytes();
+	private static final byte[] PDF = "%PDF-1.4\n%fin\n".getBytes();
 
 	@Test
 	void subeReemplazaYQuitaLaPlantillaDeUnDocumentoDeUnPeriodoProgramado() {
 		reloj.fijarEn(fecha(2026, 9, 1));
 		UUID documento = documentos2027().getFirst().id();
 
-		DocumentoVista subida = servicio.subirPlantilla(periodo2027(), documento, "C:\\docs\\ficha.CSV", CSV);
+		DocumentoVista subida = servicio.subirPlantilla(periodo2027(), documento, "C:\\docs\\ficha.PDF", PDF);
 		assertThat(subida.tienePlantilla()).isTrue();
-		assertThat(subida.plantillaNombreArchivo()).isEqualTo("ficha.CSV");
+		assertThat(subida.plantillaNombreArchivo()).isEqualTo("ficha.PDF");
 		var descargada = servicio.descargarPlantilla(periodo2027(), documento);
-		assertThat(descargada.nombreArchivo()).isEqualTo("ficha.CSV");
-		assertThat(descargada.tipoMime()).isEqualTo("text/csv");
-		assertThat(descargada.contenido()).isEqualTo(CSV);
+		assertThat(descargada.nombreArchivo()).isEqualTo("ficha.PDF");
+		assertThat(descargada.tipoMime()).isEqualTo("application/pdf");
+		assertThat(descargada.contenido()).isEqualTo(PDF);
 		assertThat(servicio.ver(periodo2027()).documentos().getFirst().tienePlantilla()).isTrue();
 
-		servicio.subirPlantilla(periodo2027(), documento, "ficha.xls", new byte[]{(byte) 0xD0, (byte) 0xCF, 0x11,
-				(byte) 0xE0, (byte) 0xA1, (byte) 0xB1, 0x1A, (byte) 0xE1, 0});
-		assertThat(servicio.descargarPlantilla(periodo2027(), documento).tipoMime())
-				.isEqualTo("application/vnd.ms-excel");
+		servicio.subirPlantilla(periodo2027(), documento, "ficha.png",
+				new byte[]{(byte) 0x89, 'P', 'N', 'G', 0});
+		assertThat(servicio.descargarPlantilla(periodo2027(), documento).tipoMime()).isEqualTo("image/png");
 
 		assertThat(servicio.quitarPlantilla(periodo2027(), documento).tienePlantilla()).isFalse();
 		rechaza(HttpStatus.NOT_FOUND, "El documento no tiene plantilla.",
@@ -679,20 +678,20 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 	}
 
 	@Test
-	void laPlantillaSoloAdmiteXlsxXlsOCsvDeHasta10Mb() {
+	void laPlantillaSoloAdmitePdfDocxJpgOPngDeHasta10Mb() {
 		reloj.fijarEn(fecha(2026, 9, 1));
 		UUID documento = documentos2027().getFirst().id();
 
-		rechaza(HttpStatus.BAD_REQUEST, "La plantilla debe ser un archivo XLSX, XLS o CSV.",
-				() -> servicio.subirPlantilla(periodo2027(), documento, "ficha.pdf", CSV));
-		rechaza(HttpStatus.BAD_REQUEST, "El contenido del archivo no corresponde a un XLSX válido.",
-				() -> servicio.subirPlantilla(periodo2027(), documento, "ficha.xlsx", CSV));
+		rechaza(HttpStatus.BAD_REQUEST, "La plantilla debe ser un archivo PDF, DOCX, JPG o PNG.",
+				() -> servicio.subirPlantilla(periodo2027(), documento, "ficha.xlsx", PDF));
+		rechaza(HttpStatus.BAD_REQUEST, "El contenido del archivo no corresponde a un PDF válido.",
+				() -> servicio.subirPlantilla(periodo2027(), documento, "ficha.pdf", "no es un pdf".getBytes()));
 		rechaza(HttpStatus.BAD_REQUEST, "Selecciona un archivo para la plantilla.",
-				() -> servicio.subirPlantilla(periodo2027(), documento, "ficha.csv", new byte[0]));
+				() -> servicio.subirPlantilla(periodo2027(), documento, "ficha.pdf", new byte[0]));
 		byte[] grande = new byte[10 * 1024 * 1024 + 1];
 		java.util.Arrays.fill(grande, (byte) 'a');
 		rechaza(HttpStatus.BAD_REQUEST, "La plantilla no puede pesar más de 10 MB.",
-				() -> servicio.subirPlantilla(periodo2027(), documento, "grande.csv", grande));
+				() -> servicio.subirPlantilla(periodo2027(), documento, "grande.pdf", grande));
 		assertThat(servicio.ver(periodo2027()).documentos().getFirst().tienePlantilla()).isFalse();
 	}
 
@@ -700,17 +699,17 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 	void laPlantillaSoloSeCambiaConElPeriodoProgramadoPeroSeDescargaSiempre() {
 		reloj.fijarEn(fecha(2026, 9, 1));
 		UUID documento = documentos2027().getFirst().id();
-		servicio.subirPlantilla(periodo2027(), documento, "ficha.csv", CSV);
+		servicio.subirPlantilla(periodo2027(), documento, "ficha.pdf", PDF);
 
 		reloj.fijarEn(fecha(2026, 10, 1)); // ahora está ABIERTO: solo lectura
 		rechaza(HttpStatus.CONFLICT, "Solo se puede cambiar la plantilla de un periodo programado.",
-				() -> servicio.subirPlantilla(periodo2027(), documento, "otra.csv", CSV));
+				() -> servicio.subirPlantilla(periodo2027(), documento, "otra.pdf", PDF));
 		rechaza(HttpStatus.CONFLICT, "Solo se puede cambiar la plantilla de un periodo programado.",
 				() -> servicio.quitarPlantilla(periodo2027(), documento));
-		assertThat(servicio.descargarPlantilla(periodo2027(), documento).contenido()).isEqualTo(CSV);
+		assertThat(servicio.descargarPlantilla(periodo2027(), documento).contenido()).isEqualTo(PDF);
 
 		reloj.fijarEn(fecha(2026, 11, 15)); // y CERRADO
-		assertThat(servicio.descargarPlantilla(periodo2027(), documento).nombreArchivo()).isEqualTo("ficha.csv");
+		assertThat(servicio.descargarPlantilla(periodo2027(), documento).nombreArchivo()).isEqualTo("ficha.pdf");
 	}
 
 	@Test
@@ -719,11 +718,11 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		UUID documento2026 = servicio.ver(periodoDe(ANIO_2026)).documentos().getFirst().id();
 
 		rechaza(HttpStatus.NOT_FOUND, "El documento no existe.",
-				() -> servicio.subirPlantilla(periodo2027(), documento2026, "ficha.csv", CSV));
+				() -> servicio.subirPlantilla(periodo2027(), documento2026, "ficha.pdf", PDF));
 		rechaza(HttpStatus.NOT_FOUND, "El documento no existe.",
 				() -> servicio.descargarPlantilla(periodo2027(), UUID.randomUUID()));
 		rechaza(HttpStatus.NOT_FOUND, "El periodo de matrícula no existe.",
-				() -> servicio.subirPlantilla(UUID.randomUUID(), documento2026, "ficha.csv", CSV));
+				() -> servicio.subirPlantilla(UUID.randomUUID(), documento2026, "ficha.pdf", PDF));
 	}
 
 	@Test
@@ -731,12 +730,12 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		reloj.fijarEn(fecha(2026, 9, 1));
 		confirmarTarifario(ANIO_2027);
 		List<DocumentoSolicitud> actuales = documentos2027();
-		servicio.subirPlantilla(periodo2027(), actuales.get(0).id(), "ficha.csv", CSV);
+		servicio.subirPlantilla(periodo2027(), actuales.get(0).id(), "ficha.pdf", PDF);
 
 		FormularioPeriodoMatricula f = servicio.editar(periodo2027(),
 				solicitud(null, fecha(2026, 9, 20), fecha(2026, 10, 31), List.of(), actuales));
 
 		assertThat(f.documentos().getFirst().tienePlantilla()).isTrue();
-		assertThat(servicio.descargarPlantilla(periodo2027(), actuales.get(0).id()).contenido()).isEqualTo(CSV);
+		assertThat(servicio.descargarPlantilla(periodo2027(), actuales.get(0).id()).contenido()).isEqualTo(PDF);
 	}
 }

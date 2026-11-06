@@ -69,7 +69,7 @@ const documentos = [
     descripcion: 'Con firma',
     orden: 1,
     tienePlantilla: true,
-    plantillaNombreArchivo: 'ficha.xlsx',
+    plantillaNombreArchivo: 'ficha.pdf',
     tieneEntregas: false,
   },
   {
@@ -137,7 +137,7 @@ describe('ver (solo lectura)', () => {
     ).toBeDisabled();
     // Los documentos se ven; no se agregan ni se quitan.
     expect(screen.getByText('Ficha de matrícula')).toBeInTheDocument();
-    expect(screen.getByText('Plantilla: ficha.xlsx')).toBeInTheDocument();
+    expect(screen.getByText('Plantilla: ficha.pdf')).toBeInTheDocument();
     expect(
       screen.queryByLabelText('Nombre del documento'),
     ).not.toBeInTheDocument();
@@ -203,7 +203,7 @@ describe('ver (solo lectura)', () => {
     expect(descargar).toHaveBeenCalledWith(
       'periodo-2027',
       'doc-ficha',
-      'ficha.xlsx',
+      'ficha.pdf',
     );
     // El documento sin plantilla no ofrece descarga.
     expect(
@@ -413,7 +413,7 @@ describe('editar', () => {
     await userEvent.type(screen.getByLabelText('Nombre del documento'), 'Foto');
     await userEvent.upload(
       screen.getByLabelText('Seleccionar archivo'),
-      new File(['a,b'], 'foto.csv', { type: 'text/csv' }),
+      new File(['a,b'], 'foto.pdf', { type: 'application/pdf' }),
     );
     await userEvent.click(
       screen.getByRole('button', { name: 'Agregar documento' }),
@@ -453,10 +453,10 @@ describe('editar', () => {
 
     await userEvent.upload(
       screen.getByLabelText('Archivo de plantilla de Ficha de matrícula'),
-      new File(['a,b'], 'nueva.csv', { type: 'text/csv' }),
+      new File(['a,b'], 'nueva.pdf', { type: 'application/pdf' }),
     );
 
-    expect(screen.getByText('Plantilla: nueva.csv')).toBeInTheDocument();
+    expect(screen.getByText('Plantilla: nueva.pdf')).toBeInTheDocument();
     expect(subidas).toEqual([]);
     await guardar();
     await waitFor(() => expect(subidas).toEqual(['doc-ficha']));
@@ -471,15 +471,15 @@ describe('editar', () => {
 
     await usuario.upload(
       screen.getByLabelText('Archivo de plantilla de Ficha de matrícula'),
-      new File(['x'], 'ficha.pdf'),
+      new File(['x'], 'ficha.xlsx'),
     );
 
     expect(
       await screen.findByText(
-        'La plantilla debe ser un archivo XLSX, XLS o CSV.',
+        'La plantilla debe ser un archivo PDF, DOCX, JPG o PNG.',
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText('Plantilla: ficha.xlsx')).toBeInTheDocument();
+    expect(screen.getByText('Plantilla: ficha.pdf')).toBeInTheDocument();
   });
 
   test('"Quitar plantilla" la quita al guardar, no antes, y se puede deshacer eligiendo otra', async () => {
@@ -504,7 +504,7 @@ describe('editar', () => {
       }),
     );
 
-    expect(screen.queryByText('Plantilla: ficha.xlsx')).not.toBeInTheDocument();
+    expect(screen.queryByText('Plantilla: ficha.pdf')).not.toBeInTheDocument();
     expect(
       screen.getByText('La plantilla se quitará al guardar.'),
     ).toBeInTheDocument();
@@ -521,8 +521,7 @@ describe('editar', () => {
       http.post(`${API}/periodo-2027/documentos/doc-ficha/plantilla`, () =>
         HttpResponse.json(
           {
-            message:
-              'El contenido del archivo no corresponde a un XLSX válido.',
+            message: 'El contenido del archivo no corresponde a un PDF válido.',
           },
           { status: 400 },
         ),
@@ -532,7 +531,7 @@ describe('editar', () => {
     await screen.findByText('Tutor: Jorge Ramírez');
     await userEvent.upload(
       screen.getByLabelText('Archivo de plantilla de Ficha de matrícula'),
-      new File(['a,b'], 'nueva.csv', { type: 'text/csv' }),
+      new File(['a,b'], 'nueva.pdf', { type: 'application/pdf' }),
     );
 
     await guardar();
@@ -552,9 +551,7 @@ describe('editar', () => {
       ).toBeEnabled(),
     );
     // Tras la recarga, el documento vuelve a mostrar la plantilla que sigue guardada.
-    expect(
-      await screen.findByText('Plantilla: ficha.xlsx'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Plantilla: ficha.pdf')).toBeInTheDocument();
   });
 
   test('el rechazo del backend (409) se muestra tal cual y la edición sigue abierta', async () => {

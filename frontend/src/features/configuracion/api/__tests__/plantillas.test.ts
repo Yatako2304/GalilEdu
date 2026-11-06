@@ -19,7 +19,7 @@ import '../../__tests__/polyfill-blob';
 const API = `${env.API_URL}/configuracion/periodos-matricula/periodo-1/documentos`;
 
 const csv = (nombre: string) =>
-  new File(['nombre,dni\nAna,1\n'], nombre, { type: 'text/csv' });
+  new File(['nombre,dni\nAna,1\n'], nombre, { type: 'application/pdf' });
 
 const documentoVista = (
   id: string,
@@ -31,7 +31,7 @@ const documentoVista = (
   descripcion: null,
   orden: 1,
   tienePlantilla,
-  plantillaNombreArchivo: tienePlantilla ? 'ficha.csv' : null,
+  plantillaNombreArchivo: tienePlantilla ? 'ficha.pdf' : null,
   tieneEntregas: false,
 });
 
@@ -42,8 +42,8 @@ describe('emparejarPlantillas', () => {
   ];
 
   test('une cada archivo con su documento por nombre, no por posición', () => {
-    const ficha = csv('ficha.csv');
-    const dni = csv('dni.csv');
+    const ficha = csv('ficha.pdf');
+    const dni = csv('dni.pdf');
 
     const resultado = emparejarPlantillas(
       [
@@ -60,7 +60,7 @@ describe('emparejarPlantillas', () => {
   });
 
   test('ignora mayúsculas y espacios en los bordes, como el backend', () => {
-    const ficha = csv('ficha.csv');
+    const ficha = csv('ficha.pdf');
 
     const resultado = emparejarPlantillas(
       [{ nombre: '  ficha DE matrícula ', archivo: ficha }],
@@ -73,7 +73,7 @@ describe('emparejarPlantillas', () => {
   test('descarta un archivo cuyo documento no quedó guardado', () => {
     expect(
       emparejarPlantillas(
-        [{ nombre: 'Otro documento', archivo: csv('otro.csv') }],
+        [{ nombre: 'Otro documento', archivo: csv('otro.pdf') }],
         guardados,
       ),
     ).toEqual([]);
@@ -90,7 +90,7 @@ test('subirPlantilla envía el archivo en la parte "archivo"', async () => {
   const documento = await subirPlantilla(
     'periodo-1',
     'doc-1',
-    csv('ficha.csv'),
+    csv('ficha.pdf'),
   );
 
   expect(post).toHaveBeenCalledTimes(1);
@@ -100,8 +100,8 @@ test('subirPlantilla envía el archivo en la parte "archivo"', async () => {
   );
   expect(datos).toBeInstanceOf(FormData);
   const archivo = (datos as FormData).get('archivo') as File;
-  expect(archivo.name).toBe('ficha.csv');
-  expect(archivo.type).toBe('text/csv');
+  expect(archivo.name).toBe('ficha.pdf');
+  expect(archivo.type).toBe('application/pdf');
   expect(await archivo.text()).toBe('nombre,dni\nAna,1\n');
   expect(documento).toEqual(respuesta);
   post.mockRestore();
@@ -133,8 +133,8 @@ describe('subirPlantillas', () => {
     );
 
     const resultado = await subirPlantillas('periodo-1', [
-      { documentoId: 'doc-1', nombre: 'Ficha', archivo: csv('a.csv') },
-      { documentoId: 'doc-2', nombre: 'DNI', archivo: csv('b.csv') },
+      { documentoId: 'doc-1', nombre: 'Ficha', archivo: csv('a.pdf') },
+      { documentoId: 'doc-2', nombre: 'DNI', archivo: csv('b.pdf') },
     ]);
 
     expect(orden).toEqual(['doc-1', 'doc-2']);
@@ -148,7 +148,10 @@ describe('subirPlantillas', () => {
         orden.push(String(params.documentoId));
         return params.documentoId === 'doc-1'
           ? HttpResponse.json(
-              { message: 'La plantilla debe ser un archivo XLSX, XLS o CSV.' },
+              {
+                message:
+                  'La plantilla debe ser un archivo PDF, DOCX, JPG o PNG.',
+              },
               { status: 400 },
             )
           : HttpResponse.json(documentoVista('doc-2', 'DNI', true));
@@ -156,8 +159,8 @@ describe('subirPlantillas', () => {
     );
 
     const resultado = await subirPlantillas('periodo-1', [
-      { documentoId: 'doc-1', nombre: 'Ficha', archivo: csv('a.csv') },
-      { documentoId: 'doc-2', nombre: 'DNI', archivo: csv('b.csv') },
+      { documentoId: 'doc-1', nombre: 'Ficha', archivo: csv('a.pdf') },
+      { documentoId: 'doc-2', nombre: 'DNI', archivo: csv('b.pdf') },
     ]);
 
     expect(orden).toEqual(['doc-1', 'doc-2']);
@@ -176,7 +179,7 @@ test('descargarPlantilla guarda el archivo con el nombre que se subió', async (
       `${API}/doc-1/plantilla`,
       () =>
         new HttpResponse('nombre,dni\n', {
-          headers: { 'Content-Type': 'text/csv' },
+          headers: { 'Content-Type': 'application/pdf' },
         }),
     ),
   );
@@ -197,11 +200,11 @@ test('descargarPlantilla guarda el archivo con el nombre que se subió', async (
     });
 
   try {
-    await descargarPlantilla('periodo-1', 'doc-1', 'ficha.csv');
+    await descargarPlantilla('periodo-1', 'doc-1', 'ficha.pdf');
 
     expect(crear).toHaveBeenCalledTimes(1);
     expect(enlaces).toHaveLength(1);
-    expect(enlaces[0].download).toBe('ficha.csv');
+    expect(enlaces[0].download).toBe('ficha.pdf');
     expect(enlaces[0].href).toBe('blob:plantilla');
     expect(liberar).toHaveBeenCalledWith('blob:plantilla');
   } finally {

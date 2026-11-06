@@ -215,7 +215,7 @@ describe('un tarifario en configuración (Figma 2027)', () => {
     ).toHaveTextContent('Total pensionesS/ 6,200.00');
   });
 
-  test('los campos se pueden editar; la pestaña de descuentos no está disponible y hay "Volver" y "Confirmar tarifario"', async () => {
+  test('los campos se pueden editar; la pestaña de descuentos está disponible y hay "Volver" y "Confirmar tarifario"', async () => {
     await mostrar();
     await screen.findByText('En configuración');
 
@@ -227,8 +227,7 @@ describe('un tarifario en configuración (Figma 2027)', () => {
     const descuentos = screen.getByRole('tab', {
       name: 'Catálogo de descuentos',
     });
-    expect(descuentos).toBeDisabled();
-    expect(descuentos).toHaveAttribute('title', 'Disponible pronto');
+    expect(descuentos).toBeEnabled();
     expect(screen.getByRole('link', { name: 'Volver' })).toHaveAttribute(
       'href',
       '/app/administrativo/pensiones',

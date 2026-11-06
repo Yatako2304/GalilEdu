@@ -193,10 +193,22 @@ public class ServicioUsuarios {
 				});
 	}
 
-	/** La cuenta de la persona queda inactiva (no puede iniciar sesión), si tiene una. */
+	/**
+	 * La persona dejó de ser padre, madre o apoderado presente de todos sus estudiantes (la quitaron de la
+	 * inscripción, no registra o falleció): se le quita el rol Apoderado. Si era su único rol, se conserva y la cuenta
+	 * queda inactiva (la cuenta siempre tiene al menos un rol; si vuelve a ser familiar, asegurarRol la reactiva).
+	 */
 	@Transactional
-	public void desactivarCuentaDe(UUID personaId) {
-		usuarios.findByPersonaId(personaId).filter(u -> !u.isEliminado()).ifPresent(Usuario::desactivar);
+	public void retirarRolApoderado(UUID personaId) {
+		usuarios.findByPersonaId(personaId)
+				.filter(u -> !u.isEliminado() && u.getRoles().contains(Rol.APODERADO))
+				.ifPresent(u -> {
+					if (u.getRoles().size() == 1) {
+						u.desactivar();
+					} else {
+						u.quitarRol(Rol.APODERADO);
+					}
+				});
 	}
 
 	@Transactional(readOnly = true)

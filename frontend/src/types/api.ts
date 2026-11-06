@@ -228,6 +228,8 @@ export type DatosFamiliar = {
   viveConEstudiante?: boolean;
   tienePatriaPotestad?: boolean;
   relacion?: string | null;
+  /** Padre o madre fallecido: se registra con sus datos, pero no tiene cuenta. */
+  fallecido?: boolean;
 };
 
 export type DatosContacto = {
@@ -271,6 +273,17 @@ export type InscripcionRegistrada = {
   responsable: string;
   usuarioResponsable: string;
   cuentaNueva: boolean;
+  /** Cuenta de cada padre, madre o apoderado presente (todos tienen cuenta, no solo el responsable). */
+  cuentas: CuentaFamiliar[];
+};
+
+export type CuentaFamiliar = {
+  parentesco: Parentesco;
+  nombre: string;
+  usuario: string;
+  correo: string | null;
+  /** Se acaba de crear: sus credenciales se enviaron a su correo. */
+  nueva: boolean;
 };
 
 export type DocumentoAdjunto = {
@@ -300,6 +313,7 @@ export type PersonaEncontrada = {
   /** Su cuenta de usuario está eliminada: en "Nuevo usuario" se puede volver a registrar. */
   cuentaEliminada: boolean;
   estudiantesACargo: string[];
+  fallecido: boolean;
 };
 
 export type FichaEstudiante = {
@@ -322,6 +336,7 @@ export type FichaEstudiante = {
     motivoNoRegistra: string | null;
     /** Documento que acredita al apoderado (carta poder…), si se adjuntó. */
     acreditacion: DocumentoAdjunto | null;
+    fallecido: boolean;
   }[];
   contactos: DatosContacto[];
   modoSalida: ModoSalida | null;
@@ -346,6 +361,7 @@ export type CursoSesion = {
   curso: string;
   docente: string;
   aula: string;
+  seccion?: string;
 };
 
 export type SesionClase = {
@@ -679,6 +695,8 @@ export type CuotaDetalle = {
   estado: EstadoCuota;
   vencida: boolean;
   fechaPago: string | null;
+  diasAtraso: number;
+  recargo: number;
 };
 
 export type ResumenCompromiso = {
@@ -753,6 +771,155 @@ export type CuotaMatriculaDetalle = {
   estado: EstadoCuota;
   fechaPago: string | null;
   responsable: string;
+};
+
+// ---------- Pagos · Morosidad, descuentos y apoderado (HU-35, HU-38, HU-39, HU-40) ----------
+
+export type CuotaMorosa = {
+  cuotaId: string;
+  concepto: string;
+  numero: number | null;
+  fechaVencimiento: string;
+  diasAtraso: number;
+  capital: number;
+  recargo: number;
+  total: number;
+};
+
+export type MorosidadCompromiso = {
+  compromisoId: string;
+  fecha: string;
+  anio: number;
+  estudianteId: string;
+  estudiante: string;
+  diasGracia: number;
+  recargoPorcentaje: number;
+  topeRecargoPorcentaje: number;
+  capital: number;
+  recargo: number;
+  total: number;
+  cuotas: CuotaMorosa[];
+};
+
+export type PagoRealizado = {
+  id: string;
+  numeroConstancia: string;
+  fechaPago: string;
+  monto: number;
+  capital: number;
+  recargo: number;
+  estado: string;
+  cuotas: string[];
+};
+
+export type HijoConDeuda = {
+  estudianteId: string;
+  codigo: string;
+  nombres: string;
+  apellidos: string;
+  grado: string | null;
+  seccion: string | null;
+  saldo: number;
+  cuotasVencidas: number;
+};
+
+export type TipoDescuento = 'PORCENTAJE_UNICO' | 'POR_HERMANOS';
+export type AplicacionDescuento = 'MANUAL' | 'AUTOMATICO';
+export type EstadoDescuento = 'ACTIVO' | 'INACTIVO';
+
+export type TramoDescuento = {
+  hermanosDesde: number;
+  hermanosHasta: number | null;
+  porcentaje: number;
+};
+
+export type DescuentoVista = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tipo: TipoDescuento;
+  aplicacion: AplicacionDescuento;
+  porcentaje: number | null;
+  tramos: TramoDescuento[];
+  conceptos: string[];
+  condicion: string | null;
+  estado: EstadoDescuento;
+};
+
+export type SolicitudDescuento = {
+  nombre: string;
+  descripcion?: string | null;
+  tipo: TipoDescuento;
+  aplicacion: AplicacionDescuento;
+  porcentaje?: number | null;
+  tramos?: TramoDescuento[];
+  conceptos: string[];
+  condicion?: string | null;
+};
+
+export type ConfiguracionDescuentos = { porcentajeMaximo: number };
+export type SolicitudConfiguracionDescuentos = { porcentajeMaximo: number };
+
+export type DescuentoAplicable = {
+  id: string;
+  nombre: string;
+  tipo: TipoDescuento;
+  aplicacion: AplicacionDescuento;
+  porcentaje: number | null;
+  conceptos: string[];
+  condicion: string | null;
+  aplicable: boolean;
+  motivo: string | null;
+};
+
+export type DescuentoActual = {
+  id: string;
+  nombre: string;
+  porcentaje: number;
+};
+
+export type DescuentosAplicables = {
+  hermanosMatriculados: number;
+  actual: DescuentoActual | null;
+  descuentos: DescuentoAplicable[];
+};
+
+export type SolicitudAplicarDescuento = {
+  descuentoId: string;
+  motivo: string;
+  vigenciaDesde?: string | null;
+  vigenciaHasta?: string | null;
+  reemplazar: boolean;
+};
+
+export type SolicitudRevocarDescuento = { motivo: string };
+
+export type EstadoDescuentoAplicado = 'ACTIVO' | 'REEMPLAZADO' | 'REVOCADO';
+
+export type DescuentoAplicadoVista = {
+  id: string;
+  descuentoId: string;
+  nombre: string;
+  porcentaje: number;
+  vigenciaDesde: string;
+  vigenciaHasta: string | null;
+  motivo: string;
+  estado: EstadoDescuentoAplicado;
+  aplicadoPor: string | null;
+  aplicadoEn: string;
+  motivoRevocacion: string | null;
+  revocadoEn: string | null;
+};
+
+export type DescuentoDelCompromiso = {
+  activo: DescuentoAplicadoVista | null;
+  cuotasConDescuento: number;
+  historial: DescuentoAplicadoVista[];
+};
+
+export type ResultadoDescuento = {
+  descuento: DescuentoAplicadoVista;
+  cuotasRecalculadas: number;
 };
 
 // ---------- Configuración · Año escolar (HU-74) ----------
@@ -1307,4 +1474,265 @@ export type OrdenPagoDetalle = {
     monto: number;
     estado: 'CONFIRMADO' | 'OBSERVADO';
   }[];
+};
+
+// ---------- Calificaciones del docente (HU-57, HU-59 y HU-62) ----------
+
+export type EscalaEvaluacion = 'VIGESIMAL' | 'CUALITATIVA';
+export type EstadoPeriodoCalificacion = 'PLANIFICADO' | 'EN_CURSO' | 'CERRADO';
+
+export type PeriodoCursoDocente = {
+  id: string;
+  numero: number;
+  nombre: string;
+  fechaInicio: string;
+  fechaFin: string;
+  fechaLimiteNotas: string;
+  estado: EstadoPeriodoCalificacion;
+  registroNotasAbierto: boolean;
+  competencias: number;
+  items: number;
+};
+
+export type CursoDocente = {
+  planCursoId: string;
+  seccionId: string;
+  anioEscolarId: string;
+  anio: number;
+  curso: string;
+  area: string;
+  gradoCodigo: string;
+  grado: string;
+  seccion: string;
+  escala: EscalaEvaluacion;
+  reglaNota: string;
+  consolidacion: string;
+  periodos: PeriodoCursoDocente[];
+};
+
+export type CompetenciaOpcion = { id: string; nombre: string };
+
+export type CompetenciaItem = {
+  competenciaId: string;
+  competencia: string;
+  pesoPorcentaje: number;
+};
+
+export type TipoItemEvaluacion =
+  | 'PRACTICA'
+  | 'EXAMEN'
+  | 'PROYECTO'
+  | 'TRABAJO_INDIVIDUAL'
+  | 'EXPOSICION'
+  | 'PORTAFOLIO'
+  | 'OTRO';
+
+export type ItemEvaluacion = {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  tipo: TipoItemEvaluacion;
+  actualizadoEn: string;
+  competencias: CompetenciaItem[];
+  editable: boolean;
+};
+
+export type SolicitudItemEvaluacion = {
+  nombre: string;
+  descripcion: string;
+  tipo: TipoItemEvaluacion;
+  competencias: {
+    competenciaId: string;
+    pesoPorcentaje: number;
+  }[];
+};
+
+export type EvidenciaCalificacion = {
+  nombreArchivo: string;
+  tipoMime: string;
+  tamanoBytes: number;
+  subidoEn: string;
+};
+
+export type FilaCalificacion = {
+  id: string | null;
+  matriculaId: string;
+  estudianteId: string;
+  estudiante: string;
+  notaNumerica: number | null;
+  nivelLogro: 'AD' | 'A' | 'B' | 'C' | null;
+  evidencia: EvidenciaCalificacion | null;
+  estado: 'PENDIENTE' | 'CALIFICADO';
+};
+
+export type TipoReporteCalificaciones = 'ITEM' | 'COMPETENCIA' | 'PERIODO';
+
+export type ReporteCalificaciones = {
+  titulo: string;
+  detalle: string;
+  columnas: { clave: string; titulo: string }[];
+  filas: {
+    matriculaId: string;
+    estudiante: string;
+    valores: Record<string, string>;
+  }[];
+};
+
+// ---------- Matrícula · Personal administrativo (HU-24, A3 "Matrículas del periodo") ----------
+// Backend: matricula/aplicacion/DtosMatricula.java (PeriodoMatriculas, FilaMatriculaPeriodo).
+
+export type IndicadoresPeriodo = {
+  estudiantes: number;
+  matriculados: number;
+  enProceso: number;
+  requierenAccion: number;
+};
+
+/** Aviso del periodo (PROGRAMADO, ABIERTO o CERRADO, lo calcula el backend) e indicadores. */
+export type PeriodoMatriculas = {
+  id: string;
+  anio: number;
+  inicio: string;
+  cierre: string;
+  estado: EstadoVisiblePeriodoMatricula;
+  permiteExtemporanea: boolean;
+  indicadores: IndicadoresPeriodo;
+};
+
+/** Fila de la tabla: solo estudiantes que ya tienen matrícula. `seccion` es null si aún no se asigna. */
+export type FilaMatriculaPeriodo = {
+  id: string;
+  estudianteId: string;
+  nombre: string;
+  documento: string;
+  gradoCodigo: string;
+  grado: string;
+  seccion: string | null;
+  estado: EstadoMatricula;
+  codigo: string | null;
+  tipo: 'NUEVO' | 'CONTINUADOR';
+};
+
+// ---------- Matrícula · Nueva matrícula del Personal administrativo (HU-24, A6) ----------
+
+/** Resultado del buscador: inscritos para el año del periodo que aún no tienen matrícula. */
+export type EstudianteSinMatricula = {
+  id: string;
+  nombre: string;
+  documento: string;
+  gradoCodigo: string;
+  grado: string;
+};
+
+/** Sección que el sistema asignaría: la primera del grado con cupo (orden alfabético). */
+export type SeccionAsignada = {
+  id: string;
+  etiqueta: string;
+  tutor: string | null;
+  capacidad: number;
+  ocupadas: number;
+};
+
+export type DocumentoPedido = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tienePlantilla: boolean;
+};
+
+/** Lo que muestra el modal al elegir al alumno. `seccion` es null si el grado no tiene cupo en ninguna sección. */
+export type PreparacionMatricula = {
+  estudianteId: string;
+  nombre: string;
+  documento: string;
+  gradoCodigo: string;
+  grado: string;
+  tipo: 'NUEVO' | 'CONTINUADOR';
+  seccion: SeccionAsignada | null;
+  apoderado: string | null;
+  contacto: string | null;
+  contactoEmergencia: string | null;
+  informacionMedica: string;
+  documentos: DocumentoPedido[];
+};
+
+export type MatriculaCreada = {
+  id: string;
+  estado: EstadoMatricula;
+  seccion: string;
+  documentosSubidos: number;
+  seccionReasignada: boolean;
+};
+
+export type SeccionOpcion = {
+  id: string;
+  etiqueta: string;
+  tutor: string | null;
+  capacidad: number;
+  ocupadas: number;
+};
+
+export type SeccionesDelGrado = {
+  grado: string;
+  /** La sección actual (o la propuesta, en Nueva matrícula). */
+  seleccionadaId: string | null;
+  secciones: SeccionOpcion[];
+};
+
+export type ArchivoGuardado = {
+  nombre: string;
+  tipoMime: string;
+  tamanoBytes: number;
+  estado: 'EN_REVISION' | 'APROBADO' | 'OBSERVADO';
+  observacion: string | null;
+  subidoEn: string;
+};
+
+export type DocumentoDeMatricula = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tienePlantilla: boolean;
+  archivo: ArchivoGuardado | null;
+};
+
+export type DetalleMatricula = {
+  id: string;
+  periodoId: string;
+  anio: number;
+  estudianteId: string;
+  nombre: string;
+  documento: string;
+  tipo: 'NUEVO' | 'CONTINUADOR';
+  gradoCodigo: string;
+  grado: string;
+  seccion: SeccionAsignada | null;
+  estado: EstadoMatricula;
+  codigo: string | null;
+  pasoActual: number;
+  apoderado: string | null;
+  contacto: string | null;
+  contactoEmergencia: string | null;
+  informacionMedica: string;
+  puedeCambiarSeccion: boolean;
+  puedeEditarDocumentos: boolean;
+  puedeValidar: boolean;
+  documentos: DocumentoDeMatricula[];
+};
+
+// ---------- Documentos de matrícula del apoderado (HU-28, HU-29) ----------
+// Iguales a DocumentoApoderado y DocumentosApoderado de backend/.../matricula/aplicacion/DtosMatricula.java
+
+export type DocumentoApoderado = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tienePlantilla: boolean;
+  archivo: ArchivoGuardado | null;
+};
+
+export type DocumentosApoderado = {
+  estado: EstadoMatricula;
+  puedeSubir: boolean;
+  documentos: DocumentoApoderado[];
 };

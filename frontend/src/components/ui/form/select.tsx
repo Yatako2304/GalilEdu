@@ -1,5 +1,6 @@
 import { Check, ChevronDown } from 'lucide-react';
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { UseFormRegisterReturn } from 'react-hook-form';
 
 import { cn } from '@/utils/cn';
@@ -28,6 +29,21 @@ type SelectFieldProps = FieldWrapperPassThroughProps &
     wrapperClassName?: string;
     registration?: Partial<UseFormRegisterReturn>;
   };
+
+// La lista se dibuja fuera del campo (en el <body>) con `position: fixed`: así flota sobre cualquier contenedor, aunque
+// tenga `overflow` (un modal, un cajón, una tarjeta con scroll), sin empujar su contenido ni agregarle scroll.
+const ALTO_MAXIMO_LISTA = 256; // 16 rem (antes `max-h-64`)
+const ALTO_ESTIMADO_OPCION = 44;
+const SEPARACION = 4;
+const MARGEN_DE_PANTALLA = 8;
+
+type PosicionLista = {
+  left: number;
+  width: number;
+  top?: number;
+  bottom?: number;
+  maxHeight: number;
+};
 
 const unirRefs =
   <T,>(...refs: (React.Ref<T> | undefined)[]) =>
@@ -63,13 +79,19 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
       vaciable && placeholder
         ? [{ label: placeholder, value: '' }, ...options]
         : options;
+    // Controlado y sin valor: `value` existe y no corresponde a ninguna opción (por ejemplo, '').
+    const sinValor =
+      props.value !== undefined &&
+      !options.some((o) => String(o.value) === String(props.value));
     const nativo = React.useRef<HTMLSelectElement | null>(null);
     const contenedor = React.useRef<HTMLDivElement>(null);
+    const boton = React.useRef<HTMLButtonElement>(null);
     const lista = React.useRef<HTMLUListElement>(null);
     const id = React.useId();
     const [abierto, setAbierto] = React.useState(false);
     const [activo, setActivo] = React.useState(0);
     const [valor, setValor] = React.useState('');
+    const [posicion, setPosicion] = React.useState<PosicionLista | null>(null);
 
     // El valor puede cambiar por fuera (reset, setValue, prop `value`): se lee del <select> en cada render.
     // Va sin dependencias a propósito; el if evita el bucle.
@@ -79,21 +101,84 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
       if (actual !== valor) setValor(actual);
     });
 
+    // Coloca la lista pegada al campo: abajo y, si no cabe y arriba hay más sitio, hacia arriba. Sigue al campo si la
+    // ventana cambia de tamaño o algún contenedor se desplaza.
+    const medir = React.useCallback(() => {
+      const campo = boton.current;
+      if (!campo) return;
+      const r = campo.getBoundingClientRect();
+      const abajo =
+        window.innerHeight - r.bottom - SEPARACION - MARGEN_DE_PANTALLA;
+      const arriba = r.top - SEPARACION - MARGEN_DE_PANTALLA;
+      const necesario = Math.min(
+        ALTO_MAXIMO_LISTA,
+        lista.current?.scrollHeight ?? items.length * ALTO_ESTIMADO_OPCION + 8,
+      );
+      const haciaArriba = abajo < necesario && arriba > abajo;
+      setPosicion({
+        left: r.left,
+        width: r.width,
+        maxHeight: Math.max(
+          ALTO_ESTIMADO_OPCION,
+          Math.min(ALTO_MAXIMO_LISTA, haciaArriba ? arriba : abajo),
+        ),
+        ...(haciaArriba
+          ? { bottom: window.innerHeight - r.top + SEPARACION }
+          : { top: r.bottom + SEPARACION }),
+      });
+    }, [items.length]);
+
+    React.useLayoutEffect(() => {
+      if (!abierto) {
+        setPosicion(null);
+        return;
+      }
+      medir();
+      window.addEventListener('resize', medir);
+      window.addEventListener('scroll', medir, true);
+      return () => {
+        window.removeEventListener('resize', medir);
+        window.removeEventListener('scroll', medir, true);
+      };
+    }, [abierto, medir]);
+
     React.useEffect(() => {
       if (!abierto) return;
       const alClickFuera = (e: MouseEvent) => {
-        if (!contenedor.current?.contains(e.target as Node)) setAbierto(false);
+        const destino = e.target as Node;
+        // La lista vive fuera del campo: un clic en ella tampoco es "fuera".
+        if (
+          !contenedor.current?.contains(destino) &&
+          !lista.current?.contains(destino)
+        )
+          setAbierto(false);
       };
       document.addEventListener('mousedown', alClickFuera);
       return () => document.removeEventListener('mousedown', alClickFuera);
     }, [abierto]);
 
+    // La lista cuelga del <body>, fuera de un modal de Radix, que bloquea la rueda y el gesto táctil fuera de él (así
+    // la página de atrás no se mueve). Sin esto la lista no se podría desplazar dentro de un modal: sus eventos de
+    // desplazamiento no suben hasta ese bloqueo, y la lista se desplaza como siempre.
+    const hayLista = abierto && posicion !== null;
     React.useEffect(() => {
-      if (abierto)
+      const elemento = lista.current;
+      if (!hayLista || !elemento) return;
+      const noSubir = (e: Event) => e.stopPropagation();
+      elemento.addEventListener('wheel', noSubir, { passive: true });
+      elemento.addEventListener('touchmove', noSubir, { passive: true });
+      return () => {
+        elemento.removeEventListener('wheel', noSubir);
+        elemento.removeEventListener('touchmove', noSubir);
+      };
+    }, [hayLista]);
+
+    React.useEffect(() => {
+      if (abierto && posicion)
         lista.current
           ?.querySelector(`[data-indice="${activo}"]`)
           ?.scrollIntoView?.({ block: 'nearest' });
-    }, [abierto, activo]);
+    }, [abierto, activo, posicion]);
 
     const elegido = options.find((o) => String(o.value) === valor);
 
@@ -158,8 +243,11 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
             {...props}
             ref={unirRefs(ref, nativo, registration?.ref)}
           >
-            {placeholder && (
-              <option value="" disabled={!vaciable}>
+            {/* Un campo controlado "sin valor" (value="" o uno que no es de ninguna opción) necesita una opción vacía:
+                sin ella, React elige la primera opción y el campo nunca puede quedar vacío. Sin placeholder va oculta
+                y deshabilitada. Un campo sin controlar (react-hook-form) no la lleva: sigue como siempre. */}
+            {(placeholder || sinValor) && (
+              <option value="" disabled={!vaciable} hidden={!placeholder}>
                 {placeholder}
               </option>
             )}
@@ -170,6 +258,7 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
             ))}
           </select>
           <button
+            ref={boton}
             type="button"
             disabled={disabled}
             role="combobox"
@@ -209,50 +298,56 @@ export const Select = React.forwardRef<HTMLSelectElement, SelectFieldProps>(
             )}
             aria-hidden="true"
           />
-          {abierto && (
-            <ul
-              ref={lista}
-              id={id}
-              role="listbox"
-              className="absolute inset-x-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-lg border border-stroke-secondary bg-surface-primary p-1 shadow-card-elevation"
-            >
-              {items.map((opcion, i) => {
-                const seleccionada = String(opcion.value) === valor;
-                return (
-                  // El teclado se maneja en el botón (patrón listbox con aria-activedescendant).
-                  // eslint-disable-next-line jsx-a11y/click-events-have-key-events
-                  <li
-                    key={String(opcion.value)}
-                    id={`${id}-${i}`}
-                    role="option"
-                    aria-selected={seleccionada}
-                    aria-disabled={opcion.disabled || undefined}
-                    data-indice={i}
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => elegir(opcion)}
-                    onMouseEnter={() => !opcion.disabled && setActivo(i)}
-                    className={cn(
-                      'flex items-center gap-2 rounded px-2 py-3 text-label-2 text-content-secondary',
-                      opcion.disabled
-                        ? 'cursor-not-allowed text-content-disabled-alt'
-                        : 'cursor-pointer',
-                      i === activo &&
-                        !opcion.disabled &&
-                        'bg-surface-primary-hover text-content-primary',
-                    )}
-                  >
-                    <span className="min-w-0 flex-1">{opcion.label}</span>
-                    {seleccionada && (
-                      <Check
-                        className="size-4 shrink-0 text-content-accent-primary"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+          {abierto &&
+            posicion &&
+            createPortal(
+              <ul
+                ref={lista}
+                id={id}
+                role="listbox"
+                // z-[60]: por encima de los modales (z-50). `pointer-events: auto` porque un modal de Radix deja el
+                // <body> sin eventos de puntero y esta lista, que cuelga del <body>, tiene que seguir respondiendo.
+                style={{ ...posicion, pointerEvents: 'auto' }}
+                className="fixed z-[60] overflow-y-auto rounded-lg border border-stroke-secondary bg-surface-primary p-1 shadow-card-elevation"
+              >
+                {items.map((opcion, i) => {
+                  const seleccionada = String(opcion.value) === valor;
+                  return (
+                    // El teclado se maneja en el botón (patrón listbox con aria-activedescendant).
+                    // eslint-disable-next-line jsx-a11y/click-events-have-key-events
+                    <li
+                      key={String(opcion.value)}
+                      id={`${id}-${i}`}
+                      role="option"
+                      aria-selected={seleccionada}
+                      aria-disabled={opcion.disabled || undefined}
+                      data-indice={i}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => elegir(opcion)}
+                      onMouseEnter={() => !opcion.disabled && setActivo(i)}
+                      className={cn(
+                        'flex items-center gap-2 rounded px-2 py-3 text-label-2 text-content-secondary',
+                        opcion.disabled
+                          ? 'cursor-not-allowed text-content-disabled-alt'
+                          : 'cursor-pointer',
+                        i === activo &&
+                          !opcion.disabled &&
+                          'bg-surface-primary-hover text-content-primary',
+                      )}
+                    >
+                      <span className="min-w-0 flex-1">{opcion.label}</span>
+                      {seleccionada && (
+                        <Check
+                          className="size-4 shrink-0 text-content-accent-primary"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>,
+              document.body,
+            )}
         </div>
       </FieldWrapper>
     );

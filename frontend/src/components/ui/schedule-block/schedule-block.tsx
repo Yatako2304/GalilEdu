@@ -25,6 +25,10 @@ export type ScheduleBlockProps = {
   label?: string;
   /** En la vista del coordinador, la hora libre se puede asignar. */
   onAssign?: () => void;
+  /** En la vista del coordinador, un bloque asignado se puede abrir para cambiarlo o quitarlo. */
+  onSelect?: () => void;
+  /** Mensaje de un cruce de horario: marca el bloque como advertencia y lo muestra debajo. */
+  conflict?: string;
   className?: string;
 };
 
@@ -54,7 +58,8 @@ const Titulo = ({
   </p>
 );
 
-// Figma > Componentes > Bloque horario (Tipo = Asignado, Sin asignar, Subgrupos, Recreo · Vista = Coordinador, Profesor)
+// Figma > Componentes > Bloque horario (Tipo = Asignado, Sin asignar, Subgrupos, Recreo · Vista = Coordinador, Profesor).
+// `onSelect` (bloque asignado clicable) y `conflict` (cruce) no están dibujados en Figma: salen de HU-45.
 export const ScheduleBlock = ({
   type,
   courses = [],
@@ -62,6 +67,8 @@ export const ScheduleBlock = ({
   section,
   label = 'Recreo',
   onAssign,
+  onSelect,
+  conflict,
   className,
 }: ScheduleBlockProps) => {
   if (type === 'break') {
@@ -101,22 +108,26 @@ export const ScheduleBlock = ({
   }
 
   const subgrupos = courses.length > 1;
-  return (
-    <div
-      className={cn(
-        'flex min-h-[102px] flex-col rounded-lg border border-stroke-secondary bg-surface-accent-light p-4',
-        className,
-      )}
-    >
+  const clases = cn(
+    'flex min-h-[102px] w-full flex-col rounded-lg border p-4 text-left',
+    conflict
+      ? 'border-stroke-warning bg-surface-warning-light'
+      : 'border-stroke-secondary bg-surface-accent-light',
+    onSelect &&
+      'cursor-pointer outline-none hover:bg-surface-tertiary focus-visible:ring-2 focus-visible:ring-stroke-focus',
+    className,
+  );
+  const contenido = (
+    <>
       <div className="flex flex-col gap-1">
         {subgrupos && (
           <p className="text-caption-1 font-medium text-content-accent-primary">
             Subgrupos
           </p>
         )}
-        {courses.map((c) => (
-          <React.Fragment key={c.name}>
-            <Titulo>{c.name}</Titulo>
+        {courses.map((c, i) => (
+          <React.Fragment key={`${c.name}-${i}`}>
+            <Titulo warning={!!conflict}>{c.name}</Titulo>
             {c.teacher && (
               <p className="text-caption-1 text-content-tertiary">
                 {c.teacher}
@@ -125,6 +136,9 @@ export const ScheduleBlock = ({
           </React.Fragment>
         ))}
       </div>
+      {conflict && (
+        <p className="mt-1 text-caption-1 text-content-warning">{conflict}</p>
+      )}
       {(room || section) && (
         <p className="mt-auto flex items-end pt-3 text-caption-1">
           <span className="flex-1 text-content-quartiary">{room}</span>
@@ -135,6 +149,14 @@ export const ScheduleBlock = ({
           )}
         </p>
       )}
-    </div>
+    </>
+  );
+
+  return onSelect ? (
+    <button type="button" onClick={onSelect} className={clases}>
+      {contenido}
+    </button>
+  ) : (
+    <div className={clases}>{contenido}</div>
   );
 };

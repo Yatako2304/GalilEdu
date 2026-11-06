@@ -2,12 +2,17 @@ package com.galiledu.estudiantes.aplicacion;
 
 import static com.galiledu.compartido.web.ExcepcionNegocio.exigir;
 
+import java.time.LocalDate;
+import java.time.Period;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.criteria.Predicate;
@@ -20,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.compartido.web.Pagina;
+import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.CuentaFamiliar;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosAutorizado;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosContacto;
 import com.galiledu.estudiantes.aplicacion.DtosEstudiantes.DatosEstudiante;
@@ -62,6 +68,13 @@ public class ServicioEstudiantes {
 	private static final String DOCUMENTO_EXISTE = "El documento ya está registrado dentro del sistema";
 	private static final Map<Parentesco, String> NOMBRE_PARENTESCO = Map.of(Parentesco.PADRE, "Padre",
 			Parentesco.MADRE, "Madre", Parentesco.APODERADO, "Apoderado");
+	private static final ZoneId LIMA = ZoneId.of("America/Lima");
+	/** Validación de la iteración 1 con el PO: padre, madre y apoderado deben ser mayores de edad. */
+	private static final int MAYORIA_DE_EDAD = 18;
+	/** Motivo de "no registra" que exige la observación. */
+	private static final String MOTIVO_OTRO = "Otro";
+	/** UUID que no es de ningún estudiante, para consultar "otro estudiante" cuando aún no tiene id. */
+	private static final UUID NINGUNO = new UUID(0, 0);
 
 	private final EstudianteRepositorio estudiantes;
 	private final ServicioPersonas personas;
@@ -85,9 +98,10 @@ public class ServicioEstudiantes {
 	/**
 	 * "Editar" del listado: mismas validaciones y pasos que la inscripción, sobre el mismo estudiante. Se reemplazan
 	 * sus datos, ficha médica, familia, contactos y autorizados. Reglas del equipo: el documento se puede cambiar (si
-	 * no es de otra persona); un estudiante matriculado no cambia de grado ni de año; si cambia el responsable, al
-	 * nuevo se le crea (o reactiva) su cuenta y la del anterior queda inactiva, salvo que sea responsable de otro
-	 * estudiante. El documento que acredita al apoderado se conserva si el apoderado es el mismo.
+	 * no es de otra persona); un estudiante matriculado no cambia de grado ni de año; cada familiar presente tiene
+	 * cuenta (se crea o reactiva) y quien deja de serlo (lo quitan, no registra o falleció) pierde el rol Apoderado,
+	 * salvo que sea familiar presente de otro estudiante. El documento que acredita al apoderado se conserva si el
+	 * apoderado es el mismo.
 	 */
 	@Transactional
 	public InscripcionRegistrada actualizar(UUID id, SolicitudInscripcion s) {
@@ -100,7 +114,7 @@ public class ServicioEstudiantes {
 					.invalido("El estudiante está matriculado: no se puede cambiar el grado ni el año académico");
 		}
 		validar(s);
-		UUID responsableAnterior = responsableDe(estudiante).map(Persona::getId).orElse(null);
+		Set<UUID> presentesAntes = presentes(estudiante);
 		var acreditacion = acreditacionDe(estudiante);
 
 		personas.actualizar(estudiante.getPersona(), d.persona());
@@ -110,30 +124,70 @@ public class ServicioEstudiantes {
 		InscripcionRegistrada resultado = registrar(estudiante, s);
 
 		acreditacion.ifPresent(a -> conservarAcreditacion(estudiante, a));
-		UUID responsableNuevo = responsableDe(estudiante).map(Persona::getId).orElse(null);
-		if (responsableAnterior != null && !responsableAnterior.equals(responsableNuevo)
-				&& !estudiantes.esResponsableDeOtro(responsableAnterior, estudiante.getId())) {
-			usuarios.desactivarCuentaDe(responsableAnterior);
-		}
+		presentesAntes.removeAll(presentes(estudiante));
+		retirarCuentas(estudiante, presentesAntes);
 		return resultado;
+	}
+
+	/** Personas de los vínculos que están presentes (registradas y no fallecidas): son las que tienen cuenta. */
+	private static Set<UUID> presentes(Estudiante e) {
+		Set<UUID> ids = new LinkedHashSet<>();
+		e.getVinculos().stream()
+				.map(VinculoFamiliar::getPersona)
+				.filter(p -> p != null && !p.isFallecido())
+				.forEach(p -> ids.add(p.getId()));
+		return ids;
+	}
+
+	/**
+	 * Quien dejó de ser familiar presente de este estudiante pierde el rol Apoderado, salvo que lo siga siendo de otro
+	 * estudiante. Los fallecidos de la inscripción también lo pierden (un fallecido no tiene cuenta).
+	 */
+	private void retirarCuentas(Estudiante e, Set<UUID> candidatos) {
+		Set<UUID> ids = new LinkedHashSet<>(candidatos);
+		e.getVinculos().stream()
+				.map(VinculoFamiliar::getPersona)
+				.filter(p -> p != null && p.isFallecido())
+				.forEach(p -> ids.add(p.getId()));
+		for (UUID id : ids) {
+			if (!estudiantes.esFamiliarPresenteDeOtro(id, e.getId())) {
+				usuarios.retirarRolApoderado(id);
+			}
+		}
 	}
 
 	/** Reglas de los cinco pasos, antes de guardar nada (para no dejar una inscripción a medias). */
 	private static void validar(SolicitudInscripcion s) {
-		// Regla de Figma (paso 3): al menos padre o madre; si no hay ninguno, el apoderado es obligatorio.
-		boolean hayPadres = s.padre().registra() || s.madre().registra();
-		boolean hayApoderado = s.apoderado() != null && s.apoderado().registra();
+		// Regla de Figma (paso 3): al menos padre o madre; si no hay ninguno, el apoderado es obligatorio. Un padre o
+		// una madre fallecidos se registran, pero no cuentan como presentes.
+		boolean hayPadres = s.padre().presente() || s.madre().presente();
+		boolean hayApoderado = s.apoderado() != null && s.apoderado().presente();
 		if (!hayPadres && !hayApoderado) {
-			throw ExcepcionNegocio.invalido("No hay padre ni madre registrados: debes registrar un apoderado");
+			throw ExcepcionNegocio.invalido(
+					"No hay padre ni madre presentes (registrados y no fallecidos): debes registrar un apoderado");
 		}
-		exigirMotivo(s.padre(), "Indica el motivo por el que no se registra al padre");
-		exigirMotivo(s.madre(), "Indica el motivo por el que no se registra a la madre");
+		if (s.apoderado() != null && s.apoderado().esFallecido()) {
+			throw ExcepcionNegocio.invalido("El apoderado no puede estar fallecido");
+		}
+		exigirMotivo(s.padre(), "Indica el motivo por el que no se registra al padre", "Padre");
+		exigirMotivo(s.madre(), "Indica el motivo por el que no se registra a la madre", "Madre");
+		DatosFamiliar responsable = switch (s.responsable() == null ? Parentesco.APODERADO : s.responsable()) {
+			case PADRE -> s.padre();
+			case MADRE -> s.madre();
+			case APODERADO -> s.apoderado();
+		};
+		if (responsable != null && responsable.esFallecido()) {
+			throw ExcepcionNegocio.invalido("El responsable de matrícula no puede ser una persona fallecida");
+		}
 		exigirPaso1(s.estudiante());
 		exigirPaso2(s.fichaMedica());
 		exigirPaso3(s);
 	}
 
-	/** Guarda los datos de los pasos en el estudiante y asegura la cuenta del responsable (paso 5). */
+	/**
+	 * Guarda los datos de los pasos en el estudiante y asegura la cuenta de cada familiar presente (validación de la
+	 * iteración 1 con el PO: no solo la del responsable de matrícula).
+	 */
 	private InscripcionRegistrada registrar(Estudiante estudiante, SolicitudInscripcion s) {
 		DatosEstudiante d = s.estudiante();
 		Persona personaEstudiante = estudiante.getPersona();
@@ -157,7 +211,7 @@ public class ServicioEstudiantes {
 		}
 		VinculoFamiliar responsable = null;
 		for (var entrada : familiares.entrySet()) {
-			VinculoFamiliar vinculo = vinculo(entrada.getKey(), entrada.getValue());
+			VinculoFamiliar vinculo = vinculo(estudiante, entrada.getKey(), entrada.getValue());
 			if (vinculo == null) {
 				continue;
 			}
@@ -170,6 +224,9 @@ public class ServicioEstudiantes {
 		if (responsable == null || responsable.getPersona() == null) {
 			throw ExcepcionNegocio
 					.invalido("El responsable de matrícula debe ser el padre, la madre o el apoderado registrado");
+		}
+		if (responsable.getPersona().isFallecido()) {
+			throw ExcepcionNegocio.invalido("El responsable de matrícula no puede ser una persona fallecida");
 		}
 
 		short orden = 1;
@@ -184,28 +241,46 @@ public class ServicioEstudiantes {
 		}
 		estudiantes.save(estudiante);
 
-		// Paso 5: el responsable tiene el usuario de la familia (rol Apoderado). Si no lo tiene, se crea.
+		// Paso 5: el correo y el celular del responsable (los usa la matrícula y los pagos).
 		Persona personaResponsable = responsable.getPersona();
 		completarContacto(personaResponsable, s.correoResponsable(), s.celularResponsable());
-		boolean cuentaNueva = !usuarios.tieneCuenta(personaResponsable.getId());
-		var cuenta = usuarios.asegurarRol(personaResponsable, Rol.APODERADO);
+
+		// Cada padre, madre o apoderado presente tiene cuenta (rol Apoderado); si no la tiene, se crea y sus
+		// credenciales se envían a su correo. El fallecido no tiene cuenta.
+		List<CuentaFamiliar> cuentas = new ArrayList<>();
+		for (VinculoFamiliar v : estudiante.getVinculos()) {
+			Persona p = v.getPersona();
+			if (p == null || p.isFallecido()) {
+				continue;
+			}
+			boolean nueva = !usuarios.tieneCuenta(p.getId());
+			var cuenta = asegurarCuenta(v.getParentesco(), p);
+			cuentas.add(new CuentaFamiliar(v.getParentesco(), p.nombreCompleto(), cuenta.getNombreUsuario(),
+					p.getCorreo(), nueva));
+		}
+		Parentesco parentescoResponsable = responsable.getParentesco();
+		CuentaFamiliar delResponsable = cuentas.stream()
+				.filter(c -> c.parentesco() == parentescoResponsable)
+				.findFirst().orElseThrow();
+		retirarCuentas(estudiante, Set.of());
 
 		return new InscripcionRegistrada(estudiante.getId(), personaEstudiante.nombreCompleto(),
-				personaResponsable.nombreCompleto(), cuenta.getNombreUsuario(), cuentaNueva);
+				personaResponsable.nombreCompleto(), delResponsable.usuario(), delResponsable.nueva(), cuentas);
+	}
+
+	/** Crea o reactiva la cuenta del familiar; el mensaje de error dice de quién es ("Madre: ..."). */
+	private com.galiledu.usuarios.dominio.Usuario asegurarCuenta(Parentesco parentesco, Persona p) {
+		try {
+			return usuarios.asegurarRol(p, Rol.APODERADO);
+		} catch (ExcepcionNegocio e) {
+			throw ExcepcionNegocio.invalido(NOMBRE_PARENTESCO.get(parentesco) + ": " + e.getMessage());
+		}
 	}
 
 	private Estudiante obtener(UUID id) {
 		return estudiantes.findById(id)
 				.filter(x -> !x.isEliminado())
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El estudiante no existe"));
-	}
-
-	private static Optional<Persona> responsableDe(Estudiante e) {
-		return e.getVinculos().stream()
-				.filter(VinculoFamiliar::isEsResponsableMatricula)
-				.map(VinculoFamiliar::getPersona)
-				.filter(Objects::nonNull)
-				.findFirst();
 	}
 
 	/** Documento del apoderado copiado en memoria, para volver a enlazarlo después de reemplazar los vínculos. */
@@ -356,7 +431,8 @@ public class ServicioEstudiantes {
 					v.getRelacion(), v.isViveConEstudiante(), v.isEsResponsableMatricula(), v.getMotivoNoRegistra(),
 					documentos.findResumenByVinculoId(v.getId())
 							.map(d -> new DocumentoAdjunto(d.getTipo(), d.getNombreArchivo(), d.getSubidoEn()))
-							.orElse(null));
+							.orElse(null),
+					p != null && p.isFallecido());
 		}).toList();
 		// Hermanos: otros estudiantes vinculados a los mismos padres/apoderado.
 		var hermanos = e.getVinculos().stream()
@@ -423,10 +499,10 @@ public class ServicioEstudiantes {
 	private static DatosFamiliar familiar(VinculoFamiliar v) {
 		if (v == null || v.getPersona() == null) {
 			return new DatosFamiliar(true, v == null ? null : v.getMotivoNoRegistra(),
-					v == null ? null : v.getObservacion(), null, null, null, null, null);
+					v == null ? null : v.getObservacion(), null, null, null, null, null, false);
 		}
 		return new DatosFamiliar(false, null, null, v.getPersona().getId(), DatosPersona.de(v.getPersona()),
-				v.isViveConEstudiante(), v.isTienePatriaPotestad(), v.getRelacion());
+				v.isViveConEstudiante(), v.isTienePatriaPotestad(), v.getRelacion(), v.getPersona().isFallecido());
 	}
 
 	private static List<DatosContacto> contactos(Estudiante e) {
@@ -455,10 +531,10 @@ public class ServicioEstudiantes {
 				.map(e -> e.getPersona().nombreCompleto() + " (" + e.gradoDescriptivo() + ")")
 				.toList();
 		return new PersonaEncontrada(p.getId(), DatosPersona.de(p), usuarios.tieneCuenta(p.getId()),
-				usuarios.cuentaEliminada(p.getId()), aCargo);
+				usuarios.cuentaEliminada(p.getId()), aCargo, p.isFallecido());
 	}
 
-	private VinculoFamiliar vinculo(Parentesco parentesco, DatosFamiliar d) {
+	private VinculoFamiliar vinculo(Estudiante estudiante, Parentesco parentesco, DatosFamiliar d) {
 		if (d == null) {
 			return null;
 		}
@@ -476,10 +552,24 @@ public class ServicioEstudiantes {
 			// Al editar se pueden corregir sus datos (también los ve un hermano: es la misma persona).
 			if (d.persona() != null) {
 				actualizarFamiliar(persona, d.persona());
+			} else {
+				// Solo se vincula: su edad se revisa con la fecha de nacimiento que ya tenía.
+				exigirMayorDeEdad(parentesco, persona.getFechaNacimiento());
 			}
 		}
+		boolean fallecido = d.esFallecido();
+		if (fallecido && !persona.isFallecido() && estudiantes.esResponsableDeOtro(persona.getId(),
+				Optional.ofNullable(estudiante.getId()).orElse(NINGUNO))) {
+			throw ExcepcionNegocio.invalido(NOMBRE_PARENTESCO.get(parentesco)
+					+ ": es responsable de matrícula de otro estudiante. "
+					+ "Primero cambia al responsable de sus otros estudiantes.");
+		}
+		// Es un dato de la persona: si tiene otros hijos en el colegio, también figura como fallecido allí.
+		persona.setFallecido(fallecido);
+		// Un fallecido no vive con el estudiante ni tiene la patria potestad.
 		return VinculoFamiliar.conPersona(parentesco, persona, vacio(d.relacion()),
-				Boolean.TRUE.equals(d.viveConEstudiante()), Boolean.TRUE.equals(d.tienePatriaPotestad()));
+				!fallecido && Boolean.TRUE.equals(d.viveConEstudiante()),
+				!fallecido && Boolean.TRUE.equals(d.tienePatriaPotestad()));
 	}
 
 	/**
@@ -521,8 +611,9 @@ public class ServicioEstudiantes {
 	}
 
 	/**
-	 * Paso 3: padre, madre o apoderado nuevo, con los mismos obligatorios que un usuario (CAHU6-2), porque el
-	 * responsable de matrícula tendrá cuenta. El mensaje dice de quién es el dato ("Madre: Ingresa el celular").
+	 * Paso 3: padre, madre o apoderado nuevo, con los mismos obligatorios que un usuario (CAHU6-2), porque cada
+	 * familiar presente tendrá cuenta, y mayor de edad. El padre o la madre fallecidos solo necesitan sus datos de
+	 * identidad (y también ser mayores de edad). El mensaje dice de quién es el dato ("Madre: Ingresa el celular").
 	 * Se revisa antes de guardar nada, para no dejar una inscripción a medias.
 	 */
 	private static void exigirPaso3(SolicitudInscripcion s) {
@@ -544,9 +635,23 @@ public class ServicioEstudiantes {
 			return;
 		}
 		try {
-			d.persona().exigirCompletos();
+			if (d.esFallecido()) {
+				d.persona().exigirIdentidad();
+			} else {
+				d.persona().exigirCompletos();
+			}
 		} catch (ExcepcionNegocio e) {
 			throw ExcepcionNegocio.invalido(NOMBRE_PARENTESCO.get(parentesco) + ": " + e.getMessage());
+		}
+		// También el fallecido: un padre o una madre no puede ser menor de edad.
+		exigirMayorDeEdad(parentesco, d.persona().fechaNacimiento());
+	}
+
+	/** Validación de la iteración 1 con el PO: padre, madre y apoderado deben ser mayores de edad. */
+	private static void exigirMayorDeEdad(Parentesco parentesco, LocalDate fechaNacimiento) {
+		if (fechaNacimiento != null
+				&& Period.between(fechaNacimiento, LocalDate.now(LIMA)).getYears() < MAYORIA_DE_EDAD) {
+			throw ExcepcionNegocio.invalido(NOMBRE_PARENTESCO.get(parentesco) + ": Debe ser mayor de edad");
 		}
 	}
 
@@ -562,9 +667,15 @@ public class ServicioEstudiantes {
 		}
 	}
 
-	private static void exigirMotivo(DatosFamiliar d, String mensaje) {
-		if (!d.registra() && (d.motivo() == null || d.motivo().isBlank())) {
+	private static void exigirMotivo(DatosFamiliar d, String mensaje, String quien) {
+		if (d.registra()) {
+			return;
+		}
+		if (d.motivo() == null || d.motivo().isBlank()) {
 			throw ExcepcionNegocio.invalido(mensaje);
+		}
+		if (MOTIVO_OTRO.equals(d.motivo().strip()) && (d.observacion() == null || d.observacion().isBlank())) {
+			throw ExcepcionNegocio.invalido(quien + ": Indica la observación");
 		}
 	}
 

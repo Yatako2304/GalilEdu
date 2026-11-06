@@ -10,6 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
+import com.galiledu.configuracion.aplicacion.DtosConfiguracion.TarifarioVigente;
+import com.galiledu.configuracion.aplicacion.ServicioTarifario;
 import com.galiledu.pagos.aplicacion.DtosPagos.CuotaMatriculaDetalle;
 import com.galiledu.pagos.dominio.CompromisoPago;
 import com.galiledu.pagos.dominio.Cuota;
@@ -19,7 +21,6 @@ import com.galiledu.pagos.infraestructura.CompromisoPagoRepositorio;
 import com.galiledu.pagos.infraestructura.ConsultasPagos;
 import com.galiledu.pagos.infraestructura.ConsultasPagos.DescuentoActivo;
 import com.galiledu.pagos.infraestructura.ConsultasPagos.MatriculaParaPagos;
-import com.galiledu.pagos.infraestructura.ConsultasPagos.Tarifario;
 
 /**
  * HU-36: genera (RF-78, RF-79) y consulta (RF-80) la cuota de matrícula. Matrícula debe llamar a
@@ -34,10 +35,13 @@ public class ServicioCuotaMatricula {
 
 	private final CompromisoPagoRepositorio compromisos;
 	private final ConsultasPagos consultas;
+	private final ServicioTarifario tarifarios;
 
-	public ServicioCuotaMatricula(CompromisoPagoRepositorio compromisos, ConsultasPagos consultas) {
+	public ServicioCuotaMatricula(CompromisoPagoRepositorio compromisos, ConsultasPagos consultas,
+			ServicioTarifario tarifarios) {
 		this.compromisos = compromisos;
 		this.consultas = consultas;
+		this.tarifarios = tarifarios;
 	}
 
 	@Transactional
@@ -49,16 +53,13 @@ public class ServicioCuotaMatricula {
 					"La cuota de matrícula se genera mientras la matrícula está en proceso de confirmación.");
 		}
 		// RF-78: monto y vencimiento del tarifario vigente (CONFIRMADO en HU-34) del año escolar de la matrícula.
-		Tarifario tarifario = consultas.tarifario(m.anioEscolarId())
-				.orElseThrow(() -> ExcepcionNegocio.conflicto("No hay tarifario para el año " + m.anio() + "."));
-		if (!"CONFIRMADO".equals(tarifario.estado())) {
-			throw ExcepcionNegocio.conflicto("El tarifario " + m.anio() + " aún no está confirmado.");
-		}
+		TarifarioVigente tarifario = tarifarios.vigente(m.anioEscolarId())
+				.orElseThrow(() -> ExcepcionNegocio.conflicto("El tarifario " + m.anio() + " aún no está confirmado."));
 
 		CompromisoPago compromiso = compromisos.findByMatriculaId(matriculaId)
 				.or(() -> compromisos.findByEstudianteIdAndAnioEscolarId(m.estudianteId(), m.anioEscolarId()))
 				.orElseGet(() -> CompromisoPago.nuevo(m.estudianteId(), m.anioEscolarId(), matriculaId,
-						tarifario.id()));
+						tarifario.tarifarioId()));
 		if (compromiso.getEstado() == EstadoCompromiso.ANULADO) {
 			throw ExcepcionNegocio.conflicto("El compromiso de pago " + m.anio() + " del estudiante está anulado.");
 		}

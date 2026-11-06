@@ -179,3 +179,68 @@ test('el documento de otro usuario se marca en el campo junto con los demás err
   expect(screen.getByText('Ingresa los nombres')).toBeInTheDocument();
   expect(screen.queryByText(/¿Guardar los cambios/)).not.toBeInTheDocument();
 });
+
+// Validación de la iteración 1 con el PO: exalumno solo se pide a padres y apoderados.
+test('"Nuevo usuario" no pide si es exalumno del colegio', async () => {
+  await renderApp(
+    <DialogoUsuario
+      estado={{ modo: 'crear' }}
+      onCerrar={vi.fn()}
+      onCreado={vi.fn()}
+    />,
+    { user: await createUser({ roles: [ROLES.ADMINISTRADOR] }) },
+  );
+
+  expect(await screen.findByLabelText(/apellido paterno/i)).toBeInTheDocument();
+  expect(
+    screen.queryByLabelText('Es exalumno(a) del colegio'),
+  ).not.toBeInTheDocument();
+});
+
+test('si el usuario es apoderado (aunque tenga otro rol), sí pide si es exalumno', async () => {
+  server.use(
+    http.get(`${env.API_URL}/usuarios/u1`, () =>
+      HttpResponse.json(
+        detalle({
+          roles: [ROLES.DOCENTE, ROLES.APODERADO],
+          persona: { ...detalle({}).persona, esExalumno: true },
+        }),
+      ),
+    ),
+  );
+
+  await renderApp(
+    <DialogoUsuario
+      estado={{ modo: 'ver', id: 'u1' }}
+      onCerrar={vi.fn()}
+      onCreado={vi.fn()}
+    />,
+    { user: await createUser({ roles: [ROLES.ADMINISTRADOR] }) },
+  );
+
+  expect(
+    await screen.findByLabelText('Es exalumno(a) del colegio'),
+  ).toBeChecked();
+});
+
+test('si el usuario no es apoderado, no pide si es exalumno', async () => {
+  server.use(
+    http.get(`${env.API_URL}/usuarios/u1`, () =>
+      HttpResponse.json(detalle({ roles: [ROLES.DOCENTE] })),
+    ),
+  );
+
+  await renderApp(
+    <DialogoUsuario
+      estado={{ modo: 'ver', id: 'u1' }}
+      onCerrar={vi.fn()}
+      onCreado={vi.fn()}
+    />,
+    { user: await createUser({ roles: [ROLES.ADMINISTRADOR] }) },
+  );
+
+  expect(await screen.findByDisplayValue('Carmen')).toBeInTheDocument();
+  expect(
+    screen.queryByLabelText('Es exalumno(a) del colegio'),
+  ).not.toBeInTheDocument();
+});

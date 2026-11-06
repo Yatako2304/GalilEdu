@@ -137,7 +137,7 @@ public class PeriodoMatriculaController {
 
 	/**
 	 * POST /api/configuracion/periodos-matricula/{id}/documentos/{documentoId}/plantilla (multipart, parte
-	 * {@code archivo}) · "Subir plantilla" de "Documentos requeridos". XLSX, XLS o CSV de hasta 10 MB; solo con el
+	 * {@code archivo}) · "Subir plantilla" de "Documentos requeridos". PDF, DOCX, JPG o PNG de hasta 10 MB; solo con el
 	 * periodo programado.
 	 */
 	@PostMapping(path = "/{id}/documentos/{documentoId}/plantilla", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

@@ -21,4 +21,15 @@ public class CompetenciaEvaluada {
 	public UUID getCompetenciaId() {
 		return competenciaId;
 	}
+
+	@Override
+	public boolean equals(Object otro) {
+		return this == otro || otro instanceof CompetenciaEvaluada competencia
+				&& competenciaId.equals(competencia.competenciaId);
+	}
+
+	@Override
+	public int hashCode() {
+		return competenciaId.hashCode();
+	}
 }

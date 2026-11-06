@@ -265,6 +265,8 @@ const FormularioUsuario = ({
             prefix="persona"
             disabled={soloLectura}
             conPaisDeNacimiento
+            // Exalumno solo se pide a padres y apoderados (validación de la iteración 1 con el PO).
+            sinExalumno={!rolesElegidos.includes(ROLES.APODERADO)}
             tipoDocumento={form.watch('persona.tipoDocumento')}
             onTipoDocumentoChange={(filtrar) =>
               form.setValue(

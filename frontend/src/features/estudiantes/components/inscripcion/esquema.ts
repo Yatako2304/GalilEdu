@@ -10,6 +10,7 @@ import {
 } from '@/components/personas/persona-schema';
 import { PAIS_CON_UBIGEO } from '@/config/ubigeo';
 import {
+  CuentaFamiliar,
   DatosFamiliar,
   DatosPersona,
   EdicionEstudiante,
@@ -22,6 +23,11 @@ import {
 
 export type FamiliarForm = {
   noRegistra: boolean;
+  /**
+   * Padre o madre fallecido: se registran sus datos, pero no tiene cuenta, no puede ser responsable de matrícula
+   * ni recoger al estudiante (validación de la iteración 1 con el PO).
+   */
+  fallecido: boolean;
   motivo: string;
   observacion: string;
   /** Si la persona ya existe en GalilEdu (búsqueda por documento), solo se vincula. */
@@ -97,19 +103,22 @@ export type InscripcionForm = {
 
 const familiarVacio = (sexo: 'MASCULINO' | 'FEMENINO' | ''): FamiliarForm => ({
   noRegistra: false,
+  fallecido: false,
   motivo: '',
   observacion: '',
   personaId: null,
   tieneCuenta: false,
   aCargo: [],
-  // Como en el Paso 1, el tipo de documento no trae valor por defecto.
+  // Como en el Paso 1, nada trae valor por defecto salvo el sexo del padre y de la madre; las casillas empiezan sin
+  // marcar.
   persona: {
     ...personaVacia(),
     tipoDocumento: '' as unknown as PersonaFormValues['tipoDocumento'],
+    nacionalidad: '',
     sexo,
   },
-  viveConEstudiante: true,
-  tienePatriaPotestad: true,
+  viveConEstudiante: false,
+  tienePatriaPotestad: false,
   relacion: '',
   relacionDetalle: '',
 });
@@ -159,11 +168,8 @@ export const inscripcionVacia = (): InscripcionForm => ({
   padre: familiarVacio('MASCULINO'),
   madre: familiarVacio('FEMENINO'),
   incluirApoderado: false,
-  apoderado: {
-    ...familiarVacio(''),
-    viveConEstudiante: false,
-    tienePatriaPotestad: false,
-  },
+  // El apoderado no trae ningún valor por defecto (tampoco el sexo).
+  apoderado: familiarVacio(''),
   contactos: [
     { nombreCompleto: '', parentesco: '', telefonoFijo: '', celular: '' },
     { nombreCompleto: '', parentesco: '', telefonoFijo: '', celular: '' },
@@ -192,6 +198,44 @@ export const RELACIONES_APODERADO = [
 export const registra = (f: FamiliarForm) =>
   !f.noRegistra && (!!f.personaId || !!f.persona.numeroDocumento);
 
+/**
+ * Registrado y no fallecido: puede ser responsable de matrícula, recoger al estudiante y tiene cuenta. Un padre o
+ * una madre fallecidos no cuentan para la regla del apoderado.
+ */
+export const presente = (f: FamiliarForm) => registra(f) && !f.fallecido;
+
+/**
+ * Motivos de "No registra" (validación de la iteración 1 con el PO). "Fallecido(a)" ya no es un motivo: el fallecido
+ * se registra con sus datos. Con "Otro" la observación es obligatoria.
+ */
+export const MOTIVOS_NO_REGISTRA = [
+  'No se conoce',
+  'No ha reconocido al estudiante',
+  'Otro',
+];
+
+/** Validación de la iteración 1 con el PO: padre, madre y apoderado deben ser mayores de edad. */
+export const MAYORIA_DE_EDAD = 18;
+
+/** Edad cumplida hoy para una fecha AAAA-MM-DD; null si no es una fecha. */
+export const edadCumplida = (fecha: string | null | undefined) => {
+  if (!fecha) return null;
+  const nacimiento = new Date(`${fecha}T00:00:00`);
+  if (Number.isNaN(nacimiento.getTime())) return null;
+  const hoy = new Date();
+  let edad = hoy.getFullYear() - nacimiento.getFullYear();
+  if (
+    hoy.getMonth() < nacimiento.getMonth() ||
+    (hoy.getMonth() === nacimiento.getMonth() &&
+      hoy.getDate() < nacimiento.getDate())
+  ) {
+    edad--;
+  }
+  return edad;
+};
+
+const vacio = (v: unknown) => typeof v !== 'string' || v.trim() === '';
+
 const familiarSchema = (opcional: boolean, editando = false) =>
   z.custom<FamiliarForm>().superRefine((f, ctx) => {
     if (f.noRegistra) {
@@ -202,19 +246,85 @@ const familiarSchema = (opcional: boolean, editando = false) =>
           message: 'Indica el motivo',
         });
       }
+      if (!opcional && f.motivo === 'Otro' && vacio(f.observacion)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['observacion'],
+          message: 'Indica la observación',
+        });
+      }
       return;
     }
     if (f.personaId && !editando) return;
-    // Persona nueva (o ya registrada, al editar): mismos obligatorios que un usuario (CAHU6-2), porque el responsable tendrá cuenta.
-    const r = personaUsuarioSchema.safeParse(f.persona);
-    if (!r.success) {
-      r.error.issues.forEach((i) =>
-        ctx.addIssue({ ...i, path: ['persona', ...i.path] }),
+    if (f.fallecido) {
+      // Fallecido: solo sus datos de identidad, todos obligatorios salvo el apellido materno (no tendrá cuenta ni se
+      // le contactará).
+      const r = personaSchema.safeParse(f.persona);
+      if (!r.success) {
+        r.error.issues.forEach((i) =>
+          ctx.addIssue({ ...i, path: ['persona', ...i.path] }),
+        );
+      }
+      const exige = (campo: string, valor: unknown, message: string) => {
+        if (vacio(valor)) {
+          ctx.addIssue({ code: 'custom', path: ['persona', campo], message });
+        }
+      };
+      exige(
+        'fechaNacimiento',
+        f.persona.fechaNacimiento,
+        'Ingresa la fecha de nacimiento',
       );
+      exige(
+        'nacionalidad',
+        f.persona.nacionalidad,
+        'Selecciona la nacionalidad',
+      );
+      exige('sexo', f.persona.sexo, 'Selecciona el sexo');
+      exige(
+        'lugarNacimiento',
+        f.persona.lugarNacimiento,
+        'Selecciona el país de nacimiento',
+      );
+      exige('estadoCivil', f.persona.estadoCivil, 'Selecciona el estado civil');
+      exige(
+        'gradoInstruccion',
+        f.persona.gradoInstruccion,
+        'Selecciona el grado de instrucción',
+      );
+    } else {
+      // Persona nueva (o ya registrada, al editar): mismos obligatorios que un usuario (CAHU6-2), porque cada
+      // familiar presente tendrá cuenta.
+      const r = personaUsuarioSchema.safeParse(f.persona);
+      if (!r.success) {
+        r.error.issues.forEach((i) =>
+          ctx.addIssue({ ...i, path: ['persona', ...i.path] }),
+        );
+      }
+    }
+    // Una fecha futura solo dice que debe ser pasada (personaUsuarioSchema ya lo revisa; al fallecido se le revisa
+    // aquí). Recién con una fecha pasada se valida que sea mayor de edad (validación de la iteración 1 con el PO;
+    // también el fallecido: un padre no puede ser menor).
+    const fecha = f.persona.fechaNacimiento;
+    if (fecha && fecha >= new Date().toLocaleDateString('en-CA')) {
+      if (f.fallecido) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['persona', 'fechaNacimiento'],
+          message: 'La fecha de nacimiento debe ser pasada',
+        });
+      }
+      return;
+    }
+    const edad = edadCumplida(fecha);
+    if (edad !== null && edad < MAYORIA_DE_EDAD) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['persona', 'fechaNacimiento'],
+        message: 'Debe ser mayor de edad',
+      });
     }
   });
-
-const vacio = (v: unknown) => typeof v !== 'string' || v.trim() === '';
 
 /**
  * Paso 1 (HU-7): todo es obligatorio salvo apellido materno, correo, referencia, teléfono de casa, segunda
@@ -544,12 +654,12 @@ export const inscripcionSchema = z
         );
         // El archivo no es obligatorio: se puede adjuntar más adelante desde la ficha.
       }
-    } else if (!registra(f.padre) && !registra(f.madre)) {
+    } else if (!presente(f.padre) && !presente(f.madre)) {
       ctx.addIssue({
         code: 'custom',
         path: ['incluirApoderado'],
         message:
-          'No hay padre ni madre registrados: debes registrar un apoderado.',
+          'No hay padre ni madre presentes (registrados y no fallecidos): debes registrar un apoderado.',
       });
     }
   });
@@ -569,6 +679,23 @@ const siNo = (v: string) => (v === '' ? null : v === 'SI');
 const persona = (p: PersonaFormValues) =>
   personaSchema.parse(p) as DatosPersona;
 
+/**
+ * Fallecido: solo se envían sus datos de identidad (los de contacto, trabajo, domicilio y exalumno no se muestran,
+ * así que no se guardan aunque se hubieran escrito antes de marcar la casilla).
+ */
+const identidad = (p: PersonaFormValues): DatosPersona => ({
+  ...persona(p),
+  celular: null,
+  correo: null,
+  telefonoCasa: null,
+  profesion: null,
+  centroTrabajo: null,
+  cargo: null,
+  distrito: null,
+  direccion: null,
+  esExalumno: false,
+});
+
 const familiar = (f: FamiliarForm, editando: boolean) =>
   !registra(f)
     ? {
@@ -578,11 +705,18 @@ const familiar = (f: FamiliarForm, editando: boolean) =>
       }
     : {
         noRegistra: false,
+        fallecido: f.fallecido,
         personaId: f.personaId,
         // Al inscribir, un familiar ya registrado solo se vincula; al editar se envían sus datos corregidos.
-        persona: f.personaId && !editando ? null : persona(f.persona),
-        viveConEstudiante: f.viveConEstudiante,
-        tienePatriaPotestad: f.tienePatriaPotestad,
+        persona:
+          f.personaId && !editando
+            ? null
+            : f.fallecido
+              ? identidad(f.persona)
+              : persona(f.persona),
+        // Un fallecido no vive con el estudiante ni tiene la patria potestad.
+        viveConEstudiante: !f.fallecido && f.viveConEstudiante,
+        tienePatriaPotestad: !f.fallecido && f.tienePatriaPotestad,
         relacion:
           f.relacion === 'Otro' ? texto(f.relacionDetalle) : texto(f.relacion),
       };
@@ -731,6 +865,7 @@ const familiarDesde = (
   return {
     ...vacio,
     personaId: d.personaId ?? null,
+    fallecido: !!d.fallecido,
     tieneCuenta,
     persona: d.persona ? personaAFormulario(d.persona) : vacio.persona,
     viveConEstudiante: !!d.viveConEstudiante,
@@ -820,4 +955,22 @@ export const desdeEdicion = (e: EdicionEstudiante): InscripcionForm => {
       archivo: null,
     },
   };
+};
+
+/**
+ * Aviso de los usuarios creados al registrar o editar (cada familiar presente tiene usuario): "Se creó el usuario
+ * de Carla Rojas (U20260010) y se enviaron las credenciales a su correo." Vacío si no se creó ninguno.
+ */
+export const avisoCuentasNuevas = (cuentas: CuentaFamiliar[] = []) => {
+  const nuevas = cuentas
+    .filter((c) => c.nueva)
+    .map((c) => `${c.nombre} (${c.usuario})`);
+  if (nuevas.length === 0) return '';
+  const lista =
+    nuevas.length === 1
+      ? nuevas[0]
+      : `${nuevas.slice(0, -1).join(', ')} y ${nuevas[nuevas.length - 1]}`;
+  return nuevas.length === 1
+    ? `Se creó el usuario de ${lista} y se enviaron las credenciales a su correo.`
+    : `Se crearon los usuarios de ${lista}. Las credenciales se enviaron a sus correos.`;
 };

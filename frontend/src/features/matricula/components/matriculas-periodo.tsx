@@ -22,29 +22,65 @@ import { Input, Select } from '@/components/ui/form';
 import { StatCard } from '@/components/ui/stat-card';
 import { PaginationBar, Table } from '@/components/ui/table';
 import { SelectableTag } from '@/components/ui/tag';
+import { GRADOS_POR_NIVEL, nombreGrado } from '@/config/catalogos';
 import { paths } from '@/config/paths';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
+import { EstadoMatricula, FilaMatriculaPeriodo } from '@/types/api';
+import { formatFechaLima } from '@/utils/format';
 
 import {
-  EstadoFlujoMatricula,
-  MATRICULAS_FLUJO,
-  MatriculaFlujo,
-} from './datos-flujo-matricula';
+  OrdenMatriculas,
+  useMatriculasDelPeriodo,
+  usePeriodoMatriculas,
+} from '../api/matriculas-periodo';
 
-const ESTADOS: Record<
-  EstadoFlujoMatricula,
-  { etiqueta: string; color: 'info' | 'warning' | 'success' }
+const ESTADOS: Partial<
+  Record<
+    EstadoMatricula,
+    { etiqueta: string; color: 'info' | 'warning' | 'success' }
+  >
 > = {
   SECCION_RESERVADA: { etiqueta: 'Sección reservada', color: 'info' },
+  EN_VALIDACION: { etiqueta: 'En validación', color: 'info' },
   PENDIENTE_PAGO: { etiqueta: 'Pendiente de pago', color: 'warning' },
   MATRICULADO: { etiqueta: 'Matriculado', color: 'success' },
 };
 
+const OPCIONES_GRADO = [
+  { label: 'Grado: Todos', value: '' },
+  ...Object.values(GRADOS_POR_NIVEL)
+    .flat()
+    .map(({ value }) => ({
+      label: nombreGrado(String(value)),
+      value: String(value),
+    })),
+];
+
+const OPCIONES_ESTADO = [
+  { label: 'Estado: Todos', value: '' },
+  ...Object.entries(ESTADOS).map(([value, e]) => ({
+    label: e.etiqueta,
+    value,
+  })),
+];
+
+/** Columna de la tabla ⇄ parámetro `orden` del backend. */
+const COLUMNA_POR_ORDEN: Record<OrdenMatriculas, keyof FilaMatriculaPeriodo> = {
+  estudiante: 'nombre',
+  grado: 'grado',
+  seccion: 'seccion',
+  estado: 'estado',
+};
+
+const ordenDeColumna = (campo: keyof FilaMatriculaPeriodo) =>
+  (Object.keys(COLUMNA_POR_ORDEN) as OrdenMatriculas[]).find(
+    (orden) => COLUMNA_POR_ORDEN[orden] === campo,
+  );
+
 const AccionesMatricula = ({
   matricula,
-  periodoId,
 }: {
-  matricula: MatriculaFlujo;
-  periodoId: string;
+  matricula: FilaMatriculaPeriodo;
 }) => {
   const navigate = useNavigate();
   return (
@@ -57,7 +93,7 @@ const AccionesMatricula = ({
         <DropdownMenuItem
           onClick={() =>
             navigate(
-              `${paths.app.administrativo.matriculaDetalle.getHref(matricula.id)}?periodoId=${encodeURIComponent(periodoId)}`,
+              paths.app.administrativo.matriculaDetalle.getHref(matricula.id),
             )
           }
         >
@@ -74,58 +110,97 @@ const AccionesMatricula = ({
   );
 };
 
-// Figma > Personal Administrativo > A3 · Matrículas del periodo.
-export const MatriculasPeriodo = ({
-  periodoId = 'periodo-2027',
-}: {
-  periodoId?: string;
-}) => {
-  const [busqueda, setBusqueda] = React.useState('');
-  const [estado, setEstado] = React.useState('TODOS');
-  const texto = busqueda.trim().toLocaleLowerCase('es-PE');
-  const matriculas = MATRICULAS_FLUJO.filter(
-    (matricula) =>
-      (estado === 'TODOS' || matricula.estado === estado) &&
-      (!texto ||
-        `${matricula.nombre} ${matricula.dni} ${matricula.codigo ?? ''}`
-          .toLocaleLowerCase('es-PE')
-          .includes(texto)),
+/** Aviso del periodo (Figma A3: abierto = información; cerrado = advertencia). */
+const AvisoPeriodo = ({ periodoId }: { periodoId: string }) => {
+  const { data: periodo } = usePeriodoMatriculas(periodoId);
+  if (!periodo) return null;
+  if (periodo.estado === 'CERRADO') {
+    return (
+      <Alert type="warning" title="El periodo de matrícula está cerrado.">
+        Ya no se pueden asignar secciones ni validar matrículas regulares: solo
+        registrar matrículas extemporáneas y cambiar de sección a los
+        matriculados.
+      </Alert>
+    );
+  }
+  if (periodo.estado === 'PROGRAMADO') {
+    return (
+      <Alert
+        type="info"
+        title={`El periodo regular inicia el ${formatFechaLima(periodo.inicio)}.`}
+      >
+        Hasta entonces no se pueden asignar secciones.
+      </Alert>
+    );
+  }
+  return (
+    <Alert
+      type="info"
+      title={`El periodo regular está en curso hasta el ${formatFechaLima(periodo.cierre)}.`}
+    >
+      La matrícula extemporánea se habilita cuando el periodo cierre.
+    </Alert>
   );
-  const matriculados = MATRICULAS_FLUJO.filter(
-    (m) => m.estado === 'MATRICULADO',
-  ).length;
-  const enProceso = MATRICULAS_FLUJO.length - matriculados;
+};
+
+// Figma > Personal Administrativo > A3 · Matrículas del periodo (HU-24, HU-71).
+export const MatriculasPeriodo = ({ periodoId }: { periodoId: string }) => {
+  const [busqueda, setBusqueda] = React.useState('');
+  const [grado, setGrado] = React.useState('');
+  const [estado, setEstado] = React.useState('');
+  const [orden, setOrden] = React.useState<OrdenMatriculas>('estudiante');
+  const [direccion, setDireccion] = React.useState<'asc' | 'desc'>('asc');
+  const [page, setPage] = React.useState(1);
+  const texto = useDebouncedValue(busqueda.trim());
+
+  // Cualquier cambio de filtro u orden vuelve a la primera página.
+  React.useEffect(() => setPage(1), [texto, grado, estado, orden, direccion]);
+
+  const { data: periodo } = usePeriodoMatriculas(periodoId);
+  const { data, isError, isLoading } = useMatriculasDelPeriodo(periodoId, {
+    texto,
+    grado,
+    estado,
+    orden,
+    direccion,
+    page,
+  });
+  const indicadores = periodo?.indicadores;
+  const hayFiltros = Boolean(texto || grado || estado);
+
+  if (isError) {
+    return (
+      <Alert type="error" title="No pudimos cargar las matrículas del periodo.">
+        Intenta de nuevo en unos minutos.
+      </Alert>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">
-      <Alert
-        type="info"
-        title="El periodo regular está en curso hasta el 31/10/2026."
-      >
-        La matrícula extemporánea se habilita cuando el periodo cierre.
-      </Alert>
+      <AvisoPeriodo periodoId={periodoId} />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           icon={<Users aria-hidden="true" />}
-          value={MATRICULAS_FLUJO.length}
+          value={indicadores?.estudiantes ?? 0}
           label="Estudiantes en el periodo"
         />
         <StatCard
           icon={<CircleCheck aria-hidden="true" />}
           iconColor="success"
-          value={matriculados}
+          value={indicadores?.matriculados ?? 0}
           label="Matriculados"
         />
         <StatCard
           icon={<RefreshCw aria-hidden="true" />}
-          value={enProceso}
+          value={indicadores?.enProceso ?? 0}
           label="En proceso"
         />
         <StatCard
           icon={<CircleAlert aria-hidden="true" />}
           iconColor="warning"
-          value={enProceso}
+          value={indicadores?.requierenAccion ?? 0}
           label="Requieren tu acción"
         />
       </div>
@@ -141,67 +216,97 @@ export const MatriculasPeriodo = ({
             wrapperClassName="w-full max-w-sm"
           />
           <Select
+            aria-label="Filtrar por grado"
+            wrapperClassName="w-56"
+            value={grado}
+            onChange={(event) => setGrado(event.target.value)}
+            options={OPCIONES_GRADO}
+          />
+          <Select
             aria-label="Filtrar por estado"
             wrapperClassName="w-56"
             value={estado}
             onChange={(event) => setEstado(event.target.value)}
-            options={[
-              { label: 'Estado: Todos', value: 'TODOS' },
-              { label: 'Sección reservada', value: 'SECCION_RESERVADA' },
-              { label: 'Pendiente de pago', value: 'PENDIENTE_PAGO' },
-              { label: 'Matriculado', value: 'MATRICULADO' },
-            ]}
+            options={OPCIONES_ESTADO}
           />
         </div>
 
-        <Table<MatriculaFlujo>
-          data={matriculas}
-          emptyMessage="No hay matrículas que coincidan con los filtros"
+        <Table<FilaMatriculaPeriodo>
+          data={isLoading ? [] : (data?.data ?? [])}
+          emptyMessage={
+            isLoading
+              ? 'Cargando matrículas…'
+              : hayFiltros
+                ? 'No hay matrículas que coincidan con los filtros'
+                : 'Aún no hay estudiantes con matrícula en este periodo'
+          }
+          sort={{
+            field: COLUMNA_POR_ORDEN[orden],
+            direction: direccion,
+            onSort: (campo) => {
+              const nuevo = ordenDeColumna(campo);
+              if (!nuevo) return;
+              if (nuevo === orden) {
+                setDireccion(direccion === 'asc' ? 'desc' : 'asc');
+              } else {
+                setOrden(nuevo);
+                setDireccion('asc');
+              }
+            },
+          }}
           columns={[
             {
               title: 'Estudiante',
               field: 'nombre',
+              sortable: true,
               Cell: ({ entry }) => (
                 <div>
                   <p className="text-content-primary">{entry.nombre}</p>
                   <p className="text-body-4 text-content-tertiary">
-                    DNI {entry.dni}
+                    DNI {entry.documento}
                     {entry.codigo ? ` · ${entry.codigo}` : ''}
                   </p>
                 </div>
               ),
             },
-            { title: 'Grado', field: 'grado' },
-            { title: 'Sección', field: 'seccion' },
+            { title: 'Grado', field: 'grado', sortable: true },
+            {
+              title: 'Sección',
+              field: 'seccion',
+              sortable: true,
+              Cell: ({ entry }) => <span>{entry.seccion ?? '—'}</span>,
+            },
             {
               title: 'Estado',
               field: 'estado',
-              Cell: ({ entry }) => (
-                <SelectableTag
-                  readOnly
-                  shape="circle"
-                  size="md"
-                  color={ESTADOS[entry.estado].color}
-                >
-                  {ESTADOS[entry.estado].etiqueta}
-                </SelectableTag>
-              ),
+              sortable: true,
+              Cell: ({ entry }) => {
+                const e = ESTADOS[entry.estado];
+                return (
+                  <SelectableTag
+                    readOnly
+                    shape="circle"
+                    size="md"
+                    color={e?.color ?? 'info'}
+                  >
+                    {e?.etiqueta ?? entry.estado}
+                  </SelectableTag>
+                );
+              },
             },
             {
               title: '',
               field: 'id',
-              Cell: ({ entry }) => (
-                <AccionesMatricula matricula={entry} periodoId={periodoId} />
-              ),
+              Cell: ({ entry }) => <AccionesMatricula matricula={entry} />,
             },
           ]}
         />
         <PaginationBar
-          page={1}
-          size={Math.max(matriculas.length, 1)}
-          total={matriculas.length}
-          totalPages={1}
-          onPageChange={() => {}}
+          page={data?.meta.page ?? 1}
+          size={data?.meta.size ?? 10}
+          total={data?.meta.total ?? 0}
+          totalPages={data?.meta.totalPages ?? 1}
+          onPageChange={setPage}
         />
       </Card>
     </div>

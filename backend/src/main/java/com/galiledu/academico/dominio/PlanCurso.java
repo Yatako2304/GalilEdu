@@ -2,7 +2,9 @@ package com.galiledu.academico.dominio;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import jakarta.persistence.CollectionTable;
@@ -47,7 +49,7 @@ public class PlanCurso {
 
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(schema = "academico", name = "plan_competencia", joinColumns = @JoinColumn(name = "plan_curso_id"))
-	private List<CompetenciaEvaluada> competencias = new ArrayList<>();
+	private Set<CompetenciaEvaluada> competencias = new LinkedHashSet<>();
 
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(schema = "academico", name = "docente_seccion", joinColumns = @JoinColumn(name = "plan_curso_id"))
@@ -62,7 +64,7 @@ public class PlanCurso {
 		this.gradoCodigo = gradoCodigo;
 		this.cursoId = cursoId;
 		this.horasSemanales = (short) horasSemanales;
-		this.competencias = new ArrayList<>(competencias);
+		this.competencias = new LinkedHashSet<>(competencias);
 	}
 
 	@PrePersist
@@ -108,7 +110,7 @@ public class PlanCurso {
 		return actualizadoEn;
 	}
 	public List<CompetenciaEvaluada> getCompetencias() {
-		return competencias;
+		return List.copyOf(competencias);
 	}
 	public List<DocenteAsignado> getDocentes() {
 		return docentes;

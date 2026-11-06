@@ -63,3 +63,33 @@ test('un 401 con la sesión vencida manda al login y vuelve a la misma pantalla'
     `/auth/login?redirectTo=${encodeURIComponent('/app/apoderado/horarios')}`,
   );
 });
+
+test('acepta cualquier tipo de contenido cuando descarga un archivo', async () => {
+  let accept = '';
+  server.use(
+    http.get(`${env.API_URL}/archivo`, ({ request }) => {
+      accept = request.headers.get('Accept') ?? '';
+      return new HttpResponse('contenido', {
+        headers: { 'Content-Type': 'text/csv' },
+      });
+    }),
+  );
+
+  await api.get('/archivo', { responseType: 'blob' });
+
+  expect(accept).toBe('*/*');
+});
+
+test('mantiene JSON como contenido esperado en las consultas normales', async () => {
+  let accept = '';
+  server.use(
+    http.get(`${env.API_URL}/consulta`, ({ request }) => {
+      accept = request.headers.get('Accept') ?? '';
+      return HttpResponse.json({ data: [] });
+    }),
+  );
+
+  await api.get('/consulta');
+
+  expect(accept).toBe('application/json');
+});

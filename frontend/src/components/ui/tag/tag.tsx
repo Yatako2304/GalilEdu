@@ -21,10 +21,15 @@ const tagVariants = cva(
         md: 'px-2 py-1 text-caption-1',
         sm: 'px-1.5 py-1 text-caption-2',
       },
+      appearance: {
+        soft: '',
+        outline: 'border border-current bg-white',
+      },
     },
     defaultVariants: {
       color: 'primary',
       size: 'lg',
+      appearance: 'soft',
     },
   },
 );
@@ -38,11 +43,15 @@ export const Tag = ({
   className,
   color,
   size,
+  appearance,
   icon,
   children,
   ...props
 }: TagProps) => (
-  <span className={cn(tagVariants({ color, size }), className)} {...props}>
+  <span
+    className={cn(tagVariants({ color, size, appearance }), className)}
+    {...props}
+  >
     {icon}
     {children}
   </span>

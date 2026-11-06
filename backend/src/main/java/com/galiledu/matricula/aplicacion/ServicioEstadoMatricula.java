@@ -2,7 +2,6 @@ package com.galiledu.matricula.aplicacion;
 
 import java.math.BigDecimal;
 import java.time.Clock;
-import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -13,6 +12,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
+import com.galiledu.configuracion.aplicacion.ServicioPeriodoMatricula;
+import com.galiledu.configuracion.dominio.EstadoVisiblePeriodoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.CuotaDeuda;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DeudaFamiliar;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstadoMatriculaApoderado;
@@ -33,19 +34,22 @@ import com.galiledu.pagos.dominio.EstadoCuota;
 
 /**
  * HU-27 (consulta del periodo y estado de matrícula) y HU-30 (validación de deuda). Componente "Proceso de
- * Matrícula": la deuda se pide a Pagos por su servicio (IEstadoCuenta), no se calcula aquí.
+ * Matrícula": la deuda se pide a Pagos por su servicio (IEstadoCuenta) y el estado del periodo a Configuración
+ * ({@link ServicioPeriodoMatricula#estadoEn}); aquí no se calculan.
  */
 @Service
 public class ServicioEstadoMatricula {
 	private final ConsultasMatricula consultas;
 	private final ServicioEstadoCuenta estadoCuenta;
+	private final ServicioPeriodoMatricula periodos;
 	private final ServicioCuotaMatricula cuotaMatricula;
 	private final Clock reloj;
 
 	public ServicioEstadoMatricula(ConsultasMatricula consultas, ServicioEstadoCuenta estadoCuenta,
-			ServicioCuotaMatricula cuotaMatricula, Clock reloj) {
+			ServicioPeriodoMatricula periodos, ServicioCuotaMatricula cuotaMatricula, Clock reloj) {
 		this.consultas = consultas;
 		this.estadoCuenta = estadoCuenta;
+		this.periodos = periodos;
 		this.cuotaMatricula = cuotaMatricula;
 		this.reloj = reloj;
 	}
@@ -64,8 +68,8 @@ public class ServicioEstadoMatricula {
 
 	@Transactional(readOnly = true)
 	public EstadoMatriculaApoderado estado(UUID usuarioId, UUID estudianteId) {
-		List<HijoFila> hijos = hijosDelUsuario(usuarioId);
-		HijoFila hijo = hijos.stream().filter(h -> h.estudianteId().equals(estudianteId)).findFirst()
+		HijoFila hijo = hijosDelUsuario(usuarioId).stream().filter(h -> h.estudianteId().equals(estudianteId))
+				.findFirst()
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No tienes a este estudiante a tu cargo."));
 
 		List<Impedimento> impedimentos = new ArrayList<>();
@@ -92,12 +96,13 @@ public class ServicioEstadoMatricula {
 			impedimentos.add(new Impedimento("DOCUMENTOS", "Faltan " + faltan + " documento(s) firmado(s) por subir."));
 		}
 
-		// RF-64: deuda del apoderado o de cualquiera de sus hijos (hermanos entre sí).
-		DeudaFamiliar deuda = deudaDe(hijos);
+		// RF-64 (corregido en la iteración 2): solo la deuda de este estudiante bloquea su matrícula; la de un hermano
+		// no bloquea la de los demás.
+		DeudaFamiliar deuda = deudaDe(hijo);
 		boolean bloquea = periodoFila.map(PeriodoFila::bloquearPorMorosidad).orElse(true);
 		if (!deuda.cuotas().isEmpty() && bloquea) {
-			impedimentos.add(new Impedimento("DEUDA", "Tienes una deuda pendiente de " + soles(deuda.total())
-					+ ". Págala para habilitar el proceso de matrícula."));
+			impedimentos.add(new Impedimento("DEUDA", hijo.nombre() + " tiene una deuda pendiente de "
+					+ soles(deuda.total()) + ". Págala para habilitar el proceso de matrícula."));
 		}
 
 		int paso = matricula == null ? 0 : pasoDe(matricula.estado());
@@ -142,9 +147,8 @@ public class ServicioEstadoMatricula {
 		return consultas.hijosDe(persona);
 	}
 
-	private DeudaFamiliar deudaDe(List<HijoFila> hijos) {
-		List<CuotaDeuda> cuotas = estadoCuenta.cuotasVencidas(hijos.stream().map(HijoFila::estudianteId).toList())
-				.stream()
+	private DeudaFamiliar deudaDe(HijoFila hijo) {
+		List<CuotaDeuda> cuotas = estadoCuenta.cuotasVencidas(List.of(hijo.estudianteId())).stream()
 				.map(c -> new CuotaDeuda(c.estudianteId(), c.estudiante(), c.concepto(), c.fechaVencimiento(),
 						c.saldo()))
 				.toList();
@@ -152,10 +156,11 @@ public class ServicioEstadoMatricula {
 		return new DeudaFamiliar(total, cuotas);
 	}
 
+	/** Estado visible (PROGRAMADO, ABIERTO o CERRADO) calculado por Configuración con el reloj de la app. */
 	private PeriodoMatricula aPeriodo(PeriodoFila p) {
-		OffsetDateTime ahora = OffsetDateTime.now(reloj);
-		boolean abierto = "HABILITADO".equals(p.estado()) && !ahora.isBefore(p.inicio()) && !ahora.isAfter(p.cierre());
-		return new PeriodoMatricula(p.anio(), p.inicio(), p.cierre(), p.estado(), abierto);
+		EstadoVisiblePeriodoMatricula estado = periodos.estadoEn(p.id(), reloj.instant());
+		return new PeriodoMatricula(p.anio(), p.inicio(), p.cierre(), estado.name(),
+				estado == EstadoVisiblePeriodoMatricula.ABIERTO);
 	}
 
 	/** Pasos del stepper de Figma: 1 Datos y documentos, 2 Validación, 3 Pago de matrícula, 4 Matriculado. */

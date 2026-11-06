@@ -1,8 +1,8 @@
 # Pagos y pensiones
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** 🚧 en desarrollo: HU-36, HU-37 y HU-41 hechas; falta integrar la tarjeta de HU-36 al detalle de HU-24 y completar la iteración 2
-- **Última actualización:** 2026-11-04
+- **Estado:** 🚧 en desarrollo: HU-35, 36, 37, 38, 39, 40 y 41 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
+- **Última actualización:** 2026-11-06
 
 ## Alcance
 
@@ -21,30 +21,39 @@ Apoderado elige cuotas ─► orden de pago (cuotas EN_PROCESO) ─► pasarela 
 **Se calcula al consultar y no se guarda:**
 - **Cuota vencida:** una pensión impaga después de su vencimiento más los días de gracia.
 - **Días de atraso.**
-- **Recargo por mora:** la tasa por cada 30 días sobre el capital pendiente, sin pasar del tope.
+- **Recargo por mora:** la tasa por cada **30 días completos** de atraso, contados desde el vencimiento, sobre el capital pendiente (monto final menos lo pagado), sin capitalizar y sin pasar del tope (porcentaje del capital). Como en Figma P11: S/ 600 con tasa 2 % → 32 días = S/ 12 y 63 días = S/ 24. Solo las pensiones generan mora (RF-91).
 - **Deuda del apoderado:** la suma de todos sus hijos.
 
 Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
 
 ## Endpoints
 
-Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-cuenta`, `/pagos/estudiantes/{id}/compromisos`, `/pagos/compromisos/{id}`, `/pagos/matriculas/{id}/cronograma`, `/pagos/compromisos/{id}/retiro` y `/pagos/matriculas/{id}/cuota-matricula`.
+Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-cuenta`, `/pagos/estudiantes/{id}/compromisos`, `/pagos/compromisos/{id}` (y `/morosidad`, `/pagos`, `/descuento`, `/descuentos-aplicables`, `/descuentos`), `/pagos/descuentos`, `/pagos/descuentos-aplicados/{id}/revocacion`, `/pagos/apoderado/...`, `/pagos/matriculas/{id}/cronograma`, `/pagos/compromisos/{id}/retiro` y `/pagos/matriculas/{id}/cuota-matricula`.
+
+- El tarifario se lee con el servicio de Configuración (`ServicioTarifario.vigente` y `calendario`, de Luciana); ya no hay SQL propio sobre `pagos.tarifario` para generar cuotas. Sin tarifario CONFIRMADO responde 409 "El tarifario {año} aún no está confirmado.".
+- HU-35: el límite de descuento (RF-77) rige para lo que se registre o edite desde que se cambia; los descuentos ya guardados no se revalidan.
+- HU-38: el descuento es del **estudiante**: al aplicarlo se rebajan las cuotas PENDIENTES sin pagos de todos sus compromisos vigentes cuyos conceptos cubre y que vencen dentro de la vigencia (por defecto, desde hoy). "Hermanos matriculados" cuenta a los estudiantes con matrícula MATRICULADO en el año del compromiso que comparten padre, madre o apoderado, incluido él mismo.
+- HU-40: lo consulta cualquier padre, madre o apoderado vinculado al estudiante (no solo el responsable de matrícula, corrección 2). El "código de estudiante" es su número de documento porque la ficha no tiene otro código.
 
 - HU-36: cuando el colegio aprueba los documentos (HU-29/HU-72), Matrícula debe llamar a `ServicioCuotaMatricula.generar(matriculaId, usuarioId)`; para saber si ya se pagó (HU-31) usa `ServicioCuotaMatricula.buscar(matriculaId)` (no lanza error si aún no existe). Mientras tanto, el personal la genera con el `POST`. Como el cronograma, exige el tarifario del año CONFIRMADO (P19, HU-34): en los datos de prueba el de 2027 está EN_CONFIGURACION, así que hay que confirmarlo antes de generar la cuota de Mateo. La tarjeta "Pago de matrícula" de B6/B7 usa el `GET` (404 = todavía no generada) y su enlace "Ver compromiso de pago" lleva a P8 con el `estudianteId` de la respuesta.
 - Al confirmarse el pago de la matrícula (HU-31), Matrícula llama a `ServicioCronograma.generarPensiones(matriculaId, usuarioId)` desde `EscuchaPagoMatricula`. Ver la [decisión](../decisiones/2026-10-20-leonardo-cronograma-pensiones.md).
 - Flujo de la HU-37: menú **Pensiones** → P2 ("Todos los alumnos") → ⋮ del alumno → **Ver cronograma** (P8, `/app/administrativo/pensiones/{estudianteId}`) o **Registrar retiro** (modal, fecha de hoy). Falta el enlace desde B7 ("Ver compromiso de pago") cuando exista ese detalle de matrícula.
+- En P8 ya están operativas las pestañas **Pagos** (P9), **Descuento** (P10) y **Morosidad** (P11). El catálogo global de descuentos se abre desde **Configuración de pensiones → Catálogo de descuentos** (P21).
+- P8 muestra el **recargo por mora** en la misma fila de cada cuota vencida. En los textos de la interfaz se usa **monto pagado**, **monto de cuotas** y **monto pendiente**; `capital` se conserva únicamente como nombre técnico del contrato con el backend.
+- En P21 los tramos por hermanos pueden quitarse mientras quede una fila editable. Antes de guardar se exige un mínimo de dos tramos y se rechazan rangos superpuestos, sin importar el orden en que se ingresen.
+- La vista **Apoderado → Pensiones** permite cambiar de hijo y compromiso, consultar el cronograma con mora y revisar pagos. Las casillas y el botón de pago permanecen deshabilitados porque corresponden a HU-41.
 - Las pestañas "Compromisos vigentes" (P1, HU-38) y "Cuotas vencidas" (P3, HU-39) se ven desactivadas.
 
 ## HU-41 · Pago en línea
 
-Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Código: `pagos/aplicacion/ServicioPagoEnLinea`, `PasarelaPagos` (puerto) con `PasarelaStripe` y `PasarelaSimulada`; frontend en `features/pagos` (`seleccion-cuotas.ts`, `barra-pago-cuotas.tsx`, `pago-cuotas.tsx`, `resultado-pago.tsx`).
+Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Código: `pagos/aplicacion/ServicioPagoEnLinea`, `PasarelaPagos` (puerto) con `PasarelaStripe` y `PasarelaSimulada`; frontend en `features/pagos` (`seleccion-cuotas.ts`, `barra-pago-cuotas.tsx`, `pensiones-apoderado.tsx`, `resultado-pago.tsx`).
 
 - **Pasarela:** `PASARELA_PAGOS=simulada` (por defecto, no cobra; la "página de pago" es `/app/apoderado/pensiones/pasarela-simulada`) o `stripe` (Stripe Checkout en modo de prueba, con `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET`).
-- **Recargo por mora** (sección 3.10): `Morosidad.recargo` = capital pendiente × tasa × períodos de 30 días desde el vencimiento, solo pasada la gracia y sin pasar del tope. Solo pensiones.
-- **Una orden puede pagar cuotas de varios hijos;** al aprobarse se registra **un pago con su constancia por estudiante** (V11 quitó el UNIQUE de `pago.orden_pago_id`).
+- **Recargo por mora** (sección 3.10): `Cuota.recargo`, la misma regla de HU-39 (Figma P11): capital pendiente × tasa × períodos **completos** de 30 días desde el vencimiento, solo pasada la gracia y sin pasar del tope. Solo pensiones. Así la orden cobra lo mismo que muestra la pestaña Morosidad.
+- **Una orden puede pagar cuotas de varios hijos;** al aprobarse se registra **un pago con su constancia por estudiante** (V13 quitó el UNIQUE de `pago.orden_pago_id`).
 - **Evento `PagoEnLineaAprobado`:** se publica al aprobarse una orden, con las cuotas que quedaron pagadas. Incluye `matriculasPagadas` (las matrículas cuya cuota quedó pagada); Matrícula lo escucha para HU-31. La cuota de matrícula no se puede pagar si el mismo estudiante tiene pensiones vencidas fuera de la orden (CAHU31-2).
 
-**Cómo se acopla con HU-40 (cronograma del apoderado):** en Figma ("HU-41 Pago en línea de cuotas pendientes y HU-40") la tabla del cronograma tiene una columna de casillas y encima la barra de selección. La tabla de HU-40 usa `useSeleccionCuotas(useCuotasPorPagar().data)` para sus casillas (`estaSeleccionada`, `alternar`) y pone `<BarraPagoCuotas>` encima; al pagar llama a `useCrearOrdenPago().mutate(ids)`. Mientras HU-40 no exista, `PagoCuotas` arma una tabla mínima en Pensiones.
+**Cómo se acopla con HU-40 (cronograma del apoderado):** en Figma ("HU-41 Pago en línea de cuotas pendientes y HU-40") la tabla del cronograma tiene una columna de casillas y encima la barra de selección. La tabla de HU-40 usa `useSeleccionCuotas(useCuotasPorPagar().data)` para sus casillas (`estaSeleccionada`, `alternar`) y pone `<BarraPagoCuotas>` encima; al pagar llama a `useCrearOrdenPago().mutate(ids)`. Ya está hecho en `pensiones-apoderado.tsx`: solo se pueden marcar las cuotas que el backend devuelve como pagables.
 
 | Código | Criterio de aceptación |
 | --- | --- |
@@ -62,7 +71,7 @@ Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Códig
 | CAHU41-12 | Una cuota en proceso no cuenta como vencida ni bloquea la matrícula mientras se resuelve. |
 | CAHU41-13 | Nadie puede pagar ni ver cuotas u órdenes de una familia que no es la suya. |
 
-Pruebas: `PagoEnLineaIT` (un caso por criterio), `MorosidadTests`, `FirmaStripeTests`; `pago-cuotas.test.tsx`.
+Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaStripeTests`; `seleccion-cuotas.test.ts` y `pensiones-apoderado.test.tsx`.
 
 ## Pantallas (Figma)
 
@@ -76,7 +85,7 @@ Pruebas: `PagoEnLineaIT` (un caso por criterio), `MorosidadTests`, `FirmaStripeT
 
 ## Base de datos
 
-- **Esquema:** `pagos` · **Migraciones:** `V4` (tarifario), `V5__matricula_y_pagos.sql` y `V11__pago_en_linea.sql` (vencimiento de la orden, estado anterior de cada cuota y varios pagos por orden)
+- **Esquema:** `pagos` · **Migraciones:** `V4` (tarifario), `V5__matricula_y_pagos.sql`, `V13__pago_en_linea.sql` (vencimiento de la orden, estado anterior de cada cuota y varios pagos por orden) y `V14__pago_en_linea_stripe.sql` (referencias y URL de Stripe más largas)
 
 | Tabla | Para qué |
 | --- | --- |
@@ -99,10 +108,19 @@ Pruebas: `PagoEnLineaIT` (un caso por criterio), `MorosidadTests`, `FirmaStripeT
 ## Pendientes
 
 - [x] HU-37: generar, consultar y anular por retiro el cronograma de pensiones.
+- [x] HU-39 (backend): morosidad del compromiso (`GET /pagos/compromisos/{id}/morosidad`), como Figma P11.
+- [x] HU-39 (front): pestaña "Morosidad (n)" en P8, con monto pendiente y recargo separados.
 - [x] HU-36 (backend): generar y consultar la cuota de matrícula.
 - [x] HU-36 (front): tarjeta reutilizable "Pago de matrícula" de B6/B7; se abre con `?matriculaId=` hasta que HU-24 aporte el detalle administrativo.
 - [x] La pensión vence el último día de cada mes (diciembre, el 15), como en el tarifario; el "día 05" del cronograma del apoderado no se usa. Ver la [decisión](../decisiones/2026-10-19-yatako-integracion-bd.md).
-- [x] Pasarela de pagos (HU-41): Stripe Checkout en modo de prueba, con una pasarela simulada mientras no haya llaves.
+- [x] HU-35 (backend): catálogo de descuentos, tramos por hermanos, activación y límite de la institución.
+- [x] HU-38 (backend): descuentos aplicables, aplicar con reemplazo confirmado, recálculo de cuotas pendientes, consulta y revocación.
+- [x] HU-40 (backend): hijos con saldo y cuotas vencidas, cronograma con recargo e historial de pagos del apoderado.
+- [x] HU-35 (front): catálogo P21, alta/edición, tramos por hermanos y activación/desactivación.
+- [x] HU-38 (front): descuentos aplicables, reemplazo, ficha P10 y revocación con motivo.
+- [x] HU-40 (front): selector de hijos y compromisos, cronograma con recargo e historial de pagos.
+- [x] P9: historial de pagos del compromiso para personal administrativo.
+- [x] Pasarela de pagos (HU-41): Stripe Checkout en modo de prueba, con una pasarela simulada mientras no haya llaves. Probado de punta a punta con Stripe en local (06/11): pago aprobado con la tarjeta 4242 y confirmado por consulta directa. Se quitó `payment_method_types` (Stripe ya no lo acepta; los métodos de pago se eligen en el dashboard).
+- [x] HU-40 + HU-41 (front): las casillas del cronograma de HU-40 arman el pago en línea con `useSeleccionCuotas` y `BarraPagoCuotas`; se quitó la tabla mínima `PagoCuotas`.
 - [ ] Crear la cuenta de Stripe en modo de prueba y configurar el webhook en el servidor (necesita HTTPS para el modo real).
-- [ ] HU-40: reemplazar la tabla mínima de `PagoCuotas` por el cronograma completo usando `useSeleccionCuotas` y `BarraPagoCuotas`.
 - [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).

@@ -1,7 +1,26 @@
+import { HttpResponse, http } from 'msw';
+
+import { env } from '@/config/env';
+import { server } from '@/testing/mocks/server';
 import { renderApp, screen, userEvent } from '@/testing/test-utils';
 import { EstadoMatriculaApoderado, HijoApoderado } from '@/types/api';
 
 import { ConsultaMatricula } from '../consulta-matricula';
+
+// La tarjeta de documentos pide los suyos; aquí no interesan.
+beforeEach(() => {
+  server.use(
+    http.get(
+      `${env.API_URL}/matricula/apoderado/estudiantes/:id/documentos`,
+      () =>
+        HttpResponse.json({
+          estado: 'SECCION_RESERVADA',
+          puedeSubir: true,
+          documentos: [],
+        }),
+    ),
+  );
+});
 
 const hijos: HijoApoderado[] = [
   {

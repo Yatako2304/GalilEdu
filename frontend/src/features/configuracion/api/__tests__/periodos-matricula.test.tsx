@@ -292,8 +292,8 @@ test('la plantilla se descarga como archivo', async () => {
       () =>
         new HttpResponse('nombre,dni\nAna,1\n', {
           headers: {
-            'Content-Type': 'text/csv',
-            'Content-Disposition': 'attachment; filename="ficha.csv"',
+            'Content-Type': 'application/pdf',
+            'Content-Disposition': 'attachment; filename="ficha.pdf"',
           },
         }),
     ),

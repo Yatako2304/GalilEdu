@@ -10,10 +10,12 @@ import {
 } from '@/testing/test-utils';
 
 import { Accordion } from '../accordion';
+import { Card, CardHeader, CardTitle } from '../card';
 import { Calendar, DatePicker } from '../date-picker';
 import { Form, Input, Select, TagField, Textarea } from '../form';
 import { ProgressBar } from '../progress-bar';
 import { Rating } from '../rating';
+import { ScheduleBlock } from '../schedule-block';
 import { StatCard } from '../stat-card';
 import { Tabs } from '../tabs';
 import { SelectableTag } from '../tag';
@@ -404,4 +406,76 @@ test('StatCard: iconColor cambia el color del cuadro del ícono y, sin él, cons
   expect(screen.getByText('Ícono sin color').parentElement).not.toHaveClass(
     'bg-turquoise-50',
   );
+});
+
+test('ScheduleBlock: el bloque asignado solo es un botón con onSelect y la hora libre solo se asigna con onAssign', async () => {
+  const abrir = vi.fn();
+  const asignar = vi.fn();
+  const { rerender } = rtlRender(
+    <ScheduleBlock
+      type="assigned"
+      courses={[{ name: 'Matemática', teacher: 'Prof. Pedro García' }]}
+      room="A-502"
+    />,
+  );
+  // Sin onSelect (modo lectura) no es clicable.
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+
+  rerender(
+    <ScheduleBlock
+      type="assigned"
+      courses={[{ name: 'Matemática', teacher: 'Prof. Pedro García' }]}
+      room="A-502"
+      onSelect={abrir}
+    />,
+  );
+  await userEvent.click(screen.getByRole('button', { name: /Matemática/ }));
+  expect(abrir).toHaveBeenCalledTimes(1);
+
+  // Hora libre: sin onAssign no tiene «+» ni botón; con onAssign, «Asignar».
+  rerender(<ScheduleBlock type="empty" />);
+  expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  expect(screen.queryByText('Asignar')).not.toBeInTheDocument();
+  rerender(<ScheduleBlock type="empty" onAssign={asignar} />);
+  await userEvent.click(screen.getByRole('button', { name: /Asignar/ }));
+  expect(asignar).toHaveBeenCalledTimes(1);
+});
+
+test('ScheduleBlock: con un cruce se marca como advertencia y muestra su mensaje', () => {
+  rtlRender(
+    <ScheduleBlock
+      type="assigned"
+      courses={[{ name: 'Inglés' }]}
+      room="A-502"
+      conflict="El docente ya dicta Inglés en 5.° B a esa hora."
+    />,
+  );
+
+  const mensaje = screen.getByText(
+    'El docente ya dicta Inglés en 5.° B a esa hora.',
+  );
+  expect(mensaje).toBeVisible();
+  expect(mensaje.closest('div')).toHaveClass('border-stroke-warning');
+});
+
+test('CardTitle: por defecto es el título de Figma (h6, regular) y con size="body-1" es Body/Body-1/Medium', () => {
+  rtlRender(
+    <Card>
+      <CardHeader>
+        <CardTitle>Título por defecto</CardTitle>
+        <CardTitle size="body-1">Título Body-1</CardTitle>
+      </CardHeader>
+    </Card>,
+  );
+
+  expect(
+    screen.getByRole('heading', { name: 'Título por defecto' }),
+  ).toHaveClass('text-h6', 'font-normal');
+  const medio = screen.getByRole('heading', { name: 'Título Body-1' });
+  expect(medio).toHaveClass(
+    'text-body-1',
+    'font-medium',
+    'text-content-primary',
+  );
+  expect(medio).not.toHaveClass('text-h6');
 });
