@@ -102,6 +102,11 @@ class ServicioCalificacionesTests {
 
 		assertThat(reporte.filas()).hasSize(1);
 		assertThat(reporte.filas().get(0).valores()).containsEntry("resultado", "16");
+		var parcial = servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, COMPETENCIA,
+				List.of(ITEM), true);
+		assertThat(parcial.columnas()).extracting(c -> c.titulo()).containsExactly("Práctica", "Promedio final");
+		assertThat(parcial.filas().get(0).valores()).containsEntry("resultado", "10")
+				.doesNotContainKey(item2.toString());
 	}
 
 	@Test

@@ -160,6 +160,8 @@ export const useEliminarEvidencia = () =>
 export type FiltrosReporte = SeleccionPeriodo & {
   tipo: TipoReporteCalificaciones;
   objetivoId?: string;
+  itemIds?: string;
+  incluirPromedio?: boolean;
 };
 
 export const useReporteCalificaciones = (filtros: FiltrosReporte | null) =>
@@ -191,7 +193,7 @@ export const exportarReporte = async (filtros: FiltrosReporte) => {
     params: filtros,
     responseType: 'blob',
   })) as Blob;
-  descargarBlob(contenido, 'reporte-calificaciones.csv');
+  descargarBlob(contenido, 'consolidado-notas.csv');
 };
 
 const descargarBlob = (contenido: Blob, nombre: string) => {

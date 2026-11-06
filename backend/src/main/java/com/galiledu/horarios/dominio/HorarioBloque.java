@@ -54,6 +54,16 @@ public class HorarioBloque {
 		return b;
 	}
 
+	/** Cambia el curso y el ambiente del bloque. Devuelve si algo cambió (el día y el número son su clave). */
+	public boolean reasignar(UUID nuevoPlanCursoId, UUID nuevoAmbienteId) {
+		if (planCursoId.equals(nuevoPlanCursoId) && ambienteId.equals(nuevoAmbienteId)) {
+			return false;
+		}
+		this.planCursoId = nuevoPlanCursoId;
+		this.ambienteId = nuevoAmbienteId;
+		return true;
+	}
+
 	public UUID getId() {
 		return id;
 	}
