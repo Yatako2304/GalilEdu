@@ -186,13 +186,13 @@ export const CRUCE_DE_DOCENTE: CruceDetectado = {
   dia: 'MAR',
   numeroBloque: 2,
   mensaje:
-    'Alessandra Huertas Villarreal ya dicta Inglés en 5.° B el martes a esa hora.',
+    'Alessandra Huertas Villarreal ya dicta Inglés con 5.° B el martes de 8:45 a 9:30.',
   seccion: '5.° B',
   curso: 'Inglés',
 };
 
 export const CRUCE_DE_AMBIENTE_NUEVO =
-  'Laboratorio de ciencias ya está ocupado por 5.° B el lunes en ese bloque.';
+  '5.° B ya usa Laboratorio de ciencias para Física el lunes de 8:00 a 8:45.';
 
 const base = (
   id: string,

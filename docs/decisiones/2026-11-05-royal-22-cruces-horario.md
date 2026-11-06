@@ -51,9 +51,9 @@ Reemplacé el `ValidadorCrucesStub`, que no detectaba nada, por el validador rea
 
 - [ ] Si Académico cambia un titular, el cruce no se impide; el GET lo muestra en la celda.
 - [ ] El endpoint no valida el día contra los días lectivos; lo valida el PUT.
-- [ ] Figma dice «Seleccione otro docente», pero el docente no se elige en el modal (es el titular de `docente_seccion`): el frontend mostrará otra ayuda.
+- [x] Figma dice «Seleccione otro docente», pero el docente no se elige en el modal (es el titular de `docente_seccion`): el frontend mostrará otra ayuda. Resuelto en el frontend de la HU-46 (2026-11-06): ver docs/modulos/horarios.md
 - [ ] `OcupacionHorariosSql` llena el ambiente con su nombre y la matriz de Figma muestra el código (A-502): pendiente para Valeria.
-- [ ] Falta el frontend: marcar cruces en la matriz y llamar al endpoint desde el modal.
+- [x] Falta el frontend: marcar cruces en la matriz y llamar al endpoint desde el modal. Resuelto en el frontend de la HU-46 (2026-11-06): ver docs/modulos/horarios.md
 
 ## Notas para quien siga
 
