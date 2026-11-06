@@ -632,7 +632,7 @@ export type MatriculaActual = {
 };
 
 export type ImpedimentoMatricula = {
-  tipo: 'PERIODO' | 'SIN_SECCION' | 'DOCUMENTOS' | 'DEUDA';
+  tipo: 'PERIODO' | 'INSCRIPCION' | 'DOCUMENTOS' | 'DEUDA';
   mensaje: string;
 };
 
@@ -1735,7 +1735,8 @@ export type DocumentoApoderado = {
 };
 
 export type DocumentosApoderado = {
-  estado: EstadoMatricula;
+  /** null: el hijo aún no tiene matrícula; el apoderado la inicia al enviar todos los documentos a validación. */
+  estado: EstadoMatricula | null;
   puedeSubir: boolean;
   documentos: DocumentoApoderado[];
 };

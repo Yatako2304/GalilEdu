@@ -43,7 +43,7 @@ const estados: Record<
 export const datosEstadoMatricula = (estado?: EstadoMatricula | null) =>
   estado
     ? estados[estado]
-    : { etiqueta: 'Pendiente de asignación', color: 'neutral' as const };
+    : { etiqueta: 'Sin iniciar', color: 'neutral' as const };
 
 /** Estado general del proceso, independiente de la etapa alcanzada. */
 export const datosResumenMatricula = (estado?: EstadoMatricula | null) => {
@@ -471,7 +471,8 @@ export const ConsultaMatricula = ({
             </CardContent>
           </Card>
 
-          {estado?.matricula && estudianteId && (
+          {/* Sin matrícula, el apoderado la inicia aquí mismo cuando nada lo impide (periodo, inscripción, deuda). */}
+          {(estado?.matricula || estado?.puedeContinuar) && estudianteId && (
             <DocumentosApoderado estudianteId={estudianteId} />
           )}
         </div>

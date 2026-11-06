@@ -55,7 +55,7 @@ public final class DtosMatricula {
 			int documentosRequeridos, int documentosEntregados, OffsetDateTime confirmadoEn) {
 	}
 
-	/** RF-60: motivo por el que no puede continuar. tipo: PERIODO, SIN_SECCION, DOCUMENTOS o DEUDA. */
+	/** RF-60: motivo por el que no puede continuar. tipo: PERIODO, INSCRIPCION, DOCUMENTOS o DEUDA. */
 	public record Impedimento(String tipo, String mensaje) {
 	}
 

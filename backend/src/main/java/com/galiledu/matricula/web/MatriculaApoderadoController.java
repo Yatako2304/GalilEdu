@@ -1,6 +1,8 @@
 package com.galiledu.matricula.web;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ContentDisposition;
@@ -9,6 +11,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.galiledu.compartido.seguridad.ServicioJwt;
+import com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoParaVer;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DocumentosApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstadoMatriculaApoderado;
@@ -88,6 +92,26 @@ public class MatriculaApoderadoController {
 	@PostMapping("/estudiantes/{id}/enviar-validacion")
 	public EstadoMatriculaApoderado enviarAValidacion(@PathVariable UUID id, Authentication autenticacion) {
 		return documentos.enviarAValidacion(ServicioJwt.usuarioActual(autenticacion), id);
+	}
+
+	/**
+	 * POST .../matricula (multipart, un campo por documento: su id con el archivo) · «Enviar a validación» cuando el
+	 * hijo aún no tiene matrícula: la crea con la sección que asigna el sistema y la deja EN_VALIDACION.
+	 */
+	@PostMapping(path = "/estudiantes/{id}/matricula", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public EstadoMatriculaApoderado iniciar(@PathVariable UUID id,
+			@RequestParam(required = false) MultiValueMap<String, MultipartFile> archivos,
+			Authentication autenticacion) {
+		Map<UUID, ArchivoMatricula> leidos = new LinkedHashMap<>();
+		if (archivos != null) {
+			archivos.forEach((campo, lista) -> {
+				if (!lista.isEmpty() && lista.getFirst() instanceof MultipartFile f && !f.isEmpty()) {
+					leidos.put(MatriculaAdministrativoController.idDelCampo(campo),
+							MatriculaAdministrativoController.leer(f));
+				}
+			});
+		}
+		return documentos.iniciar(ServicioJwt.usuarioActual(autenticacion), id, leidos);
 	}
 
 	private static ResponseEntity<byte[]> archivo(ArchivoParaVer a, ContentDisposition.Builder tipo) {

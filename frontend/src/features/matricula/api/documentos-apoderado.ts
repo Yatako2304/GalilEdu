@@ -42,6 +42,25 @@ export const useSubirDocumentoApoderado = (estudianteId: string) => {
   });
 };
 
+// POST .../matricula (multipart, un campo por documento con su id): sin matrícula, «Enviar a validación» la crea
+// con la sección que asigna el sistema y la deja EN_VALIDACION.
+export const useIniciarMatricula = (estudianteId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      archivos: Record<string, File>,
+    ): Promise<EstadoMatriculaApoderado> => {
+      const datos = new FormData();
+      Object.entries(archivos).forEach(([documentoId, archivo]) =>
+        datos.append(documentoId, archivo),
+      );
+      return api.post(`${base(estudianteId)}/matricula`, datos);
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ['matricula', 'apoderado'] }),
+  });
+};
+
 // POST .../enviar-validacion: SECCION_RESERVADA pasa a EN_VALIDACION
 export const useEnviarAValidacion = (estudianteId: string) => {
   const queryClient = useQueryClient();
@@ -54,7 +73,7 @@ export const useEnviarAValidacion = (estudianteId: string) => {
   });
 };
 
-const abrirEnPestana = (archivo: Blob) => {
+export const abrirEnPestana = (archivo: Blob) => {
   const url = URL.createObjectURL(archivo);
   window.open(url, '_blank', 'noopener');
   setTimeout(() => URL.revokeObjectURL(url), 60_000);

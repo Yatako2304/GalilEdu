@@ -3,6 +3,7 @@ package com.galiledu.matricula.aplicacion;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -27,7 +28,12 @@ import com.galiledu.matricula.infraestructura.EscriturasMatricula;
 
 /**
  * HU-28 y HU-29 (Apoderado): descargar la plantilla de cada documento, subir el firmado y enviarlo a validación. El
- * apoderado solo actúa sobre sus hijos y mientras la matrícula está en SECCION_RESERVADA con el periodo abierto.
+ * apoderado solo actúa sobre sus hijos y con el periodo abierto.
+ * <p>
+ * Si el colegio no creó la matrícula ("Nueva matrícula"), el apoderado la inicia él mismo: elige los documentos en la
+ * pantalla y, al «Enviar a validación», {@link #iniciar} crea la matrícula con la sección que asigna el sistema y la
+ * deja EN_VALIDACION. Así solo llega a la bandeja del Personal administrativo lo que ya está listo para revisar. Si la
+ * matrícula ya existe (la creó el colegio o el colegio observó un documento), se sube documento por documento.
  */
 @Service
 public class ServicioMatriculaApoderado {
@@ -35,24 +41,33 @@ public class ServicioMatriculaApoderado {
 	private final EscriturasMatricula escrituras;
 	private final ServicioPeriodoMatricula periodos;
 	private final ServicioEstadoMatricula estadoMatricula;
+	private final ServicioMatriculasPeriodo matriculas;
 	private final Clock reloj;
 
 	public ServicioMatriculaApoderado(ConsultasMatricula consultas, EscriturasMatricula escrituras,
-			ServicioPeriodoMatricula periodos, ServicioEstadoMatricula estadoMatricula, Clock reloj) {
+			ServicioPeriodoMatricula periodos, ServicioEstadoMatricula estadoMatricula,
+			ServicioMatriculasPeriodo matriculas, Clock reloj) {
 		this.consultas = consultas;
 		this.escrituras = escrituras;
 		this.periodos = periodos;
 		this.estadoMatricula = estadoMatricula;
+		this.matriculas = matriculas;
 		this.reloj = reloj;
 	}
 
-	/** Matrícula del hijo en el periodo vigente, ya comprobado que el hijo es del apoderado. */
+	/**
+	 * Periodo vigente y matrícula del hijo en ese periodo, ya comprobado que el hijo es del apoderado. La matrícula es
+	 * {@code null} mientras el apoderado no la inicie.
+	 */
 	private record Contexto(PeriodoFila periodo, MatriculaFila matricula) {
 	}
 
 	@Transactional(readOnly = true)
 	public DocumentosApoderado documentos(UUID usuarioId, UUID estudianteId) {
 		Contexto c = contexto(usuarioId, estudianteId);
+		if (c.matricula() == null) {
+			return sinMatricula(usuarioId, estudianteId, c);
+		}
 		return vista(c);
 	}
 
@@ -69,6 +84,9 @@ public class ServicioMatriculaApoderado {
 	@Transactional(readOnly = true)
 	public ArchivoParaVer archivo(UUID usuarioId, UUID estudianteId, UUID documentoId) {
 		Contexto c = contexto(usuarioId, estudianteId);
+		if (c.matricula() == null) {
+			throw ExcepcionNegocio.noEncontrado("Ese documento todavía no se subió.");
+		}
 		return consultas.archivoDelDocumento(c.matricula().id(), documentoId)
 				.map(a -> new ArchivoParaVer(a.nombre(), a.tipoMime(), a.contenido()))
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("Ese documento todavía no se subió."));
@@ -77,7 +95,7 @@ public class ServicioMatriculaApoderado {
 	/** Sube o reemplaza un documento; queda EN_REVISION. */
 	@Transactional
 	public DocumentosApoderado subir(UUID usuarioId, UUID estudianteId, UUID documentoId, ArchivoMatricula archivo) {
-		Contexto c = contexto(usuarioId, estudianteId);
+		Contexto c = conMatricula(contexto(usuarioId, estudianteId));
 		exigirEditable(c);
 		exigirDocumentoDelPeriodo(c, documentoId);
 		boolean aprobado = consultas.documentosGuardados(c.matricula().id()).stream()
@@ -95,16 +113,55 @@ public class ServicioMatriculaApoderado {
 	 */
 	@Transactional
 	public EstadoMatriculaApoderado enviarAValidacion(UUID usuarioId, UUID estudianteId) {
-		Contexto c = contexto(usuarioId, estudianteId);
+		Contexto c = conMatricula(contexto(usuarioId, estudianteId));
 		exigirEditable(c);
+		exigirSinImpedimentos(usuarioId, estudianteId);
+		escrituras.marcarEnValidacion(c.matricula().id());
+		return estadoMatricula.estado(usuarioId, estudianteId);
+	}
+
+	/**
+	 * «Enviar a validación» cuando el hijo aún no tiene matrícula: con todos los documentos firmados la crea, con la
+	 * sección que asigna el sistema (la primera del grado con cupo, igual que «Nueva matrícula»), y la deja
+	 * EN_VALIDACION para que el Personal administrativo la revise. Nada se guarda si falta un documento.
+	 */
+	@Transactional
+	public EstadoMatriculaApoderado iniciar(UUID usuarioId, UUID estudianteId, Map<UUID, ArchivoMatricula> archivos) {
+		Contexto c = contexto(usuarioId, estudianteId);
+		if (c.matricula() != null) {
+			throw ExcepcionNegocio.conflicto("La matrícula de este estudiante ya fue iniciada.");
+		}
+		exigirSinImpedimentos(usuarioId, estudianteId);
+		Set<UUID> pedidos = consultas.documentosRequeridosDe(c.periodo().id()).stream().map(d -> d.id())
+				.collect(Collectors.toSet());
+		if (!archivos.keySet().containsAll(pedidos)) {
+			throw ExcepcionNegocio.invalido(
+					"Sube los " + pedidos.size() + " documentos firmados antes de enviarlos a validación.");
+		}
+		var creada = matriculas.crear(c.periodo().id(), estudianteId, null, archivos, usuarioId);
+		if (!"EN_VALIDACION".equals(creada.estado())) {
+			// Un periodo sin documentos pedidos: no hay nada que completar.
+			escrituras.marcarEnValidacion(creada.id());
+		}
+		return estadoMatricula.estado(usuarioId, estudianteId);
+	}
+
+	private void exigirSinImpedimentos(UUID usuarioId, UUID estudianteId) {
 		EstadoMatriculaApoderado estado = estadoMatricula.estado(usuarioId, estudianteId);
 		if (!estado.puedeContinuar()) {
 			throw ExcepcionNegocio.conflicto(estado.impedimentos().isEmpty()
 					? "No se puede enviar la matrícula a validación."
 					: estado.impedimentos().getFirst().mensaje());
 		}
-		escrituras.marcarEnValidacion(c.matricula().id());
-		return estadoMatricula.estado(usuarioId, estudianteId);
+	}
+
+	/** Documentos pedidos, sin archivos: el apoderado los elige en la pantalla y los envía todos juntos. */
+	private DocumentosApoderado sinMatricula(UUID usuarioId, UUID estudianteId, Contexto c) {
+		EstadoMatriculaApoderado estado = estadoMatricula.estado(usuarioId, estudianteId);
+		List<DocumentoApoderado> documentos = consultas.documentosRequeridosDe(c.periodo().id()).stream()
+				.map(d -> new DocumentoApoderado(d.id(), d.nombre(), d.descripcion(), d.tienePlantilla(), null))
+				.toList();
+		return new DocumentosApoderado(null, estado.puedeContinuar(), documentos);
 	}
 
 	private DocumentosApoderado vista(Contexto c) {
@@ -124,9 +181,17 @@ public class ServicioMatriculaApoderado {
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No tienes a este estudiante a tu cargo."));
 		PeriodoFila periodo = consultas.periodoVigente()
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("Aún no hay un periodo de matrícula configurado."));
-		MatriculaFila matricula = consultas.matricula(estudianteId, periodo.anioEscolarId()).orElseThrow(
-				() -> ExcepcionNegocio.noEncontrado("El colegio aún no reserva una sección para este estudiante."));
+		MatriculaFila matricula = consultas.matricula(estudianteId, periodo.anioEscolarId()).orElse(null);
 		return new Contexto(periodo, matricula);
+	}
+
+	/** Subir uno por uno y «enviar a validación» por separado solo existen cuando la matrícula ya fue creada. */
+	private static Contexto conMatricula(Contexto c) {
+		if (c.matricula() == null) {
+			throw ExcepcionNegocio.conflicto(
+					"Primero sube todos los documentos y envíalos a validación para iniciar la matrícula.");
+		}
+		return c;
 	}
 
 	private boolean editable(Contexto c) {
@@ -137,7 +202,7 @@ public class ServicioMatriculaApoderado {
 	private void exigirEditable(Contexto c) {
 		if (!editable(c)) {
 			throw ExcepcionNegocio.conflicto(
-					"Solo puedes subir documentos mientras la sección está reservada y el periodo de matrícula está abierto.");
+					"Solo puedes subir documentos mientras la matrícula espera tus documentos y el periodo está abierto.");
 		}
 	}
 

@@ -125,7 +125,7 @@ test('informa cuando el periodo cerró y aún no existe una sección', async () 
 
   expect(screen.getByText('Periodo cerrado')).toBeInTheDocument();
   expect(screen.getByText('Por definir')).toBeInTheDocument();
-  expect(screen.getByText('Pendiente de asignación')).toBeInTheDocument();
+  expect(screen.getByText('Sin iniciar')).toBeInTheDocument();
   expect(
     screen.getByText('El periodo de matrícula está cerrado.'),
   ).toBeInTheDocument();
@@ -320,4 +320,44 @@ test('la constancia y el cronograma solo se ofrecen con la matrícula confirmada
   expect(
     screen.getByRole('link', { name: 'Ver cronograma de pensiones' }),
   ).toHaveAttribute('href', '/app/apoderado/pensiones');
+});
+
+test('sin matrícula y sin impedimentos el apoderado la empieza en el paso 1', async () => {
+  server.use(
+    http.get(
+      `${env.API_URL}/matricula/apoderado/estudiantes/:id/documentos`,
+      () =>
+        HttpResponse.json({
+          estado: null,
+          puedeSubir: true,
+          documentos: [
+            {
+              id: 'd-1',
+              nombre: 'Ficha de matrícula firmada',
+              descripcion: null,
+              tienePlantilla: false,
+              archivo: null,
+            },
+          ],
+        }),
+    ),
+  );
+  await renderApp(
+    <ConsultaMatricula
+      hijos={[{ ...hijos[0], estadoMatricula: null }]}
+      estudianteId="mateo"
+      estado={{ ...estado, matricula: null, pasoActual: 1 }}
+      isLoading={false}
+      onElegir={vi.fn()}
+    />,
+  );
+
+  expect(screen.getAllByText('Sin iniciar')).not.toHaveLength(0);
+  expect(screen.getByText('Por definir')).toBeInTheDocument();
+  expect(
+    await screen.findByText('Ficha de matrícula firmada'),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole('button', { name: 'Enviar a validación' }),
+  ).toBeDisabled();
 });
