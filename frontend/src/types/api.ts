@@ -228,6 +228,8 @@ export type DatosFamiliar = {
   viveConEstudiante?: boolean;
   tienePatriaPotestad?: boolean;
   relacion?: string | null;
+  /** Padre o madre fallecido: se registra con sus datos, pero no tiene cuenta. */
+  fallecido?: boolean;
 };
 
 export type DatosContacto = {
@@ -271,6 +273,17 @@ export type InscripcionRegistrada = {
   responsable: string;
   usuarioResponsable: string;
   cuentaNueva: boolean;
+  /** Cuenta de cada padre, madre o apoderado presente (todos tienen cuenta, no solo el responsable). */
+  cuentas: CuentaFamiliar[];
+};
+
+export type CuentaFamiliar = {
+  parentesco: Parentesco;
+  nombre: string;
+  usuario: string;
+  correo: string | null;
+  /** Se acaba de crear: sus credenciales se enviaron a su correo. */
+  nueva: boolean;
 };
 
 export type DocumentoAdjunto = {
@@ -300,6 +313,7 @@ export type PersonaEncontrada = {
   /** Su cuenta de usuario está eliminada: en "Nuevo usuario" se puede volver a registrar. */
   cuentaEliminada: boolean;
   estudiantesACargo: string[];
+  fallecido: boolean;
 };
 
 export type FichaEstudiante = {
@@ -322,6 +336,7 @@ export type FichaEstudiante = {
     motivoNoRegistra: string | null;
     /** Documento que acredita al apoderado (carta poder…), si se adjuntó. */
     acreditacion: DocumentoAdjunto | null;
+    fallecido: boolean;
   }[];
   contactos: DatosContacto[];
   modoSalida: ModoSalida | null;

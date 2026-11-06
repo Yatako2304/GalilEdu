@@ -84,16 +84,27 @@ public final class DtosEstudiantes {
 
 	/**
 	 * Paso 3. Tres casos: "no registra" (noRegistra + motivo), persona ya registrada (personaId)
-	 * o persona nueva (persona con sus datos).
+	 * o persona nueva (persona con sus datos). {@code fallecido}: el padre o la madre se registra con sus datos, pero
+	 * no está presente (validación de la iteración 1 con el PO).
 	 */
 	public record DatosFamiliar(
 			Boolean noRegistra, String motivo, String observacion,
 			UUID personaId,
 			@Valid DatosPersona persona,
 			Boolean viveConEstudiante, Boolean tienePatriaPotestad,
-			String relacion) {
+			String relacion,
+			Boolean fallecido) {
 		public boolean registra() {
 			return !Boolean.TRUE.equals(noRegistra) && (personaId != null || persona != null);
+		}
+
+		/** Registrado y no fallecido: puede ser responsable, recoger al estudiante y tener cuenta. */
+		public boolean presente() {
+			return registra() && !esFallecido();
+		}
+
+		public boolean esFallecido() {
+			return registra() && Boolean.TRUE.equals(fallecido);
 		}
 	}
 
@@ -112,8 +123,17 @@ public final class DtosEstudiantes {
 			@NotBlank(message = "Ingresa la relación de la persona autorizada") @Size(max = 60) @Pattern(regexp = DatosPersona.SOLO_LETRAS, message = "La relación solo puede contener letras") String relacion) {
 	}
 
+	/**
+	 * Resultado de inscribir o editar. {@code usuarioResponsable} y {@code cuentaNueva}: la cuenta del responsable de
+	 * matrícula. {@code cuentas}: la de cada padre, madre o apoderado presente (todos tienen cuenta).
+	 */
 	public record InscripcionRegistrada(UUID id, String estudiante, String responsable, String usuarioResponsable,
-			boolean cuentaNueva) {
+			boolean cuentaNueva, List<CuentaFamiliar> cuentas) {
+	}
+
+	/** Cuenta de un familiar presente. {@code nueva}: se acaba de crear y sus credenciales se enviaron a su correo. */
+	public record CuentaFamiliar(Parentesco parentesco, String nombre, String usuario, String correo,
+			boolean nueva) {
 	}
 
 	// ---------- Consultas ----------
@@ -143,7 +163,7 @@ public final class DtosEstudiantes {
 	 * eliminada; "Nuevo usuario" la usa para dejar volver a registrar ese documento.
 	 */
 	public record PersonaEncontrada(UUID personaId, DatosPersona persona, boolean tieneCuenta,
-			boolean cuentaEliminada, List<String> estudiantesACargo) {
+			boolean cuentaEliminada, List<String> estudiantesACargo, boolean fallecido) {
 	}
 
 	public record FichaEstudiante(UUID id, SituacionEstudiante estado, String grado, int anioAcademico,
@@ -154,7 +174,7 @@ public final class DtosEstudiantes {
 
 	public record Familiar(UUID personaId, Parentesco parentesco, String nombreCompleto, String documento,
 			String celular, String relacion, boolean viveConEstudiante, boolean esResponsable,
-			String motivoNoRegistra, DocumentoAdjunto acreditacion) {
+			String motivoNoRegistra, DocumentoAdjunto acreditacion, boolean fallecido) {
 	}
 
 	/**

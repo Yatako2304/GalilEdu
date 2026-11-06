@@ -4,6 +4,7 @@ import { ContentLayout } from '@/components/layouts';
 import { Spinner } from '@/components/ui/spinner';
 import { paths } from '@/config/paths';
 import { useEdicionEstudiante } from '@/features/estudiantes/api/estudiantes';
+import { avisoCuentasNuevas } from '@/features/estudiantes/components/inscripcion/esquema';
 import { InscripcionWizard } from '@/features/estudiantes/components/inscripcion/inscripcion-wizard';
 
 // "Editar" del listado de estudiantes: el mismo asistente de "Nueva inscripción" con los datos guardados (UX).
@@ -23,9 +24,12 @@ const EditarEstudianteRoute = () => {
           edicion={edicion.data}
           onCancelar={() => navigate(ficha)}
           onRegistrada={(r) => {
-            const aviso = r.cuentaNueva
-              ? `Se guardaron los cambios de ${r.estudiante}. ${r.responsable} es ahora el responsable: se creó su usuario ${r.usuarioResponsable} y se enviaron las credenciales a su correo.`
-              : `Se guardaron los cambios de ${r.estudiante}.`;
+            const aviso = [
+              `Se guardaron los cambios de ${r.estudiante}.`,
+              avisoCuentasNuevas(r.cuentas),
+            ]
+              .filter(Boolean)
+              .join(' ');
             navigate(ficha, {
               state: {
                 aviso: r.documentoFallido

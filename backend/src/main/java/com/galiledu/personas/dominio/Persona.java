@@ -57,6 +57,9 @@ public class Persona {
 	private String direccion;
 	@Column(name = "es_exalumno", nullable = false)
 	private boolean esExalumno;
+	/** V12: padre o madre fallecido (se registra con sus datos, pero no tiene cuenta). */
+	@Column(nullable = false)
+	private boolean fallecido;
 	@Column(name = "creado_en", nullable = false, updatable = false)
 	private Instant creadoEn;
 	@Column(name = "actualizado_en", nullable = false)
@@ -204,6 +207,12 @@ public class Persona {
 	}
 	public void setEsExalumno(boolean v) {
 		esExalumno = v;
+	}
+	public boolean isFallecido() {
+		return fallecido;
+	}
+	public void setFallecido(boolean v) {
+		fallecido = v;
 	}
 	public Instant getCreadoEn() {
 		return creadoEn;

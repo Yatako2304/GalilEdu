@@ -30,4 +30,15 @@ public interface EstudianteRepositorio extends JpaRepository<Estudiante, UUID>, 
 			  and v.estudiante.eliminado = false and v.estudiante.id <> :estudianteId
 			""")
 	boolean esResponsableDeOtro(@Param("personaId") UUID personaId, @Param("estudianteId") UUID estudianteId);
+
+	/**
+	 * Si la persona es padre, madre o apoderado presente (no fallecido) de otro estudiante (no eliminado) además del
+	 * indicado: en ese caso conserva su cuenta.
+	 */
+	@Query("""
+			select count(v) > 0 from VinculoFamiliar v
+			where v.persona.id = :personaId and v.persona.fallecido = false
+			  and v.estudiante.eliminado = false and v.estudiante.id <> :estudianteId
+			""")
+	boolean esFamiliarPresenteDeOtro(@Param("personaId") UUID personaId, @Param("estudianteId") UUID estudianteId);
 }

@@ -246,13 +246,22 @@ export const FichaEstudiante = ({
                   title: 'Rol',
                   field: 'parentesco',
                   Cell: ({ entry }) => (
-                    <Tag color="primary" size="md" className="rounded-full">
-                      {entry.parentesco === 'PADRE'
-                        ? 'Padre'
-                        : entry.parentesco === 'MADRE'
-                          ? 'Madre'
-                          : 'Apoderado'}
-                    </Tag>
+                    <div className="flex flex-wrap gap-2">
+                      <Tag color="primary" size="md" className="rounded-full">
+                        {entry.parentesco === 'PADRE'
+                          ? 'Padre'
+                          : entry.parentesco === 'MADRE'
+                            ? 'Madre'
+                            : 'Apoderado'}
+                      </Tag>
+                      {entry.fallecido && (
+                        <Tag color="neutral" size="md" className="rounded-full">
+                          {entry.parentesco === 'MADRE'
+                            ? 'Fallecida'
+                            : 'Fallecido'}
+                        </Tag>
+                      )}
+                    </div>
                   ),
                 },
                 {
@@ -260,7 +269,7 @@ export const FichaEstudiante = ({
                   field: 'viveConEstudiante',
                   Cell: ({ entry }) => (
                     <span>
-                      {entry.nombreCompleto
+                      {entry.nombreCompleto && !entry.fallecido
                         ? siNo(entry.viveConEstudiante)
                         : '—'}
                     </span>
