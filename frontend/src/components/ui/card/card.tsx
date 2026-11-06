@@ -37,13 +37,22 @@ const CardHeader = React.forwardRef<
 ));
 CardHeader.displayName = 'CardHeader';
 
+// `h6` (20 px, regular) es el título de CardHeader de Figma. `body-1` es Body/Body-1/Medium (18 px, medium): el título
+// que dibujan las tarjetas de «HU-45: Asignación de horarios» («Datos del Horario», «Matriz horaria»).
+const TAMANOS_TITULO = {
+  h6: 'text-h6 font-normal',
+  'body-1': 'text-body-1 font-medium',
+} as const;
+
 const CardTitle = React.forwardRef<
   HTMLHeadingElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, children, ...props }, ref) => (
+  React.HTMLAttributes<HTMLHeadingElement> & {
+    size?: keyof typeof TAMANOS_TITULO;
+  }
+>(({ className, children, size = 'h6', ...props }, ref) => (
   <h2
     ref={ref}
-    className={cn('text-h6 font-normal text-content-primary', className)}
+    className={cn(TAMANOS_TITULO[size], 'text-content-primary', className)}
     {...props}
   >
     {children}
