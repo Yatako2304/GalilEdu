@@ -1640,6 +1640,7 @@ export type DetalleMatricula = {
   informacionMedica: string;
   puedeCambiarSeccion: boolean;
   puedeEditarDocumentos: boolean;
+  puedeValidar: boolean;
   documentos: DocumentoDeMatricula[];
 };
 

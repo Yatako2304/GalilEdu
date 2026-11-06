@@ -1,4 +1,4 @@
-import { Eye, Paperclip, RefreshCw } from 'lucide-react';
+import { Eye, MessageSquareWarning, Paperclip, RefreshCw } from 'lucide-react';
 import * as React from 'react';
 import { Link } from 'react-router';
 
@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { DialogoConfirmacion } from '@/components/ui/dialog/dialogo-confirmacion';
 import { FileItem } from '@/components/ui/files';
 import { useNotifications } from '@/components/ui/notifications';
 import { Stepper } from '@/components/ui/stepper';
@@ -25,14 +26,17 @@ import {
 import {
   abrirDocumentoDeMatricula,
   useCambiarSeccion,
+  useObservarDocumento,
   useSeccionesDeMatricula,
   useSubirDocumento,
+  useValidarMatricula,
 } from '../api/matricula-detalle';
 import { descargarPlantillaDelPeriodo } from '../api/plantillas-matricula';
 import { problemaDelArchivo, tamanoLegible } from '../archivos-matricula';
 
 import { BotonPlantilla } from './boton-plantilla';
 import { DialogoCambiarSeccion } from './dialogo-cambiar-seccion';
+import { DialogoObservarDocumento } from './dialogo-observar-documento';
 
 const PASOS = [
   { label: 'Datos y documentos' },
@@ -171,7 +175,27 @@ const DocumentosMatricula = ({
   const [elegido, setElegido] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const subir = useSubirDocumento(matricula.id);
+  const observar = useObservarDocumento(matricula.id);
+  const [observando, setObservando] = React.useState<{
+    id: string;
+    nombre: string;
+  } | null>(null);
   const { addNotification } = useNotifications();
+
+  const confirmarObservacion = async (observacion: string) => {
+    if (!observando) return;
+    try {
+      await observar.mutateAsync({ documentoId: observando.id, observacion });
+      addNotification({
+        type: 'success',
+        title: 'Documento observado',
+        message: `${observando.nombre} volvió al apoderado para su corrección.`,
+      });
+      setObservando(null);
+    } catch {
+      // El cliente HTTP muestra el mensaje específico del backend.
+    }
+  };
 
   const pedir = (documentoId: string) => {
     setElegido(documentoId);
@@ -281,18 +305,19 @@ const DocumentosMatricula = ({
                   <Tag size="sm" color={estado.color}>
                     {estado.etiqueta}
                   </Tag>
-                  {documento.tienePlantilla && (
-                    <BotonPlantilla
-                      documento={documento.nombre}
-                      alDescargar={() =>
-                        descargarPlantillaDelPeriodo(
-                          matricula.periodoId,
-                          documento.id,
-                          documento.nombre,
-                        )
-                      }
-                    />
-                  )}
+                  {documento.tienePlantilla &&
+                    archivo.estado !== 'APROBADO' && (
+                      <BotonPlantilla
+                        documento={documento.nombre}
+                        alDescargar={() =>
+                          descargarPlantillaDelPeriodo(
+                            matricula.periodoId,
+                            documento.id,
+                            documento.nombre,
+                          )
+                        }
+                      />
+                    )}
                   <Button
                     type="button"
                     size="icon"
@@ -304,18 +329,42 @@ const DocumentosMatricula = ({
                   >
                     <Eye className="size-4" aria-hidden="true" />
                   </Button>
-                  {matricula.puedeEditarDocumentos && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      disabled={subir.isPending}
-                      aria-label={`Reemplazar ${documento.nombre}`}
-                      onClick={() => pedir(documento.id)}
-                    >
-                      Reemplazar
-                    </Button>
-                  )}
+                  {matricula.estado === 'EN_VALIDACION' &&
+                    archivo.estado === 'EN_REVISION' && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        icon={
+                          <MessageSquareWarning
+                            className="size-4"
+                            aria-hidden="true"
+                          />
+                        }
+                        aria-label={`Observar ${documento.nombre}`}
+                        onClick={() =>
+                          setObservando({
+                            id: documento.id,
+                            nombre: documento.nombre,
+                          })
+                        }
+                      >
+                        Observar
+                      </Button>
+                    )}
+                  {matricula.puedeEditarDocumentos &&
+                    archivo.estado !== 'APROBADO' && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        disabled={subir.isPending}
+                        aria-label={`Reemplazar ${documento.nombre}`}
+                        onClick={() => pedir(documento.id)}
+                      >
+                        Reemplazar
+                      </Button>
+                    )}
                 </>
               }
             />
@@ -325,6 +374,14 @@ const DocumentosMatricula = ({
           <p role="alert" className="text-body-4 text-content-error">
             {error}
           </p>
+        )}
+        {observando && (
+          <DialogoObservarDocumento
+            documento={observando.nombre}
+            guardando={observar.isPending}
+            alConfirmar={(o) => void confirmarObservacion(o)}
+            onCerrar={() => setObservando(null)}
+          />
         )}
       </CardContent>
     </Card>
@@ -358,6 +415,8 @@ export const DetalleMatricula = ({
   const [cambiando, setCambiando] = React.useState(false);
   const secciones = useSeccionesDeMatricula(matricula.id, cambiando);
   const cambiarSeccion = useCambiarSeccion(matricula.id);
+  const validar = useValidarMatricula(matricula.id);
+  const [validando, setValidando] = React.useState(false);
   const config = configuracionEstado(matricula.estado, matricula.codigo);
   const enProceso =
     matricula.estado === 'SECCION_RESERVADA' ||
@@ -365,6 +424,20 @@ export const DetalleMatricula = ({
   const volver = paths.app.administrativo.matriculasDelPeriodo.getHref(
     matricula.periodoId,
   );
+
+  const confirmarValidacion = async () => {
+    try {
+      await validar.mutateAsync();
+      addNotification({
+        type: 'success',
+        title: 'Documentación aprobada',
+        message: `La matrícula de ${matricula.nombre} quedó pendiente de pago.`,
+      });
+    } catch {
+      // El cliente HTTP muestra el mensaje específico del backend.
+    }
+    setValidando(false);
+  };
 
   const confirmarCambio = async (seccionId: string) => {
     try {
@@ -417,11 +490,26 @@ export const DetalleMatricula = ({
             <Link to={volver}>{enProceso ? 'Cancelar' : 'Salir'}</Link>
           </Button>
           {enProceso && (
-            // La validación de documentos es HU-32.
-            <Button disabled>Validar</Button>
+            <Button
+              disabled={!matricula.puedeValidar}
+              onClick={() => setValidando(true)}
+            >
+              Validar
+            </Button>
           )}
         </div>
       </div>
+
+      <DialogoConfirmacion
+        open={validando}
+        onOpenChange={setValidando}
+        tipo="guardar"
+        titulo="¿Aprobar documentación?"
+        descripcion={`Se aprobarán los documentos de ${matricula.nombre} y la matrícula pasará a pendiente de pago.`}
+        textoConfirmar="Aprobar"
+        cargando={validar.isPending}
+        onConfirmar={() => void confirmarValidacion()}
+      />
 
       {cambiando && (
         <DialogoCambiarSeccion

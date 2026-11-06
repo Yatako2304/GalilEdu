@@ -1,6 +1,7 @@
 import { Eye, Paperclip } from 'lucide-react';
 import * as React from 'react';
 
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileItem } from '@/components/ui/files';
@@ -49,6 +50,10 @@ export const DocumentosApoderado = ({
   if (!datos) return null;
 
   const faltan = datos.documentos.filter((d) => !d.archivo).length;
+  const observados = datos.documentos.filter(
+    (d) => d.archivo?.estado === 'OBSERVADO',
+  );
+  const porEnviar = faltan + observados.length;
 
   const pedir = (documentoId: string) => {
     setElegido(documentoId);
@@ -123,7 +128,7 @@ export const DocumentosApoderado = ({
                 <Eye className="size-4" aria-hidden="true" />
               </Button>
             )}
-            {datos.puedeSubir && (
+            {datos.puedeSubir && archivo?.estado !== 'APROBADO' && (
               <Button
                 type="button"
                 variant={archivo ? 'ghost' : 'primary-light'}
@@ -159,6 +164,15 @@ export const DocumentosApoderado = ({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {observados.length > 0 && (
+          <Alert
+            type="error"
+            title={`El colegio observó ${observados.length} documento(s)`}
+          >
+            Reemplaza solo los observados y vuelve a enviar a validación. Los
+            aprobados no se modifican.
+          </Alert>
+        )}
         <input
           ref={entrada}
           type="file"
@@ -182,11 +196,13 @@ export const DocumentosApoderado = ({
           <p className="text-body-4 text-content-tertiary">
             {faltan > 0
               ? `Te faltan ${faltan} documento(s) por subir.`
-              : 'Ya subiste todos los documentos.'}
+              : observados.length > 0
+                ? `Corrige ${observados.length} documento(s) observado(s).`
+                : 'Ya subiste todos los documentos.'}
           </p>
           <Button
             type="button"
-            disabled={faltan > 0 || enviar.isPending}
+            disabled={porEnviar > 0 || enviar.isPending}
             onClick={enviarAValidacion}
           >
             Enviar a validación

@@ -2,7 +2,9 @@ package com.galiledu.matricula.web;
 
 import java.util.UUID;
 
+import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
@@ -12,6 +14,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -68,6 +71,24 @@ public class MatriculaDetalleController {
 				.header(HttpHeaders.CONTENT_DISPOSITION,
 						ContentDisposition.inline().filename(a.nombre()).build().toString())
 				.body(a.contenido());
+	}
+
+	public record Observacion(@NotBlank @Size(max = 500) String observacion) {
+	}
+
+	/** PUT /api/matricula/matriculas/{id}/documentos/{documentoId}/observacion · observa el documento. */
+	@PutMapping("/{id}/documentos/{documentoId}/observacion")
+	public DetalleMatricula observar(@PathVariable UUID id, @PathVariable UUID documentoId,
+			@RequestBody @jakarta.validation.Valid Observacion cuerpo, Authentication autenticacion) {
+		servicio.observarDocumento(id, documentoId, cuerpo.observacion(), ServicioJwt.usuarioActual(autenticacion));
+		return servicio.detalle(id);
+	}
+
+	/** POST /api/matricula/matriculas/{id}/validar · "¿Aprobar documentación?". */
+	@PostMapping("/{id}/validar")
+	public DetalleMatricula validar(@PathVariable UUID id, Authentication autenticacion) {
+		servicio.validar(id, ServicioJwt.usuarioActual(autenticacion));
+		return servicio.detalle(id);
 	}
 
 	/** PUT /api/matricula/matriculas/{id}/documentos/{documentoId} (multipart, campo archivo) · sube o reemplaza. */

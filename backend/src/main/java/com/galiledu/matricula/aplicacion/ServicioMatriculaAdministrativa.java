@@ -72,7 +72,7 @@ public class ServicioMatriculaAdministrativa {
 				emergencia.map(c -> c.nombre() + " (" + c.parentesco() + ")"
 						+ (c.celular() == null ? "" : " · " + c.celular())).orElse(null),
 				PresentacionMatricula.resumenMedico(consultas.fichaMedica(m.estudianteId())),
-				puedeCambiarSeccion(m), puedeEditarDocumentos(m), documentos);
+				puedeCambiarSeccion(m), puedeEditarDocumentos(m), puedeValidar(m, documentos), documentos);
 	}
 
 	/** Secciones del grado de la matrícula; la actual va marcada como seleccionada. */
@@ -121,6 +121,11 @@ public class ServicioMatriculaAdministrativa {
 		if (consultas.documentosRequeridosDe(m.periodoId()).stream().noneMatch(d -> d.id().equals(documentoId))) {
 			throw ExcepcionNegocio.invalido("Ese documento no lo pide este periodo de matrícula.");
 		}
+		boolean aprobado = consultas.documentosGuardados(matriculaId).stream()
+				.anyMatch(d -> d.documentoRequeridoId().equals(documentoId) && d.estado().equals("APROBADO"));
+		if (aprobado) {
+			throw ExcepcionNegocio.conflicto("Ese documento ya fue aprobado y no se puede reemplazar.");
+		}
 		PresentacionMatricula.validarArchivo(archivo);
 		escrituras.guardarDocumento(matriculaId, documentoId, archivo, usuarioId);
 		// Si el colegio completa los documentos por el apoderado, la matrícula pasa sola a validación.
@@ -129,6 +134,49 @@ public class ServicioMatriculaAdministrativa {
 				&& consultas.documentosEntregados(matriculaId) >= requeridos) {
 			escrituras.marcarEnValidacion(matriculaId);
 		}
+	}
+
+	/**
+	 * Observa un documento que está en revisión: queda OBSERVADO con el motivo y la matrícula vuelve a
+	 * SECCION_RESERVADA para que el apoderado lo reemplace (los aprobados no se tocan).
+	 */
+	@Transactional
+	public void observarDocumento(UUID matriculaId, UUID documentoId, String observacion, UUID usuarioId) {
+		MatriculaDetalleFila m = buscar(matriculaId);
+		if (!m.estado().equals("EN_VALIDACION")) {
+			throw ExcepcionNegocio.conflicto("Solo se observan documentos de matrículas en validación.");
+		}
+		DocumentoGuardadoFila doc = consultas.documentosGuardados(matriculaId).stream()
+				.filter(d -> d.documentoRequeridoId().equals(documentoId)).findFirst()
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("Ese documento todavía no se subió."));
+		if (!doc.estado().equals("EN_REVISION")) {
+			throw ExcepcionNegocio.conflicto("Solo se puede observar un documento que está en revisión.");
+		}
+		String motivo = observacion == null ? "" : observacion.strip();
+		if (motivo.isEmpty()) {
+			throw ExcepcionNegocio.invalido("Indica qué debe corregir el apoderado.");
+		}
+		escrituras.observarDocumento(matriculaId, documentoId, motivo, usuarioId);
+		escrituras.devolverAlApoderado(matriculaId);
+	}
+
+	/** "¿Aprobar documentación?": aprueba lo que está en revisión y la matrícula pasa a PENDIENTE_PAGO. */
+	@Transactional
+	public void validar(UUID matriculaId, UUID usuarioId) {
+		MatriculaDetalleFila m = buscar(matriculaId);
+		if (!m.estado().equals("EN_VALIDACION")) {
+			throw ExcepcionNegocio.conflicto("Solo se valida una matrícula que está en validación.");
+		}
+		List<DocumentoGuardadoFila> guardados = consultas.documentosGuardados(matriculaId);
+		if (guardados.stream().anyMatch(d -> d.estado().equals("OBSERVADO"))) {
+			throw ExcepcionNegocio.conflicto("Hay documentos observados: el apoderado debe corregirlos primero.");
+		}
+		escrituras.aprobarDocumentacion(matriculaId, usuarioId);
+	}
+
+	private boolean puedeValidar(MatriculaDetalleFila m, List<DocumentoDeMatricula> documentos) {
+		return m.estado().equals("EN_VALIDACION") && !documentos.isEmpty() && documentos.stream()
+				.allMatch(d -> d.archivo() != null && !d.archivo().estado().equals("OBSERVADO"));
 	}
 
 	private static ArchivoGuardado archivoGuardado(DocumentoGuardadoFila f) {
