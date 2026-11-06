@@ -32,9 +32,10 @@ import { buscarPersonaPorDocumento } from '../../api/estudiantes';
 import { Casilla, Grilla, SeccionPaso, Subtitulo } from './campos';
 import {
   InscripcionForm,
+  MOTIVOS_NO_REGISTRA,
   RELACIONES_APODERADO,
   TIPOS_DOCUMENTO_APODERADO,
-  registra,
+  presente,
   validarDocumento,
 } from './esquema';
 
@@ -44,10 +45,7 @@ type Clave = 'padre' | 'madre' | 'apoderado';
 /** Largos de estudiantes.contacto_emergencia y autorizado_recojo (V2). */
 const LIMITES_CONTACTO = { nombre: 150, relacion: 60 } as const;
 
-const MOTIVOS = ['Fallecido(a)', 'No registra', 'Otro'].map((v) => ({
-  label: v,
-  value: v,
-}));
+const MOTIVOS = MOTIVOS_NO_REGISTRA.map((v) => ({ label: v, value: v }));
 
 const RELACIONES = RELACIONES_APODERADO.map((v) => ({ label: v, value: v }));
 
@@ -86,6 +84,10 @@ const TarjetaFamiliar = ({
         setValue(`${clave}.tieneCuenta`, encontrada.tieneCuenta);
         setValue(`${clave}.aCargo`, encontrada.estudiantesACargo);
         setValue(`${clave}.persona`, personaAFormulario(encontrada.persona));
+        // Si ya figura como fallecido (por ejemplo, por un hermano), se marca.
+        if (clave !== 'apoderado') {
+          setValue(`${clave}.fallecido`, !!encontrada.fallecido);
+        }
       } else {
         setValue(`${clave}.personaId`, null);
         setValue(`${clave}.tieneCuenta`, false);
@@ -116,15 +118,26 @@ const TarjetaFamiliar = ({
           </h3>
           <p className="text-body-4 text-content-tertiary">{descripcion}</p>
         </div>
+        {/* Validación de la iteración 1 con el PO: "No registra" y "Fallecido(a)" son casos distintos. */}
         {clave !== 'apoderado' && (
-          <Casilla
-            etiqueta={
-              clave === 'padre'
-                ? 'No registra / fallecido'
-                : 'No registra / fallecida'
-            }
-            registration={register(`${clave}.noRegistra`)}
-          />
+          <div className="flex flex-wrap gap-6">
+            <Casilla
+              etiqueta="No registra"
+              registration={register(`${clave}.noRegistra`, {
+                onChange: (e) => {
+                  if (e.target.checked) setValue(`${clave}.fallecido`, false);
+                },
+              })}
+            />
+            <Casilla
+              etiqueta={clave === 'padre' ? 'Fallecido' : 'Fallecida'}
+              registration={register(`${clave}.fallecido`, {
+                onChange: (e) => {
+                  if (e.target.checked) setValue(`${clave}.noRegistra`, false);
+                },
+              })}
+            />
+          </div>
         )}
       </div>
 
@@ -138,8 +151,11 @@ const TarjetaFamiliar = ({
             error={errores?.motivo}
           />
           <Input
-            label="Observación (opcional)"
+            label={
+              f.motivo === 'Otro' ? 'Observación' : 'Observación (opcional)'
+            }
             registration={register(`${clave}.observacion`)}
+            error={errores?.observacion}
           />
         </Grilla>
       ) : (
@@ -206,6 +222,7 @@ const TarjetaFamiliar = ({
             disabled={!!f.personaId && !editando}
             sinDocumento
             conPaisDeNacimiento
+            soloIdentidad={f.fallecido}
             onSalirCorreo={() => alSalirDelCorreo?.(clave)}
           />
 
@@ -216,16 +233,19 @@ const TarjetaFamiliar = ({
             />
           )}
 
-          <div className="flex flex-wrap gap-6">
-            <Casilla
-              etiqueta="Vive con el estudiante"
-              registration={register(`${clave}.viveConEstudiante`)}
-            />
-            <Casilla
-              etiqueta="Tiene la patria potestad / tutela"
-              registration={register(`${clave}.tienePatriaPotestad`)}
-            />
-          </div>
+          {/* Un fallecido no vive con el estudiante ni tiene la patria potestad. */}
+          {!f.fallecido && (
+            <div className="flex flex-wrap gap-6">
+              <Casilla
+                etiqueta="Vive con el estudiante"
+                registration={register(`${clave}.viveConEstudiante`)}
+              />
+              <Casilla
+                etiqueta="Tiene la patria potestad / tutela"
+                registration={register(`${clave}.tienePatriaPotestad`)}
+              />
+            </div>
+          )}
         </>
       )}
     </Card>
@@ -372,11 +392,12 @@ export const PasoFamilia = ({
     'madre',
     'incluirApoderado',
   ]);
+  // Sin padre ni madre presentes: cada uno marcado "No registra" o "Fallecido(a)".
   const sinPadres =
-    !registra(padre) &&
-    !registra(madre) &&
-    padre.noRegistra &&
-    madre.noRegistra;
+    !presente(padre) &&
+    !presente(madre) &&
+    (padre.noRegistra || padre.fallecido) &&
+    (madre.noRegistra || madre.fallecido);
 
   React.useEffect(() => {
     if (sinPadres && !incluirApoderado) setValue('incluirApoderado', true);
@@ -403,7 +424,7 @@ export const PasoFamilia = ({
       />
 
       {sinPadres && (
-        <Alert type="warning" title="No hay padre ni madre registrados">
+        <Alert type="warning" title="No hay padre ni madre presentes">
           Para continuar debes registrar un apoderado. Puede ser un familiar o
           una persona sin parentesco.
         </Alert>
@@ -477,11 +498,12 @@ export const PasoContactos = ({ form }: PasoProps) => {
     }
   }, [modoSalida, hayAutorizados, vaciarAutorizados]);
 
+  // Pueden recoger al estudiante el padre, la madre y el apoderado presentes (un fallecido no aparece).
   const familiares = [
-    registra(padre) && `${nombreFamiliar(padre)} · Padre`,
-    registra(madre) && `${nombreFamiliar(madre)} · Madre`,
+    presente(padre) && `${nombreFamiliar(padre)} · Padre`,
+    presente(madre) && `${nombreFamiliar(madre)} · Madre`,
     incluirApoderado &&
-      registra(apoderado) &&
+      presente(apoderado) &&
       `${nombreFamiliar(apoderado)} · Apoderado`,
   ].filter(Boolean) as string[];
 
