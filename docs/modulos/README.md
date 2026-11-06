@@ -11,7 +11,7 @@ Hay un archivo por módulo, creado desde [`_plantilla.md`](_plantilla.md). Quien
 | Configuración del año escolar | [configuracion.md](configuracion.md) | HU-74, 75, 44, 23, 34 | 1 | 🚧 backend de HU-74, HU-75 (MVP, sin historial de tutores), HU-34, HU-23 y HU-44 hecho; frontend de HU-74 (año escolar y periodos), HU-75 (secciones y tutores), HU-44 (estructura horaria), HU-23 (periodos de matrícula) y HU-34 (tarifario y calendario) hecho |
 | Catálogo académico | [catalogo-academico.md](catalogo-academico.md) | HU-52–56 · (HU-43) | 1 · 3 | 🚧 HU-52 a HU-56 hechas; falta HU-43 |
 | Matrícula | [matricula.md](matricula.md) | HU-24, 27, 30 · HU-28, 29, 31, 32 · (HU-25, 26, 33, 71, 72) | 1 · 2 · 3 | 🚧 HU-27 y HU-30 completas; falta HU-24 |
-| Pagos y pensiones | [pagos.md](pagos.md) | HU-36, 37 · HU-35, 38–42 | 1 · 2 | 🚧 HU-36 y HU-37 hechas; falta integrar HU-36 al detalle de HU-24 y la iteración 2 |
+| Pagos y pensiones | [pagos.md](pagos.md) | HU-36, 37 · HU-35, 38–42 | 1 · 2 | 🚧 HU-36, HU-37 y HU-41 (pago en línea con Stripe o pasarela simulada) hechas; falta integrar HU-36 al detalle de HU-24 y el resto de la iteración 2 |
 | Horarios | [horarios.md](horarios.md) | HU-45, 46, 49, 50, 51 · (HU-47, 48) | 2 · 3 | 🚧 HU-45 hecha (backend y pantalla del Coordinador); HU-46 hecha (backend y frontend); HU-49 hecha (backend y frontend); HU-51 (horario del apoderado) hecha; la vista del Estudiante (HU-50, Could) sigue con datos simulados (MSW) |
 | Académico (calificaciones) | [calificaciones.md](calificaciones.md) | HU-57, 59, 62 · (HU-60, 63, 64, 69) | 3 | ✅ HU-57, HU-59 y HU-62 terminadas y verificadas |
 | Asistencia | — | HU-65, 67, 68 | 3 | ⏳ |

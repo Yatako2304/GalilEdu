@@ -1,8 +1,8 @@
 # Pagos y pensiones
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** 🚧 en desarrollo: HU-35, 36, 37, 38, 39 y 40 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
-- **Última actualización:** 2026-11-05
+- **Estado:** 🚧 en desarrollo: HU-35, 36, 37, 38, 39, 40 y 41 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
+- **Última actualización:** 2026-11-06
 
 ## Alcance
 
@@ -44,6 +44,35 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 - La vista **Apoderado → Pensiones** permite cambiar de hijo y compromiso, consultar el cronograma con mora y revisar pagos. Las casillas y el botón de pago permanecen deshabilitados porque corresponden a HU-41.
 - Las pestañas "Compromisos vigentes" (P1, HU-38) y "Cuotas vencidas" (P3, HU-39) se ven desactivadas.
 
+## HU-41 · Pago en línea
+
+Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Código: `pagos/aplicacion/ServicioPagoEnLinea`, `PasarelaPagos` (puerto) con `PasarelaStripe` y `PasarelaSimulada`; frontend en `features/pagos` (`seleccion-cuotas.ts`, `barra-pago-cuotas.tsx`, `pensiones-apoderado.tsx`, `resultado-pago.tsx`).
+
+- **Pasarela:** `PASARELA_PAGOS=simulada` (por defecto, no cobra; la "página de pago" es `/app/apoderado/pensiones/pasarela-simulada`) o `stripe` (Stripe Checkout en modo de prueba, con `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET`).
+- **Recargo por mora** (sección 3.10): `Cuota.recargo`, la misma regla de HU-39 (Figma P11): capital pendiente × tasa × períodos **completos** de 30 días desde el vencimiento, solo pasada la gracia y sin pasar del tope. Solo pensiones. Así la orden cobra lo mismo que muestra la pestaña Morosidad.
+- **Una orden puede pagar cuotas de varios hijos;** al aprobarse se registra **un pago con su constancia por estudiante** (V13 quitó el UNIQUE de `pago.orden_pago_id`).
+- **Evento `PagoEnLineaAprobado`:** se publica al aprobarse una orden, con las cuotas que quedaron pagadas. Matrícula lo escucha para HU-31.
+
+**Cómo se acopla con HU-40 (cronograma del apoderado):** en Figma ("HU-41 Pago en línea de cuotas pendientes y HU-40") la tabla del cronograma tiene una columna de casillas y encima la barra de selección. La tabla de HU-40 usa `useSeleccionCuotas(useCuotasPorPagar().data)` para sus casillas (`estaSeleccionada`, `alternar`) y pone `<BarraPagoCuotas>` encima; al pagar llama a `useCrearOrdenPago().mutate(ids)`. Ya está hecho en `pensiones-apoderado.tsx`: solo se pueden marcar las cuotas que el backend devuelve como pagables.
+
+| Código | Criterio de aceptación |
+| --- | --- |
+| CAHU41-1 | El apoderado (padre, madre o apoderado vinculado) ve las cuotas pendientes y vencidas de cada hijo, con capital y recargo por separado. |
+| CAHU41-2 | Al marcar cuotas (de uno o varios hijos), el total (capital + recargo) se actualiza. |
+| CAHU41-3 | Las pensiones se pagan en orden: al marcar una se marcan las anteriores impagas de ese hijo; el backend rechaza saltarse una. |
+| CAHU41-4 | Una cuota pagada, anulada o en otro pago en proceso no se puede marcar. |
+| CAHU41-5 | "Pagar seleccionadas" crea la orden, pone las cuotas en proceso y lleva a la pasarela; el sistema no pide ni guarda datos de tarjeta. |
+| CAHU41-6 | Pago aprobado: pago con constancia `C-AAAA-NNNNN` por estudiante, cuotas pagadas con el recargo cubierto y pantalla "Pago realizado". |
+| CAHU41-7 | Pago rechazado: la orden queda rechazada con su motivo y las cuotas vuelven a su estado anterior. |
+| CAHU41-8 | Sin confirmación en 30 minutos la orden expira y las cuotas vuelven a pendiente. |
+| CAHU41-9 | Si la notificación no llega, al volver el apoderado (o al expirar) se consulta el estado a la pasarela. |
+| CAHU41-10 | Una notificación repetida no registra dos pagos. |
+| CAHU41-11 | Si la pasarela confirma otro monto, el pago queda OBSERVADO con la diferencia. |
+| CAHU41-12 | Una cuota en proceso no cuenta como vencida ni bloquea la matrícula mientras se resuelve. |
+| CAHU41-13 | Nadie puede pagar ni ver cuotas u órdenes de una familia que no es la suya. |
+
+Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaStripeTests`; `seleccion-cuotas.test.ts` y `pensiones-apoderado.test.tsx`.
+
 ## Pantallas (Figma)
 
 | Pantalla | Frame en Figma |
@@ -56,7 +85,7 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 
 ## Base de datos
 
-- **Esquema:** `pagos` · **Migraciones:** `V4` (tarifario) y `V5__matricula_y_pagos.sql`
+- **Esquema:** `pagos` · **Migraciones:** `V4` (tarifario), `V5__matricula_y_pagos.sql`, `V13__pago_en_linea.sql` (vencimiento de la orden, estado anterior de cada cuota y varios pagos por orden) y `V14__pago_en_linea_stripe.sql` (referencias y URL de Stripe más largas)
 
 | Tabla | Para qué |
 | --- | --- |
@@ -91,5 +120,7 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 - [x] HU-38 (front): descuentos aplicables, reemplazo, ficha P10 y revocación con motivo.
 - [x] HU-40 (front): selector de hijos y compromisos, cronograma con recargo e historial de pagos.
 - [x] P9: historial de pagos del compromiso para personal administrativo.
-- [ ] Pasarela de pagos real: hoy la orden solo guarda la referencia y el resultado; falta elegir el proveedor.
+- [x] Pasarela de pagos (HU-41): Stripe Checkout en modo de prueba, con una pasarela simulada mientras no haya llaves. Probado de punta a punta con Stripe en local (06/11): pago aprobado con la tarjeta 4242 y confirmado por consulta directa. Se quitó `payment_method_types` (Stripe ya no lo acepta; los métodos de pago se eligen en el dashboard).
+- [x] HU-40 + HU-41 (front): las casillas del cronograma de HU-40 arman el pago en línea con `useSeleccionCuotas` y `BarraPagoCuotas`; se quitó la tabla mínima `PagoCuotas`.
+- [ ] Crear la cuenta de Stripe en modo de prueba y configurar el webhook en el servidor (necesita HTTPS para el modo real).
 - [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).

@@ -119,10 +119,13 @@ public class Cuota {
 		return true;
 	}
 
-	/** RF-91: una pensión impaga es vencida después de su vencimiento más los días de gracia del tarifario. */
+	/**
+	 * RF-91: una pensión impaga es vencida después de su vencimiento más los días de gracia del tarifario. Una cuota
+	 * con un pago en línea en proceso no cuenta como vencida mientras la pasarela responde (sección 3.12).
+	 */
 	public boolean estaVencida(LocalDate hoy, int diasGracia) {
 		return CONCEPTO_PENSION.equals(conceptoCodigo)
-				&& estado != EstadoCuota.PAGADA && estado != EstadoCuota.ANULADA
+				&& estado != EstadoCuota.PAGADA && estado != EstadoCuota.ANULADA && estado != EstadoCuota.EN_PROCESO
 				&& hoy.isAfter(fechaVencimiento.plusDays(diasGracia));
 	}
 
@@ -189,6 +192,51 @@ public class Cuota {
 		return estado != EstadoCuota.ANULADA;
 	}
 
+	/** HU-41: se puede pagar en línea si tiene saldo y no está pagada, anulada ni en otro pago en proceso. */
+	public boolean esPagable() {
+		return (estado == EstadoCuota.PENDIENTE || estado == EstadoCuota.PAGADA_PARCIAL) && saldo().signum() > 0;
+	}
+
+	/** Capital que falta pagar. */
+	public BigDecimal saldo() {
+		return getMontoFinal().subtract(montoPagado);
+	}
+
+	/**
+	 * HU-41: entra a una orden de pago. Queda EN_PROCESO hasta que la pasarela responda (sección 3.8) y devuelve el
+	 * estado anterior, que se restaura si la orden se rechaza o expira.
+	 */
+	public EstadoCuota iniciarPago() {
+		if (!esPagable()) {
+			throw new IllegalStateException("La cuota " + nombre + " no se puede pagar.");
+		}
+		EstadoCuota anterior = estado;
+		estado = EstadoCuota.EN_PROCESO;
+		return anterior;
+	}
+
+	/** La pasarela rechazó o no confirmó a tiempo: la cuota vuelve a como estaba. */
+	public void restaurar(EstadoCuota anterior) {
+		if (estado == EstadoCuota.EN_PROCESO) {
+			estado = anterior;
+		}
+	}
+
+	/** Pago confirmado: suma el capital cubierto; queda PAGADA si se completó y PAGADA_PARCIAL si no. */
+	public void registrarPago(BigDecimal capital, LocalDate fecha) {
+		montoPagado = montoPagado.add(capital);
+		if (saldo().signum() <= 0) {
+			estado = EstadoCuota.PAGADA;
+			fechaPago = fecha;
+		} else {
+			estado = EstadoCuota.PAGADA_PARCIAL;
+		}
+	}
+
+	public CompromisoPago getCompromiso() {
+		return compromiso;
+	}
+
 	public boolean esPension() {
 		return CONCEPTO_PENSION.equals(conceptoCodigo);
 	}
@@ -217,8 +265,9 @@ public class Cuota {
 		return montoDescuento;
 	}
 
+	/** monto_final lo calcula la BD; en una cuota recién creada (aún sin leer) se calcula aquí. */
 	public BigDecimal getMontoFinal() {
-		return montoFinal;
+		return montoFinal != null ? montoFinal : montoBase.subtract(montoDescuento);
 	}
 
 	public BigDecimal getMontoPagado() {

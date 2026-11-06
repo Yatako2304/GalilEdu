@@ -1,4 +1,4 @@
-import { Check, ChevronDown, WalletCards } from 'lucide-react';
+import { Banknote, Check, ChevronDown } from 'lucide-react';
 import * as React from 'react';
 
 import { Avatar } from '@/components/ui/avatar';
@@ -28,6 +28,7 @@ import { Tag } from '@/components/ui/tag';
 import { CompromisoDetalle, HijoConDeuda } from '@/types/api';
 import { formatDay } from '@/utils/format';
 
+import { useCrearOrdenPago, useCuotasPorPagar } from '../api/pago-en-linea';
 import {
   useCompromisoApoderado,
   useCompromisosApoderado,
@@ -35,8 +36,10 @@ import {
   usePagosApoderado,
 } from '../api/pensiones-apoderado';
 
+import { BarraPagoCuotas } from './barra-pago-cuotas';
 import { ResumenCompromiso } from './cronograma-cuotas';
 import { etiquetaCuota, soles } from './formato';
+import { useSeleccionCuotas } from './seleccion-cuotas';
 import { TablaPagos } from './tabla-pagos';
 
 type Pestana = 'cronograma' | 'pagos';
@@ -118,94 +121,121 @@ const SelectorEstudiante = ({
   </Card>
 );
 
+type Seleccion = ReturnType<typeof useSeleccionCuotas>;
+
 const TablaCuotasApoderado = ({
   compromiso,
+  seleccion,
 }: {
   compromiso: CompromisoDetalle;
-}) => (
-  <TableElement className="whitespace-nowrap">
-    <TableHeader>
-      <TableRow>
-        <TableHead className="w-12">
-          <Checkbox disabled aria-label="Seleccionar todas las cuotas" />
-        </TableHead>
-        <TableHead>Cuota</TableHead>
-        <TableHead>Vencimiento</TableHead>
-        <TableHead className="text-right">Monto</TableHead>
-        <TableHead>Estado</TableHead>
-        <TableHead className="text-right">Recargo</TableHead>
-      </TableRow>
-    </TableHeader>
-    <TableBody>
-      {compromiso.cuotas.map((cuota) => {
-        const etiqueta = etiquetaCuota(cuota);
-        return (
-          <TableRow key={cuota.id}>
-            <TableCell>
-              <Checkbox disabled aria-label={`Seleccionar ${cuota.nombre}`} />
-            </TableCell>
-            <TableCell>
-              <p className="text-content-primary">{cuota.nombre}</p>
-              <p className="text-body-4 text-content-tertiary">
-                {cuota.numero
-                  ? `Cuota ${cuota.numero} de ${compromiso.resumen.pensionesTotal}`
-                  : 'Cuota de matrícula'}
-              </p>
-            </TableCell>
-            <TableCell>{formatDay(cuota.fechaVencimiento)}</TableCell>
-            <TableCell className="text-right font-semibold text-content-primary">
-              {soles(cuota.montoFinal)}
-            </TableCell>
-            <TableCell>
-              <span className="flex flex-wrap items-center gap-2">
-                <Tag size="sm" color={etiqueta.color}>
-                  {etiqueta.texto}
-                </Tag>
-                {cuota.vencida && (
-                  <span className="text-body-4 text-content-tertiary">
-                    Vencida hace {cuota.diasAtraso} días
-                  </span>
-                )}
-                {cuota.fechaPago && (
-                  <span className="text-body-4 text-content-tertiary">
-                    {formatDay(cuota.fechaPago)}
-                  </span>
-                )}
-              </span>
-            </TableCell>
-            <TableCell className="text-right text-content-error">
-              {cuota.recargo > 0 ? `+ ${soles(cuota.recargo)}` : '—'}
-            </TableCell>
-          </TableRow>
-        );
-      })}
-    </TableBody>
-    <TableFooter>
-      <TableRow>
-        <TableCell />
-        <TableCell colSpan={2} className="font-semibold text-content-primary">
-          Total anual comprometido
-        </TableCell>
-        <TableCell className="text-right font-semibold text-content-primary">
-          {soles(compromiso.resumen.totalAnual)}
-        </TableCell>
-        <TableCell />
-        <TableCell className="text-right font-semibold text-content-primary">
-          {soles(
-            compromiso.cuotas.reduce(
-              (total, cuota) => total + cuota.recargo,
-              0,
-            ),
-          )}
-        </TableCell>
-      </TableRow>
-    </TableFooter>
-  </TableElement>
-);
+  seleccion: Seleccion;
+}) => {
+  // HU-41: solo se marcan las cuotas que el backend devuelve como pagables.
+  const pagables = new Set(
+    seleccion.cuotas.filter((c) => c.seleccionable).map((c) => c.cuotaId),
+  );
+  const ids = compromiso.cuotas
+    .map((c) => c.id)
+    .filter((id) => pagables.has(id));
+  const todas = ids.length > 0 && ids.every(seleccion.estaSeleccionada);
+  return (
+    <TableElement className="whitespace-nowrap">
+      <TableHeader>
+        <TableRow>
+          <TableHead className="w-12">
+            <Checkbox
+              aria-label="Seleccionar todas las cuotas"
+              checked={todas}
+              disabled={ids.length === 0}
+              onChange={() => seleccion.fijar(ids, !todas)}
+            />
+          </TableHead>
+          <TableHead>Cuota</TableHead>
+          <TableHead>Vencimiento</TableHead>
+          <TableHead className="text-right">Monto</TableHead>
+          <TableHead>Estado</TableHead>
+          <TableHead className="text-right">Recargo</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {compromiso.cuotas.map((cuota) => {
+          const etiqueta = etiquetaCuota(cuota);
+          return (
+            <TableRow key={cuota.id}>
+              <TableCell>
+                <Checkbox
+                  aria-label={`Seleccionar ${cuota.nombre}`}
+                  checked={seleccion.estaSeleccionada(cuota.id)}
+                  disabled={!pagables.has(cuota.id)}
+                  onChange={() => seleccion.alternar(cuota.id)}
+                />
+              </TableCell>
+              <TableCell>
+                <p className="text-content-primary">{cuota.nombre}</p>
+                <p className="text-body-4 text-content-tertiary">
+                  {cuota.numero
+                    ? `Cuota ${cuota.numero} de ${compromiso.resumen.pensionesTotal}`
+                    : 'Cuota de matrícula'}
+                </p>
+              </TableCell>
+              <TableCell>{formatDay(cuota.fechaVencimiento)}</TableCell>
+              <TableCell className="text-right font-semibold text-content-primary">
+                {soles(cuota.montoFinal)}
+              </TableCell>
+              <TableCell>
+                <span className="flex flex-wrap items-center gap-2">
+                  <Tag size="sm" color={etiqueta.color}>
+                    {etiqueta.texto}
+                  </Tag>
+                  {cuota.vencida && (
+                    <span className="text-body-4 text-content-tertiary">
+                      Vencida hace {cuota.diasAtraso} días
+                    </span>
+                  )}
+                  {cuota.fechaPago && (
+                    <span className="text-body-4 text-content-tertiary">
+                      {formatDay(cuota.fechaPago)}
+                    </span>
+                  )}
+                </span>
+              </TableCell>
+              <TableCell className="text-right text-content-error">
+                {cuota.recargo > 0 ? `+ ${soles(cuota.recargo)}` : '—'}
+              </TableCell>
+            </TableRow>
+          );
+        })}
+      </TableBody>
+      <TableFooter>
+        <TableRow>
+          <TableCell />
+          <TableCell colSpan={2} className="font-semibold text-content-primary">
+            Total anual comprometido
+          </TableCell>
+          <TableCell className="text-right font-semibold text-content-primary">
+            {soles(compromiso.resumen.totalAnual)}
+          </TableCell>
+          <TableCell />
+          <TableCell className="text-right font-semibold text-content-primary">
+            {soles(
+              compromiso.cuotas.reduce(
+                (total, cuota) => total + cuota.recargo,
+                0,
+              ),
+            )}
+          </TableCell>
+        </TableRow>
+      </TableFooter>
+    </TableElement>
+  );
+};
 
-// Figma > Apoderado > Pensiones (HU-40). Las acciones de pago permanecen deshabilitadas hasta HU-41.
+// Figma > Apoderado > Pensiones (HU-40). Las casillas y "Pagar seleccionadas" son el pago en línea (HU-41).
 export const PensionesApoderado = () => {
   const hijos = useHijosConDeuda();
+  const porPagar = useCuotasPorPagar();
+  const seleccion = useSeleccionCuotas(porPagar.data);
+  const crear = useCrearOrdenPago();
   const [estudianteId, setEstudianteId] = React.useState('');
   const [compromisoId, setCompromisoId] = React.useState('');
   const [pestana, setPestana] = React.useState<Pestana>('cronograma');
@@ -302,24 +332,39 @@ export const PensionesApoderado = () => {
 
             {pestana === 'cronograma' ? (
               <>
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stroke-focus bg-surface-accent-light px-4 py-3">
-                  <div>
-                    <p className="text-label-2 font-medium text-content-primary">
-                      Selecciona las cuotas que deseas pagar
-                    </p>
-                    <p className="text-body-4 text-content-tertiary">
-                      El pago en línea estará disponible próximamente.
-                    </p>
+                {seleccion.seleccionadas.length > 0 ? (
+                  <BarraPagoCuotas
+                    seleccionadas={seleccion.seleccionadas}
+                    isLoading={crear.isPending || crear.isSuccess}
+                    onPagar={() =>
+                      crear.mutate(
+                        seleccion.seleccionadas.map((c) => c.cuotaId),
+                      )
+                    }
+                  />
+                ) : (
+                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-stroke-focus bg-surface-accent-light px-4 py-3">
+                    <div>
+                      <p className="text-label-2 font-medium text-content-primary">
+                        Selecciona las cuotas que deseas pagar
+                      </p>
+                      <p className="text-body-4 text-content-tertiary">
+                        Las pensiones se pagan en orden: al marcar una, se
+                        marcan también las anteriores pendientes.
+                      </p>
+                    </div>
+                    <Button
+                      disabled
+                      icon={<Banknote className="size-4" aria-hidden="true" />}
+                    >
+                      Pagar seleccionadas
+                    </Button>
                   </div>
-                  <Button
-                    disabled
-                    icon={<WalletCards className="size-4" />}
-                    title="Disponible en HU-41"
-                  >
-                    Pagar seleccionadas
-                  </Button>
-                </div>
-                <TablaCuotasApoderado compromiso={compromiso.data} />
+                )}
+                <TablaCuotasApoderado
+                  compromiso={compromiso.data}
+                  seleccion={seleccion}
+                />
               </>
             ) : (
               <TablaPagos pagos={pagos.data} isLoading={pagos.isLoading} />

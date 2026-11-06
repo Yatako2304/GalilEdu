@@ -149,6 +149,9 @@ export const paths = {
       calificaciones: route(APODERADO, 'calificaciones'),
       matricula: route(APODERADO, 'matricula'),
       pensiones: route(APODERADO, 'pensiones'),
+      // HU-41: regreso desde la pasarela y página de pago simulada.
+      resultadoPago: route(APODERADO, 'pensiones/pago'),
+      pasarelaSimulada: route(APODERADO, 'pensiones/pasarela-simulada'),
     },
 
     // Figma: 🌟 Estudiante

@@ -61,6 +61,8 @@ public class SeguridadConfig {
 				.authorizeHttpRequests(a -> a
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers("/auth/login", "/auth/logout", "/actuator/health", "/error").permitAll()
+						// Webhook de la pasarela: lo llama Stripe sin sesión; se valida con la firma (FirmaStripe).
+						.requestMatchers(HttpMethod.POST, "/pagos/pasarela/stripe/notificaciones").permitAll()
 						.anyRequest().authenticated())
 				.oauth2ResourceServer(o -> o.jwt(jwt -> jwt.jwtAuthenticationConverter(convertidor)));
 		return http.build();
