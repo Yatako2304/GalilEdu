@@ -1,14 +1,14 @@
 import { ContentLayout } from '@/components/layouts';
-import { ModulePlaceholder } from '@/components/module-placeholder';
+import { PensionesApoderado } from '@/features/pagos/components/pensiones-apoderado';
 
 const ApoderadoPensionesRoute = () => {
   return (
-    <ContentLayout title="Pensiones">
-      <ModulePlaceholder
-        feature="pensiones"
-        historias={['HU-40', 'HU-41', 'HU-42']}
-        figmaNodeId="362:6105"
-      />
+    <ContentLayout
+      title="Pensiones"
+      subtitle="Consulta el cronograma de cuotas, paga las pendientes y descarga tus constancias."
+      breadcrumbs={['Pensiones', 'Cronograma de cuotas']}
+    >
+      <PensionesApoderado />
     </ContentLayout>
   );
 };
