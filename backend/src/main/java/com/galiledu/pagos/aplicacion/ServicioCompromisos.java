@@ -16,8 +16,11 @@ import com.galiledu.pagos.aplicacion.DtosPagos.AlumnoEstadoCuenta;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoAnio;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoDetalle;
 import com.galiledu.pagos.aplicacion.DtosPagos.CuotaDetalle;
+import com.galiledu.pagos.aplicacion.DtosPagos.CuotaMorosa;
 import com.galiledu.pagos.aplicacion.DtosPagos.EstadoCuentaGeneral;
 import com.galiledu.pagos.aplicacion.DtosPagos.EstudianteCompromiso;
+import com.galiledu.pagos.aplicacion.DtosPagos.MorosidadCompromiso;
+import com.galiledu.pagos.aplicacion.DtosPagos.PagoRealizado;
 import com.galiledu.pagos.aplicacion.DtosPagos.ResumenCompromiso;
 import com.galiledu.pagos.dominio.CompromisoPago;
 import com.galiledu.pagos.dominio.Cuota;
@@ -26,7 +29,7 @@ import com.galiledu.pagos.dominio.EstadoCuota;
 import com.galiledu.pagos.infraestructura.CompromisoPagoRepositorio;
 import com.galiledu.pagos.infraestructura.ConsultasPagos;
 
-/** Compromiso de pago y cronograma de cuotas (HU-37). Solo consulta. */
+/** Compromiso de pago, cronograma de cuotas (HU-37), morosidad (HU-39) y pagos. Solo consulta. */
 @Service
 public class ServicioCompromisos {
 	private static final ZoneId LIMA = ZoneId.of("America/Lima");
@@ -83,6 +86,8 @@ public class ServicioCompromisos {
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No existe el compromiso de pago."));
 		LocalDate hoy = LocalDate.now(LIMA);
 		int gracia = c.getDiasGracia();
+		BigDecimal tasa = c.getRecargoPorcentaje();
+		BigDecimal tope = c.getTopeRecargoPorcentaje();
 
 		List<Cuota> activas = c.getCuotas().stream().filter(Cuota::estaActiva).toList();
 		BigDecimal total = sumar(activas, Cuota::getMontoFinal);
@@ -100,13 +105,56 @@ public class ServicioCompromisos {
 				.map(q -> new CuotaDetalle(q.getId(), q.getConceptoCodigo(), q.getNumero(), q.getNombre(),
 						q.getFechaVencimiento(), q.getMontoBase(), q.getMontoDescuento(), q.getPorcentajeDescuento(),
 						q.getMontoFinal(), q.getMontoPagado(), q.getEstado(), q.estaVencida(hoy, gracia),
-						q.getFechaPago()))
+						q.getFechaPago(), q.estaVencida(hoy, gracia) ? q.diasAtraso(hoy) : 0,
+						q.recargo(hoy, gracia, tasa, tope)))
 				.toList();
 
 		EstudianteCompromiso estudiante = new EstudianteCompromiso(c.getEstudianteId(), c.getEstudianteNombre(),
 				c.getEstudianteDocumento(), c.getApoderadoNombre(), c.getSeccion());
 
 		return new CompromisoDetalle(c.getId(), c.getAnio(), c.getEstado(), estudiante, resumen, cuotas);
+	}
+
+	/**
+	 * HU-39 · P11: pensiones vencidas del compromiso, de la más antigua a la más reciente, con días de atraso, capital
+	 * pendiente y recargo (RF-91 a RF-93). Se calcula al consultar; no se guarda.
+	 */
+	@Transactional(readOnly = true)
+	public MorosidadCompromiso morosidad(UUID compromisoId) {
+		CompromisoPago c = compromisos.findById(compromisoId)
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No existe el compromiso de pago."));
+		LocalDate hoy = LocalDate.now(LIMA);
+		int gracia = c.getDiasGracia();
+		BigDecimal tasa = c.getRecargoPorcentaje();
+		BigDecimal tope = c.getTopeRecargoPorcentaje();
+
+		List<CuotaMorosa> cuotas = c.getCuotas().stream()
+				.filter(q -> q.estaVencida(hoy, gracia))
+				.sorted(Comparator.comparing(Cuota::getFechaVencimiento))
+				.map(q -> {
+					BigDecimal capital = q.capitalPendiente();
+					BigDecimal recargo = q.recargo(hoy, gracia, tasa, tope);
+					return new CuotaMorosa(q.getId(), q.getNombre(), q.getNumero(), q.getFechaVencimiento(),
+							q.diasAtraso(hoy), capital, recargo, capital.add(recargo));
+				})
+				.toList();
+		BigDecimal capital = cuotas.stream().map(CuotaMorosa::capital).reduce(BigDecimal.ZERO, BigDecimal::add);
+		BigDecimal recargo = cuotas.stream().map(CuotaMorosa::recargo).reduce(BigDecimal.ZERO, BigDecimal::add);
+		return new MorosidadCompromiso(c.getId(), hoy, c.getAnio(), c.getEstudianteId(), c.getEstudianteNombre(),
+				gracia,
+				tasa, tope, capital, recargo, capital.add(recargo), cuotas);
+	}
+
+	/** Pestaña "Pagos" de P8 y RF-97: pagos que cubrieron cuotas del compromiso, del más reciente al más antiguo. */
+	@Transactional(readOnly = true)
+	public List<PagoRealizado> pagos(UUID compromisoId) {
+		if (!compromisos.existsById(compromisoId)) {
+			throw ExcepcionNegocio.noEncontrado("No existe el compromiso de pago.");
+		}
+		return consultas.pagosDelCompromiso(compromisoId).stream()
+				.map(f -> new PagoRealizado(f.id(), f.numeroConstancia(), f.fechaPago(), f.montoTotal(), f.capital(),
+						f.recargo(), f.estado(), f.cuotas()))
+				.toList();
 	}
 
 	private static BigDecimal sumar(List<Cuota> cuotas, java.util.function.Function<Cuota, BigDecimal> campo) {

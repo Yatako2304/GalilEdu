@@ -393,4 +393,85 @@ class InscripcionIT extends PruebaIntegracion {
 				.andReturn().getResponse().getContentAsString();
 		subir(JsonPath.read(r, "$.id"), "carta.pdf", "application/pdf", PDF).andExpect(status().isBadRequest());
 	}
+
+	// ---------- Validación de la iteración 1 con el PO ----------
+
+	/** Padre fallecido: se registran sus datos de identidad (sin contacto). */
+	private static final String PADRE_FALLECIDO = """
+			{"noRegistra":false,"fallecido":true,"viveConEstudiante":true,"tienePatriaPotestad":true,
+			 "persona":{"tipoDocumento":"DNI","numeroDocumento":"43456789","apellidoPaterno":"Paredes",
+			  "nombres":"Jorge","fechaNacimiento":"1980-01-15","nacionalidad":"Peruana","lugarNacimiento":"Perú",
+			  "sexo":"MASCULINO","estadoCivil":"Casado(a)","gradoInstruccion":"Secundaria"}}""";
+
+	@Test
+	void cadaFamiliarPresenteTieneCuentaAunqueNoSeaElResponsable() throws Exception {
+		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
+				inscripcion(PADRE_EXISTENTE, MADRE_NUEVA, "null", "PADRE")))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.cuentas.length()").value(2))
+				.andExpect(jsonPath("$.cuentas[?(@.parentesco == 'PADRE')].usuario").value("U20260003"))
+				.andExpect(jsonPath("$.cuentas[?(@.parentesco == 'PADRE')].nueva").value(false))
+				// La madre no es la responsable, pero igual se le crea su cuenta.
+				.andExpect(jsonPath("$.cuentas[?(@.parentesco == 'MADRE')].nueva").value(true))
+				.andExpect(jsonPath("$.cuentas[?(@.parentesco == 'MADRE')].correo").value("carla.rojas@gmail.com"));
+	}
+
+	@Test
+	void elPadreFallecidoSeRegistraConSusDatosPeroSinCuenta() throws Exception {
+		String r = mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
+				inscripcion(PADRE_FALLECIDO, MADRE_NUEVA, "null", "MADRE")))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.cuentas.length()").value(1))
+				.andExpect(jsonPath("$.cuentas[0].parentesco").value("MADRE"))
+				.andReturn().getResponse().getContentAsString();
+		String id = JsonPath.read(r, "$.id");
+
+		mvc.perform(conToken(get("/estudiantes/" + id), personal))
+				.andExpect(jsonPath("$.familia[?(@.parentesco == 'PADRE')].nombreCompleto").value("Jorge Paredes"))
+				.andExpect(jsonPath("$.familia[?(@.parentesco == 'PADRE')].fallecido").value(true))
+				// Un fallecido no vive con el estudiante ni tiene la patria potestad.
+				.andExpect(jsonPath("$.familia[?(@.parentesco == 'PADRE')].viveConEstudiante").value(false));
+		mvc.perform(conToken(get("/estudiantes/personas").param("documento", "43456789"), personal))
+				.andExpect(jsonPath("$.fallecido").value(true))
+				.andExpect(jsonPath("$.tieneCuenta").value(false));
+	}
+
+	@Test
+	void unFallecidoNoPuedeSerResponsableDeMatricula() throws Exception {
+		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
+				inscripcion(PADRE_FALLECIDO, MADRE_NUEVA, "null", "PADRE")))
+				.andExpect(status().isBadRequest())
+				.andExpect(
+						jsonPath("$.message").value("El responsable de matrícula no puede ser una persona fallecida"));
+	}
+
+	@Test
+	void siNingunPadreEstaPresenteExigeApoderado() throws Exception {
+		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
+				inscripcion(PADRE_FALLECIDO, NO_REGISTRA, "null", "PADRE")))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("apoderado")));
+	}
+
+	@Test
+	void elFamiliarDebeSerMayorDeEdad() throws Exception {
+		rechaza("\"fechaNacimiento\":\"1988-03-08\"", "\"fechaNacimiento\":\"2012-03-08\"",
+				"Madre: Debe ser mayor de edad");
+	}
+
+	@Test
+	void elFallecidoTambienDebeSerMayorDeEdad() throws Exception {
+		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
+				inscripcion(PADRE_FALLECIDO.replace("1980-01-15", "2025-05-07"), MADRE_NUEVA, "null", "MADRE")))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Padre: Debe ser mayor de edad"));
+	}
+
+	@Test
+	void conMotivoOtroLaObservacionEsObligatoria() throws Exception {
+		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
+				inscripcion("{\"noRegistra\":true,\"motivo\":\"Otro\"}", MADRE_NUEVA, "null", "MADRE")))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.message").value("Padre: Indica la observación"));
+	}
 }

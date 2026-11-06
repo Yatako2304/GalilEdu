@@ -107,7 +107,8 @@ const hoy = () => new Date().toLocaleDateString('en-CA');
 
 /**
  * Persona que tendrá cuenta de usuario (HU-6, criterios CAHU6-*): todo es obligatorio salvo
- * apellido materno, teléfono de casa y exalumno. Se usa en "Nuevo usuario" y "Editar usuario".
+ * apellido materno, teléfono de casa y exalumno. Se usa en "Nuevo usuario" y "Editar usuario", que solo
+ * muestran exalumno si el usuario es apoderado; si no se muestra, se conserva el valor que ya tenía.
  */
 const camposUsuario = base.extend({
   fechaNacimiento: obligatorio('Ingresa la fecha de nacimiento').refine(

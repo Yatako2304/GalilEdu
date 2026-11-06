@@ -222,8 +222,19 @@ public class ServicioPlanEvaluacion {
 		validarHoras(plan.getAnioEscolarId(), plan.getGradoCodigo(), plan.getId(), solicitud.horasSemanales());
 		Set<UUID> yaElegidas = plan.getCompetencias().stream().map(CompetenciaEvaluada::getCompetenciaId)
 				.collect(Collectors.toSet());
-		plan.configurar(solicitud.horasSemanales(),
-				competenciasEvaluadas(obtenerCurso(plan.getCursoId()), solicitud.competencias(), yaElegidas));
+		List<CompetenciaEvaluada> nuevas = competenciasEvaluadas(obtenerCurso(plan.getCursoId()),
+				solicitud.competencias(), yaElegidas);
+		Set<UUID> solicitadas = nuevas.stream().map(CompetenciaEvaluada::getCompetenciaId).collect(Collectors.toSet());
+		yaElegidas.stream().filter(idCompetencia -> !solicitadas.contains(idCompetencia))
+				.filter(idCompetencia -> planes.competenciaTieneItems(plan.getId(), idCompetencia)).findFirst()
+				.ifPresent(idCompetencia -> {
+					String nombre = competencias.findById(idCompetencia).map(Competencia::getNombre)
+							.orElse("seleccionada");
+					throw ExcepcionNegocio.conflicto(
+							"No se puede quitar la competencia \"%s\" porque ya tiene ítems de evaluación."
+									.formatted(nombre));
+				});
+		plan.configurar(solicitud.horasSemanales(), nuevas);
 		planes.flush();
 		return detalle(plan.getId());
 	}

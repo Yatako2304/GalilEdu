@@ -1,7 +1,9 @@
 package com.galiledu.pagos.dominio;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import jakarta.persistence.Column;
@@ -127,6 +129,65 @@ public class Cuota {
 				&& hoy.isAfter(fechaVencimiento.plusDays(diasGracia));
 	}
 
+	/** Capital que falta pagar: monto base menos descuento menos lo ya pagado (nunca negativo). */
+	public BigDecimal capitalPendiente() {
+		return montoBase.subtract(montoDescuento).subtract(montoPagado).max(BigDecimal.ZERO);
+	}
+
+	/** Días desde el vencimiento hasta hoy (0 si aún no vence). */
+	public int diasAtraso(LocalDate hoy) {
+		return (int) Math.max(0, ChronoUnit.DAYS.between(fechaVencimiento, hoy));
+	}
+
+	/**
+	 * RF-92: recargo por mora de una pensión vencida (RF-91). Se cobra la tasa del tarifario por cada 30 días completos
+	 * de
+	 * atraso sobre el capital pendiente, sin capitalizar, y nunca más que el tope (porcentaje del capital). Figma P11:
+	 * S/ 600 con 63 días de atraso y tasa 2 % → 2 × 2 % × 600 = S/ 24; con 32 días → S/ 12.
+	 */
+	public BigDecimal recargo(LocalDate hoy, int diasGracia, BigDecimal tasa, BigDecimal tope) {
+		if (!estaVencida(hoy, diasGracia)) {
+			return BigDecimal.ZERO;
+		}
+		BigDecimal capital = capitalPendiente();
+		long periodos = diasAtraso(hoy) / 30;
+		BigDecimal cien = BigDecimal.valueOf(100);
+		BigDecimal recargo = capital.multiply(tasa).multiply(BigDecimal.valueOf(periodos))
+				.divide(cien, 2, RoundingMode.HALF_UP);
+		BigDecimal maximo = capital.multiply(tope).divide(cien, 2, RoundingMode.HALF_UP);
+		return recargo.min(maximo);
+	}
+
+	/** RF-88: solo se recalculan las cuotas PENDIENTES sin pagos; las pagadas o parciales conservan su monto. */
+	public boolean admiteRecalculo() {
+		return estado == EstadoCuota.PENDIENTE && montoPagado.signum() == 0;
+	}
+
+	/** RF-88: aplica el porcentaje sobre el monto original (monto base), no sobre un monto ya rebajado. */
+	public boolean aplicarDescuento(BigDecimal porcentaje, UUID descuentoAplicadoId) {
+		if (!admiteRecalculo()) {
+			return false;
+		}
+		montoDescuento = montoBase.multiply(porcentaje).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+		this.descuentoAplicadoId = descuentoAplicadoId;
+		// monto_final lo calcula la BD; se actualiza aquí para que la misma sesión lea el valor nuevo.
+		montoFinal = montoBase.subtract(montoDescuento);
+		porcentajeDescuento = porcentaje;
+		return true;
+	}
+
+	/** RF-87, RF-90: restituye el monto original si la cuota tenía ese descuento y todavía no se paga. */
+	public boolean quitarDescuento(UUID descuentoAplicadoId) {
+		if (!descuentoAplicadoId.equals(this.descuentoAplicadoId) || !admiteRecalculo()) {
+			return false;
+		}
+		montoDescuento = BigDecimal.ZERO;
+		this.descuentoAplicadoId = null;
+		montoFinal = montoBase;
+		porcentajeDescuento = null;
+		return true;
+	}
+
 	public boolean estaActiva() {
 		return estado != EstadoCuota.ANULADA;
 	}
@@ -223,6 +284,10 @@ public class Cuota {
 
 	public LocalDate getFechaPago() {
 		return fechaPago;
+	}
+
+	public UUID getDescuentoAplicadoId() {
+		return descuentoAplicadoId;
 	}
 
 	public BigDecimal getPorcentajeDescuento() {

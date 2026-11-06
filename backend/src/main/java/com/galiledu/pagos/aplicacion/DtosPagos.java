@@ -2,6 +2,7 @@ package com.galiledu.pagos.aplicacion;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -60,7 +61,9 @@ public final class DtosPagos {
 			BigDecimal montoPagado,
 			EstadoCuota estado,
 			boolean vencida,
-			LocalDate fechaPago) {
+			LocalDate fechaPago,
+			int diasAtraso,
+			BigDecimal recargo) {
 	}
 
 	/** Respuesta de POST /pagos/matriculas/{id}/cronograma (RF-81, RF-82). */
@@ -125,5 +128,64 @@ public final class DtosPagos {
 			EstadoCuota estado,
 			LocalDate fechaPago,
 			String responsable) {
+	}
+
+	/** HU-39 · P11 Morosidad: una pensión vencida con sus días de atraso, capital y recargo (RF-93). */
+	public record CuotaMorosa(
+			UUID cuotaId,
+			String concepto,
+			Short numero,
+			LocalDate fechaVencimiento,
+			int diasAtraso,
+			BigDecimal capital,
+			BigDecimal recargo,
+			BigDecimal total) {
+	}
+
+	/**
+	 * HU-39 · P11 Morosidad del compromiso (RF-91 a RF-93). {@code fecha} es el "Total adeudado al …" de Figma. El
+	 * recargo va siempre separado del capital; la política (gracia, tasa y tope) es la del tarifario del año.
+	 */
+	public record MorosidadCompromiso(
+			UUID compromisoId,
+			LocalDate fecha,
+			int anio,
+			UUID estudianteId,
+			String estudiante,
+			int diasGracia,
+			BigDecimal recargoPorcentaje,
+			BigDecimal topeRecargoPorcentaje,
+			BigDecimal capital,
+			BigDecimal recargo,
+			BigDecimal total,
+			List<CuotaMorosa> cuotas) {
+	}
+
+	/**
+	 * HU-40 · RF-95: un hijo del apoderado. {@code codigo} es el número de documento (la ficha del estudiante no tiene
+	 * otro código); {@code grado} y {@code seccion} son los de su matrícula más reciente; {@code saldo} suma las cuotas
+	 * pendientes de sus compromisos vigentes y {@code cuotasVencidas} cuenta las pensiones vencidas (RF-91).
+	 */
+	public record HijoConDeuda(
+			UUID estudianteId,
+			String codigo,
+			String nombres,
+			String apellidos,
+			String grado,
+			String seccion,
+			BigDecimal saldo,
+			int cuotasVencidas) {
+	}
+
+	/** RF-97 y pestaña "Pagos": un pago con su constancia y las cuotas que cubrió. */
+	public record PagoRealizado(
+			UUID id,
+			String numeroConstancia,
+			OffsetDateTime fechaPago,
+			BigDecimal monto,
+			BigDecimal capital,
+			BigDecimal recargo,
+			String estado,
+			List<String> cuotas) {
 	}
 }

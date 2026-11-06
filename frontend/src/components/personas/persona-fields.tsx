@@ -41,6 +41,18 @@ type PersonaFieldsProps = {
   onTipoDocumentoChange?: (numeroFiltrado: (numero: string) => string) => void;
   /** Formulario de usuario: "Lugar de nacimiento" se pide como "País de nacimiento" con la lista de países. */
   conPaisDeNacimiento?: boolean;
+  /**
+   * Oculta "Es exalumno(a) del colegio". Solo se pide a padres y apoderados (sirve para descuentos);
+   * en "Nuevo usuario" y "Editar usuario" se oculta salvo que el usuario sea apoderado
+   * (validación de la iteración 1 con el PO).
+   */
+  sinExalumno?: boolean;
+  /**
+   * Padre o madre fallecido en la inscripción: solo se muestran los datos de identidad (documento, apellidos,
+   * nombres, fecha de nacimiento, nacionalidad, país de nacimiento, sexo, estado civil y grado de instrucción; todos
+   * obligatorios salvo el apellido materno). Se ocultan los de contacto, trabajo, domicilio y exalumno.
+   */
+  soloIdentidad?: boolean;
   /** Se llama al salir del campo de correo (ej. para comprobar que no esté asignado a otra persona). */
   onSalirCorreo?: () => void;
 };
@@ -71,6 +83,8 @@ export const PersonaFields = ({
   tipoDocumento,
   onTipoDocumentoChange,
   conPaisDeNacimiento,
+  sinExalumno,
+  soloIdentidad,
   onSalirCorreo,
 }: PersonaFieldsProps) => {
   const campo = (nombre: string) => ({
@@ -118,7 +132,7 @@ export const PersonaFields = ({
         {...filtrado('apellidoPaterno', soloLetras(LIMITES_PERSONA.apellido))}
       />
       <Input
-        label="Apellido materno"
+        label="Apellido materno (opcional)"
         {...filtrado('apellidoMaterno', soloLetras(LIMITES_PERSONA.apellido))}
       />
       <Input
@@ -169,38 +183,46 @@ export const PersonaFields = ({
           />
         </>
       )}
-      <Input
-        label="Celular"
-        inputMode="numeric"
-        placeholder="987111222"
-        {...filtrado('celular', soloDigitos(LIMITES_PERSONA.celular))}
-      />
-      <Input
-        label="Correo electrónico"
-        type="email"
-        {...campo('correo')}
-        registration={register(`${prefix}.correo`, { onBlur: onSalirCorreo })}
-      />
-      <Input
-        label="Teléfono de casa"
-        inputMode="numeric"
-        {...filtrado('telefonoCasa', soloDigitos(LIMITES_PERSONA.telefonoCasa))}
-      />
-      {!sinDatosLaborales && (
+      {!soloIdentidad && (
         <>
-          <Input label="Profesión u ocupación" {...campo('profesion')} />
-          <Input label="Centro de trabajo" {...campo('centroTrabajo')} />
-          <Input label="Cargo" {...campo('cargo')} />
+          <Input
+            label="Celular"
+            inputMode="numeric"
+            {...filtrado('celular', soloDigitos(LIMITES_PERSONA.celular))}
+          />
+          <Input
+            label="Correo electrónico"
+            type="email"
+            {...campo('correo')}
+            registration={register(`${prefix}.correo`, {
+              onBlur: onSalirCorreo,
+            })}
+          />
+          <Input
+            label="Teléfono de casa (opcional)"
+            inputMode="numeric"
+            {...filtrado(
+              'telefonoCasa',
+              soloDigitos(LIMITES_PERSONA.telefonoCasa),
+            )}
+          />
+          {!sinDatosLaborales && (
+            <>
+              <Input label="Profesión u ocupación" {...campo('profesion')} />
+              <Input label="Centro de trabajo" {...campo('centroTrabajo')} />
+              <Input label="Cargo" {...campo('cargo')} />
+            </>
+          )}
+          <Select
+            label="Distrito"
+            options={DISTRITOS_LIMA}
+            placeholder="Selecciona"
+            {...campo('distrito')}
+          />
+          <Input label="Dirección" {...campo('direccion')} />
         </>
       )}
-      <Select
-        label="Distrito"
-        options={DISTRITOS_LIMA}
-        placeholder="Selecciona"
-        {...campo('distrito')}
-      />
-      <Input label="Dirección" {...campo('direccion')} />
-      {!sinDatosLaborales && (
+      {!sinDatosLaborales && !sinExalumno && !soloIdentidad && (
         <Checkbox
           className="md:col-span-2"
           label="Es exalumno(a) del colegio"

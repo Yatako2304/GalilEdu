@@ -16,7 +16,7 @@ vuelven a su estado anterior.
 
 - `backend/src/main/java/com/galiledu/pagos/aplicacion/ServicioPagoEnLinea.java` y `PasarelaPagos.java`
 - `backend/src/main/java/com/galiledu/pagos/infraestructura/PasarelaStripe.java`, `PasarelaSimulada.java`, `FirmaStripe.java`
-- `backend/src/main/resources/db/migration/V11__pago_en_linea.sql`
+- `backend/src/main/resources/db/migration/V13__pago_en_linea.sql`
 - `frontend/src/features/pagos/components/seleccion-cuotas.ts`, `barra-pago-cuotas.tsx`, `resultado-pago.tsx`
 
 ## Decisiones y por qué
@@ -41,7 +41,7 @@ vuelven a su estado anterior.
 - **Decisión:** el recargo es la tasa por cada 30 días de atraso desde el vencimiento (pasada la gracia), sobre el capital
   pendiente y con tope; no se capitaliza.
 - **Decisión:** pueden pagar el padre, la madre o el apoderado vinculados que tengan cuenta (acta del PO, 30/10).
-- **Decisión:** una orden genera un pago por estudiante, porque cada pago y su constancia son de un solo estudiante. V11 quita
+- **Decisión:** una orden genera un pago por estudiante, porque cada pago y su constancia son de un solo estudiante. V13 quita
   el UNIQUE de `pago.orden_pago_id`; que no se duplique lo garantiza el estado de la orden.
 
 ## Pendientes / problemas conocidos

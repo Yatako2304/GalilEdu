@@ -3,12 +3,14 @@ package com.galiledu.configuracion.aplicacion;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Supplier;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
@@ -24,6 +26,7 @@ import com.galiledu.configuracion.aplicacion.PlanesDeEvaluacion.GradoExcedido;
 import com.galiledu.configuracion.dominio.AnioEscolar;
 import com.galiledu.configuracion.dominio.CalculadoraJornada.Jornada;
 import com.galiledu.configuracion.dominio.DefinicionEstructura;
+import com.galiledu.configuracion.dominio.DiaSemana;
 import com.galiledu.configuracion.dominio.EstadoAnioEscolar;
 import com.galiledu.configuracion.dominio.EstructuraHoraria;
 import com.galiledu.configuracion.infraestructura.AnioEscolarRepositorio;
@@ -47,12 +50,15 @@ public class ServicioEstructurasHorarias {
 	private final EstructuraHorariaRepositorio estructuraRepositorio;
 	private final AnioEscolarRepositorio anioEscolarRepositorio;
 	private final PlanesDeEvaluacion planesDeEvaluacion;
+	private final UsoDeEstructura usoDeEstructura;
 
 	public ServicioEstructurasHorarias(EstructuraHorariaRepositorio estructuraRepositorio,
-			AnioEscolarRepositorio anioEscolarRepositorio, PlanesDeEvaluacion planesDeEvaluacion) {
+			AnioEscolarRepositorio anioEscolarRepositorio, PlanesDeEvaluacion planesDeEvaluacion,
+			UsoDeEstructura usoDeEstructura) {
 		this.estructuraRepositorio = estructuraRepositorio;
 		this.anioEscolarRepositorio = anioEscolarRepositorio;
 		this.planesDeEvaluacion = planesDeEvaluacion;
+		this.usoDeEstructura = usoDeEstructura;
 	}
 
 	// ---------- Consultas ----------
@@ -108,6 +114,18 @@ public class ServicioEstructurasHorarias {
 
 	// ---------- Cambios ----------
 
+	/**
+	 * Para Horarios (HU-45): bloquea, con el mismo bloqueo y la misma clave que los cambios de estructuras, el año
+	 * hasta el fin de la transacción, de modo que guardar un horario y editar una estructura del año no se crucen.
+	 * Exige una transacción abierta: un bloqueo xact se libera al terminar la transacción que lo pidió, así que fuera
+	 * de
+	 * una no serviría de nada.
+	 */
+	@Transactional(propagation = Propagation.MANDATORY)
+	public void bloquearAnioParaHorarios(UUID anioId) {
+		estructuraRepositorio.bloquearEstructurasDelAnio(anioId);
+	}
+
 	@Transactional
 	public EstructuraGuardada crearEstructuraHoraria(UUID anioId, SolicitudEstructuraHoraria solicitud) {
 		AnioEscolar anio = obtenerAnio(anioId);
@@ -126,6 +144,9 @@ public class ServicioEstructurasHorarias {
 				.findByAnioEscolarIdAndNivelAndEsPrincipalTrue(anioId, nivel);
 		// La primera estructura de un nivel nace principal aunque la casilla venga sin marcar.
 		boolean seraPrincipal = solicitud.pideSerPrincipal() || principalActual.isEmpty();
+		if (seraPrincipal && principalActual.isPresent()) {
+			validarQueLaPrincipalNoTengaHorarios(principalActual.get());
+		}
 		int bloquesSemanalesNuevos = bloquesSemanalesDe(definicion.normalizada());
 		List<String> advertencias = new ArrayList<>();
 		if (seraPrincipal) {
@@ -171,6 +192,8 @@ public class ServicioEstructurasHorarias {
 					+ "Marca otra estructura de %s como principal.".formatted(nombreDelNivel(estructura)));
 		}
 
+		validarQueLosHorariosSigancabiendo(estructuraId, definicion.normalizada());
+
 		String nivel = estructura.getNivel();
 		int bloquesSemanalesAntes = estructura.bloquesPorSemana();
 		int bloquesSemanalesDespues = bloquesSemanalesDe(definicion.normalizada());
@@ -178,6 +201,7 @@ public class ServicioEstructurasHorarias {
 		boolean pasaAPrincipal = !eraPrincipal && pidePrincipal;
 		if (pasaAPrincipal) {
 			principalAnterior = estructuraRepositorio.findByAnioEscolarIdAndNivelAndEsPrincipalTrue(anioId, nivel);
+			principalAnterior.ifPresent(this::validarQueLaPrincipalNoTengaHorarios);
 		}
 		// Una estructura que no es (ni pasa a ser) principal no se valida contra los planes.
 		Integer bloquesSemanalesDeReferencia = eraPrincipal
@@ -217,6 +241,10 @@ public class ServicioEstructurasHorarias {
 		UUID anioId = estructura.getAnioEscolarId();
 		validarAnioModificable(obtenerAnio(anioId));
 
+		if (usoDeEstructura.tieneHorarios(estructuraId)) {
+			throw ExcepcionNegocio
+					.conflicto("No se puede eliminar la estructura horaria: hay horarios armados con ella.");
+		}
 		if (estructura.esPrincipal()) {
 			String nivel = estructura.getNivel();
 			boolean quedanOtrasDelNivel = estructuraRepositorio.countByAnioEscolarIdAndNivel(anioId, nivel) > 1;
@@ -274,6 +302,44 @@ public class ServicioEstructurasHorarias {
 		List<String> errores = EstructuraHoraria.detectarErrores(definicion);
 		if (!errores.isEmpty()) {
 			throw ExcepcionNegocio.invalido(errores.get(0));
+		}
+	}
+
+	private static final Map<DiaSemana, String> NOMBRE_DEL_DIA = Map.of(DiaSemana.LUN, "lunes", DiaSemana.MAR,
+			"martes", DiaSemana.MIE, "miércoles", DiaSemana.JUE, "jueves", DiaSemana.VIE, "viernes", DiaSemana.SAB,
+			"sábado");
+
+	/**
+	 * Lo que ya hay armado en los horarios debe seguir cabiendo en la estructura editada (HU-45): no se quita un día
+	 * que usan ni se bajan los bloques por día de lo que usan. Se informa el primer caso, en el orden de la semana. Se
+	 * llama dentro del bloqueo del año, el mismo que toma Horarios al guardar, así el uso no cambia mientras se valida.
+	 */
+	private void validarQueLosHorariosSigancabiendo(UUID estructuraId, DefinicionEstructura nueva) {
+		Map<DiaSemana, Integer> uso = usoDeEstructura.usoPorDia(estructuraId);
+		for (Map.Entry<DiaSemana, Integer> dia : uso.entrySet()) {
+			if (!nueva.diasLectivos().contains(dia.getKey().name())) {
+				throw ExcepcionNegocio.conflicto("No se puede quitar el %s de la estructura: hay horarios que lo usan."
+						.formatted(NOMBRE_DEL_DIA.get(dia.getKey())));
+			}
+		}
+		for (Map.Entry<DiaSemana, Integer> dia : uso.entrySet()) {
+			if (nueva.bloquesPorDia() < dia.getValue()) {
+				throw ExcepcionNegocio.conflicto(
+						"No se puede reducir a %d bloques por día: hay horarios que usan hasta el bloque %d el %s."
+								.formatted(nueva.bloquesPorDia(), dia.getValue(), NOMBRE_DEL_DIA.get(dia.getKey())));
+			}
+		}
+	}
+
+	/**
+	 * Cambiar la principal de un nivel cambia la jornada que rige a las secciones sin horario, pero mientras la actual
+	 * tenga horarios armados no se permite. Regla futura: permitirlo si la nueva es compatible y revalidar cruces.
+	 */
+	private void validarQueLaPrincipalNoTengaHorarios(EstructuraHoraria principalActual) {
+		if (usoDeEstructura.tieneHorarios(principalActual.getId())) {
+			throw ExcepcionNegocio
+					.conflicto("No se puede cambiar la estructura principal de %s: hay horarios armados con la actual."
+							.formatted(nombreDelNivel(principalActual)));
 		}
 	}
 

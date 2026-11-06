@@ -2,11 +2,11 @@
 
 - **HU:** HU-7 (iteración 1)
 - **Estado:** 🚧 hecha; falta una prueba manual completa desde la pantalla
-- **Última actualización:** 2026-10-23
+- **Última actualización:** 2026-11-05
 
 ## Alcance
 
-Personal administrativo inscribe a un estudiante de primaria o secundaria en 5 pasos: datos, ficha médica, padres/apoderado, contactos y autorización de salida, y responsable. El estudiante **no tiene cuenta**: el rol Estudiante es un "could have" y no se desarrollan sus pantallas en esta iteración (ver [decisión](../decisiones/2026-10-19-yatako-usuarios-y-acceso.md)). El **responsable de matrícula** (padre, madre o apoderado) tiene la cuenta de la familia con rol Apoderado: si ya la tiene, solo se vincula; si no, se crea y se le envían las credenciales.
+Personal administrativo inscribe a un estudiante de primaria o secundaria en 5 pasos: datos, ficha médica, padres/apoderado, contactos y autorización de salida, y responsable. El estudiante **no tiene cuenta**: el rol Estudiante es un "could have" y no se desarrollan sus pantallas en esta iteración (ver [decisión](../decisiones/2026-10-19-yatako-usuarios-y-acceso.md)). **Cada padre, madre o apoderado presente** (registrado y no fallecido) tiene su cuenta con rol Apoderado, sea o no el responsable de matrícula: si ya la tiene, solo se vincula; si no, se crea y se le envían las credenciales a su correo (validación de la iteración 1 con el PO, ver [decisión](../decisiones/2026-11-05-scuro-star-familiar-fallecido-y-cuentas.md)). El **responsable de matrícula** es quien firma la matrícula y recibe las boletas.
 
 En Notion, HU-7 está en "Seguridad" como "registro de estudiante con apoderado"; seguimos el flujo de Figma, que lo resuelve como inscripción.
 
@@ -67,14 +67,16 @@ El Paso 1 sigue el frame "Admin / Estudiantes | Inscripción | Paso 1 - Estudian
 
 ## Paso 3 según Figma y CAHU6
 
-Frame "Admin / Estudiantes | Inscripción | Paso 3 - Padres y apoderado". Un padre, madre o apoderado **nuevo** (no encontrado por documento) se valida como un usuario de HU-6, porque el responsable de matrícula tendrá cuenta:
+Frame "Admin / Estudiantes | Inscripción | Paso 3 - Padres y apoderado". Un padre, madre o apoderado **nuevo** (no encontrado por documento) se valida como un usuario de HU-6, porque cada familiar presente tendrá cuenta:
 
 - **Obligatorios (CAHU6-2):** todo salvo apellido materno, teléfono de casa y exalumno. Frontend: `personaUsuarioSchema` en `familiarSchema` (`esquema.ts`). Backend: `DatosPersona.exigirCompletos()`, compartido con "Nuevo usuario"; el mensaje dice de quién es el dato ("Madre: Ingresa el celular") y se revisa antes de guardar nada.
 - **Formatos (CAHU6-6, 10, 12, 21, 23, 24):** el N.° de documento solo deja escribir 8 dígitos con DNI o 12 letras y números con carné; nombres y apellidos solo letras; celular 9 dígitos; correo con extensión; teléfono solo números.
 - **"País de nacimiento"** con la lista de países (igual que Nuevo usuario), en vez del texto libre "Lugar de nacimiento".
 - Un familiar ya registrado (vinculado por documento) no se vuelve a validar: sus datos no se editan aquí.
-- **Sin valores por defecto:** el tipo de documento del familiar empieza vacío y el N.° de documento se habilita al elegirlo, como en el Paso 1.
-- **"No registra / fallecido(a)":** el motivo es obligatorio (Fallecido(a), No registra u Otro); la observación es opcional.
+- **Sin valores por defecto:** el tipo de documento del familiar empieza vacío y el N.° de documento se habilita al elegirlo, como en el Paso 1. Solo el sexo del padre (Masculino) y de la madre (Femenino) viene elegido; la nacionalidad empieza vacía y las casillas ("Vive con el estudiante", patria potestad, exalumno, "No registra", "Fallecido(a)") empiezan sin marcar. El apoderado no trae ningún valor por defecto.
+- **Mayor de edad:** el padre, la madre y el apoderado deben tener 18 años o más ("Debe ser mayor de edad"), también si están fallecidos. También se revisa al solo vincular a alguien ya registrado (backend).
+- **"No registra":** casilla del padre y de la madre. El motivo es obligatorio: "No se conoce", "No ha reconocido al estudiante" u "Otro"; con "Otro" la observación también. "Fallecido(a)" ya no es un motivo (las inscripciones antiguas lo conservan).
+- **"Fallecido" / "Fallecida":** casilla aparte (no para el apoderado). Solo se registran sus datos de identidad: se muestran tipo y N.° de documento, apellidos, nombres, fecha de nacimiento, nacionalidad, país de nacimiento, sexo, estado civil y grado de instrucción (`soloIdentidad` de `PersonaFields`); todos son obligatorios salvo el apellido materno (frontend y `DatosPersona.exigirIdentidad()`). Celular, correo, teléfono, trabajo, distrito, dirección y exalumno no se muestran ni se envían (`identidad()` en `esquema.ts`). Se ocultan "Vive con el estudiante" y la patria potestad (se guardan en No). No cuenta como presente: si ni el padre ni la madre están presentes, el apoderado es obligatorio. Es un dato de la persona (`personas.persona.fallecido`, V12): si tiene otros hijos, también figura como fallecido allí, y al buscarlo por documento se marca solo.
 - **Búsqueda automática:** no hay botón "Buscar"; la persona se busca al salir del N.° de documento, solo si está completo (`documentoCompleto` de `persona-schema.ts`) y una vez por número. Tipo y N.° de documento ocupan media fila cada uno, como los demás datos.
 - **Correo no repetido:** al pulsar "Siguiente", el correo de cada familiar nuevo se consulta con `GET /estudiantes/correos?correo=` (sin importar mayúsculas) y no puede repetirse entre ellos; si está ocupado: "El correo ya está registrado en el sistema" (sin decir de quién).
 - **Apoderado:** relación obligatoria; con "Otro", "Especificar" también; el tipo de documento que lo acredita es obligatorio. **Adjuntar el archivo no es obligatorio:** se puede adjuntar más adelante. El backend exige la relación.
@@ -83,14 +85,15 @@ Frame "Admin / Estudiantes | Inscripción | Paso 3 - Padres y apoderado". Un pad
 ## Paso 4: contactos y autorización de salida
 
 - **Contactos de emergencia** (mínimo 2): nombre, relación y celular obligatorios; teléfono fijo opcional. Nombre y relación solo dejan escribir letras (como nombres y apellidos), el celular 9 dígitos y el teléfono solo números. Largos de `estudiantes.contacto_emergencia` (150 y 60).
-- **Autorización de salida:** los tres radios siguen igual. Con "Recogido por persona autorizada", cada fila de "Agregar otra persona autorizada" pide nombre y relación (solo letras); no hay filas hasta pulsar ese botón. Si se cambia a "sale solo" o "movilidad", las filas se quitan y no se envían.
+- **Autorización de salida:** los tres radios siguen igual. En "Recogido por persona autorizada" se listan solo el padre, la madre y el apoderado presentes: un fallecido no aparece. Con "Recogido por persona autorizada", cada fila de "Agregar otra persona autorizada" pide nombre y relación (solo letras); no hay filas hasta pulsar ese botón. Si se cambia a "sale solo" o "movilidad", las filas se quitan y no se envían.
 - Backend: mismas reglas en `DatosContacto` y `DatosAutorizado` (con `DatosPersona.SOLO_LETRAS`).
 
 ## Paso 5: responsable y registro
 
-- Se listan solo el padre, la madre y el apoderado registrados en el Paso 3; **empieza marcado el primero**. Al elegir uno (o al volver a este paso) se cargan su correo y su celular del Paso 3, que aquí son **solo de vista**: si falta o está mal alguno, el mensaje indica corregirlo en el Paso 3.
+- Se listan solo el padre, la madre y el apoderado **presentes** del Paso 3 (un fallecido no puede ser responsable); **empieza marcado el primero**. Al elegir uno (o al volver a este paso) se cargan su correo y su celular del Paso 3, que aquí son **solo de vista**: si falta o está mal alguno, el mensaje indica corregirlo en el Paso 3.
 - **"Registrar inscripción"** está deshabilitado hasta marcar "Verifiqué los datos…"; ya habilitado, al pulsarlo muestra los errores de responsable, correo y celular.
-- Backend: `correoResponsable` y `celularResponsable` son obligatorios en `SolicitudInscripcion`; con ellos se crea la cuenta (rol Apoderado) o se completa la existente.
+- **"Usuarios en GalilEdu":** dice, para cada familiar registrado, si ya tiene usuario, si se le creará uno (y a qué correo llegarán las credenciales) o si no tendrá por ser fallecido.
+- Backend: `correoResponsable` y `celularResponsable` son obligatorios en `SolicitudInscripcion` (completan los datos del responsable). Al registrar se asegura la cuenta (rol Apoderado) de **cada familiar presente**; la respuesta trae `cuentas` (una por familiar, con `nueva` si se acaba de crear) y el aviso final nombra los usuarios creados. Rechaza un responsable fallecido.
 
 ## Paso 2 según Figma
 
@@ -111,7 +114,8 @@ Se abre desde "Editar" en los tres puntos del listado o desde "Editar datos" en 
 - **Matriculado** (ya pagó): año académico, nivel y grado quedan bloqueados, y el backend rechaza cambiarlos.
 - **Familiares:** los ya registrados se pueden corregir y se validan como uno nuevo (CAHU6). Son la misma persona para sus hermanos, así que el cambio también lo ven ellos. Se puede cambiar de padre, madre o apoderado escribiendo otro documento; el hermano conserva su vínculo anterior.
 - **Correo de un familiar con cuenta:** si cambia, la cuenta usa el correo nuevo y se le envía una contraseña nueva con su mismo código de usuario (una persona tiene una sola cuenta).
-- **Responsable de matrícula:** si cambia, al nuevo se le crea su cuenta (o se reactiva) y la del anterior queda **inactiva**, salvo que sea responsable de otro estudiante.
+- **Cuentas de los familiares:** cada familiar presente conserva (o recibe) su cuenta aunque cambie el responsable. Quien deja de ser familiar presente (lo quitan, pasa a "No registra" o se marca fallecido) pierde el rol Apoderado, salvo que siga siéndolo de otro estudiante; si era su único rol, su cuenta queda **inactiva** y se reactiva si vuelve a ser familiar.
+- **Marcar fallecido a un responsable:** primero hay que elegir a otro responsable. Si es responsable de matrícula de otro estudiante (un hermano), se rechaza: "Primero cambia al responsable de sus otros estudiantes".
 - **Documento que acredita al apoderado:** se conserva si el apoderado sigue siendo la misma persona; se muestra con "Reemplazar" para adjuntar otro.
 - La casilla "Verifiqué los datos…" empieza sin marcar: hay que volver a confirmarla para guardar.
 - Datos antiguos incompletos (anteriores a estas validaciones) se piden al editar, como en una inscripción nueva.

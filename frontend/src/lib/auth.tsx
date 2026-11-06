@@ -40,6 +40,10 @@ export type LoginInput = z.infer<typeof loginInputSchema>;
 const loginWithUsernameAndPassword = (
   data: LoginInput,
 ): Promise<AuthResponse> => {
+  // Una base recreada o un cambio de JWT invalida el token anterior. No debe
+  // enviarse al endpoint público de login porque Spring lo rechaza antes de
+  // comprobar las nuevas credenciales.
+  tokenStorage.clear();
   return api.post('/auth/login', data);
 };
 

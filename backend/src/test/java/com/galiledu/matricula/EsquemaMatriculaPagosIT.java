@@ -148,8 +148,8 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 	@Test
 	void unaTransaccionDeLaPasarelaNoSeRegistraDosVeces() {
 		String orden = """
-				INSERT INTO pagos.orden_pago (codigo, usuario_id, monto_total, referencia_pasarela)
-				VALUES (?, ?::uuid, 600, 'TX999001')""";
+				INSERT INTO pagos.orden_pago (codigo, usuario_id, monto_total, referencia_pasarela, expira_en)
+				VALUES (?, ?::uuid, 600, 'TX999001', now() + interval '30 minutes')""";
 		jdbc.sql(orden).param("OP-1").param(LUIS_PAREDES).update();
 		// Otra orden (OP-2) con la misma transacción de la pasarela.
 		rechazaPor("orden_pago_referencia_pasarela_key",

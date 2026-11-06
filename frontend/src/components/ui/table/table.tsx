@@ -1,4 +1,4 @@
-import { ArchiveX } from 'lucide-react';
+import { ArchiveX, ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react';
 import * as React from 'react';
 
 import { BaseEntity } from '@/types/api';
@@ -131,11 +131,20 @@ export {
 type TableColumn<Entry> = {
   title: string;
   field: keyof Entry;
+  /** Con la prop `sort` en la tabla, el encabezado se vuelve un botón que ordena por esta columna. */
+  sortable?: boolean;
   Cell?({ entry }: { entry: Entry }): React.ReactElement;
+};
+
+export type TableSort<Entry> = {
+  field: keyof Entry;
+  direction: 'asc' | 'desc';
+  onSort: (field: keyof Entry) => void;
 };
 
 export type TableProps<Entry> = {
   data: Entry[];
+  sort?: TableSort<Entry>;
   columns: TableColumn<Entry>[];
   pagination?: TablePaginationProps;
   emptyMessage?: string;
@@ -144,6 +153,7 @@ export type TableProps<Entry> = {
 export const Table = <Entry extends Pick<BaseEntity, 'id'>>({
   data,
   columns,
+  sort,
   pagination,
   emptyMessage = 'No se encontraron registros',
 }: TableProps<Entry>) => {
@@ -160,9 +170,45 @@ export const Table = <Entry extends Pick<BaseEntity, 'id'>>({
       <TableElement>
         <TableHeader>
           <TableRow>
-            {columns.map((column, index) => (
-              <TableHead key={column.title + index}>{column.title}</TableHead>
-            ))}
+            {columns.map((column, index) => {
+              const activa = sort?.field === column.field;
+              return (
+                <TableHead
+                  key={column.title + index}
+                  aria-sort={
+                    activa
+                      ? sort.direction === 'asc'
+                        ? 'ascending'
+                        : 'descending'
+                      : undefined
+                  }
+                >
+                  {sort && column.sortable ? (
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 hover:text-content-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus"
+                      onClick={() => sort.onSort(column.field)}
+                    >
+                      {column.title}
+                      {activa ? (
+                        sort.direction === 'asc' ? (
+                          <ArrowUp className="size-3.5" aria-hidden="true" />
+                        ) : (
+                          <ArrowDown className="size-3.5" aria-hidden="true" />
+                        )
+                      ) : (
+                        <ArrowUpDown
+                          className="size-3.5 opacity-50"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  ) : (
+                    column.title
+                  )}
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>

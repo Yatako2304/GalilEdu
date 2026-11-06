@@ -1,6 +1,7 @@
 package com.galiledu.pagos.aplicacion;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -34,6 +35,7 @@ import com.galiledu.pagos.aplicacion.PasarelaPagos.Cobro;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Concepto;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Resultado;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Sesion;
+import com.galiledu.pagos.dominio.CompromisoPago;
 import com.galiledu.pagos.dominio.Cuota;
 import com.galiledu.pagos.dominio.EstadoCompromiso;
 import com.galiledu.pagos.dominio.EstadoCuota;
@@ -109,11 +111,21 @@ public class ServicioPagoEnLinea {
 	}
 
 	private CuotaPorPagar fila(Cuota q, List<Cuota> delEstudiante, LocalDate hoy) {
-		BigDecimal recargo = q.getCompromiso().getMorosidad().recargo(q, hoy);
+		BigDecimal recargo = recargo(q, hoy);
 		List<UUID> requiere = pensionesAnterioresPagables(q, delEstudiante).stream().map(Cuota::getId).toList();
 		return new CuotaPorPagar(q.getId(), q.getConceptoCodigo(), q.getNumero(), q.getNombre(),
 				q.getCompromiso().getAnio(), q.getFechaVencimiento(), q.saldo(), recargo, q.saldo().add(recargo),
 				q.estaVencida(hoy, q.getCompromiso().getDiasGracia()), q.getEstado(), q.esPagable(), requiere);
+	}
+
+	/**
+	 * Recargo por mora con la misma regla de HU-39 (Cuota.recargo, Figma P11), para que la orden cobre lo que se
+	 * muestra.
+	 */
+	private static BigDecimal recargo(Cuota q, LocalDate hoy) {
+		CompromisoPago c = q.getCompromiso();
+		return q.recargo(hoy, c.getDiasGracia(), c.getRecargoPorcentaje(), c.getTopeRecargoPorcentaje()).setScale(2,
+				RoundingMode.HALF_UP);
 	}
 
 	/** CAHU41-3: pensiones impagas del mismo hijo que vencen antes; se pagan antes o junto con esta. */
@@ -155,7 +167,7 @@ public class ServicioPagoEnLinea {
 				ahora.plusMinutes(minutosExpiracion));
 		List<Concepto> conceptos = new ArrayList<>();
 		for (Cuota q : elegidas.stream().sorted(Comparator.comparing(Cuota::getFechaVencimiento)).toList()) {
-			BigDecimal recargo = q.getCompromiso().getMorosidad().recargo(q, hoy);
+			BigDecimal recargo = recargo(q, hoy);
 			conceptos.add(new Concepto(descripcion(q, recargo), q.saldo().add(recargo)));
 			orden.agregar(q, recargo);
 		}

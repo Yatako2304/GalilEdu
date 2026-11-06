@@ -21,7 +21,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 
 /**
- * HU-41 · Orden de pago en línea (pagos.orden_pago, V5 y V11): las cuotas que el apoderado eligió, con el capital y
+ * HU-41 · Orden de pago en línea (pagos.orden_pago, V5 y V13): las cuotas que el apoderado eligió, con el capital y
  * el recargo de cada una. Mientras la pasarela no responde está EN_PROCESO y sus cuotas también.
  */
 @Entity

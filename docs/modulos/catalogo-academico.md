@@ -81,6 +81,7 @@ El backend ya no recibe, lee ni decide estos tres valores por competencia. `acad
 **Lo valida el plan de evaluación (`ServicioPlanEvaluacion`):**
 - Solo se agregan cursos activos, de áreas activas, que se dictan en el grado y que aún no están en su plan.
 - Las competencias son del área del curso y no se repiten. Una competencia inactiva solo se conserva si el curso ya la evaluaba.
+- Al configurar un curso se insertan y eliminan únicamente las competencias que cambiaron; las que permanecen seleccionadas conservan sus ítems. Una competencia que ya tiene ítems de evaluación no se puede quitar del plan.
 - La suma de horas del grado no supera los bloques semanales de la estructura horaria principal de su nivel (bloques por día × días lectivos). Si el año aún no tiene estructura, no hay límite.
 - La sección del docente es del mismo grado y año, y el docente es un usuario activo con rol Docente.
 - Solo se copia a un grado sin cursos. Se copian los cursos y las competencias que siguen activos, sin los docentes.

@@ -6,7 +6,10 @@ import {
   desdeEdicion,
   gradoSugerido,
   inscripcionSchema,
+  MOTIVOS_NO_REGISTRA,
+  avisoCuentasNuevas,
   inscripcionVacia,
+  presente,
   registra,
   validarDocumento,
 } from '../esquema';
@@ -217,10 +220,10 @@ describe('inscripcionSchema (reglas de Figma)', () => {
 
   test('sin padre ni madre exige un apoderado', () => {
     const f = valida();
-    f.padre = { ...f.padre, noRegistra: true, motivo: 'Fallecido(a)' };
-    f.madre = { ...f.madre, noRegistra: true, motivo: 'No registra' };
+    f.padre = { ...f.padre, noRegistra: true, motivo: 'No se conoce' };
+    f.madre = { ...f.madre, noRegistra: true, motivo: 'No se conoce' };
     expect(mensajes(f)).toContain(
-      'No hay padre ni madre registrados: debes registrar un apoderado.',
+      'No hay padre ni madre presentes (registrados y no fallecidos): debes registrar un apoderado.',
     );
   });
 
@@ -366,6 +369,143 @@ describe('Paso 3 · padres y apoderado (CAHU6)', () => {
   test('el tipo de documento del familiar no trae valor por defecto', () => {
     expect(inscripcionVacia().padre.persona.tipoDocumento).toBe('');
     expect(inscripcionVacia().apoderado.persona.tipoDocumento).toBe('');
+  });
+
+  test('solo el sexo del padre y de la madre trae valor por defecto; las casillas empiezan sin marcar', () => {
+    const { padre, madre, apoderado } = inscripcionVacia();
+    expect(padre.persona.nacionalidad).toBe('');
+    expect(padre.persona.sexo).toBe('MASCULINO');
+    expect(madre.persona.sexo).toBe('FEMENINO');
+    expect(apoderado.persona).toMatchObject({ nacionalidad: '', sexo: '' });
+    for (const f of [padre, madre, apoderado]) {
+      expect(f).toMatchObject({
+        noRegistra: false,
+        fallecido: false,
+        viveConEstudiante: false,
+        tienePatriaPotestad: false,
+      });
+      expect(f.persona.esExalumno).toBe(false);
+    }
+  });
+
+  // Validación de la iteración 1 con el PO.
+  test('el apoderado también debe ser mayor de edad', () => {
+    const f = valida();
+    f.incluirApoderado = true;
+    f.apoderado = {
+      ...f.madre,
+      relacion: 'Abuelo(a)',
+      persona: {
+        ...f.madre.persona,
+        numeroDocumento: '45678912',
+        correo: 'rosa@gmail.com',
+        fechaNacimiento: '2012-03-08',
+      },
+    };
+    expect(mensajes(f)).toContain('Debe ser mayor de edad');
+  });
+
+  test('una fecha futura solo dice que debe ser pasada (no "mayor de edad")', () => {
+    const f = valida();
+    const futura = new Date();
+    futura.setDate(futura.getDate() + 8);
+    f.madre.persona.fechaNacimiento = futura.toLocaleDateString('en-CA');
+    expect(mensajes(f)).toEqual(['La fecha de nacimiento debe ser pasada']);
+    f.madre.fallecido = true;
+    expect(mensajes(f)).toEqual(['La fecha de nacimiento debe ser pasada']);
+  });
+
+  test('el padre, la madre y el apoderado deben ser mayores de edad', () => {
+    const f = valida();
+    const hace17 = new Date();
+    hace17.setFullYear(hace17.getFullYear() - 17);
+    f.madre.persona.fechaNacimiento = hace17.toISOString().slice(0, 10);
+    expect(mensajes(f)).toEqual(['Debe ser mayor de edad']);
+  });
+
+  test('"Fallecido(a)" ya no es un motivo de "No registra"', () => {
+    expect(MOTIVOS_NO_REGISTRA).toEqual([
+      'No se conoce',
+      'No ha reconocido al estudiante',
+      'Otro',
+    ]);
+  });
+
+  test('con el motivo "Otro", la observación es obligatoria', () => {
+    const f = valida();
+    f.padre = { ...f.padre, noRegistra: true, motivo: 'Otro' };
+    expect(mensajes(f)).toEqual(['Indica la observación']);
+    f.padre.observacion = 'Vive en el extranjero';
+    expect(mensajes(f)).toEqual([]);
+  });
+
+  test('un fallecido solo necesita sus datos de identidad y no cuenta como presente', () => {
+    const f = valida();
+    f.madre.fallecido = true;
+    f.madre.persona = {
+      ...f.madre.persona,
+      celular: '',
+      correo: '',
+      profesion: '',
+      centroTrabajo: '',
+      cargo: '',
+      direccion: '',
+      distrito: '',
+    };
+    f.responsable = 'PADRE';
+    f.correoResponsable = 'luis@gmail.com';
+    expect(mensajes(f)).toEqual([]);
+    expect(registra(f.madre)).toBe(true);
+    expect(presente(f.madre)).toBe(false);
+
+    f.madre.persona.sexo = '';
+    expect(mensajes(f)).toEqual(['Selecciona el sexo']);
+    f.madre.persona.sexo = 'FEMENINO';
+
+    // País de nacimiento, estado civil y grado de instrucción también son obligatorios.
+    f.madre.persona.lugarNacimiento = '';
+    f.madre.persona.estadoCivil = '';
+    f.madre.persona.gradoInstruccion = '';
+    expect(mensajes(f)).toEqual([
+      'Selecciona el país de nacimiento',
+      'Selecciona el estado civil',
+      'Selecciona el grado de instrucción',
+    ]);
+    f.madre.persona.lugarNacimiento = 'Perú';
+    f.madre.persona.estadoCivil = 'Soltero(a)';
+    f.madre.persona.gradoInstruccion = 'Secundaria';
+
+    // También debe ser mayor de edad.
+    f.madre.persona.fechaNacimiento = '2025-05-07';
+    expect(mensajes(f)).toEqual(['Debe ser mayor de edad']);
+  });
+
+  test('si ninguno está presente (fallecido y no registra) exige un apoderado', () => {
+    const f = valida();
+    f.padre = { ...f.padre, noRegistra: true, motivo: 'No se conoce' };
+    f.madre.fallecido = true;
+    expect(mensajes(f)).toContain(
+      'No hay padre ni madre presentes (registrados y no fallecidos): debes registrar un apoderado.',
+    );
+  });
+
+  test('un fallecido no se envía como que vive con el estudiante', () => {
+    const f = valida();
+    f.madre.fallecido = true;
+    const s = aSolicitud(f);
+    expect(s.madre).toMatchObject({
+      fallecido: true,
+      viveConEstudiante: false,
+      tienePatriaPotestad: false,
+    });
+    // Solo se envían sus datos de identidad.
+    expect(s.madre.persona).toMatchObject({
+      nombres: f.madre.persona.nombres,
+      celular: null,
+      correo: null,
+      direccion: null,
+      esExalumno: false,
+    });
   });
 
   test('un familiar ya registrado (vinculado) no se vuelve a validar', () => {
@@ -608,5 +748,37 @@ describe('documento del apoderado', () => {
       relacionDetalle: 'Vecina',
     };
     expect(aSolicitud(f).apoderado).toMatchObject({ relacion: 'Vecina' });
+  });
+});
+
+describe('avisoCuentasNuevas', () => {
+  const cuenta = (nombre: string, usuario: string, nueva: boolean) => ({
+    parentesco: 'PADRE' as const,
+    nombre,
+    usuario,
+    correo: null,
+    nueva,
+  });
+
+  test('nombra solo los usuarios que se crearon', () => {
+    expect(
+      avisoCuentasNuevas([cuenta('Luis Paredes', 'U20260003', false)]),
+    ).toBe('');
+    expect(
+      avisoCuentasNuevas([
+        cuenta('Luis Paredes', 'U20260003', false),
+        cuenta('Carla Rojas', 'U20260010', true),
+      ]),
+    ).toBe(
+      'Se creó el usuario de Carla Rojas (U20260010) y se enviaron las credenciales a su correo.',
+    );
+    expect(
+      avisoCuentasNuevas([
+        cuenta('Luis Paredes', 'U20260011', true),
+        cuenta('Carla Rojas', 'U20260010', true),
+      ]),
+    ).toBe(
+      'Se crearon los usuarios de Luis Paredes (U20260011) y Carla Rojas (U20260010). Las credenciales se enviaron a sus correos.',
+    );
   });
 });

@@ -30,9 +30,10 @@ import com.jayway.jsonpath.JsonPath;
 
 /**
  * HU-41 · Pago en línea de cuotas pendientes (criterios CAHU41), con la pasarela simulada.
- * Datos de prueba: Luis Paredes (U20260003), papá de Sofía. El reloj está en el 20/10/2026: las pensiones de marzo a
- * agosto de Sofía están pagadas; la de septiembre (S/ 600, vence el 30/09, 5 días de gracia) está vencida con un
- * período de recargo (2 % = S/ 12.00) y la de octubre aún no vence.
+ * Datos de prueba: Luis Paredes (U20260003), papá de Sofía. El reloj está en el 01/11/2026: las pensiones de marzo a
+ * agosto de Sofía están pagadas; la de septiembre (S/ 600, vence el 30/09, 5 días de gracia) está vencida hace 32 días:
+ * un
+ * período completo de recargo (2 % = S/ 12.00, regla de HU-39). La de octubre (vence el 31/10) sigue en gracia.
  */
 @RecordApplicationEvents
 class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
@@ -71,7 +72,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 
 	@BeforeEach
 	void prepararDia() throws Exception {
-		reloj.fijarEn(LocalDate.of(2026, 10, 20));
+		reloj.fijarEn(LocalDate.of(2026, 11, 1));
 		token = token(APODERADO);
 	}
 
@@ -198,7 +199,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 		String codigo = crearOrden(SEPTIEMBRE);
 		assertThat(servicio.ordenesVencidas()).doesNotContain(codigo);
 
-		reloj.fijarEn(LocalDate.of(2026, 10, 21));
+		reloj.fijarEn(LocalDate.of(2026, 11, 2));
 		assertThat(servicio.ordenesVencidas()).contains(codigo);
 		servicio.resolverSiVencio(codigo);
 

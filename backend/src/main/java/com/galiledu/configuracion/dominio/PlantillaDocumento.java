@@ -3,10 +3,10 @@ package com.galiledu.configuracion.dominio;
 import java.util.Locale;
 
 /**
- * Plantilla opcional de un documento requerido (pantalla 13: "XLSX, XLS o CSV, máx. 10 MB"). La BD no restringe el
- * tipo ni el tamaño, así que se valida aquí: la extensión y que el contenido sea de ese tipo. El tipo que declara el
- * navegador no se usa (para un CSV suele llegar como application/octet-stream); se guarda el tipo que corresponde a la
- * extensión.
+ * Plantilla opcional de un documento requerido: el apoderado la descarga, la completa o firma y la vuelve a subir.
+ * Formatos: PDF, DOCX, JPG o PNG, máx. 10 MB. La BD no restringe el tipo ni el tamaño, así que se valida aquí: la
+ * extensión y que el contenido sea de ese tipo. El tipo que declara el navegador no se usa; se guarda el que
+ * corresponde a la extensión.
  *
  * <p>
  * Las reglas lanzan {@link IllegalArgumentException} (400).
@@ -16,9 +16,12 @@ public final class PlantillaDocumento {
 	/** Columna plantilla_nombre_archivo: VARCHAR(200). */
 	public static final int LONGITUD_MAXIMA_NOMBRE = 200;
 
-	private static final byte[] FIRMA_XLSX = {'P', 'K', 3, 4};
-	private static final byte[] FIRMA_XLS = {(byte) 0xD0, (byte) 0xCF, 0x11, (byte) 0xE0, (byte) 0xA1, (byte) 0xB1,
-			0x1A, (byte) 0xE1};
+	private static final String MENSAJE_FORMATO = "La plantilla debe ser un archivo PDF, DOCX, JPG o PNG.";
+
+	private static final byte[] FIRMA_PDF = {'%', 'P', 'D', 'F'};
+	private static final byte[] FIRMA_DOCX = {'P', 'K', 3, 4};
+	private static final byte[] FIRMA_JPG = {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF};
+	private static final byte[] FIRMA_PNG = {(byte) 0x89, 'P', 'N', 'G'};
 
 	/** Una plantilla ya validada, lista para guardar. */
 	public record Validada(String nombreArchivo, String tipoMime, byte[] contenido) {
@@ -42,18 +45,18 @@ public final class PlantillaDocumento {
 			throw new IllegalArgumentException(
 					"El nombre del archivo no puede pasar de " + LONGITUD_MAXIMA_NOMBRE + " caracteres.");
 		}
-		String extension = nombre.substring(nombre.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
-		boolean tieneExtension = nombre.contains(".");
-		if (!tieneExtension) {
-			throw new IllegalArgumentException("La plantilla debe ser un archivo XLSX, XLS o CSV.");
+		if (!nombre.contains(".")) {
+			throw new IllegalArgumentException(MENSAJE_FORMATO);
 		}
+		String extension = nombre.substring(nombre.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
 		return switch (extension) {
-			case "xlsx" -> new Validada(nombre,
-					"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-					exigirFirma(contenido, FIRMA_XLSX, "XLSX"));
-			case "xls" -> new Validada(nombre, "application/vnd.ms-excel", exigirFirma(contenido, FIRMA_XLS, "XLS"));
-			case "csv" -> new Validada(nombre, "text/csv", exigirTexto(contenido));
-			default -> throw new IllegalArgumentException("La plantilla debe ser un archivo XLSX, XLS o CSV.");
+			case "pdf" -> new Validada(nombre, "application/pdf", exigirFirma(contenido, FIRMA_PDF, "PDF"));
+			case "docx" -> new Validada(nombre,
+					"application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+					exigirFirma(contenido, FIRMA_DOCX, "DOCX"));
+			case "jpg", "jpeg" -> new Validada(nombre, "image/jpeg", exigirFirma(contenido, FIRMA_JPG, "JPG"));
+			case "png" -> new Validada(nombre, "image/png", exigirFirma(contenido, FIRMA_PNG, "PNG"));
+			default -> throw new IllegalArgumentException(MENSAJE_FORMATO);
 		};
 	}
 
@@ -74,16 +77,6 @@ public final class PlantillaDocumento {
 		for (int i = 0; i < firma.length; i++) {
 			if (contenido[i] != firma[i]) {
 				throw contenidoNoCoincide(tipo);
-			}
-		}
-		return contenido;
-	}
-
-	/** Un CSV es texto: no puede traer bytes nulos. */
-	private static byte[] exigirTexto(byte[] contenido) {
-		for (byte b : contenido) {
-			if (b == 0) {
-				throw contenidoNoCoincide("CSV");
 			}
 		}
 		return contenido;

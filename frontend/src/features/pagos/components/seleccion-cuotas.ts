@@ -58,12 +58,27 @@ export const useSeleccionCuotas = (datos?: CuotasPorPagar) => {
     if (cuota) setIds((actual) => alternarCuota(actual, cuota, cuotas));
   };
 
+  // "Seleccionar todas" de una tabla: marca las que se pueden pagar o desmarca todas las de la lista.
+  const fijar = (cuotaIds: string[], marcar: boolean) =>
+    setIds((actual) => {
+      const nueva = new Set(actual);
+      cuotas
+        .filter(
+          (c) => cuotaIds.includes(c.cuotaId) && (!marcar || c.seleccionable),
+        )
+        .forEach((c) =>
+          marcar ? nueva.add(c.cuotaId) : nueva.delete(c.cuotaId),
+        );
+      return nueva;
+    });
+
   const seleccionadas = cuotas.filter((c) => ids.has(c.cuotaId));
   return {
     cuotas,
     seleccionadas,
     estaSeleccionada: (cuotaId: string) => ids.has(cuotaId),
     alternar,
+    fijar,
     limpiar: () => setIds(new Set()),
   };
 };

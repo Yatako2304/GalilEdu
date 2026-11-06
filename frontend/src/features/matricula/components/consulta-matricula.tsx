@@ -18,7 +18,10 @@ import {
   EstadoMatricula,
   EstadoMatriculaApoderado,
   HijoApoderado,
+  MatriculaActual,
 } from '@/types/api';
+
+import { DocumentosApoderado } from './documentos-apoderado';
 
 const estados: Record<
   EstadoMatricula,
@@ -251,6 +254,36 @@ const DeudaPendiente = ({
   </Card>
 );
 
+// Figma > HU-29, HU-31 y HU-32: el aviso cambia con la etapa de la matrícula.
+const avisoDelEstado = (matricula?: MatriculaActual | null) => {
+  switch (matricula?.estado) {
+    case 'EN_VALIDACION':
+      return (
+        <Alert type="info" title="En espera de validación">
+          El colegio está revisando tus documentos. Cuando los valide podrás
+          pagar la matrícula.
+        </Alert>
+      );
+    case 'PENDIENTE_PAGO':
+      return (
+        <Alert type="warning" title="Documentación validada">
+          Ya puedes pagar la cuota de matrícula para completar el proceso.
+        </Alert>
+      );
+    case 'MATRICULADO':
+      return (
+        <Alert
+          type="success"
+          title={`Matrícula registrada con el código ${matricula.codigo}`}
+        >
+          Se generó el cronograma de pensiones de tu hijo.
+        </Alert>
+      );
+    default:
+      return null;
+  }
+};
+
 type ConsultaMatriculaProps = {
   hijos: HijoApoderado[];
   estudianteId?: string;
@@ -268,8 +301,10 @@ export const ConsultaMatricula = ({
 }: ConsultaMatriculaProps) => {
   const elegido = hijos.find((hijo) => hijo.id === estudianteId);
   const impedimentos = estado?.impedimentos ?? [];
+  // Los documentos que faltan se ven en su propia tarjeta; la deuda, en su aviso y detalle.
   const otrosImpedimentos = impedimentos.filter(
-    (impedimento) => impedimento.tipo !== 'DEUDA',
+    (impedimento) =>
+      impedimento.tipo !== 'DEUDA' && impedimento.tipo !== 'DOCUMENTOS',
   );
   const estadoActual = datosEstadoMatricula(
     estado?.matricula?.estado ?? elegido?.estadoMatricula,
@@ -323,10 +358,16 @@ export const ConsultaMatricula = ({
         </Alert>
       )}
 
+      {avisoDelEstado(estado?.matricula)}
+
       <ProgresoMatricula pasoActual={estado?.pasoActual ?? 0} />
 
       {estado && estado.deuda.total > 0 && (
         <DeudaPendiente deuda={estado.deuda} />
+      )}
+
+      {estado?.matricula && estudianteId && (
+        <DocumentosApoderado estudianteId={estudianteId} />
       )}
 
       <Card>

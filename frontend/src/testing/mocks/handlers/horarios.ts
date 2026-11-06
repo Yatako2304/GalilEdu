@@ -3,6 +3,10 @@ import { HttpResponse, http } from 'msw';
 import { env } from '@/config/env';
 import { ROLES } from '@/config/roles';
 
+import {
+  hijosConHorario,
+  horarioValeria2026,
+} from '../fixtures/horario-apoderado';
 import { horarioSeccion5A } from '../fixtures/horarios';
 import { requireAuth, requireRole, networkDelay } from '../utils';
 
@@ -13,7 +17,49 @@ import { requireAuth, requireRole, networkDelay } from '../utils';
 // `validarSesion`: en los tests la sesión también es simulada y se valida aquí.
 // En el navegador la sesión es la real del backend (el simulador no la ve): si se validara
 // aquí respondería 401 y la app mandaría al login en bucle.
+// HU-51 (Apoderado):
+//   GET /horarios/apoderado/estudiantes                     -> HijoConHorario[]
+//   GET /horarios/apoderado/estudiantes/{id}/horario?anio=  -> HorarioDelEstudiante (404 si no es su hijo)
+const sesionDelApoderado = (
+  validarSesion: boolean,
+  cookies: Record<string, string>,
+) => {
+  if (!validarSesion) return null;
+  const { user, error } = requireAuth(cookies);
+  if (error) return HttpResponse.json({ message: error }, { status: 401 });
+  try {
+    requireRole(user, [ROLES.APODERADO]);
+  } catch (e: any) {
+    return HttpResponse.json({ message: e.message }, { status: 403 });
+  }
+  return null;
+};
+
 const crearHorariosHandlers = (validarSesion: boolean) => [
+  http.get(
+    `${env.API_URL}/horarios/apoderado/estudiantes`,
+    async ({ cookies }) => {
+      await networkDelay();
+      return (
+        sesionDelApoderado(validarSesion, cookies) ??
+        HttpResponse.json(hijosConHorario)
+      );
+    },
+  ),
+  http.get(
+    `${env.API_URL}/horarios/apoderado/estudiantes/:id/horario`,
+    async ({ cookies, params }) => {
+      await networkDelay();
+      const rechazo = sesionDelApoderado(validarSesion, cookies);
+      if (rechazo) return rechazo;
+      return params.id === horarioValeria2026.estudianteId
+        ? HttpResponse.json(horarioValeria2026)
+        : HttpResponse.json(
+            { message: 'No encontramos el horario de este estudiante.' },
+            { status: 404 },
+          );
+    },
+  ),
   http.get(
     `${env.API_URL}/horarios/mi-seccion`,
     async ({ cookies, request }) => {

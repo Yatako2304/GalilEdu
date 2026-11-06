@@ -106,7 +106,9 @@ const Acciones = () => {
           subir.mutate({
             periodoId: 'periodo-2028',
             documentoId: 'doc-1',
-            archivo: new File(['a,b\n'], 'ficha.csv', { type: 'text/csv' }),
+            archivo: new File(['a,b\n'], 'ficha.pdf', {
+              type: 'application/pdf',
+            }),
           })
         }
       >

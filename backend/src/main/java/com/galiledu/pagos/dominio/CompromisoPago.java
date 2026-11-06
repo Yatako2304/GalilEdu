@@ -144,6 +144,10 @@ public class CompromisoPago {
 		return estudianteId;
 	}
 
+	public UUID getAnioEscolarId() {
+		return anioEscolarId;
+	}
+
 	public EstadoCompromiso getEstado() {
 		return estado;
 	}
@@ -164,9 +168,12 @@ public class CompromisoPago {
 		return montoPension;
 	}
 
-	/** Política de morosidad del tarifario del compromiso (HU-34). */
-	public Morosidad getMorosidad() {
-		return new Morosidad(getDiasGracia(), recargoPorcentaje, topeRecargoPorcentaje);
+	public BigDecimal getRecargoPorcentaje() {
+		return recargoPorcentaje == null ? BigDecimal.ZERO : recargoPorcentaje;
+	}
+
+	public BigDecimal getTopeRecargoPorcentaje() {
+		return topeRecargoPorcentaje == null ? BigDecimal.ZERO : topeRecargoPorcentaje;
 	}
 
 	public String getEstudianteNombre() {
