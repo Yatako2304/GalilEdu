@@ -352,3 +352,16 @@ test('un documento aprobado ya no se reemplaza ni muestra su plantilla', async (
     screen.queryByRole('button', { name: /Reemplazar|plantilla/i }),
   ).not.toBeInTheDocument();
 });
+
+test('matriculado: el último paso del indicador figura completado', async () => {
+  await renderApp(
+    <DetalleMatricula
+      matricula={detalle({
+        estado: 'MATRICULADO',
+        codigo: 'MAT-2027-0001',
+        pasoActual: 4,
+      })}
+    />,
+  );
+  expect(document.querySelector('[aria-current="step"]')).toBeNull();
+});

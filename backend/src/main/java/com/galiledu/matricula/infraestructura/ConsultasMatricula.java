@@ -28,7 +28,8 @@ public class ConsultasMatricula {
 			String estado, boolean bloquearPorMorosidad) {
 	}
 
-	public record MatriculaFila(UUID id, String estado, String grado, String seccion, String codigo) {
+	public record MatriculaFila(UUID id, String estado, String grado, String seccion, String codigo,
+			OffsetDateTime confirmadoEn) {
 	}
 
 	public Optional<UUID> personaDeUsuario(UUID usuarioId) {
@@ -71,14 +72,14 @@ public class ConsultasMatricula {
 
 	public Optional<MatriculaFila> matricula(UUID estudianteId, UUID anioEscolarId) {
 		return jdbc.sql("""
-				SELECT m.id, m.estado, g.nombre, g.numero || '.° ' || s.nombre, m.codigo
+				SELECT m.id, m.estado, g.nombre, g.numero || '.° ' || s.nombre, m.codigo, m.confirmado_en
 				FROM matricula.matricula m
 				JOIN configuracion.grado g ON g.codigo = m.grado_codigo
 				LEFT JOIN configuracion.seccion s ON s.id = m.seccion_id
 				WHERE m.estudiante_id = ? AND m.anio_escolar_id = ?""")
 				.params(estudianteId, anioEscolarId)
 				.query((rs, i) -> new MatriculaFila(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
-						rs.getString(4), rs.getString(5)))
+						rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class)))
 				.optional();
 	}
 

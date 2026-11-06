@@ -15,9 +15,13 @@ import { soles } from './formato';
 // HU-41 · Pantalla a la que vuelve el apoderado desde la pasarela (CAHU41-6, 7, 8 y 9). Si la pasarela aún no avisa,
 // el backend la consulta directamente y aquí se vuelve a preguntar cada 3 segundos.
 
-const Volver = () => (
+const Volver = ({ estudianteId }: { estudianteId?: string }) => (
   <Button asChild variant="primary-light">
-    <Link to={paths.app.apoderado.pensiones.getHref()}>Volver a Pensiones</Link>
+    <Link
+      to={`${paths.app.apoderado.pensiones.getHref()}${estudianteId ? `?estudiante=${estudianteId}` : ''}`}
+    >
+      Volver a Pensiones
+    </Link>
   </Button>
 );
 
@@ -82,6 +86,11 @@ export const ResultadoPago = ({
     );
   }
 
+  // Si el pago fue de un solo estudiante, "Volver a Pensiones" abre las pensiones de ese estudiante.
+  const estudiantes = [...new Set(orden.cuotas.map((c) => c.estudianteId))];
+  const estudianteDelPago =
+    estudiantes.length === 1 ? estudiantes[0] : undefined;
+
   return (
     <Card className="mx-auto max-w-2xl space-y-5 p-6">
       {orden.estado === 'EN_PROCESO' && (
@@ -135,7 +144,27 @@ export const ResultadoPago = ({
         </div>
       )}
 
-      <Volver />
+      <div className="flex flex-wrap gap-3">
+        <Volver estudianteId={estudianteDelPago} />
+        <div className="ml-auto flex gap-3">
+          {orden.estado === 'APROBADA' &&
+            [
+              ...new Set(
+                orden.cuotas
+                  .filter((c) => c.matricula)
+                  .map((c) => c.estudianteId),
+              ),
+            ].map((estudianteId) => (
+              <Button key={estudianteId} asChild>
+                <Link
+                  to={`${paths.app.apoderado.matricula.getHref()}?estudiante=${estudianteId}`}
+                >
+                  Ver matrícula
+                </Link>
+              </Button>
+            ))}
+        </div>
+      </div>
     </Card>
   );
 };

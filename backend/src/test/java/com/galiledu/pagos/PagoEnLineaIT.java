@@ -172,7 +172,10 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 		servicio.notificar("SIM-" + codigo);
 		mvc.perform(conToken(get("/pagos/pago-en-linea/ordenes/{codigo}", codigo), token))
 				.andExpect(jsonPath("$.estado").value("APROBADA"))
-				.andExpect(jsonPath("$.constancias", hasSize(1)));
+				.andExpect(jsonPath("$.constancias", hasSize(1)))
+				// Cada línea dice de qué estudiante es y si es la cuota de matrícula (botón "Ver matrícula").
+				.andExpect(jsonPath("$.cuotas[0].estudianteId").isNotEmpty())
+				.andExpect(jsonPath("$.cuotas[0].matricula").value(false));
 	}
 
 	@Test

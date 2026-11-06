@@ -198,3 +198,63 @@ test('con un documento observado solo se reemplaza ese y no deja enviar hasta co
     screen.getByRole('button', { name: 'Enviar a validación' }),
   ).toBeDisabled();
 });
+
+// Figma > Apoderado > HU-28: sin matrícula, el apoderado la inicia él mismo. Los archivos quedan en la pantalla y
+// «Enviar a validación» los manda todos juntos; recién ahí se crea la matrícula y le llega al colegio.
+test('sin matrícula guarda los archivos en la pantalla y al enviar crea la matrícula con todos', async () => {
+  servir({
+    estado: null,
+    puedeSubir: true,
+    documentos: [
+      pendiente('d-1', 'Ficha de matrícula'),
+      pendiente('d-2', 'DNI del estudiante'),
+    ],
+  });
+  const put = vi.spyOn(api, 'put');
+  const post = vi.spyOn(api, 'post').mockResolvedValue({});
+  await abrir();
+
+  expect(
+    await screen.findByText(/Se guardan al enviarlos a validación/),
+  ).toBeVisible();
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Subir Ficha de matrícula' }),
+  );
+  await userEvent.upload(
+    screen.getByLabelText('Archivo del documento'),
+    new File(['a'], 'ficha.pdf', { type: 'application/pdf' }),
+  );
+
+  // Aún no se sube nada: el archivo queda listo para enviar y falta el otro.
+  expect(await screen.findByText('ficha.pdf')).toBeVisible();
+  expect(screen.getByText('Por enviar')).toBeVisible();
+  expect(screen.getByText('Te faltan 1 documento(s) por subir.')).toBeVisible();
+  expect(
+    screen.getByRole('button', { name: 'Enviar a validación' }),
+  ).toBeDisabled();
+  expect(put).not.toHaveBeenCalled();
+
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Subir DNI del estudiante' }),
+  );
+  await userEvent.upload(
+    screen.getByLabelText('Archivo del documento'),
+    new File(['b'], 'dni.png', { type: 'image/png' }),
+  );
+  expect(
+    await screen.findByText('Ya subiste todos los documentos.'),
+  ).toBeVisible();
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Enviar a validación' }),
+  );
+
+  await waitFor(() => expect(post).toHaveBeenCalled());
+  expect(post.mock.calls[0][0]).toBe(
+    '/matricula/apoderado/estudiantes/mateo/matricula',
+  );
+  const enviados = post.mock.calls[0][1] as FormData;
+  expect((enviados.get('d-1') as File).name).toBe('ficha.pdf');
+  expect((enviados.get('d-2') as File).name).toBe('dni.png');
+  expect(put).not.toHaveBeenCalled();
+  expect(await screen.findByText('Enviado a validación')).toBeVisible();
+});

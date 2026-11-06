@@ -64,7 +64,8 @@ public final class DtosPagoEnLinea {
 			List<ConstanciaEmitida> constancias) {
 	}
 
-	public record LineaOrden(UUID cuotaId, String estudiante, String nombre, BigDecimal capital, BigDecimal recargo) {
+	public record LineaOrden(UUID cuotaId, UUID estudianteId, String estudiante, String nombre, boolean matricula,
+			BigDecimal capital, BigDecimal recargo) {
 	}
 
 	public record ConstanciaEmitida(String numero, String estudiante, BigDecimal monto, String estado) {

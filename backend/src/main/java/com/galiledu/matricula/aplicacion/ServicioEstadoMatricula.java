@@ -83,12 +83,16 @@ public class ServicioEstadoMatricula {
 		}
 
 		MatriculaActual matricula = periodoFila.flatMap(p -> consultas.matricula(estudianteId, p.anioEscolarId())
-				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), m.seccion(), m.codigo(),
-						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()))))
+				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), seccionVisible(m), m.codigo(),
+						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()),
+						m.confirmadoEn())))
 				.orElse(null);
-		if (periodo != null && matricula == null) {
-			impedimentos.add(new Impedimento("SIN_SECCION", "El colegio aún no reserva una sección para "
-					+ hijo.nombre() + " en " + periodo.anio() + "."));
+		// Sin matrícula, el apoderado la inicia él mismo si su hijo está inscrito para el año del periodo: la matrícula
+		// se crea al enviar los documentos a validación (ServicioMatriculaApoderado#iniciar).
+		boolean puedeIniciar = periodo != null && matricula == null && inscritoParaElPeriodo(estudianteId, periodo);
+		if (periodo != null && matricula == null && !puedeIniciar) {
+			impedimentos.add(new Impedimento("INSCRIPCION", hijo.nombre() + " no está inscrito(a) para el año escolar "
+					+ periodo.anio() + ". Comunícate con el colegio."));
 		}
 		if (matricula != null && "SECCION_RESERVADA".equals(matricula.estado())
 				&& matricula.documentosEntregados() < matricula.documentosRequeridos()) {
@@ -105,9 +109,10 @@ public class ServicioEstadoMatricula {
 					+ soles(deuda.total()) + ". Págala para habilitar el proceso de matrícula."));
 		}
 
-		int paso = matricula == null ? 0 : pasoDe(matricula.estado());
-		boolean puedeContinuar = impedimentos.isEmpty() && matricula != null
-				&& !"MATRICULADO".equals(matricula.estado());
+		boolean puedeContinuar = impedimentos.isEmpty()
+				&& (matricula == null ? puedeIniciar : !"MATRICULADO".equals(matricula.estado()));
+		// Sin matrícula pero con el camino libre, el apoderado está en el paso 1 (Datos y documentos), como en Figma.
+		int paso = matricula == null ? (puedeContinuar ? 1 : 0) : pasoDe(matricula.estado());
 		PagoMatricula pago = matricula == null
 				? null
 				: cuotaMatricula.buscar(matricula.id())
@@ -139,6 +144,12 @@ public class ServicioEstadoMatricula {
 		}
 		return new PagoMatricula(c.cuotaId(), c.concepto(), c.monto(), c.fechaVencimiento(), c.estado().name(),
 				c.responsable(), motivo == null, motivo);
+	}
+
+	/** Mismo criterio que "Nueva matrícula" del colegio: el año académico de la inscripción es el del periodo. */
+	private boolean inscritoParaElPeriodo(UUID estudianteId, PeriodoMatricula periodo) {
+		return consultas.estudianteParaMatricula(estudianteId).map(e -> e.anioAcademico() == periodo.anio())
+				.orElse(false);
 	}
 
 	private List<HijoFila> hijosDelUsuario(UUID usuarioId) {
@@ -176,5 +187,10 @@ public class ServicioEstadoMatricula {
 
 	private static String soles(BigDecimal monto) {
 		return String.format(Locale.US, "S/ %,.2f", monto);
+	}
+
+	/** El apoderado ve la sección solo con la matrícula confirmada; antes figura como "Por definir". */
+	private static String seccionVisible(MatriculaFila m) {
+		return "MATRICULADO".equals(m.estado()) ? m.seccion() : null;
 	}
 }

@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import com.galiledu.PruebaIntegracion;
 
@@ -18,6 +19,9 @@ import com.galiledu.PruebaIntegracion;
  * reservada en 1.° A de 2027) y Sofía (pensión de septiembre 2026 vencida).
  */
 class MatriculaApoderadoIT extends PruebaIntegracion {
+	@org.springframework.beans.factory.annotation.Autowired
+	private JdbcClient jdbc;
+
 	private static final String APODERADO = "U20260003";
 	private static final String MATEO = "20000000-0000-0000-0000-000000000001";
 	private static final String SOFIA = "20000000-0000-0000-0000-000000000002";
@@ -40,12 +44,24 @@ class MatriculaApoderadoIT extends PruebaIntegracion {
 				// HU-27: periodo 2027 y sección reservada. El estado visible del periodo depende de la fecha.
 				.andExpect(jsonPath("$.periodo.anio").value(2027))
 				.andExpect(jsonPath("$.matricula.estado").value("SECCION_RESERVADA"))
-				.andExpect(jsonPath("$.matricula.seccion").value("1.° A"))
+				// La sección no se muestra al apoderado hasta que la matrícula esté confirmada.
+				.andExpect(jsonPath("$.matricula.seccion").doesNotExist())
 				.andExpect(jsonPath("$.pasoActual").value(1))
 				// HU-30 (RF-64, corregido): la pensión vencida es de Sofía, no de Mateo
 				.andExpect(jsonPath("$.deuda.total").value(0))
 				.andExpect(jsonPath("$.deuda.cuotas", hasSize(0)))
 				.andExpect(jsonPath("$.impedimentos[*].tipo", not(hasItem("DEUDA"))));
+	}
+
+	@Test
+	void laSeccionSoloSeMuestraConLaMatriculaConfirmada() throws Exception {
+		jdbc.sql("""
+				UPDATE matricula.matricula SET estado = 'MATRICULADO', codigo = 'MAT-2027-9001', confirmado_en = now()
+				WHERE estudiante_id = ?::uuid""").param(MATEO).update();
+		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", MATEO), token(APODERADO)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.matricula.seccion").value("1.° A"))
+				.andExpect(jsonPath("$.matricula.confirmadoEn").isNotEmpty());
 	}
 
 	@Test

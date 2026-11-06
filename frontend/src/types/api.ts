@@ -628,10 +628,11 @@ export type MatriculaActual = {
   codigo: string | null;
   documentosRequeridos: number;
   documentosEntregados: number;
+  confirmadoEn: string | null;
 };
 
 export type ImpedimentoMatricula = {
-  tipo: 'PERIODO' | 'SIN_SECCION' | 'DOCUMENTOS' | 'DEUDA';
+  tipo: 'PERIODO' | 'INSCRIPCION' | 'DOCUMENTOS' | 'DEUDA';
   mensaje: string;
 };
 
@@ -1463,8 +1464,10 @@ export type OrdenPagoDetalle = {
   urlPago: string | null;
   cuotas: {
     cuotaId: string;
+    estudianteId: string;
     estudiante: string;
     nombre: string;
+    matricula: boolean;
     capital: number;
     recargo: number;
   }[];
@@ -1738,7 +1741,8 @@ export type DocumentoApoderado = {
 };
 
 export type DocumentosApoderado = {
-  estado: EstadoMatricula;
+  /** null: el hijo aún no tiene matrícula; el apoderado la inicia al enviar todos los documentos a validación. */
+  estado: EstadoMatricula | null;
   puedeSubir: boolean;
   documentos: DocumentoApoderado[];
 };

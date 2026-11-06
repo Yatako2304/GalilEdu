@@ -46,12 +46,16 @@ public final class DtosMatricula {
 			boolean abierto) {
 	}
 
-	/** {@code seccion} es null mientras no se asigne ("se asigna al confirmar la matrícula"). */
+	/**
+	 * {@code seccion} es null hasta que la matrícula esté MATRICULADO: el apoderado ve "Por definir".
+	 * {@code confirmadoEn}
+	 * es la fecha y hora exacta de la confirmación (solo MATRICULADO).
+	 */
 	public record MatriculaActual(UUID id, String estado, String grado, String seccion, String codigo,
-			int documentosRequeridos, int documentosEntregados) {
+			int documentosRequeridos, int documentosEntregados, OffsetDateTime confirmadoEn) {
 	}
 
-	/** RF-60: motivo por el que no puede continuar. tipo: PERIODO, SIN_SECCION, DOCUMENTOS o DEUDA. */
+	/** RF-60: motivo por el que no puede continuar. tipo: PERIODO, INSCRIPCION, DOCUMENTOS o DEUDA. */
 	public record Impedimento(String tipo, String mensaje) {
 	}
 

@@ -2,18 +2,19 @@
 
 - **HU:** HU-24, 27, 30 (iteración 1) · HU-28, 29, 31, 32 (2) · HU-25, 26, 33, 71, 72 (3)
 - **Estado:** 🚧 en desarrollo: HU-24, HU-27, HU-30 y HU-31 completas (HU-24: listado A3, Nueva matrícula, detalle A5/B6/B7 y Cambiar sección, todo conectado a la BD)
-- **Última actualización:** 2026-11-05
+- **Última actualización:** 2026-11-06
 
 ## Alcance
 
-El Personal administrativo reserva una sección para cada estudiante, nuevo o continuador. El apoderado sube los documentos firmados. El colegio los valida, se genera la cuota de matrícula y, al pagarla, el estudiante queda **matriculado** con un código (`MAT-2027-0044`) y su cronograma de pensiones.
+El apoderado inicia la matrícula de su hijo: sube los documentos firmados y los envía a validación; recién ahí se crea la matrícula, con la sección que asigna el sistema. El Personal administrativo también puede crearla con «Nueva matrícula» (cuando la familia lo hace en el colegio). El colegio los valida, se genera la cuota de matrícula y, al pagarla, el estudiante queda **matriculado** con un código (`MAT-2027-0044`) y su cronograma de pensiones.
 
 La configuración del periodo (fechas, reglas y vacantes) está en [configuracion.md](configuracion.md).
 
 ## Flujo (Figma › "Flujo de matrícula · Personal administrativo" y Apoderado HU-28 a HU-32)
 
 ```
-SECCION_RESERVADA ──(apoderado sube documentos)──► EN_VALIDACION ──(colegio aprueba y no hay deuda)──►
+(sin matrícula) ──(el apoderado envía todos sus documentos: se crea la matrícula)──► EN_VALIDACION
+SECCION_RESERVADA («Nueva matrícula» del colegio) ──(apoderado sube documentos)──► EN_VALIDACION ──(colegio aprueba y no hay deuda)──►
 PENDIENTE_PAGO (se crea el compromiso con la cuota de matrícula, HU-36) ──(pago confirmado)──►
 MATRICULADO (código MAT-…, cronograma de pensiones, HU-37)          · también: RETIRADO, ANULADA
 ```
@@ -23,7 +24,12 @@ MATRICULADO (código MAT-…, cronograma de pensiones, HU-37)          · tambi�
 
 ## Endpoints (apoderado)
 
-Ver la tabla de [`backend/README.md`](../../backend/README.md): hijos y estado (`GET /matricula/apoderado/estudiantes` y `/{id}/estado`) y documentos (HU-28 y HU-29: `GET .../documentos`, descargar plantilla, ver archivo, `PUT .../documentos/{id}` para subir o reemplazar y `POST .../enviar-validacion`). El apoderado solo actúa sobre sus hijos, con la sección reservada y el periodo abierto. Si el colegio completa todos los documentos (al crear la matrícula o al subir el último), la matrícula pasa sola a EN_VALIDACION.
+Ver la tabla de [`backend/README.md`](../../backend/README.md): hijos y estado (`GET /matricula/apoderado/estudiantes` y `/{id}/estado`) y documentos (HU-28 y HU-29: `GET .../documentos`, descargar plantilla, ver archivo, `PUT .../documentos/{id}` para subir o reemplazar y `POST .../enviar-validacion`). El apoderado solo actúa sobre sus hijos y con el periodo abierto.
+
+- **Sin matrícula (el apoderado la inicia, Figma › Apoderado › HU-28):** si el hijo está inscrito para el año del periodo y no tiene deuda vencida, `/estado` devuelve `puedeContinuar = true` y `pasoActual = 1`, y `/documentos` la lista sin archivos con `estado = null`. Los archivos que elige quedan en la pantalla (no se guardan) y «Enviar a validación» los manda todos con `POST .../matricula`: se crea la matrícula con la primera sección del grado con cupo (como «Nueva matrícula»), con todos los documentos EN_REVISION, y queda **EN_VALIDACION**, en la bandeja del Personal administrativo. Si falta uno, no se guarda nada. Si no está inscrito para ese año, el impedimento es `INSCRIPCION`.
+- **Con matrícula (la creó el colegio o devolvió un documento observado):** se sube documento por documento (`PUT`) y se envía con `POST .../enviar-validacion`, como antes.
+
+Si el colegio completa todos los documentos (al crear la matrícula o al subir el último), la matrícula pasa sola a EN_VALIDACION.
 
 ## Endpoints (personal administrativo · HU-24)
 
@@ -184,3 +190,8 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 - [ ] La información adicional de HU-32 (dirección, contacto de emergencia, alergias y seguro) ya existe en `estudiantes.*`. Matrícula la muestra y la actualiza; no la duplica.
 
 - **Decisión de producto (2026-11-06): observar documentos.** El colegio observa un documento individual con un motivo; la matrícula regresa a SECCION_RESERVADA, el apoderado reemplaza solo los observados (los aprobados quedan bloqueados) y vuelve a enviar a validación. Si el colegio sube el documento observado por el apoderado, la matrícula vuelve sola a EN_VALIDACION. No se envía correo: el aviso es en pantalla.
+
+- **Decisión de producto (2026-11-06): el apoderado inicia la matrícula.** No espera a que el colegio le reserve la sección (Figma › Apoderado › HU-28 y el PO: la sección la elige el sistema). La matrícula se crea al enviar todos los documentos a validación, así a la bandeja del Personal administrativo solo llega lo que está listo para revisar. Ver [la decisión](../decisiones/2026-11-06-scuro-star-apoderado-inicia-matricula.md).
+- **Decisión de producto (2026-11-06): sección del apoderado.** Mientras la matrícula no esté MATRICULADO, el apoderado no ve la sección: `GET /matricula/apoderado/estudiantes/{id}/estado` devuelve `matricula.seccion = null` y la pantalla muestra "Por definir". El personal administrativo sí ve la sección reservada.
+
+- **Pantalla del apoderado (Figma páginas 13 y 14).** La tarjeta "Pago de matrícula" (`pagoMatricula`) va a la derecha de los datos y documentos, como el detalle del colegio. `matricula.confirmadoEn` trae la fecha de confirmación; con la matrícula MATRICULADO aparecen **Descargar constancia** (HTML imprimible, guardar como PDF) y **Ver cronograma de pensiones**. Tras pagar la matrícula, el resultado del pago ofrece **Ver matrícula** del hijo correspondiente (el detalle de la orden trae `estudianteId` y `matricula` por cuota) y "Volver a Pensiones" abre las pensiones del estudiante que pagó (`?estudiante=`). Sin hacer: notificación al apoderado.
