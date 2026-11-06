@@ -2,7 +2,7 @@ import { HttpResponse, http } from 'msw';
 
 import { env } from '@/config/env';
 import { server } from '@/testing/mocks/server';
-import { renderApp, screen, userEvent } from '@/testing/test-utils';
+import { renderApp, screen, userEvent, within } from '@/testing/test-utils';
 import { EstadoMatriculaApoderado, HijoApoderado } from '@/types/api';
 
 import { ConsultaMatricula } from '../consulta-matricula';
@@ -246,4 +246,39 @@ test('con la documentación validada avisa de la cuota y muestra el pago', async
     screen.getByText(/Se generó la cuota de matrícula de S\/ 850.00/),
   ).toBeInTheDocument();
   expect(screen.getByText('Tarjeta de pago')).toBeInTheDocument();
+});
+
+// Figma > Apoderado > "HU-32 Confirmación de matrícula": ya matriculado, los 4 pasos salen completados.
+test('ya matriculado, el avance muestra los 4 pasos completados', async () => {
+  await renderApp(
+    <ConsultaMatricula
+      hijos={hijos}
+      estudianteId="mateo"
+      estado={{
+        ...estado,
+        matricula: {
+          ...estado.matricula!,
+          estado: 'MATRICULADO',
+          codigo: 'MAT-2027-0001',
+        },
+        pasoActual: 4,
+      }}
+      isLoading={false}
+      onElegir={vi.fn()}
+    />,
+  );
+
+  expect(
+    await screen.findByText('Matriculado', { selector: 'p' }),
+  ).toBeInTheDocument();
+  // Ningún paso queda "en curso" ni muestra su número: todos tienen check.
+  const avance = within(
+    screen.getByRole('list', { name: 'Avance de la matrícula' }),
+  );
+  const pasos = avance.getAllByRole('listitem');
+  expect(pasos).toHaveLength(4);
+  pasos.forEach((paso, i) => {
+    expect(paso).not.toHaveAttribute('aria-current');
+    expect(within(paso).queryByText(String(i + 1))).not.toBeInTheDocument();
+  });
 });

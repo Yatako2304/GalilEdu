@@ -200,9 +200,21 @@ const PASOS_MATRICULA = [
 ];
 
 // Figma > Apoderado > Matrícula > "Card - Progreso": instancia de Componentes > Stepper.
-const ProgresoMatricula = ({ pasoActual }: { pasoActual: number }) => (
+// Ya matriculado, Figma ("HU-32 Confirmación de matrícula") muestra los 4 pasos completados, con check: el avance
+// pasa del último paso.
+const ProgresoMatricula = ({
+  pasoActual,
+  matriculado,
+}: {
+  pasoActual: number;
+  matriculado: boolean;
+}) => (
   <Card className="p-6">
-    <Stepper steps={PASOS_MATRICULA} current={pasoActual} />
+    <Stepper
+      steps={PASOS_MATRICULA}
+      aria-label="Avance de la matrícula"
+      current={matriculado ? PASOS_MATRICULA.length + 1 : pasoActual}
+    />
   </Card>
 );
 
@@ -368,7 +380,10 @@ export const ConsultaMatricula = ({
 
       {avisoDelEstado(estado)}
 
-      <ProgresoMatricula pasoActual={estado?.pasoActual ?? 0} />
+      <ProgresoMatricula
+        pasoActual={estado?.pasoActual ?? 0}
+        matriculado={estado?.matricula?.estado === 'MATRICULADO'}
+      />
 
       {pagoMatricula}
 
