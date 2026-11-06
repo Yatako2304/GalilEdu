@@ -680,6 +680,8 @@ export type CuotaDetalle = {
   estado: EstadoCuota;
   vencida: boolean;
   fechaPago: string | null;
+  diasAtraso: number;
+  recargo: number;
 };
 
 export type ResumenCompromiso = {
@@ -754,6 +756,155 @@ export type CuotaMatriculaDetalle = {
   estado: EstadoCuota;
   fechaPago: string | null;
   responsable: string;
+};
+
+// ---------- Pagos · Morosidad, descuentos y apoderado (HU-35, HU-38, HU-39, HU-40) ----------
+
+export type CuotaMorosa = {
+  cuotaId: string;
+  concepto: string;
+  numero: number | null;
+  fechaVencimiento: string;
+  diasAtraso: number;
+  capital: number;
+  recargo: number;
+  total: number;
+};
+
+export type MorosidadCompromiso = {
+  compromisoId: string;
+  fecha: string;
+  anio: number;
+  estudianteId: string;
+  estudiante: string;
+  diasGracia: number;
+  recargoPorcentaje: number;
+  topeRecargoPorcentaje: number;
+  capital: number;
+  recargo: number;
+  total: number;
+  cuotas: CuotaMorosa[];
+};
+
+export type PagoRealizado = {
+  id: string;
+  numeroConstancia: string;
+  fechaPago: string;
+  monto: number;
+  capital: number;
+  recargo: number;
+  estado: string;
+  cuotas: string[];
+};
+
+export type HijoConDeuda = {
+  estudianteId: string;
+  codigo: string;
+  nombres: string;
+  apellidos: string;
+  grado: string | null;
+  seccion: string | null;
+  saldo: number;
+  cuotasVencidas: number;
+};
+
+export type TipoDescuento = 'PORCENTAJE_UNICO' | 'POR_HERMANOS';
+export type AplicacionDescuento = 'MANUAL' | 'AUTOMATICO';
+export type EstadoDescuento = 'ACTIVO' | 'INACTIVO';
+
+export type TramoDescuento = {
+  hermanosDesde: number;
+  hermanosHasta: number | null;
+  porcentaje: number;
+};
+
+export type DescuentoVista = {
+  id: string;
+  nombre: string;
+  descripcion: string | null;
+  tipo: TipoDescuento;
+  aplicacion: AplicacionDescuento;
+  porcentaje: number | null;
+  tramos: TramoDescuento[];
+  conceptos: string[];
+  condicion: string | null;
+  estado: EstadoDescuento;
+};
+
+export type SolicitudDescuento = {
+  nombre: string;
+  descripcion?: string | null;
+  tipo: TipoDescuento;
+  aplicacion: AplicacionDescuento;
+  porcentaje?: number | null;
+  tramos?: TramoDescuento[];
+  conceptos: string[];
+  condicion?: string | null;
+};
+
+export type ConfiguracionDescuentos = { porcentajeMaximo: number };
+export type SolicitudConfiguracionDescuentos = { porcentajeMaximo: number };
+
+export type DescuentoAplicable = {
+  id: string;
+  nombre: string;
+  tipo: TipoDescuento;
+  aplicacion: AplicacionDescuento;
+  porcentaje: number | null;
+  conceptos: string[];
+  condicion: string | null;
+  aplicable: boolean;
+  motivo: string | null;
+};
+
+export type DescuentoActual = {
+  id: string;
+  nombre: string;
+  porcentaje: number;
+};
+
+export type DescuentosAplicables = {
+  hermanosMatriculados: number;
+  actual: DescuentoActual | null;
+  descuentos: DescuentoAplicable[];
+};
+
+export type SolicitudAplicarDescuento = {
+  descuentoId: string;
+  motivo: string;
+  vigenciaDesde?: string | null;
+  vigenciaHasta?: string | null;
+  reemplazar: boolean;
+};
+
+export type SolicitudRevocarDescuento = { motivo: string };
+
+export type EstadoDescuentoAplicado = 'ACTIVO' | 'REEMPLAZADO' | 'REVOCADO';
+
+export type DescuentoAplicadoVista = {
+  id: string;
+  descuentoId: string;
+  nombre: string;
+  porcentaje: number;
+  vigenciaDesde: string;
+  vigenciaHasta: string | null;
+  motivo: string;
+  estado: EstadoDescuentoAplicado;
+  aplicadoPor: string | null;
+  aplicadoEn: string;
+  motivoRevocacion: string | null;
+  revocadoEn: string | null;
+};
+
+export type DescuentoDelCompromiso = {
+  activo: DescuentoAplicadoVista | null;
+  cuotasConDescuento: number;
+  historial: DescuentoAplicadoVista[];
+};
+
+export type ResultadoDescuento = {
+  descuento: DescuentoAplicadoVista;
+  cuotasRecalculadas: number;
 };
 
 // ---------- Configuración · Año escolar (HU-74) ----------
