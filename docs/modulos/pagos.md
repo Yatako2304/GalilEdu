@@ -85,7 +85,7 @@ Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaS
 
 ## Base de datos
 
-- **Esquema:** `pagos` · **Migraciones:** `V4` (tarifario), `V5__matricula_y_pagos.sql` y `V13__pago_en_linea.sql` (vencimiento de la orden, estado anterior de cada cuota y varios pagos por orden)
+- **Esquema:** `pagos` · **Migraciones:** `V4` (tarifario), `V5__matricula_y_pagos.sql`, `V13__pago_en_linea.sql` (vencimiento de la orden, estado anterior de cada cuota y varios pagos por orden) y `V14__pago_en_linea_stripe.sql` (referencias y URL de Stripe más largas)
 
 | Tabla | Para qué |
 | --- | --- |
@@ -120,7 +120,7 @@ Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaS
 - [x] HU-38 (front): descuentos aplicables, reemplazo, ficha P10 y revocación con motivo.
 - [x] HU-40 (front): selector de hijos y compromisos, cronograma con recargo e historial de pagos.
 - [x] P9: historial de pagos del compromiso para personal administrativo.
-- [x] Pasarela de pagos (HU-41): Stripe Checkout en modo de prueba, con una pasarela simulada mientras no haya llaves.
+- [x] Pasarela de pagos (HU-41): Stripe Checkout en modo de prueba, con una pasarela simulada mientras no haya llaves. Probado de punta a punta con Stripe en local (06/11): pago aprobado con la tarjeta 4242 y confirmado por consulta directa. Se quitó `payment_method_types` (Stripe ya no lo acepta; los métodos de pago se eligen en el dashboard).
 - [x] HU-40 + HU-41 (front): las casillas del cronograma de HU-40 arman el pago en línea con `useSeleccionCuotas` y `BarraPagoCuotas`; se quitó la tabla mínima `PagoCuotas`.
 - [ ] Crear la cuenta de Stripe en modo de prueba y configurar el webhook en el servidor (necesita HTTPS para el modo real).
 - [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).

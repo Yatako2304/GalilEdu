@@ -47,7 +47,6 @@ public class PasarelaStripe implements PasarelaPagos {
 		form.add("client_reference_id", cobro.codigoOrden());
 		form.add("metadata[orden]", cobro.codigoOrden());
 		form.add("expires_at", String.valueOf(cobro.expiraEn().toEpochSecond()));
-		form.add("payment_method_types[0]", "card");
 		for (int i = 0; i < cobro.conceptos().size(); i++) {
 			Concepto c = cobro.conceptos().get(i);
 			String linea = "line_items[" + i + "]";
