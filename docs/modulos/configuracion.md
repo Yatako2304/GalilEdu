@@ -52,7 +52,11 @@ Se informa el primer caso, en el orden de la semana (primero los días quitados 
 
 ### Qué se puede editar
 
-`PUT /configuracion/estructuras-horarias/{id}` reemplaza el código, la descripción, los días lectivos, la hora de entrada, los bloques por día, la duración del bloque y los recesos (que se regeneran), y acepta `esPrincipal`; el nivel no cambia. Cambiar la **hora de entrada**, la **duración del bloque** o los **recesos** modifica las horas reales de los horarios ya armados y podría crear cruces entre secciones; hoy solo se validan la jornada (termina a las 18:00) y los planes, no los horarios.
+`PUT /configuracion/estructuras-horarias/{id}` reemplaza la descripción, los días lectivos, la hora de inicio (en el JSON sigue siendo `horaEntrada`), los bloques por día, la duración del bloque y los recesos (que se regeneran), y acepta `esPrincipal`; el nivel y el código no cambian (un `codigo` que llegue en la solicitud se ignora).
+
+### Código de la estructura
+
+El backend lo genera al crear: `EH-{PRI|SEC}-{año a 2 dígitos}`, por ejemplo `EH-SEC-27`. Si ya existe en el mismo año, agrega `-2`, `-3`… La generación ocurre dentro del bloqueo por año (`<anioId>:estructuras-horarias`), así que dos creaciones simultáneas no repiten código. Un `codigo` que llegue en la solicitud de crear se ignora. Los códigos ya guardados no se tocan. La respuesta sigue devolviendo `codigo`. Si algún día hay otros niveles, hay que definir su sigla en `ServicioEstructurasHorarias.generarCodigo`. Cambiar la **hora de inicio**, la **duración del bloque** o los **recesos** modifica las horas reales de los horarios ya armados y podría crear cruces entre secciones; hoy solo se validan la jornada (termina a las 18:00) y los planes, no los horarios.
 
 ## Pantallas (Figma)
 
