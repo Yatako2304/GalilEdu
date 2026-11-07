@@ -151,26 +151,23 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 	// ---------- 10. Concurrencia ----------
 
 	@Test
-	void variasCreacionesSimultaneasConElMismoCodigoCreanUnaSolaYLasDemasRecibenConflicto() throws Exception {
+	void variasCreacionesSimultaneasDelMismoNivelGeneranCodigosDistintos() throws Exception {
 		List<Callable<MvcResult>> tareas = new ArrayList<>();
 		for (int hilo = 0; hilo < HILOS; hilo++) {
-			tareas.add(() -> crear(cuerpoDeCrear("codigo", texto("EH-CARRERA"))));
+			tareas.add(() -> crear(cuerpoDeCrear()));
 		}
 
 		List<MvcResult> resultados = enParalelo(tareas);
 
 		exigeSinErroresDelServidorNiFugas(resultados);
-		List<Integer> estados = estados(resultados);
-		assertThat(estados).as("estados %s", estados).isSubsetOf(201, 409);
-		assertThat(estados.stream().filter(estado -> estado == 201).count()).isEqualTo(1);
-		assertThat(cantidadDeEstructuras()).isEqualTo(1);
-		assertThat(cantidadDePrincipalesDe("PRIMARIA")).isEqualTo(1);
+		assertThat(estados(resultados)).as("estados %s", estados(resultados)).containsOnly(201);
+		List<String> codigos = new ArrayList<>();
 		for (MvcResult resultado : resultados) {
-			if (resultado.getResponse().getStatus() == 409) {
-				assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
-						.isEqualTo("Ya existe una estructura con el código EH-CARRERA en este año.");
-			}
+			codigos.add(JsonPath.read(cuerpoDe(resultado), "$.estructura.codigo"));
 		}
+		assertThat(codigos).doesNotHaveDuplicates().contains("EH-PRI-27", "EH-PRI-27-2", "EH-PRI-27-" + HILOS);
+		assertThat(cantidadDeEstructuras()).isEqualTo(HILOS);
+		assertThat(cantidadDePrincipalesDe("PRIMARIA")).isEqualTo(1);
 	}
 
 	@Test
@@ -237,26 +234,6 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 
 	// ---------- Con transacción real: una escritura rechazada no deja nada a medias ----------
 
-	/**
-	 * Corregido: el NUL en el código se rechaza con 400 antes de tocar la base (antes daba 500). Con transacción real
-	 * se
-	 * comprueba además que no quedó nada escrito.
-	 */
-	@Test
-	void unNulEnElCodigoDa400YNoDejaNadaEscrito() throws Exception {
-		MvcResult resultado = crear(cuerpoDeCrear("codigo", texto("A\u0000B")));
-
-		assertThat(resultado.getResponse().getStatus()).as("cuerpo: %s", cuerpoDe(resultado)).isEqualTo(400);
-		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
-				.isEqualTo("El texto contiene caracteres no válidos.");
-		assertThat(cantidadDeEstructuras()).isZero();
-	}
-
-	/**
-	 * Una creación como principal que se rechaza no deja a la anterior desmarcada. Hoy el NUL en la descripción se
-	 * rechaza al validar, antes de bajar a la anterior; el camino "falla el guardado después de bajarla" ya no se puede
-	 * provocar desde la API (se probó antes de la corrección: la transacción real lo deshacía).
-	 */
 	@Test
 	void unaCreacionPrincipalRechazadaNoDejaDesmarcadaALaAnterior() throws Exception {
 		String principal = crearValida("codigo", texto("EH-A"));

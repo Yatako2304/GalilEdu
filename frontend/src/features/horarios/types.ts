@@ -26,13 +26,16 @@ export type CruceDetectado = {
   curso: string;
 };
 
+/** El ambiente de un bloque: el `codigo` («A-502») es el que se ve en la celda (Figma); el nombre, en el selector. */
+export type AmbienteDelHorario = { id: string; nombre: string; codigo: string };
+
 export type CeldaDelHorario = {
   dia: DiaCoordinador;
   numeroBloque: number;
   planCursoId: string;
   curso: string;
   docente: Referencia | null;
-  ambiente: Referencia;
+  ambiente: AmbienteDelHorario;
   cruces: CruceDetectado[];
 };
 
@@ -82,6 +85,7 @@ export type CursoOpcion = {
 export type AmbienteOpcion = {
   id: string;
   nombre: string;
+  codigo: string;
   tipo: 'AULA_REGULAR' | 'ESPACIO_ESPECIAL';
   aforoMaximo: number;
 };

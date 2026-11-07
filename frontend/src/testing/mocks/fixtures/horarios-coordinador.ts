@@ -10,7 +10,7 @@ import type {
   SeccionParaHorarios,
 } from '@/features/horarios/types';
 
-// HU-45 (coordinador): datos de los endpoints de /horarios/secciones y de los selectores de /horarios/anios-escolares.
+// HU-45 (coordinador): el ambiente tiene nombre («Aula 502», en el selector) y código («A-502», en la celda). Datos de los endpoints de /horarios/secciones y de los selectores de /horarios/anios-escolares.
 
 export const ANIO_2026 = 'anio-2026';
 
@@ -95,11 +95,24 @@ export const AMBIENTE_A401 = 'amb-a401';
 export const AMBIENTE_LABORATORIO = 'amb-laboratorio';
 
 export const ambientesCoordinador: AmbienteOpcion[] = [
-  { id: AMBIENTE_A502, nombre: 'A-502', tipo: 'AULA_REGULAR', aforoMaximo: 30 },
-  { id: AMBIENTE_A401, nombre: 'A-401', tipo: 'AULA_REGULAR', aforoMaximo: 32 },
+  {
+    id: AMBIENTE_A502,
+    nombre: 'Aula 502',
+    codigo: 'A-502',
+    tipo: 'AULA_REGULAR',
+    aforoMaximo: 30,
+  },
+  {
+    id: AMBIENTE_A401,
+    nombre: 'Aula 401',
+    codigo: 'A-401',
+    tipo: 'AULA_REGULAR',
+    aforoMaximo: 32,
+  },
   {
     id: AMBIENTE_LABORATORIO,
     nombre: 'Laboratorio de ciencias',
+    codigo: 'LAB-01',
     tipo: 'ESPACIO_ESPECIAL',
     aforoMaximo: 24,
   },
@@ -176,6 +189,9 @@ const celda = (
     id: ambienteId,
     nombre:
       ambientesCoordinador.find((a) => a.id === ambienteId)?.nombre ??
+      ambienteId,
+    codigo:
+      ambientesCoordinador.find((a) => a.id === ambienteId)?.codigo ??
       ambienteId,
   },
   cruces,

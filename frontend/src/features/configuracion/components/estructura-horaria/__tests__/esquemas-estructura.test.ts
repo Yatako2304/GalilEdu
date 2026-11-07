@@ -1,6 +1,7 @@
 import {
   MENSAJE_BLOQUES,
-  MENSAJE_CODIGO_INVALIDO,
+  HORA_INICIO_POR_DEFECTO,
+  MENSAJE_HORA_INICIO,
   MENSAJE_DURACION_BLOQUE,
   MENSAJE_DURACION_RECESO,
   MENSAJE_RECESO_REPETIDO,
@@ -11,7 +12,6 @@ import {
   aSolicitudVistaPrevia,
   estructuraSchema,
   mensajePosicionDeReceso,
-  normalizarCodigo,
   puedeCalcularseLaJornada,
   valoresDeEstructura,
   valoresInicialesEstructura,
@@ -21,7 +21,6 @@ import {
 
 // La estructura de ejemplo del modal de Figma: 14:45, 4 bloques de 45 min y un receso de 15 después del bloque 2.
 const valida: ValoresEstructura = {
-  codigo: 'EH-TAR-26',
   descripcion: 'Secundaria · talleres de tarde',
   nivel: 'SECUNDARIA',
   esPrincipal: false,
@@ -56,53 +55,11 @@ test('una estructura sin descripción ni recesos también es válida', () => {
 });
 
 describe('código', () => {
-  test.each(['', '   '])(
-    'vacío o de solo espacios pide el código (%j)',
-    (codigo) => {
-      expect(mensajesDe(['codigo'], { codigo })).toEqual([
-        'Ingresa el código de la estructura.',
-      ]);
-    },
-  );
-
-  test.each(['EH-PRI-26', 'A', 'A1', '123', '-', ' EH-1 ', 'A'.repeat(20)])(
-    'acepta mayúsculas, números y guion hasta 20 caracteres (%j)',
-    (codigo) => {
-      expect(mensajesDe(['codigo'], { codigo })).toEqual([]);
-    },
-  );
-
-  test('admite hasta 20 caracteres', () => {
-    expect(mensajesDe(['codigo'], { codigo: 'A'.repeat(21) })).toEqual([
-      'El código admite hasta 20 caracteres.',
-    ]);
-  });
-
-  test.each([
-    'eh-pri',
-    'EH PRI',
-    'EH_PRI',
-    'EH.PRI',
-    'ÑU',
-    'ÁB',
-    'EH/1',
-    'EH-1!',
-  ])('solo admite letras sin tilde, números y guion (%j)', (codigo) => {
-    expect(mensajesDe(['codigo'], { codigo })).toEqual([
-      MENSAJE_CODIGO_INVALIDO,
-    ]);
-  });
-
-  test('con un código largo y con signos se muestra primero el aviso del largo', () => {
-    expect(mensajesDe(['codigo'], { codigo: `${'A'.repeat(21)}!` })[0]).toBe(
-      'El código admite hasta 20 caracteres.',
-    );
-  });
-
-  test('el código se pasa a mayúsculas al recibir lo escrito, sin quitar espacios', () => {
-    expect(normalizarCodigo('eh-pri-26')).toBe('EH-PRI-26');
-    expect(normalizarCodigo('a b')).toBe('A B');
-    expect(normalizarCodigo('')).toBe('');
+  test('el formulario ya no tiene código: lo genera el backend', () => {
+    expect(valoresInicialesEstructura()).not.toHaveProperty('codigo');
+    expect(aSolicitudEstructura(valida)).not.toHaveProperty('codigo');
+    expect(aSolicitudEdicion(valida)).not.toHaveProperty('codigo');
+    expect(aSolicitudVistaPrevia(valida)).not.toHaveProperty('codigo');
   });
 });
 
@@ -151,12 +108,12 @@ describe('días lectivos', () => {
   });
 });
 
-describe('hora de entrada', () => {
+describe('hora de inicio', () => {
   test.each(['', '7:45', '25:00', '14:60', 'abc', '14:45:30'])(
-    'una hora vacía o mal escrita pide la hora de entrada (%j)',
+    'una hora vacía o mal escrita pide la hora de inicio (%j)',
     (horaEntrada) => {
       expect(mensajesDe(['horaEntrada'], { horaEntrada })).toEqual([
-        'Ingresa la hora de entrada.',
+        MENSAJE_HORA_INICIO,
       ]);
     },
   );
@@ -324,24 +281,22 @@ test('un formulario vacío avisa cada campo obligatorio una sola vez', () => {
   expect(resultado.success).toBe(false);
   if (!resultado.success) {
     expect(resultado.error.issues.map((p) => p.path[0])).toEqual([
-      'codigo',
       'nivel',
       'diasLectivos',
-      'horaEntrada',
       'bloquesPorDia',
       'duracionBloqueMin',
     ]);
   }
 });
 
-test('al abrir el modal no hay nada precargado ni recesos', () => {
+test('al abrir el modal la hora de inicio es 07:30 y no hay nada más precargado ni recesos', () => {
+  expect(HORA_INICIO_POR_DEFECTO).toBe('07:30');
   expect(valoresInicialesEstructura()).toEqual({
-    codigo: '',
     descripcion: '',
     nivel: '',
     esPrincipal: false,
     diasLectivos: [],
-    horaEntrada: '',
+    horaEntrada: '07:30',
     bloquesPorDia: '',
     duracionBloqueMin: '',
     recesos: [],
@@ -349,15 +304,13 @@ test('al abrir el modal no hay nada precargado ni recesos', () => {
 });
 
 describe('cuerpos que se envían', () => {
-  test('crear recorta el código, convierte los números y ordena los días por la semana', () => {
+  test('crear convierte los números y ordena los días por la semana', () => {
     expect(
       aSolicitudEstructura({
         ...valida,
-        codigo: ' EH-TAR-26 ',
         diasLectivos: ['VIE', 'LUN', 'MIE'],
       }),
     ).toEqual({
-      codigo: 'EH-TAR-26',
       descripcion: 'Secundaria · talleres de tarde',
       nivel: 'SECUNDARIA',
       esPrincipal: false,
@@ -380,7 +333,6 @@ describe('cuerpos que se envían', () => {
 
     expect(cuerpo).not.toHaveProperty('nivel');
     expect(cuerpo).toMatchObject({
-      codigo: 'EH-TAR-26',
       esPrincipal: true,
       bloquesPorDia: 4,
     });
@@ -388,7 +340,6 @@ describe('cuerpos que se envían', () => {
 
   test('la vista previa acepta el formulario completo con los mismos datos que crear', () => {
     expect(aSolicitudVistaPrevia(valida)).toEqual({
-      codigo: 'EH-TAR-26',
       descripcion: 'Secundaria · talleres de tarde',
       nivel: 'SECUNDARIA',
       esPrincipal: false,
@@ -412,7 +363,6 @@ describe('cuerpos que se envían', () => {
         ],
       }),
     ).toEqual({
-      codigo: null,
       descripcion: null,
       nivel: null,
       esPrincipal: false,
@@ -508,11 +458,10 @@ describe('cuerpos que se envían', () => {
       );
     });
 
-    test('el código, el nivel y los días no hacen falta para calcular', () => {
+    test('el nivel y los días no hacen falta para calcular', () => {
       expect(
         puedeCalcularseLaJornada({
           ...solicitud,
-          codigo: null,
           nivel: null,
           diasLectivos: [],
         }),
@@ -529,7 +478,6 @@ describe('cuerpos que se envían', () => {
 
 describe('valoresDeEstructura: abrir el modal en modo edición', () => {
   const guardada = {
-    codigo: 'EH-PRI-26',
     descripcion: null,
     nivel: 'PRIMARIA' as const,
     esPrincipal: true,
@@ -545,7 +493,6 @@ describe('valoresDeEstructura: abrir el modal en modo edición', () => {
 
   test('escribe todo como lo escribiría el usuario: textos, días en orden y recesos en orden', () => {
     expect(valoresDeEstructura(guardada)).toEqual({
-      codigo: 'EH-PRI-26',
       descripcion: '',
       nivel: 'PRIMARIA',
       esPrincipal: true,
@@ -565,7 +512,6 @@ describe('valoresDeEstructura: abrir el modal en modo edición', () => {
 
     expect(estructuraSchema.safeParse(valores).success).toBe(true);
     expect(aSolicitudEdicion(valores)).toEqual({
-      codigo: 'EH-PRI-26',
       descripcion: null,
       esPrincipal: true,
       diasLectivos: ['LUN', 'MAR', 'VIE'],

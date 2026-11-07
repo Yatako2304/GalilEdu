@@ -89,7 +89,6 @@ const detalle = (codigo: string): DetalleEstructuraHoraria => ({
 });
 
 const solicitud: SolicitudEstructuraHoraria = {
-  codigo: 'EH-TAR-26',
   descripcion: 'Secundaria · talleres de tarde',
   nivel: 'SECUNDARIA',
   esPrincipal: false,
@@ -248,7 +247,6 @@ const vistaPrevia = (salida: string): VistaPreviaJornada => ({
 });
 
 const formulario = (bloquesPorDia: number | null): SolicitudVistaPrevia => ({
-  codigo: 'EH-TAR-26',
   descripcion: null,
   nivel: 'SECUNDARIA',
   esPrincipal: false,
@@ -408,7 +406,6 @@ const Acciones = ({
           editar.mutate({
             id: 'estructura-EH-PRI-26',
             data: {
-              codigo: 'EH-PRI-26',
               descripcion: null,
               diasLectivos: ['LUN'],
               horaEntrada: '07:45',
@@ -560,7 +557,7 @@ test('editar manda el cuerpo sin nivel a la estructura elegida y recarga su deta
 
   await waitFor(() => expect(onEditada).toHaveBeenCalledTimes(1));
   expect(cuerpo).not.toHaveProperty('nivel');
-  expect(cuerpo).toMatchObject({ codigo: 'EH-PRI-26', bloquesPorDia: 8 });
+  expect(cuerpo).toMatchObject({ bloquesPorDia: 8 });
   await waitFor(() => expect(pedidos.detalle).toBeGreaterThan(detallesAntes));
 });
 

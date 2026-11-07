@@ -41,7 +41,7 @@ public class OcupacionHorariosSql implements OcupacionHorarios {
 				SELECT hs.seccion_id, hs.estructura_horaria_id, hb.dia, hb.numero_bloque, ds.docente_id,
 				       hb.ambiente_id, g.numero || '.° ' || s.nombre AS seccion, c.nombre AS curso,
 				       concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno) AS docente,
-				       a.nombre AS ambiente
+				       a.codigo AS ambiente
 				FROM horarios.horario_bloque hb
 				JOIN horarios.horario_seccion hs ON hs.id = hb.horario_seccion_id
 				JOIN configuracion.seccion s ON s.id = hs.seccion_id

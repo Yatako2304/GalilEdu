@@ -176,71 +176,6 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 
 	// ---------- 1. Texto: código y descripción ----------
 
-	static Stream<Arguments> codigosSinContenidoUtil() {
-		return Stream.of(
-				Arguments.of("vacío", ""),
-				Arguments.of("solo espacios", "     "),
-				Arguments.of("tabulaciones", "\t\t"),
-				Arguments.of("saltos de línea", "\n\n"),
-				Arguments.of("retorno y salto", "\r\n"),
-				Arguments.of("mezcla de blancos", " \t\r\n "),
-				Arguments.of("controles al borde", "\u0001\u001B"),
-				Arguments.of("NUL solo", "\u0000"));
-	}
-
-	@ParameterizedTest(name = "{0}")
-	@MethodSource("codigosSinContenidoUtil")
-	void unCodigoSinContenidoUtilSeRechazaConSuMensajeSinEscribirNada(String nombre, String codigo) throws Exception {
-		// Respuesta real: 400 "Ingresa el código de la estructura."
-		MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto(codigo)));
-
-		assertThat(resultado.getResponse().getStatus()).isEqualTo(400);
-		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
-				.isEqualTo("Ingresa el código de la estructura.");
-	}
-
-	static Stream<Arguments> codigosDeSoloCaracteresInvisibles() {
-		return Stream.of(
-				Arguments.of("espacio de ancho cero U+200B", Character.toString(0x200B)),
-				Arguments.of("espacio duro U+00A0", Character.toString(0x00A0)),
-				Arguments.of("espacio em U+2003", Character.toString(0x2003)),
-				Arguments.of("marca de orden de bytes U+FEFF", Character.toString(0xFEFF)));
-	}
-
-	/**
-	 * Corregido: trim() no recorta estos caracteres, pero el código solo admite letras A-Z, números y guion. Respuesta
-	 * real: 400 "El código solo admite letras, números y guion."
-	 */
-	@ParameterizedTest(name = "{0}")
-	@MethodSource("codigosDeSoloCaracteresInvisibles")
-	void unCodigoDeSoloCaracteresInvisiblesSeRechazaSinEscribirNada(String nombre, String codigo) throws Exception {
-		MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto(codigo)));
-
-		assertThat(resultado.getResponse().getStatus()).isEqualTo(400);
-		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message")).isEqualTo(CODIGO_INVALIDO);
-	}
-
-	static Stream<Arguments> largosDelCodigo() {
-		return Stream.of(
-				Arguments.of("20 caracteres", "A".repeat(20), true),
-				Arguments.of("20 caracteres con espacios al borde", "  " + "A".repeat(20) + "  ", true),
-				Arguments.of("21 caracteres", "A".repeat(21), false),
-				Arguments.of("100 000 caracteres", "A".repeat(100_000), false));
-	}
-
-	@ParameterizedTest(name = "{0}")
-	@MethodSource("largosDelCodigo")
-	void elCodigoEnElLimiteSeAceptaYUnoMasSeRechaza(String nombre, String codigo, boolean seAcepta) throws Exception {
-		if (seAcepta) {
-			String id = crearValida("codigo", texto(codigo));
-			assertThat(leerDelDetalle(id, "$.codigo")).isEqualTo("A".repeat(20));
-		} else {
-			MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto(codigo)));
-			assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
-					.isEqualTo("El código admite hasta 20 caracteres.");
-		}
-	}
-
 	static Stream<Arguments> largosDeLaDescripcion() {
 		return Stream.of(
 				Arguments.of("100 caracteres", "D".repeat(100), true),
@@ -272,91 +207,94 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		}
 	}
 
-	static Stream<Arguments> codigosEspecialesAceptados() {
+	// ---------- 1b. El código lo genera el backend: lo que llegue en la solicitud se ignora ----------
+
+	static Stream<Arguments> codigosEnviadosPorUnClienteAntiguo() {
 		return Stream.of(
-				Arguments.of("mayúsculas y minúsculas mezcladas", "eH-pRi-1", "EH-PRI-1"),
-				Arguments.of("espacios al borde", " eh-1 ", "EH-1"),
-				Arguments.of("los códigos de Figma en minúsculas", "eh-tar-26", "EH-TAR-26"),
-				Arguments.of("diez eszett, que valen 20 al pasar a SS", "ß".repeat(10), "SS".repeat(10)));
+				Arguments.of("válido", "EH-MIO"),
+				Arguments.of("vacío", ""),
+				Arguments.of("solo espacios", "     "),
+				Arguments.of("NUL", "A\u0000B"),
+				Arguments.of("control", "A\u0001B"),
+				Arguments.of("invisible U+200B", Character.toString(0x200B)),
+				Arguments.of("fuera de la regla (ñ y tildes)", "ñandú-áé"),
+				Arguments.of("emoji", "😀"),
+				Arguments.of("ruta relativa", "../x"),
+				Arguments.of("21 caracteres", "A".repeat(21)),
+				Arguments.of("100 000 caracteres", "A".repeat(100_000)),
+				Arguments.of("inyección SQL", "'; DROP TABLE configuracion.receso; --"),
+				Arguments.of("inyección de plantilla", "${jndi:ldap://x}"));
 	}
 
+	/**
+	 * El código ya no se pide al crear: lo genera el backend (EH-PRI-27). Un cliente antiguo que todavía lo mande,
+	 * aunque
+	 * sea hostil, no recibe error ni consigue fijar el código: se ignora y las tablas siguen intactas.
+	 */
 	@ParameterizedTest(name = "{0}")
-	@MethodSource("codigosEspecialesAceptados")
-	void losCodigosConLetrasNumerosYGuionSeGuardanNormalizados(String nombre, String codigo, String esperado)
-			throws Exception {
+	@MethodSource("codigosEnviadosPorUnClienteAntiguo")
+	void elCodigoQueLlegaAlCrearSeIgnoraYElBackendGeneraElSuyo(String nombre, String codigo) throws Exception {
 		String id = crearValida("codigo", texto(codigo));
 
-		assertThat(leerDelDetalle(id, "$.codigo")).isEqualTo(esperado);
-	}
-
-	static Stream<Arguments> codigosFueraDeLaRegla() {
-		return Stream.of(
-				Arguments.of("ñ y tildes", "ñandú-áé"),
-				Arguments.of("emoji", "\uD83D\uDE00"),
-				Arguments.of("diez emojis (20 unidades)", "\uD83D\uDE00".repeat(10)),
-				Arguments.of("cirílico", "\u0435\u043D-1"),
-				Arguments.of("griego", "\u03B1\u03B2\u03B3-1"),
-				Arguments.of("ancho completo", "\uFF25\uFF28-\uFF11"),
-				Arguments.of("ruta relativa", "../x"),
-				Arguments.of("espacio interno", "EH 1"),
-				Arguments.of("barras", "a/b\\c"),
-				Arguments.of("guion bajo y punto", "EH_1.2"),
-				Arguments.of("signos", "EH-1!"));
-	}
-
-	/**
-	 * Corregido: todo lo que no sea A-Z, número o guion (tras normalizar) se rechaza. Cubre cirílico, invisibles y
-	 * rutas.
-	 */
-	@ParameterizedTest(name = "{0}")
-	@MethodSource("codigosFueraDeLaRegla")
-	void losCodigosConOtrosCaracteresSeRechazanConSuMensaje(String nombre, String codigo) throws Exception {
-		MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto(codigo)));
-
-		assertThat(resultado.getResponse().getStatus()).isEqualTo(400);
-		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message")).isEqualTo(CODIGO_INVALIDO);
-	}
-
-	static Stream<Arguments> codigosQueSeAlarganAlNormalizar() {
-		return Stream.of(
-				Arguments.of("once eszett (22 al pasar a SS)", "ß".repeat(11)),
-				Arguments.of("once emojis (22 unidades)", "\uD83D\uDE00".repeat(11)));
-	}
-
-	/**
-	 * HUECO menor: el largo se mide ya normalizado y en unidades UTF-16, así que 11 caracteres escritos pueden
-	 * rechazarse por largo. Es más estricto que la columna, no peligroso.
-	 */
-	@ParameterizedTest(name = "{0}")
-	@MethodSource("codigosQueSeAlarganAlNormalizar")
-	void losCodigosQueSeAlarganAlNormalizarSeRechazanPorLargo(String nombre, String codigo) throws Exception {
-		MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto(codigo)));
-
-		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
-				.isEqualTo("El código admite hasta 20 caracteres.");
+		assertThat(leerDelDetalle(id, "$.codigo")).isEqualTo("EH-PRI-27");
+		assertThat(existeLaTabla(jdbc, "configuracion.receso")).isTrue();
 	}
 
 	@Test
-	void elMismoCodigoConYSinEspaciosYEnOtraCapitalizacionEsDuplicado() throws Exception {
-		crearValida("codigo", texto("eh-1"));
+	void unaClaveDuplicadaDeCodigoTambienSeIgnora() throws Exception {
+		String conDuplicadas = "{\"codigo\":\"EH-PRIMERO\",\"codigo\":\"EH-SEGUNDO\"," + cuerpoDeCrear().substring(1);
 
-		for (String variante : new String[]{" EH-1 ", "Eh-1", "\tEH-1\n", "eH-1  "}) {
-			MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto(variante)));
+		String id = exigeCreada(crear(conDuplicadas));
 
-			assertThat(resultado.getResponse().getStatus()).as(variante).isEqualTo(409);
-			assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
-					.isEqualTo("Ya existe una estructura con el código EH-1 en este año.");
-		}
+		assertThat(leerDelDetalle(id, "$.codigo")).isEqualTo("EH-PRI-27");
+	}
+
+	/**
+	 * HUECO: las claves duplicadas se aceptan y gana la última aparición. Propuesta: activar
+	 * STRICT_DUPLICATE_DETECTION en Jackson (configuración compartida).
+	 */
+	@Test
+	void lasClavesDuplicadasSeAceptanYGanaLaUltima() throws Exception {
+		String conDuplicadas = "{\"descripcion\":\"Primera\",\"descripcion\":\"Ultima\","
+				+ cuerpoDeCrear().substring(1);
+
+		String id = exigeCreada(crear(conDuplicadas));
+
+		assertThat(leerDelDetalle(id, "$.descripcion")).isEqualTo("Prueba");
+	}
+
+	/**
+	 * HUECO: no hay límite de tamaño del cuerpo JSON. Una descripción de 10 MB llega hasta el dominio y se rechaza por
+	 * largo (400), pero antes se leyó entera en memoria. Propuesta: limitar el tamaño de la petición en el servidor.
+	 */
+	@Test
+	void unCuerpoDe10MbSeRechazaPorElLargoDeLaDescripcionSinEscribirNada() throws Exception {
+		MvcResult resultado = exigeCrearRechazadoSinEscribir(
+				cuerpoDeCrear("descripcion", texto("D".repeat(10_000_000))));
+
+		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
+				.isEqualTo("La descripción admite hasta 100 caracteres.");
+	}
+
+	@Test
+	void editarConOtroCodigoLoIgnoraYConservaElQueTenia() throws Exception {
+		String id = crearValida();
+		String codigoOriginal = leerDelDetalle(id, "$.codigo");
+
+		MvcResult resultado = editar(id,
+				cuerpoDeEditar("codigo", texto("EH-OTRO"), "descripcion", texto("Editada"), "esPrincipal", null));
+
+		assertThat(resultado.getResponse().getStatus()).as(cuerpoDe(resultado)).isEqualTo(200);
+		assertThat(leerDelDetalle(id, "$.codigo")).isEqualTo(codigoOriginal);
+		assertThat(leerDelDetalle(id, "$.descripcion")).isEqualTo("Editada");
 	}
 
 	static Stream<Arguments> textosConNul() {
 		return Stream.of(
-				Arguments.of("NUL en el código", "codigo", "A\u0000B"),
 				Arguments.of("NUL en la descripción", "descripcion", "x\u0000y"));
 	}
 
 	/**
-	 * Corregido: antes el NUL en el código daba 500 y en la descripción un 409 engañoso ("Otra persona acaba de
 	 * cambiar…"). Respuesta real: 400 "El texto contiene caracteres no válidos." en ambos.
 	 */
 	@ParameterizedTest(name = "{0}")
@@ -383,7 +321,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 
 	static Stream<Arguments> controlesQueNoSonNul() {
 		List<Arguments> casos = new ArrayList<>();
-		for (String campo : new String[]{"codigo", "descripcion"}) {
+		for (String campo : new String[]{"descripcion"}) {
 			casos.add(Arguments.of("\\u0001 dentro de " + campo, campo, "A\u0001B"));
 			casos.add(Arguments.of("escape \\u001B dentro de " + campo, campo, "A\u001BB"));
 			casos.add(Arguments.of("CRLF dentro de " + campo, campo, "A\r\nB"));
@@ -418,19 +356,6 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(existeLaTabla(jdbc, "configuracion.estructura_horaria")).isTrue();
 		assertThat(jdbc.sql("SELECT count(*) FROM configuracion.estructura_horaria").query(Integer.class).single())
 				.isEqualTo(3);
-	}
-
-	/** Como código, ninguna cadena de inyección cumple la regla: se rechazan por largo o por caracteres no válidos. */
-	@ParameterizedTest(name = "{0}")
-	@MethodSource("textosDeInyeccion")
-	void lasCadenasDeInyeccionComoCodigoSeRechazanSinEscribirNadaYLasTablasSiguen(String texto) throws Exception {
-		String normalizado = texto.trim().toUpperCase(Locale.ROOT);
-		String esperado = normalizado.length() > 20 ? "El código admite hasta 20 caracteres." : CODIGO_INVALIDO;
-
-		MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto(texto)));
-
-		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message")).isEqualTo(esperado);
-		assertThat(existeLaTabla(jdbc, "configuracion.receso")).isTrue();
 	}
 
 	// ---------- 2. Días lectivos ----------
@@ -673,7 +598,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 			MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("horaEntrada", literal));
 
 			assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
-					.as(String.valueOf(literal)).isEqualTo("Ingresa la hora de entrada.");
+					.as(String.valueOf(literal)).isEqualTo("Ingresa la hora de inicio.");
 		}
 	}
 
@@ -977,31 +902,6 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message")).isEqualTo(MENSAJE_FORMATO);
 	}
 
-	/**
-	 * HUECO: las claves duplicadas se aceptan y gana la última aparición. Respuesta real: 201 con el código de la
-	 * última clave. Propuesta: activar STRICT_DUPLICATE_DETECTION en Jackson (configuración compartida).
-	 */
-	@Test
-	void lasClavesDuplicadasSeAceptanYGanaLaUltima() throws Exception {
-		String conDuplicadas = "{\"codigo\":\"EH-PRIMERO\",\"codigo\":\"EH-SEGUNDO\"," + cuerpoDeCrear().substring(1);
-
-		String id = exigeCreada(crear(conDuplicadas));
-
-		assertThat(leerDelDetalle(id, "$.codigo")).isEqualTo("EH-HOSTIL");
-	}
-
-	/**
-	 * HUECO: no hay límite de tamaño del cuerpo JSON. Un código de 10 MB llega hasta el dominio y se rechaza por largo
-	 * (400), pero antes se leyó entero en memoria. Propuesta: limitar el tamaño de la petición en el servidor.
-	 */
-	@Test
-	void unCuerpoDe10MbSeRechazaPorElLargoDelCodigoSinEscribirNada() throws Exception {
-		MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto("A".repeat(10_000_000))));
-
-		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message"))
-				.isEqualTo("El código admite hasta 20 caracteres.");
-	}
-
 	static Stream<Arguments> tiposDeContenidoIncorrectos() {
 		return Stream.of(
 				Arguments.of("text/plain", MediaType.TEXT_PLAIN),
@@ -1285,15 +1185,6 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 
 		assertThat(resultado.getResponse().getStatus()).isEqualTo(200);
 		assertThat((List<?>) JsonPath.read(cuerpoDe(resultado), "$.advertencias")).isEmpty();
-	}
-
-	@Test
-	void crearDosVecesElMismoCodigoConDistintaCapitalizacionDa409LaSegunda() throws Exception {
-		crearValida("codigo", texto("Eh-Dos"));
-
-		MvcResult resultado = exigeCrearRechazadoSinEscribir(cuerpoDeCrear("codigo", texto("eH-dOS")));
-
-		assertThat(resultado.getResponse().getStatus()).isEqualTo(409);
 	}
 
 	@Test

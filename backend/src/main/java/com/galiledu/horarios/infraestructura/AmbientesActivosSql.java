@@ -23,23 +23,25 @@ public class AmbientesActivosSql implements AmbientesActivos {
 	@Override
 	public List<AmbienteDisponible> activos() {
 		return jdbc.sql("""
-				SELECT id, nombre, tipo, aforo_maximo
+				SELECT id, nombre, codigo, tipo, aforo_maximo
 				FROM configuracion.ambiente
 				WHERE estado = 'ACTIVO'
 				ORDER BY nombre""")
 				.query((r, fila) -> new AmbienteDisponible(r.getObject("id", UUID.class), r.getString("nombre"),
-						r.getString("tipo"), r.getInt("aforo_maximo")))
+						r.getString("codigo"), r.getString("tipo"), r.getInt("aforo_maximo")))
 				.list();
 	}
 
 	@Override
-	public Map<UUID, String> nombresPorId(Collection<UUID> ambienteIds) {
-		Map<UUID, String> nombres = new HashMap<>();
+	public Map<UUID, DatosAmbiente> datosPorId(Collection<UUID> ambienteIds) {
+		Map<UUID, DatosAmbiente> datos = new HashMap<>();
 		if (ambienteIds.isEmpty()) {
-			return nombres;
+			return datos;
 		}
-		jdbc.sql("SELECT id, nombre FROM configuracion.ambiente WHERE id IN (:ids)").param("ids", ambienteIds)
-				.query((r, fila) -> nombres.put(r.getObject("id", UUID.class), r.getString("nombre"))).list();
-		return nombres;
+		jdbc.sql("SELECT id, nombre, codigo FROM configuracion.ambiente WHERE id IN (:ids)")
+				.param("ids", ambienteIds).query((r, fila) -> datos.put(r.getObject("id", UUID.class),
+						new DatosAmbiente(r.getString("nombre"), r.getString("codigo"))))
+				.list();
+		return datos;
 	}
 }

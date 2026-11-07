@@ -144,7 +144,7 @@ export const MatrizCoordinador = ({
                             teacher: celda.docente?.nombre,
                           },
                         ]}
-                        room={celda.ambiente.nombre}
+                        room={celda.ambiente.codigo}
                         conflict={
                           celda.cruces.length > 0
                             ? celda.cruces.map((c) => c.mensaje).join(' ')

@@ -156,11 +156,13 @@ describe('Editar estructura horaria', () => {
         name: 'Editar estructura horaria',
       }),
     ).toBeInTheDocument();
-    expect(within(dialogo).getByLabelText('Código *')).toHaveValue('EH-PRI-26');
+    // El código lo generó el backend: se ve como texto, no como campo.
+    expect(within(dialogo).getByText('EH-PRI-26')).toBeInTheDocument();
+    expect(within(dialogo).queryByLabelText(/Código/)).not.toBeInTheDocument();
     expect(within(dialogo).getByLabelText('Descripción')).toHaveValue(
       'Primaria · jornada de mañana',
     );
-    expect(within(dialogo).getByLabelText('Hora de entrada *')).toHaveValue(
+    expect(within(dialogo).getByLabelText('Hora de inicio *')).toHaveValue(
       '07:45',
     );
     expect(within(dialogo).getByLabelText('Bloques por día *')).toHaveValue(
@@ -252,7 +254,6 @@ describe('Editar estructura horaria', () => {
     expect(registro.ediciones).toHaveLength(1);
     expect(registro.ediciones[0].id).toBe('estructura-pri');
     expect(registro.ediciones[0].cuerpo).toEqual({
-      codigo: 'EH-PRI-26',
       descripcion: 'Primaria · jornada de mañana',
       esPrincipal: true,
       diasLectivos: ['LUN', 'MAR', 'MIE', 'JUE', 'VIE'],
@@ -334,62 +335,6 @@ describe('Editar estructura horaria', () => {
     expect(
       screen.queryByText('Estructura actualizada'),
     ).not.toBeInTheDocument();
-  });
-
-  describe('el aviso de código repetido de la vista previa', () => {
-    /** La vista previa no sabe que se edita: responde "ya existe" con el código que reciba. */
-    const vistaPreviaQueRepiteElCodigo = () => {
-      const recibidos: string[] = [];
-      server.use(
-        http.post(
-          `${API}/configuracion/anios-escolares/anio-2026/estructuras-horarias/vista-previa`,
-          async ({ request }) => {
-            const cuerpo = (await request.json()) as { codigo: string };
-            recibidos.push(cuerpo.codigo);
-            return HttpResponse.json({
-              valida: false,
-              errores: [
-                `Ya existe una estructura con el código ${cuerpo.codigo} en este año.`,
-              ],
-              jornada: null,
-            });
-          },
-        ),
-      );
-      return recibidos;
-    };
-
-    test('no se muestra mientras el código sea el de la propia estructura', async () => {
-      await mostrar();
-      // Después de `mostrar`: el último manejador registrado es el que responde.
-      const recibidos = vistaPreviaQueRepiteElCodigo();
-      await abrirEditar();
-
-      await waitFor(() => expect(recibidos).toContain('EH-PRI-26'), ESPERA);
-      await new Promise((resolver) => setTimeout(resolver, 300));
-
-      expect(
-        screen.queryByText(/Ya existe una estructura con el código/),
-      ).not.toBeInTheDocument();
-    });
-
-    test('sí se muestra si se cambia por el código de otra estructura', async () => {
-      await mostrar();
-      vistaPreviaQueRepiteElCodigo();
-      const dialogo = await abrirEditar();
-      const codigo = within(dialogo).getByLabelText('Código *');
-
-      await userEvent.clear(codigo);
-      await userEvent.type(codigo, 'eh-sec-26');
-
-      expect(
-        await within(dialogo).findByText(
-          'Ya existe una estructura con el código EH-SEC-26 en este año.',
-          undefined,
-          ESPERA,
-        ),
-      ).toBeInTheDocument();
-    });
   });
 
   test('los errores en vivo siguen funcionando al editar', async () => {
