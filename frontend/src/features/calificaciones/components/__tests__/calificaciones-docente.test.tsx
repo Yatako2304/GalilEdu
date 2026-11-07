@@ -5,7 +5,14 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CalificacionesDocente } from '../calificaciones-docente';
 
 const crearItem = vi.fn();
-const { filasVacias } = vi.hoisted(() => ({ filasVacias: [] }));
+const editarItem = vi.fn();
+const { filasVacias, escenario } = vi.hoisted(() => ({
+  filasVacias: [],
+  escenario: {
+    reglaNota: 'PROMEDIO_PONDERADO',
+    pesoPorcentaje: 50 as number | null,
+  },
+}));
 
 vi.mock('../../api/calificaciones', () => ({
   useCursosDocente: () => ({
@@ -21,8 +28,10 @@ vi.mock('../../api/calificaciones', () => ({
         gradoCodigo: 'SEC-1',
         grado: '1.° de secundaria',
         seccion: 'A',
-        escala: 'VIGESIMAL',
-        reglaNota: 'PROMEDIO_PONDERADO',
+        escala: escenario.reglaNota.startsWith('PROMEDIO')
+          ? 'VIGESIMAL'
+          : 'CUALITATIVA',
+        reglaNota: escenario.reglaNota,
         consolidacion: 'PROMEDIO_PERIODOS',
         periodos: [
           {
@@ -58,7 +67,7 @@ vi.mock('../../api/calificaciones', () => ({
           {
             competenciaId: 'competencia-1',
             competencia: 'Resuelve problemas de cantidad',
-            pesoPorcentaje: 50,
+            pesoPorcentaje: escenario.pesoPorcentaje,
           },
         ],
       },
@@ -70,7 +79,7 @@ vi.mock('../../api/calificaciones', () => ({
     isSuccess: false,
   }),
   useCrearItem: () => ({ mutateAsync: crearItem, isPending: false }),
-  useEditarItem: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useEditarItem: () => ({ mutateAsync: editarItem, isPending: false }),
   useCalificacionesItem: () => ({ data: filasVacias, isLoading: false }),
   useGuardarCalificaciones: () => ({ mutateAsync: vi.fn(), isPending: false }),
   useGuardarEvidencia: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -103,7 +112,113 @@ vi.mock('../../api/calificaciones', () => ({
 }));
 
 describe('Calificaciones del docente', () => {
-  beforeEach(() => crearItem.mockReset().mockResolvedValue({}));
+  beforeEach(() => {
+    escenario.reglaNota = 'PROMEDIO_PONDERADO';
+    escenario.pesoPorcentaje = 50;
+    crearItem.mockReset().mockResolvedValue({});
+    editarItem.mockReset().mockResolvedValue({});
+  });
+
+  it.each([
+    ['PROMEDIO_SIMPLE', 100],
+    ['PROMEDIO_SIMPLE', null],
+    ['NIVEL_MAS_FRECUENTE', null],
+    ['ULTIMO_NIVEL', 100],
+  ])(
+    'permite agregar ítems sin pesos con %s y peso anterior %s',
+    async (regla, peso) => {
+      escenario.reglaNota = regla as string;
+      escenario.pesoPorcentaje = peso as number | null;
+      const usuario = userEvent.setup();
+      render(<CalificacionesDocente />);
+      await usuario.click(
+        screen.getByRole('tab', { name: 'Ítems por competencia' }),
+      );
+      expect(
+        screen.queryByRole('columnheader', { name: 'Peso en %' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Pesos (completos|incompletos|excedidos)/),
+      ).not.toBeInTheDocument();
+      await usuario.click(
+        screen.getByRole('button', { name: 'Agregar ítem de evaluación' }),
+      );
+      expect(screen.queryByLabelText('Peso en % *')).not.toBeInTheDocument();
+      await usuario.type(
+        screen.getByLabelText('Nombre del ítem de calificación *'),
+        'Examen sin pesos',
+      );
+      await usuario.type(
+        screen.getByLabelText('Descripción *'),
+        'Resuelve situaciones de cantidad.',
+      );
+      await usuario.click(screen.getByRole('button', { name: 'Agregar ítem' }));
+      expect(crearItem).toHaveBeenCalledWith({
+        seleccion: {
+          planCursoId: 'plan-1',
+          seccionId: 'seccion-1',
+          periodoId: 'periodo-4',
+        },
+        datos: {
+          nombre: 'Examen sin pesos',
+          descripcion: 'Resuelve situaciones de cantidad.',
+          tipo: 'PRACTICA',
+          competencias: [{ competenciaId: 'competencia-1' }],
+        },
+      });
+    },
+  );
+
+  it('permite editar un ítem de promedio simple sin enviar porcentajes anteriores', async () => {
+    escenario.reglaNota = 'PROMEDIO_SIMPLE';
+    escenario.pesoPorcentaje = 100;
+    const usuario = userEvent.setup();
+    render(<CalificacionesDocente />);
+    await usuario.click(
+      screen.getByRole('button', { name: /Acciones de Práctica 1/ }),
+    );
+    await usuario.click(screen.getByRole('menuitem', { name: /Editar/ }));
+    expect(screen.queryByLabelText('Peso en % *')).not.toBeInTheDocument();
+    await usuario.click(
+      screen.getByRole('button', { name: 'Guardar cambios' }),
+    );
+    expect(editarItem).toHaveBeenCalledWith({
+      id: 'item-1',
+      datos: {
+        nombre: 'Práctica 1',
+        descripcion: 'Operaciones con números racionales',
+        tipo: 'PRACTICA',
+        competencias: [{ competenciaId: 'competencia-1' }],
+      },
+    });
+  });
+
+  it('mantiene el bloqueo al 100 % y los indicadores en promedio ponderado', async () => {
+    escenario.pesoPorcentaje = 100;
+    const usuario = userEvent.setup();
+    render(<CalificacionesDocente />);
+    expect(
+      screen.getByRole('button', { name: 'Agregar ítem de evaluación' }),
+    ).toBeDisabled();
+    await usuario.click(
+      screen.getByRole('tab', { name: 'Ítems por competencia' }),
+    );
+    expect(
+      screen.getByRole('columnheader', { name: 'Peso en %' }),
+    ).toBeVisible();
+    expect(screen.getByText('Pesos completos')).toBeVisible();
+  });
+
+  it('mantiene el indicador rojo de pesos incompletos solo en promedio ponderado', async () => {
+    const usuario = userEvent.setup();
+    render(<CalificacionesDocente />);
+    await usuario.click(
+      screen.getByRole('tab', { name: 'Ítems por competencia' }),
+    );
+    expect(screen.getByText('Pesos incompletos')).toHaveClass(
+      'text-content-error',
+    );
+  });
 
   it('agrupa configuración y calificación bajo el primer botón y separa el consolidado', async () => {
     render(<CalificacionesDocente />);
@@ -207,9 +322,7 @@ describe('Calificaciones del docente', () => {
     ).toBeVisible();
     expect(within(tabla).getByText('Aprobado')).toBeVisible();
     expect(within(tabla).getAllByText('17/20')).toHaveLength(2);
-    expect(
-      screen.getByRole('button', { name: 'Exportar consolidado' }),
-    ).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Descargar PDF' })).toBeEnabled();
   });
 
   it('permite volver a calificar alumnos después de abrir el consolidado', async () => {

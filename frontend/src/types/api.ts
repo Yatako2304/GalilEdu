@@ -1518,7 +1518,7 @@ export type CompetenciaOpcion = { id: string; nombre: string };
 export type CompetenciaItem = {
   competenciaId: string;
   competencia: string;
-  pesoPorcentaje: number;
+  pesoPorcentaje: number | null;
 };
 
 export type TipoItemEvaluacion =
@@ -1546,7 +1546,7 @@ export type SolicitudItemEvaluacion = {
   tipo: TipoItemEvaluacion;
   competencias: {
     competenciaId: string;
-    pesoPorcentaje: number;
+    pesoPorcentaje?: number | null;
   }[];
 };
 
@@ -1573,7 +1573,13 @@ export type TipoReporteCalificaciones = 'ITEM' | 'COMPETENCIA' | 'PERIODO';
 export type ReporteCalificaciones = {
   titulo: string;
   detalle: string;
-  columnas: { clave: string; titulo: string }[];
+  columnas: {
+    clave: string;
+    titulo: string;
+    competenciaId?: string | null;
+    competencia?: string | null;
+    promedio?: boolean;
+  }[];
   filas: {
     matriculaId: string;
     estudiante: string;

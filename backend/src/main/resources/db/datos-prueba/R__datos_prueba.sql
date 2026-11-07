@@ -472,3 +472,115 @@ SELECT '50000000-0000-0000-0000-000000000003', '20000000-0000-0000-0000-00000000
 FROM configuracion.seccion s
 WHERE s.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND s.grado_codigo = 'SEC-5' AND s.nombre = 'A'
 ON CONFLICT DO NOTHING;
+
+-- ---------------------------------------------------------------------
+-- HU-57, HU-59 y HU-62 · Demo de María Fernández: tres alumnos en 1.° A,
+-- Álgebra, Aritmética y Geometría. Datos ficticios, sin sobrescribir notas
+-- ni asignaciones existentes. Los UUID coinciden con la demo local previa.
+-- ---------------------------------------------------------------------
+DO $$
+DECLARE
+    anio_demo UUID;
+    docente_demo UUID := '10000000-0000-0000-0000-000000000004';
+    seccion_demo UUID;
+    periodo_demo UUID;
+    regla_demo TEXT;
+    capacidad_demo INTEGER;
+    ocupados_demo INTEGER;
+    correlativo_demo INTEGER;
+    persona_demo UUID;
+    estudiante_demo UUID;
+    item_demo UUID;
+    numero_demo INTEGER;
+    alumno_demo RECORD;
+    curso_demo RECORD;
+BEGIN
+    SELECT ae.id, ae.regla_nota INTO anio_demo, regla_demo
+    FROM configuracion.anio_escolar ae WHERE ae.anio = 2026 AND ae.estado = 'ACTIVO';
+    IF anio_demo IS NULL THEN RETURN; END IF;
+    SELECT s.id, s.capacidad_maxima INTO seccion_demo, capacidad_demo
+    FROM configuracion.seccion s
+    WHERE s.anio_escolar_id = anio_demo AND s.grado_codigo = 'SEC-1' AND s.nombre = 'A'
+    FOR UPDATE;
+    SELECT p.id INTO periodo_demo FROM configuracion.periodo_academico p
+    WHERE p.anio_escolar_id = anio_demo AND p.numero = 4;
+    IF seccion_demo IS NULL OR periodo_demo IS NULL THEN RETURN; END IF;
+    SELECT count(*) INTO ocupados_demo FROM matricula.matricula m
+    WHERE m.seccion_id = seccion_demo AND m.estado NOT IN ('RETIRADO', 'ANULADA');
+
+    FOR alumno_demo IN SELECT * FROM (VALUES
+        (1, '99006101', 'García', 'López', 'Ana Lucía', DATE '2013-04-10', 'FEMENINO'),
+        (2, '99006102', 'Quispe', 'Mendoza', 'Diego José', DATE '2013-08-22', 'MASCULINO'),
+        (3, '99006103', 'Torres', 'Vargas', 'Camila Sofía', DATE '2013-02-16', 'FEMENINO')
+    ) AS datos(numero, documento, paterno, materno, nombres, nacimiento, sexo)
+    LOOP
+        persona_demo := md5('demo-calificaciones-maria-persona-' || alumno_demo.numero)::uuid;
+        estudiante_demo := md5('demo-calificaciones-maria-estudiante-' || alumno_demo.numero)::uuid;
+        INSERT INTO personas.persona
+            (id, tipo_documento, numero_documento, apellido_paterno, apellido_materno, nombres,
+             fecha_nacimiento, nacionalidad, sexo, distrito, direccion)
+        VALUES (persona_demo, 'DNI', alumno_demo.documento, alumno_demo.paterno, alumno_demo.materno,
+                alumno_demo.nombres, alumno_demo.nacimiento, 'Peruana', alumno_demo.sexo,
+                'Lima', 'Dirección ficticia para pruebas')
+        ON CONFLICT DO NOTHING;
+        INSERT INTO estudiantes.estudiante
+            (id, persona_id, pais_nacimiento, departamento_nacimiento, provincia_nacimiento, distrito_nacimiento,
+             lengua_materna, anio_academico, grado_codigo, forma_ingreso, modo_salida, estado)
+        VALUES (estudiante_demo, persona_demo, 'Perú', 'Lima', 'Lima', 'Lima', 'Castellano', 2026, 'SEC-1',
+                'Edad normativa', 'SOLO', 'ACTIVO')
+        ON CONFLICT DO NOTHING;
+        IF NOT EXISTS (SELECT 1 FROM matricula.matricula m
+                       WHERE m.estudiante_id = estudiante_demo AND m.anio_escolar_id = anio_demo)
+           AND ocupados_demo < capacidad_demo THEN
+            INSERT INTO matricula.correlativo_matricula AS actual (anio, ultimo)
+            SELECT 2026, coalesce(max(split_part(m.codigo, '-', 3)::integer), 0) + 1
+            FROM matricula.matricula m WHERE m.codigo ~ '^MAT-2026-[0-9]+$'
+            ON CONFLICT (anio) DO UPDATE SET ultimo = greatest(actual.ultimo,
+                (SELECT coalesce(max(split_part(m.codigo, '-', 3)::integer), 0)
+                 FROM matricula.matricula m WHERE m.codigo ~ '^MAT-2026-[0-9]+$')) + 1
+            RETURNING ultimo INTO correlativo_demo;
+            INSERT INTO matricula.matricula
+                (id, estudiante_id, anio_escolar_id, grado_codigo, seccion_id, tipo_estudiante, estado,
+                 codigo, confirmado_en, creado_por)
+            VALUES (md5('demo-calificaciones-maria-matricula-' || alumno_demo.numero)::uuid,
+                    estudiante_demo, anio_demo, 'SEC-1', seccion_demo, 'NUEVO', 'MATRICULADO',
+                    'MAT-2026-' || lpad(correlativo_demo::text, 4, '0'), '2026-02-11 09:00-05',
+                    '10000000-0000-0000-0000-000000000002')
+            ON CONFLICT DO NOTHING;
+            ocupados_demo := ocupados_demo + 1;
+        END IF;
+    END LOOP;
+
+    FOR curso_demo IN SELECT pc.id, cu.nombre FROM academico.plan_curso pc
+        JOIN academico.curso cu ON cu.id = pc.curso_id
+        WHERE pc.anio_escolar_id = anio_demo AND pc.grado_codigo = 'SEC-1'
+          AND cu.nombre IN ('Álgebra', 'Aritmética', 'Geometría')
+    LOOP
+        INSERT INTO academico.docente_seccion (plan_curso_id, seccion_id, docente_id)
+        VALUES (curso_demo.id, seccion_demo, docente_demo) ON CONFLICT DO NOTHING;
+        IF NOT EXISTS (SELECT 1 FROM academico.docente_seccion ds WHERE ds.plan_curso_id = curso_demo.id
+                       AND ds.seccion_id = seccion_demo AND ds.docente_id = docente_demo) THEN CONTINUE; END IF;
+        -- Solo preparar ítems si el curso todavía no tiene ninguno en el IV bimestre.
+        IF NOT EXISTS (SELECT 1 FROM academico.item_evaluacion ie
+                       WHERE ie.plan_curso_id = curso_demo.id AND ie.seccion_id = seccion_demo
+                         AND ie.periodo_academico_id = periodo_demo) THEN
+            FOR numero_demo IN 1..2 LOOP
+                item_demo := md5('demo-calificaciones-maria-item-' || curso_demo.nombre || '-' || numero_demo)::uuid;
+                INSERT INTO academico.item_evaluacion
+                    (id, plan_curso_id, anio_escolar_id, grado_codigo, seccion_id, periodo_academico_id,
+                     nombre, descripcion, tipo, creado_por)
+                VALUES (item_demo, curso_demo.id, anio_demo, 'SEC-1', seccion_demo, periodo_demo,
+                        'Práctica de prueba ' || numero_demo,
+                        'Ítem ficticio para practicar el registro de calificaciones en ' || curso_demo.nombre || '.',
+                        'PRACTICA', docente_demo)
+                ON CONFLICT DO NOTHING;
+                INSERT INTO academico.item_competencia (item_evaluacion_id, plan_curso_id, competencia_id, peso_porcentaje)
+                SELECT item_demo, curso_demo.id, pc.competencia_id,
+                       CASE WHEN regla_demo = 'PROMEDIO_PONDERADO' THEN 50 ELSE NULL END
+                FROM academico.plan_competencia pc WHERE pc.plan_curso_id = curso_demo.id
+                ON CONFLICT DO NOTHING;
+            END LOOP;
+        END IF;
+    END LOOP;
+END $$;
+-- FIN DEMO CALIFICACIONES DOCENTE

@@ -92,7 +92,7 @@ class ServicioSeccionesIT extends PruebaIntegracion {
 		assertThat(primeroA.nombre()).isEqualTo("A");
 		assertThat(primeroA.tutor()).isEqualTo("María Fernández Ríos");
 		assertThat(primeroA.capacidadMaxima()).isEqualTo(30);
-		assertThat(primeroA.alumnosOcupanVacante()).isZero();
+		assertThat(primeroA.alumnosOcupanVacante()).isEqualTo(3);
 		assertThat(secciones.get(1).nombre()).isEqualTo("B");
 		assertThat(secciones.get(1).tutor()).isNull();
 		// 4.° A es la séptima (SEC-1 A y B, SEC-2 A y B, SEC-3 A y B, SEC-4 A): índice 6.
