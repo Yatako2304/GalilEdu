@@ -98,7 +98,11 @@ En las solicitudes de alta y edición, `competencias[].pesoPorcentaje` es obliga
 - Frontend: `frontend/src/features/calificaciones/` y la ruta `frontend/src/app/routes/app/docente/calificaciones.tsx`.
 - Pruebas: `backend/src/test/java/com/galiledu/academico/ServicioCalificacionesTests.java`, `ReporteCompetenciasTests.java`, `ArchivoReporteCalificacionesTests.java`, `CalificacionesIT.java` y `frontend/src/features/calificaciones/` (`components/__tests__/` y `api/__tests__/exportar-reporte.test.ts`). Las pruebas PDF verifican texto, escala cualitativa, ausencia de promedios, descarga y permisos, paginación por estudiantes y columnas; generan una muestra visual en `backend/target/reporte-pdf-demo.pdf` y su PNG.
 
-**Datos de prueba:** María Fernández (`U20260004`, contraseña común del repositorio) dicta Álgebra en 1.° A. Las pruebas de integración crean sus propios estudiantes, ítems y calificaciones dentro de una transacción para no alterar los conteos ni las secciones compartidas del año escolar.
+**Datos de prueba compartidos:** `backend/src/main/resources/db/datos-prueba/R__datos_prueba.sql` prepara a María Fernández (`U20260004`, contraseña común del repositorio) con **Álgebra, Aritmética y Geometría**, en **1.° A de secundaria de 2026**, y tres estudiantes ficticios matriculados: **Ana Lucía García López, Diego José Quispe Mendoza y Camila Sofía Torres Vargas**. Si un curso no tiene ítems en el IV bimestre, agrega dos prácticas con las competencias del plan: 50 % cada una en ponderado y peso nulo en las demás reglas. Las notas quedan disponibles para que el docente las registre.
+
+La carga es idempotente: reutiliza los identificadores de personas y estudiantes de la demo local anterior, respeta las matrículas existentes y actualiza el correlativo solo al crear una nueva. Conserva asignaciones de otros docentes, ítems editados y calificaciones guardadas. No cambia parámetros de años iniciados y respeta la capacidad de la sección. La preparación se realiza únicamente mientras 2026 está activo.
+
+`DatosPruebaDocenteIT` comprueba el acceso a los tres cursos y alumnos y que repetir el bloque no duplique datos ni sobrescriba una nota o ítem editado. `CalificacionesIT` utiliza 1.° B como escenario aislado dentro de su transacción. Los conteos del año 2026 ahora incluyen cinco alumnos matriculados: los dos anteriores y los tres de esta demo. Véase la [decisión de datos compartidos de María](../decisiones/2026-11-06-josezavaleta-datos-prueba-docente-maria.md).
 
 ## Fuera de alcance
 

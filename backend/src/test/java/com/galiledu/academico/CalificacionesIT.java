@@ -36,13 +36,17 @@ class CalificacionesIT extends PruebaIntegracion {
 				WHERE c.nombre = 'Álgebra' AND pc.grado_codigo = 'SEC-1'""").query(String.class).single();
 		seccion = jdbc.sql("""
 				SELECT id::text FROM configuracion.seccion
-				WHERE grado_codigo = 'SEC-1' AND nombre = 'A' AND anio_escolar_id =
+				WHERE grado_codigo = 'SEC-1' AND nombre = 'B' AND anio_escolar_id =
 				      '30000000-0000-0000-0000-000000002026'""").query(String.class).single();
 		periodo = jdbc.sql("""
 				SELECT id::text FROM configuracion.periodo_academico
 				WHERE anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND numero = 4""")
 				.query(String.class).single();
 		item = "80000000-0000-0000-0000-000000000001";
+		// La demo usa 1.° A; este escenario de API se aísla en 1.° B dentro de la transacción.
+		jdbc.sql(
+				"INSERT INTO academico.docente_seccion (plan_curso_id, seccion_id, docente_id) VALUES (?::uuid, ?::uuid, '10000000-0000-0000-0000-000000000004')")
+				.params(plan, seccion).update();
 		prepararEscenarioCalificaciones();
 	}
 
@@ -74,11 +78,11 @@ class CalificacionesIT extends PruebaIntegracion {
 				VALUES
 				    ('50000000-0000-0000-0000-000000000004', '20000000-0000-0000-0000-000000000004',
 				     '30000000-0000-0000-0000-000000002026', 'SEC-1', ?::uuid, 'CONTINUADOR',
-				     'MATRICULADO', 'MAT-2026-0003', '2026-02-11 09:00-05',
+				     'MATRICULADO', 'MAT-2026-9104', '2026-02-11 09:00-05',
 				     '10000000-0000-0000-0000-000000000002'),
 				    ('50000000-0000-0000-0000-000000000005', '20000000-0000-0000-0000-000000000005',
 				     '30000000-0000-0000-0000-000000002026', 'SEC-1', ?::uuid, 'CONTINUADOR',
-				     'MATRICULADO', 'MAT-2026-0004', '2026-02-11 09:00-05',
+				     'MATRICULADO', 'MAT-2026-9105', '2026-02-11 09:00-05',
 				     '10000000-0000-0000-0000-000000000002')""")
 				.params(seccion, seccion).update();
 		jdbc.sql("""
@@ -111,12 +115,13 @@ class CalificacionesIT extends PruebaIntegracion {
 	void listaSoloLosCursosAsignadosAlDocente() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/docente/cursos"), docente))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.length()").value(1))
-				.andExpect(jsonPath("$[0].curso").value("Álgebra"))
-				.andExpect(jsonPath("$[0].grado").value("1.° de secundaria"))
-				.andExpect(jsonPath("$[0].seccion").value("A"))
-				.andExpect(jsonPath("$[0].escala").value("VIGESIMAL"))
-				.andExpect(jsonPath("$[0].periodos[3].items").value(1));
+				.andExpect(jsonPath("$.length()").value(4))
+				.andExpect(jsonPath("$[?(@.seccion == 'B')].curso").value(org.hamcrest.Matchers.contains("Álgebra")))
+				.andExpect(jsonPath("$[?(@.seccion == 'B')].grado")
+						.value(org.hamcrest.Matchers.contains("1.° de secundaria")))
+				.andExpect(jsonPath("$[?(@.seccion == 'B')].escala").value(org.hamcrest.Matchers.contains("VIGESIMAL")))
+				.andExpect(
+						jsonPath("$[?(@.seccion == 'B')].periodos[3].items").value(org.hamcrest.Matchers.contains(1)));
 	}
 
 	@Test

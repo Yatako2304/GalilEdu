@@ -91,7 +91,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.bloquesDisponibles").value(45))
 				.andExpect(jsonPath("$.secciones.length()").value(2))
 				.andExpect(jsonPath("$.docentesRequeridos").value(32))
-				.andExpect(jsonPath("$.docentesAsignados").value(1))
+				.andExpect(jsonPath("$.docentesAsignados").value(3))
 				.andExpect(jsonPath("$.cursos[0].area").value("Matemática"))
 				.andExpect(jsonPath("$.cursos[?(@.curso == 'Comunicación')].escala").value("VIGESIMAL"))
 				.andExpect(jsonPath("$.cursos[?(@.curso == 'Física')].escala").value(org.hamcrest.Matchers.contains(
@@ -168,6 +168,10 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 
 	@Test
 	void configuraHorasYCompetencias() throws Exception {
+		// Este caso configura el curso antes de registrar evaluaciones; la demo ya trae dos ítems.
+		jdbc.sql(
+				"DELETE FROM academico.item_evaluacion WHERE id IN (md5('demo-calificaciones-maria-item-Aritmética-1')::uuid, md5('demo-calificaciones-maria-item-Aritmética-2')::uuid)")
+				.update();
 		mvc.perform(conToken(put("/planes-evaluacion/" + idPlan("Aritmética")), personal, """
 				{"horasSemanales":3,"competencias":[%s,%s]}""".formatted(
 				competencia(idCompetencia("Resuelve problemas de cantidad")),
