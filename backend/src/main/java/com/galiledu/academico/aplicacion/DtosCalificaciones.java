@@ -39,8 +39,7 @@ public final class DtosCalificaciones {
 			List<CompetenciaItem> competencias, boolean editable) {
 	}
 
-	public record SolicitudCompetenciaItem(@NotNull UUID competenciaId,
-			@NotNull @DecimalMin("0.01") @DecimalMax("100.00") BigDecimal pesoPorcentaje) {
+	public record SolicitudCompetenciaItem(@NotNull UUID competenciaId, BigDecimal pesoPorcentaje) {
 	}
 
 	public record SolicitudItem(@NotBlank @Size(max = 120) String nombre,
@@ -64,7 +63,11 @@ public final class DtosCalificaciones {
 	public record SolicitudCalificaciones(@NotEmpty List<@Valid RegistroCalificacion> calificaciones) {
 	}
 
-	public record ColumnaReporte(String clave, String titulo) {
+	public record ColumnaReporte(String clave, String titulo, UUID competenciaId, String competencia,
+			boolean promedio) {
+		public ColumnaReporte(String clave, String titulo) {
+			this(clave, titulo, null, null, "resultado".equals(clave));
+		}
 	}
 
 	public record FilaReporte(UUID matriculaId, String estudiante, Map<String, String> valores) {

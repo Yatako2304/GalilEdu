@@ -160,6 +160,7 @@ export const useEliminarEvidencia = () =>
 export type FiltrosReporte = SeleccionPeriodo & {
   tipo: TipoReporteCalificaciones;
   objetivoId?: string;
+  competenciaIds?: string;
   itemIds?: string;
   incluirPromedio?: boolean;
 };
@@ -172,7 +173,8 @@ export const useReporteCalificaciones = (filtros: FiltrosReporte | null) =>
         api.get(`${base}/reportes`, { params: filtros }),
       enabled:
         !!filtros &&
-        (filtros.tipo === 'PERIODO' || Boolean(filtros.objetivoId)),
+        (filtros.tipo === 'PERIODO' ||
+          Boolean(filtros.objetivoId || filtros.competenciaIds)),
     }),
   );
 
@@ -189,11 +191,11 @@ export const descargarEvidencia = async (
 };
 
 export const exportarReporte = async (filtros: FiltrosReporte) => {
-  const contenido = (await api.get(`${base}/reportes/exportar`, {
+  const contenido = (await api.get(`${base}/reportes/exportar-pdf`, {
     params: filtros,
     responseType: 'blob',
   })) as Blob;
-  descargarBlob(contenido, 'consolidado-notas.csv');
+  descargarBlob(contenido, 'consolidado-notas.pdf');
 };
 
 const descargarBlob = (contenido: Blob, nombre: string) => {

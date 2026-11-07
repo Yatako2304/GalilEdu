@@ -34,12 +34,13 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 				WHERE ds.docente_id = ?::uuid
 				GROUP BY cu.nombre, g.nombre, s.nombre, am.codigo, pc.horas_semanales""").param(MARIA_FERNANDEZ)
 				.query().listOfRows();
-		assertThat(clases).hasSize(1);
-		assertThat(clases.get(0)).containsEntry("curso", "Álgebra")
+		assertThat(clases).hasSize(3);
+		var algebra = clases.stream().filter(c -> "Álgebra".equals(c.get("curso"))).findFirst().orElseThrow();
+		assertThat(algebra).containsEntry("curso", "Álgebra")
 				.containsEntry("grado", "1.° de secundaria")
 				.containsEntry("seccion", "A")
 				.containsEntry("aula", "A-101");
-		assertThat(((Number) clases.get(0).get("competencias")).intValue()).isEqualTo(1);
+		assertThat(((Number) algebra.get("competencias")).intValue()).isEqualTo(1);
 	}
 
 	@Test
