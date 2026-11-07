@@ -38,9 +38,13 @@ public final class DtosHorarios {
 	public record JornadaDelDia(List<DiaSemana> dias, List<BloqueJornada> bloques, List<RecesoJornada> recesos) {
 	}
 
+	/** El ambiente de un bloque: el {@code codigo} («A-502») es el que se ve en la celda; el nombre, en el selector. */
+	public record AmbienteDelHorario(UUID id, String nombre, String codigo) {
+	}
+
 	/** Un bloque asignado. {@code docente} es null si el curso ya no tiene docente en la sección. */
 	public record CeldaDelHorario(DiaSemana dia, int numeroBloque, UUID planCursoId, String curso,
-			Referencia docente, Referencia ambiente, List<CruceDetectado> cruces) {
+			Referencia docente, AmbienteDelHorario ambiente, List<CruceDetectado> cruces) {
 	}
 
 	/**
@@ -56,7 +60,7 @@ public final class DtosHorarios {
 			Referencia docente) {
 	}
 
-	public record AmbienteOpcion(UUID id, String nombre, String tipo, int aforoMaximo) {
+	public record AmbienteOpcion(UUID id, String nombre, String codigo, String tipo, int aforoMaximo) {
 	}
 
 	/** GET /horarios/secciones/{seccionId}/opciones. */

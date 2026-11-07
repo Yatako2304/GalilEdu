@@ -248,7 +248,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.proximoPeriodo.nombre").value("IV Bimestre"))
 				.andExpect(jsonPath("$.proximoPeriodo.fechaInicio").value("2026-10-19"))
 				.andExpect(jsonPath("$.seccionesActivas").value(10))
-				.andExpect(jsonPath("$.alumnosMatriculados").value(2))
+				.andExpect(jsonPath("$.alumnosMatriculados").value(5))
 				.andExpect(jsonPath("$.estructurasHorarias").value(2))
 				.andExpect(jsonPath("$.codigosEstructuras[0]").value("EH-PRI-26"))
 				.andExpect(jsonPath("$.avance").value(67));

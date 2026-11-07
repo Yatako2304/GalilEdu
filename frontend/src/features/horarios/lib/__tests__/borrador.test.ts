@@ -20,7 +20,7 @@ const celda = (
   planCursoId,
   curso: 'Curso',
   docente: null,
-  ambiente: { id: ambienteId, nombre: 'Aula' },
+  ambiente: { id: ambienteId, nombre: 'Aula', codigo: 'A-1' },
   cruces: [],
 });
 

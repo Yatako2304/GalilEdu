@@ -50,6 +50,7 @@ type Props = {
   seleccion: SeleccionPeriodo;
   periodo: PeriodoCursoDocente;
   competencias: CompetenciaOpcion[];
+  reglaNota: string;
 };
 
 type VistaItems = 'items' | 'competencias';
@@ -58,7 +59,9 @@ export const ItemsEvaluacion = ({
   seleccion,
   periodo,
   competencias,
+  reglaNota,
 }: Props) => {
+  const ponderado = reglaNota === 'PROMEDIO_PONDERADO';
   const { data: items = [], isLoading } = useItemsEvaluacion(seleccion);
   const [vista, setVista] = React.useState<VistaItems>('items');
   const [editando, setEditando] = React.useState<ItemEvaluacion | 'nuevo'>();
@@ -71,13 +74,14 @@ export const ItemsEvaluacion = ({
         totales.set(
           competencia.competenciaId,
           (totales.get(competencia.competenciaId) ?? 0) +
-            competencia.pesoPorcentaje,
+            (competencia.pesoPorcentaje ?? 0),
         ),
       ),
     );
     return totales;
   }, [items]);
   const competenciasCompletas =
+    ponderado &&
     competencias.length > 0 &&
     competencias.every(
       (competencia) =>
@@ -162,6 +166,7 @@ export const ItemsEvaluacion = ({
           <ItemsPorCompetencia
             competencias={competencias}
             items={items}
+            ponderado={ponderado}
             eliminando={eliminar.isPending}
             eliminacionLista={eliminar.isSuccess}
             onEditar={setEditando}
@@ -175,6 +180,7 @@ export const ItemsEvaluacion = ({
           seleccion={seleccion}
           periodo={periodo.nombre}
           competencias={competencias}
+          ponderado={ponderado}
           pesoAsignadoPorCompetencia={pesoAsignadoPorCompetencia}
           item={editando === 'nuevo' ? undefined : editando}
           onCerrar={() => setEditando(undefined)}
@@ -289,10 +295,12 @@ const TablaItems = ({
 const ItemsPorCompetencia = ({
   competencias,
   items,
+  ponderado,
   ...acciones
 }: {
   competencias: CompetenciaOpcion[];
   items: ItemEvaluacion[];
+  ponderado: boolean;
 } & Omit<AccionesProps, 'item'>) => {
   const grupos = competencias
     .map((competencia, indice) => ({
@@ -310,7 +318,7 @@ const ItemsPorCompetencia = ({
     <div className="divide-y divide-stroke-tertiary px-5">
       {grupos.map((grupo) => {
         const pesoTotal = grupo.items.reduce(
-          (suma, actual) => suma + actual.peso,
+          (suma, actual) => suma + (actual.peso ?? 0),
           0,
         );
         const completo = Math.abs(pesoTotal - 100) < 0.01;
@@ -332,31 +340,33 @@ const ItemsPorCompetencia = ({
                   </p>
                 </div>
               </div>
-              <Tag
-                color={completo ? 'success' : 'error'}
-                appearance={completo ? 'soft' : 'outline'}
-                size="md"
-              >
-                {completo
-                  ? 'Pesos completos'
-                  : excedido
-                    ? 'Pesos excedidos'
-                    : 'Pesos incompletos'}
-              </Tag>
+              {ponderado && (
+                <Tag
+                  color={completo ? 'success' : 'error'}
+                  appearance={completo ? 'soft' : 'outline'}
+                  size="md"
+                >
+                  {completo
+                    ? 'Pesos completos'
+                    : excedido
+                      ? 'Pesos excedidos'
+                      : 'Pesos incompletos'}
+                </Tag>
+              )}
             </div>
 
             <TableElement className="table-fixed">
               <colgroup>
                 <col />
                 <col className="w-52" />
-                <col className="w-36" />
+                {ponderado && <col className="w-36" />}
                 <col className="w-16" />
               </colgroup>
               <TableHeader className="bg-white">
                 <TableRow>
                   <TableHead className="px-3">Ítem</TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Peso en %</TableHead>
+                  {ponderado && <TableHead>Peso en %</TableHead>}
                   <TableHead>
                     <span className="sr-only">Acciones</span>
                   </TableHead>
@@ -376,7 +386,9 @@ const ItemsPorCompetencia = ({
                     <TableCell>
                       <TipoItem tipo={item.tipo} />
                     </TableCell>
-                    <TableCell>{peso}%</TableCell>
+                    {ponderado && (
+                      <TableCell>{peso == null ? '—' : `${peso}%`}</TableCell>
+                    )}
                     <TableCell className="text-right">
                       <AccionesItem item={item} {...acciones} />
                     </TableCell>

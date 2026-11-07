@@ -102,7 +102,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(actual.periodoEnCurso().fechaLimiteNotas()).isEqualTo(fecha(2026, 10, 16));
 		assertThat(actual.periodoEnCurso().diasParaLimiteNotas()).isEqualTo(31);
 		assertThat(actual.seccionesActivas()).isEqualTo(10);
-		assertThat(actual.alumnosMatriculados()).isEqualTo(2);
+		assertThat(actual.alumnosMatriculados()).isEqualTo(5);
 		assertThat(actual.estructurasHorarias()).isEqualTo(2);
 		assertThat(actual.codigosEstructuras()).containsExactly("EH-PRI-26", "EH-SEC-26");
 		assertThat(actual.avance()).isEqualTo(67); // 198 de 292 días

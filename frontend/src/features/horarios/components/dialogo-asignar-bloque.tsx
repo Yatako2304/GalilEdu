@@ -140,7 +140,11 @@ export const DialogoAsignarBloque = ({
       planCursoId: curso.planCursoId,
       curso: curso.nombre,
       docente: curso.docente,
-      ambiente: { id: ambiente.id, nombre: ambiente.nombre },
+      ambiente: {
+        id: ambiente.id,
+        nombre: ambiente.nombre,
+        codigo: ambiente.codigo,
+      },
       cruces: [],
     });
   };

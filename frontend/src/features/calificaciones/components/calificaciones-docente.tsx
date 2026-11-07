@@ -266,6 +266,7 @@ export const CalificacionesDocente = () => {
                 seleccion={seleccion}
                 periodo={periodo}
                 competencias={competencias}
+                reglaNota={curso.reglaNota}
               />
             )}
             {pestana === 'calificar' && (

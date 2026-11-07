@@ -127,9 +127,10 @@ public class CalificacionController {
 			@RequestParam UUID seccionId, @RequestParam UUID periodoId,
 			@RequestParam(required = false) UUID objetivoId,
 			@RequestParam(required = false) String itemIds,
+			@RequestParam(required = false) String competenciaIds,
 			@RequestParam(defaultValue = "true") boolean incluirPromedio, Authentication autenticacion) {
 		return servicio.reporte(ServicioJwt.usuarioActual(autenticacion), tipo, planCursoId, seccionId, periodoId,
-				objetivoId, ids(itemIds), incluirPromedio);
+				objetivoId, ids(itemIds), incluirPromedio, ids(competenciaIds));
 	}
 
 	@GetMapping(value = "/reportes/exportar", produces = "text/csv")
@@ -137,12 +138,28 @@ public class CalificacionController {
 			@RequestParam UUID seccionId, @RequestParam UUID periodoId,
 			@RequestParam(required = false) UUID objetivoId,
 			@RequestParam(required = false) String itemIds,
+			@RequestParam(required = false) String competenciaIds,
 			@RequestParam(defaultValue = "true") boolean incluirPromedio, Authentication autenticacion) {
 		byte[] contenido = servicio.exportarCsv(ServicioJwt.usuarioActual(autenticacion), tipo, planCursoId,
-				seccionId, periodoId, objetivoId, ids(itemIds), incluirPromedio);
+				seccionId, periodoId, objetivoId, ids(itemIds), incluirPromedio, ids(competenciaIds));
 		return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv;charset=UTF-8"))
 				.header(HttpHeaders.CONTENT_DISPOSITION,
 						ContentDisposition.attachment().filename("consolidado-notas.csv").build().toString())
+				.body(contenido);
+	}
+
+	@GetMapping(value = "/reportes/exportar-pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+	public ResponseEntity<byte[]> exportarPdf(@RequestParam String tipo, @RequestParam UUID planCursoId,
+			@RequestParam UUID seccionId, @RequestParam UUID periodoId,
+			@RequestParam(required = false) UUID objetivoId,
+			@RequestParam(required = false) String itemIds,
+			@RequestParam(required = false) String competenciaIds,
+			@RequestParam(defaultValue = "true") boolean incluirPromedio, Authentication autenticacion) {
+		byte[] contenido = servicio.exportarPdf(ServicioJwt.usuarioActual(autenticacion), tipo, planCursoId,
+				seccionId, periodoId, objetivoId, ids(itemIds), incluirPromedio, ids(competenciaIds));
+		return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
+				.header(HttpHeaders.CONTENT_DISPOSITION,
+						ContentDisposition.attachment().filename("consolidado-notas.pdf").build().toString())
 				.body(contenido);
 	}
 
@@ -154,7 +171,7 @@ public class CalificacionController {
 			return Arrays.stream(valor.split(",")).map(String::strip).filter(id -> !id.isEmpty()).map(UUID::fromString)
 					.toList();
 		} catch (IllegalArgumentException excepcion) {
-			throw ExcepcionNegocio.invalido("Los ítems seleccionados no son válidos.");
+			throw ExcepcionNegocio.invalido("Una de las competencias o los ítems seleccionados no es válida.");
 		}
 	}
 }

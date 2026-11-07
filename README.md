@@ -10,6 +10,8 @@ Sistema de Información Web para la Gestión Integral de un Colegio de Educació
 
 **Diseño:** las pantallas de [Figma](https://www.figma.com/design/l8nXzicItzBnvPjFQP4G9O/GalilEdu) son la fuente de verdad.
 
+**Sistema desplegado:** http://184.196.223.235 (usuarios en [Usuarios del servidor](#usuarios-del-servidor)).
+
 ---
 
 ## Levantar todo en local
@@ -44,6 +46,23 @@ Contraseña de todos: **`Galiledu2026`**.
 | `U20260005` | Carlos Ramírez | Coordinador |
 | `U20260006` | Valeria Sánchez | Estudiante con cuenta propia, matriculada en 5.° A de 2026 |
 | `U20260007` | Leonardo Montoya | Administrador **inactivo** (no puede entrar) |
+
+### Usuarios del servidor
+
+El servidor (http://184.196.223.235) tiene **sus propios datos**, distintos de los de local: los mismos códigos corresponden a otras personas. Contraseña: **`Galiledu2026`**. Pagos con Stripe en modo de prueba (tarjeta aprobada `4242 4242 4242 4242`, rechazada `4000 0000 0000 0002`; cualquier fecha futura y CVC).
+
+| Usuario | Persona | Rol(es) |
+| --- | --- | --- |
+| `U20260001` | Patricia Rojas | Administrador |
+| `U20260002` | Gabriela Núñez | Personal administrativo |
+| `U20260004` | Carmen Flores | Docente + Tutor |
+| `U20260025` | Iván Ponce | Docente |
+| `U20260030` | Javier Benites | Coordinador |
+| `U20260050` | Antonella Morales | Apoderada de 3 hijos con pensiones vencidas (pago en línea, HU-41) |
+| `U20260058` | Alessandra Valdivia | Apoderada de Valentina Arias, matrícula 2027 en validación (HU-31) |
+| `U20260003` | Rosa Elena Huamán | Docente + Tutor **inactivo** (no puede entrar) |
+
+Desde el 06/11/2026 el servidor no vuelve a cargar `R__datos_prueba.sql` (`FLYWAY_LOCATIONS=classpath:db/migration`): los cambios a los datos de prueba solo se ven en local.
 
 ### Otros datos de prueba
 
