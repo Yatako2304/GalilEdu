@@ -112,7 +112,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 				.andExpect(jsonPath("$", hasSize(1))).andExpect(jsonPath("$[0].tipo").value("AMBIENTE"))
 				.andExpect(jsonPath("$[0].seccion").value("1.° T1")).andExpect(jsonPath("$[0].curso").value("Álgebra"))
 				.andExpect(jsonPath("$[0].mensaje").value(
-						"1.° T1 ya usa Aula TMP-A1 para Álgebra el lunes de 8:00 a 8:45."));
+						"1.° T1 ya usa TMP-A1 para Álgebra el lunes de 8:00 a 8:45."));
 	}
 
 	@Test

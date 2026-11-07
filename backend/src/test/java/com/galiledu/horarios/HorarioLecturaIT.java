@@ -70,6 +70,8 @@ class HorarioLecturaIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.celdas[0].docente.nombre").value(containsString("María")))
 				.andExpect(jsonPath("$.celdas[0].ambiente.id").value(aula.toString()))
 				.andExpect(jsonPath("$.celdas[0].ambiente.nombre").value("Aula TMP-A1"))
+				// La celda muestra el código del ambiente (Figma: «A-502»); el nombre va en el selector.
+				.andExpect(jsonPath("$.celdas[0].ambiente.codigo").value("TMP-A1"))
 				// El validador de cruces es un stub: cada celda llega con la lista vacía.
 				.andExpect(jsonPath("$.celdas[0].cruces", empty()))
 				.andExpect(jsonPath("$.celdas[1].dia").value("MIE"))
@@ -206,6 +208,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.ambientes", hasSize((int) activos)))
 				.andExpect(jsonPath("$.ambientes[*].id", hasItem(activo.toString())))
 				.andExpect(jsonPath("$.ambientes[*].id", not(hasItem(inactivo.toString()))))
+				.andExpect(jsonPath("$.ambientes[?(@.id=='" + activo + "')].codigo", contains("TMP-ACT")))
 				.andExpect(jsonPath("$.ambientes[?(@.id=='" + activo + "')].tipo", contains("AULA_REGULAR")))
 				.andExpect(jsonPath("$.ambientes[?(@.id=='" + activo + "')].aforoMaximo", contains(30)));
 	}

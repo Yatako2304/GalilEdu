@@ -68,7 +68,9 @@ class ConversorDeBloquesIT extends PruebaIntegracion {
 						// Después del receso: el bloque 4 empieza a las 10:35, no a las 10:15.
 						new CeldaHorario(DiaSemana.MIE, 4, algebra, ambiente),
 						// Sin docente en la sección: se omite.
-						new CeldaHorario(DiaSemana.MAR, 2, geometria, ambiente)));
+						new CeldaHorario(DiaSemana.MAR, 2, geometria, ambiente),
+						// El sábado no es lectivo en esta estructura (lunes a viernes): se omite.
+						new CeldaHorario(DiaSemana.SAB, 1, algebra, ambiente)));
 
 		assertThat(solicitados).containsExactly(
 				new BloqueSolicitado(DiaSemana.LUN, 1, LocalTime.of(8, 0), LocalTime.of(8, 45), algebra, docente,

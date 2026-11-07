@@ -62,7 +62,8 @@ class OcupacionHorariosSqlIT extends PruebaHorarios {
 		assertThat(lunes.seccion()).isEqualTo("1.° T1");
 		assertThat(lunes.curso()).isEqualTo("Álgebra");
 		assertThat(lunes.docente()).contains("María");
-		assertThat(lunes.ambiente()).isEqualTo("Aula TMP-A1");
+		// El mensaje de cruce nombra el ambiente por su código (A-502), como se ve en las celdas de Figma.
+		assertThat(lunes.ambiente()).isEqualTo("TMP-A1");
 
 		// Después del receso: el bloque 4 de secundaria empieza a las 10:35.
 		BloqueOcupado miercoles = ocupados.stream()

@@ -215,7 +215,9 @@ test('modo lectura: celdas asignadas con curso, docente y aula; las vacías son 
   const lunes = within(celda('Lunes', 1));
   expect(lunes.getByText('Matemática')).toBeInTheDocument();
   expect(lunes.getByText('Pedro García Ramos')).toBeInTheDocument();
+  // La celda muestra el código del ambiente (Figma: «A-502»), no su nombre («Aula 502»).
   expect(lunes.getByText('A-502')).toBeInTheDocument();
+  expect(lunes.queryByText('Aula 502')).not.toBeInTheDocument();
   // Un curso al que ya no se le asignó docente se ve sin docente.
   expect(within(celda('Miércoles', 3)).getByText('Geometría')).toBeVisible();
   expect(
@@ -418,7 +420,7 @@ test('modal: una sección sin aula no trae ambiente por defecto y hay que elegir
     within(dialogo).getByRole('button', { name: 'Asignar' }),
   ).toBeDisabled();
 
-  await elegir('Ambiente', 'A-401', dialogo);
+  await elegir('Ambiente', 'Aula 401', dialogo);
 
   expect(selectNativo('Ambiente', dialogo)).toHaveValue(AMBIENTE_A401);
   expect(
@@ -442,6 +444,8 @@ test('modal: «Asignar» pone el bloque en el borrador, suma sus horas y avisa q
   expect(
     within(celda('Martes', 1)).getByText('Pedro García Ramos'),
   ).toBeVisible();
+  // Una celda recién asignada también muestra el código del ambiente.
+  expect(within(celda('Martes', 1)).getByText('A-502')).toBeVisible();
   expect(await screen.findByText(SIN_CAMBIOS)).toBeVisible();
   expect(screen.getByRole('button', { name: 'Guardar cambios' })).toBeEnabled();
 
@@ -573,7 +577,7 @@ test('guardar: un solo PUT con la versión del GET y todas las celdas del borrad
             planCursoId: PLAN_MATEMATICA,
             curso: 'Matemática',
             docente: { id: 'doc-pedro', nombre: 'Pedro García Ramos' },
-            ambiente: { id: 'amb-a502', nombre: 'A-502' },
+            ambiente: { id: 'amb-a502', nombre: 'Aula 502', codigo: 'A-502' },
             cruces: [],
           },
         ],
@@ -638,7 +642,7 @@ test('guardar con el primer horario envía version null', async () => {
 
   const dialogo = await abrirBloque('Lunes', 2);
   await userEvent.click(etiquetaDeCurso(dialogo, 'Matemática · 0/3 h'));
-  await elegir('Ambiente', 'A-401', dialogo);
+  await elegir('Ambiente', 'Aula 401', dialogo);
   await userEvent.click(
     within(dialogo).getByRole('button', { name: 'Asignar' }),
   );
@@ -913,7 +917,7 @@ test('modal: la lista del Ambiente flota fuera del diálogo (en el body) y elegi
     Number(getComputedStyle(lista).maxHeight.replace('px', '')),
   ).toBeGreaterThan(0);
 
-  await userEvent.click(await opcionDeLaLista('A-401'));
+  await userEvent.click(await opcionDeLaLista('Aula 401'));
   expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
   expect(screen.getByRole('dialog')).toBeInTheDocument();
   expect(selectNativo('Ambiente', dialogo)).toHaveValue(AMBIENTE_A401);

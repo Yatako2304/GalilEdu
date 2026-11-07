@@ -191,7 +191,7 @@ test('con cruces de los dos tipos hay dos alertas, primero la del docente y lueg
 
 test('sin cruces no hay alertas de cruce ni campos marcados', async () => {
   const consulta = responderCruces([]);
-  const dialogo = await abrirModalConAmbiente('A-401');
+  const dialogo = await abrirModalConAmbiente('Aula 401');
 
   await waitFor(() => expect(consulta.llamado).toBe(true));
   // Da tiempo a que la respuesta llegue y se pinte.
