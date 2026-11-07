@@ -52,7 +52,6 @@ final class AyudasEntradasHostiles {
 	 */
 	static String cuerpoDeCrear(String... clavesYLiterales) {
 		Map<String, String> campos = new LinkedHashMap<>();
-		campos.put("codigo", texto("EH-HOSTIL"));
 		campos.put("descripcion", texto("Prueba"));
 		campos.put("nivel", texto("PRIMARIA"));
 		campos.put("esPrincipal", "false");
@@ -67,7 +66,6 @@ final class AyudasEntradasHostiles {
 	/** Cuerpo de editar: igual que el de crear, sin el nivel. */
 	static String cuerpoDeEditar(String... clavesYLiterales) {
 		Map<String, String> campos = new LinkedHashMap<>();
-		campos.put("codigo", texto("EH-HOSTIL"));
 		campos.put("descripcion", texto("Prueba"));
 		campos.put("esPrincipal", "false");
 		campos.put("diasLectivos", "[\"LUN\",\"MAR\",\"MIE\",\"JUE\",\"VIE\"]");

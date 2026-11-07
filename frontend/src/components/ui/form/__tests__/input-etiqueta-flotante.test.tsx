@@ -77,18 +77,18 @@ test('en reposo la etiqueta no tiene fondo blanco y al enfocar lo recupera', () 
 
 // El campo de hora siempre muestra "--:--" aunque esté vacío: la etiqueta no puede bajar encima de él.
 test('con type="time" la etiqueta se queda arriba aunque el campo esté vacío', () => {
-  rtlRender(<Input type="time" label="Hora de entrada *" />);
+  rtlRender(<Input type="time" label="Hora de inicio *" />);
 
-  expect(etiqueta('Hora de entrada *').className).not.toContain(
+  expect(etiqueta('Hora de inicio *').className).not.toContain(
     'peer-placeholder-shown',
   );
-  expect(etiqueta('Hora de entrada *')).toHaveClass('top-[-7px]');
+  expect(etiqueta('Hora de inicio *')).toHaveClass('top-[-7px]');
 });
 
 test('con type="time" el campo sigue nombrándose con su etiqueta y guarda la hora escrita', async () => {
-  rtlRender(<Input type="time" label="Hora de entrada *" />);
+  rtlRender(<Input type="time" label="Hora de inicio *" />);
 
-  const campo = screen.getByLabelText('Hora de entrada *');
+  const campo = screen.getByLabelText('Hora de inicio *');
   await userEvent.type(campo, '1445');
 
   expect(campo).toHaveValue('14:45');

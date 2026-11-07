@@ -4,7 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.time.LocalTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
@@ -75,16 +77,44 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 				duracionBloqueMin, recesos);
 	}
 
-	private UUID crear(String codigo, String nivel, Boolean esPrincipal) {
-		return servicio.crearEstructuraHoraria(ANIO_2027, nueva(codigo, nivel, esPrincipal)).estructura().id();
+	/** Alias que usan las pruebas ("EH-A") -> código que generó el backend ("EH-PRI-27"). */
+	private final Map<String, String> codigos = new HashMap<>();
+
+	private EstructuraGuardada guardar(String alias, SolicitudEstructuraHoraria solicitud) {
+		EstructuraGuardada guardada = servicio.crearEstructuraHoraria(ANIO_2027, solicitud);
+		codigos.put(alias, guardada.estructura().codigo());
+		return guardada;
 	}
 
-	private UUID crear(String codigo, String nivel, Boolean esPrincipal, int bloquesPorDia, List<String> dias) {
-		return servicio.crearEstructuraHoraria(ANIO_2027, nueva(codigo, nivel, esPrincipal, bloquesPorDia, dias))
-				.estructura().id();
+	private EstructuraGuardada guardar(String alias, String nivel, Boolean esPrincipal) {
+		return guardar(alias, nueva(alias, nivel, esPrincipal));
 	}
 
-	private EstructuraHorariaResumen deLaLista(String codigo) {
+	private UUID crear(String alias, String nivel, Boolean esPrincipal) {
+		return guardar(alias, nivel, esPrincipal).estructura().id();
+	}
+
+	private UUID crear(String alias, String nivel, Boolean esPrincipal, int bloquesPorDia, List<String> dias) {
+		return guardar(alias, nueva(alias, nivel, esPrincipal, bloquesPorDia, dias)).estructura().id();
+	}
+
+	private UUID insertarAnio(int anio) {
+		UUID id = UUID.randomUUID();
+		jdbc.sql("""
+				INSERT INTO configuracion.anio_escolar (id, anio, fecha_inicio, fecha_fin, regimen)
+				VALUES (:id, :anio, :inicio, :fin, 'BIMESTRAL')
+				""").param("id", id).param("anio", anio).param("inicio", java.sql.Date.valueOf(anio + "-03-01"))
+				.param("fin", java.sql.Date.valueOf(anio + "-12-20")).update();
+		return id;
+	}
+
+	/** El código que el backend generó para el alias. */
+	private String cod(String alias) {
+		return codigos.get(alias);
+	}
+
+	private EstructuraHorariaResumen deLaLista(String alias) {
+		String codigo = codigos.getOrDefault(alias, alias);
 		for (EstructuraHorariaResumen resumen : servicio.listarPorAnioEscolar(ANIO_2027).estructuras()) {
 			if (resumen.codigo().equals(codigo)) {
 				return resumen;
@@ -194,7 +224,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 	@Test
 	void laPrimeraEstructuraDeUnNivelNaceComoPrincipalAunqueNoSeMarque() {
 		EstructuraGuardada guardada = servicio.crearEstructuraHoraria(ANIO_2027,
-				nueva("  eh-pri-27 ", "primaria", false));
+				nueva("lo-que-sea", "primaria", false));
 
 		assertThat(guardada.estructura().codigo()).isEqualTo("EH-PRI-27");
 		assertThat(guardada.estructura().nivel()).isEqualTo("PRIMARIA");
@@ -208,7 +238,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 	void laSegundaDelNivelNoEsPrincipalSalvoQueSeMarque() {
 		crear("EH-A", "PRIMARIA", null);
 
-		EstructuraGuardada segunda = servicio.crearEstructuraHoraria(ANIO_2027, nueva("EH-B", "PRIMARIA", null));
+		EstructuraGuardada segunda = guardar("EH-B", "PRIMARIA", null);
 
 		assertThat(segunda.estructura().esPrincipal()).isFalse();
 		assertThat(segunda.advertencias()).isEmpty();
@@ -219,13 +249,14 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 	void marcarComoPrincipalAlCrearBajaLaAnteriorEnLaMismaTransaccionYAvisa() {
 		crear("EH-A", "PRIMARIA", null);
 
-		EstructuraGuardada segunda = servicio.crearEstructuraHoraria(ANIO_2027, nueva("EH-B", "PRIMARIA", true));
+		EstructuraGuardada segunda = guardar("EH-B", "PRIMARIA", true);
 
 		assertThat(segunda.estructura().esPrincipal()).isTrue();
 		assertThat(deLaLista("EH-A").esPrincipal()).isFalse();
 		assertThat(deLaLista("EH-B").esPrincipal()).isTrue();
 		assertThat(segunda.advertencias())
-				.containsExactly("EH-B pasa a ser la estructura principal de primaria; EH-A deja de serlo.");
+				.containsExactly(cod("EH-B") + " pasa a ser la estructura principal de primaria; " + cod("EH-A")
+						+ " deja de serlo.");
 	}
 
 	@Test
@@ -249,31 +280,37 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 	}
 
 	@Test
-	void elCodigoRepetidoDa409AunqueVengaConEspaciosOEnMinusculas() {
-		crear("EH-A", "PRIMARIA", null);
-
-		assertRechazo(() -> servicio.crearEstructuraHoraria(ANIO_2027, nueva(" eh-a ", "SECUNDARIA", null)),
-				HttpStatus.CONFLICT, "Ya existe una estructura con el código EH-A en este año.");
-
-		// Si el servicio no normalizara el código para buscar, la restricción de la BD daría el mismo 409 pero tras
-		// intentar insertar, y en PostgreSQL eso deja la transacción abortada: esta consulta fallaría.
-		assertThat(servicio.listarPorAnioEscolar(ANIO_2027).estructuras()).hasSize(1);
+	void elCodigoLoGeneraElBackendConLaSiglaDelNivelYElAnio() {
+		assertThat(guardar("A", "PRIMARIA", null).estructura().codigo()).isEqualTo("EH-PRI-27");
+		assertThat(guardar("B", "SECUNDARIA", null).estructura().codigo()).isEqualTo("EH-SEC-27");
 	}
 
 	@Test
-	void elMismoCodigoSePuedeUsarEnOtroAnio() {
-		// EH-PRI-26 existe en 2026; en 2027 el código está libre.
-		EstructuraGuardada guardada = servicio.crearEstructuraHoraria(ANIO_2027, nueva("EH-PRI-26", "PRIMARIA", null));
-
-		assertThat(guardada.estructura().codigo()).isEqualTo("EH-PRI-26");
+	void siElCodigoYaExisteEnElAnioAgregaElSufijo2Y3() {
+		assertThat(guardar("A", "PRIMARIA", null).estructura().codigo()).isEqualTo("EH-PRI-27");
+		assertThat(guardar("B", "PRIMARIA", null).estructura().codigo()).isEqualTo("EH-PRI-27-2");
+		assertThat(guardar("C", "PRIMARIA", null).estructura().codigo()).isEqualTo("EH-PRI-27-3");
+		assertThat(guardar("D", "SECUNDARIA", null).estructura().codigo()).isEqualTo("EH-SEC-27");
 	}
 
 	@Test
-	void rechazaConMensajeElCodigoVacioYElCodigoLargo() {
-		assertRechazo(() -> servicio.crearEstructuraHoraria(ANIO_2027, nueva("   ", "PRIMARIA", null)),
-				HttpStatus.BAD_REQUEST, "Ingresa el código de la estructura.");
-		assertRechazo(() -> servicio.crearEstructuraHoraria(ANIO_2027, nueva("A".repeat(21), "PRIMARIA", null)),
-				HttpStatus.BAD_REQUEST, "El código admite hasta 20 caracteres.");
+	void unCodigoQueLlegaEnLaSolicitudDeCrearSeIgnora() {
+		EstructuraGuardada guardada = servicio.crearEstructuraHoraria(ANIO_2027,
+				nueva("  CODIGO-DEL-CLIENTE ", "PRIMARIA", null));
+
+		assertThat(guardada.estructura().codigo()).isEqualTo("EH-PRI-27");
+	}
+
+	@Test
+	void dosAniosDistintosPuedenRepetirElCodigoBase() {
+		// 2000 y 2100 terminan en «00»: el código base es el mismo en los dos años y no choca porque es único por año.
+		UUID anio2000 = insertarAnio(2000);
+		UUID anio2100 = insertarAnio(2100);
+
+		String primero = servicio.crearEstructuraHoraria(anio2000, nueva("x", "PRIMARIA", null)).estructura().codigo();
+		String segundo = servicio.crearEstructuraHoraria(anio2100, nueva("x", "PRIMARIA", null)).estructura().codigo();
+
+		assertThat(primero).isEqualTo("EH-PRI-00").isEqualTo(segundo);
 	}
 
 	@Test
@@ -359,12 +396,12 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		UUID id = servicio.crearEstructuraHoraria(ANIO_2027,
 				conRecesos(List.of(new SolicitudReceso(2, 15), new SolicitudReceso(4, 20)))).estructura().id();
 
-		EstructuraGuardada editada = servicio.editarEstructuraHoraria(id, edicion("  eh-rec-2 ", true, 4,
+		EstructuraGuardada editada = servicio.editarEstructuraHoraria(id, edicion("  otro-codigo ", true, 4,
 				List.of("LUN", "MAR"), LocalTime.of(9, 0), 50,
 				List.of(new SolicitudReceso(2, 30), new SolicitudReceso(1, 10))));
 
 		DetalleEstructuraHoraria detalle = editada.estructura();
-		assertThat(detalle.codigo()).isEqualTo("EH-REC-2");
+		assertThat(detalle.codigo()).isEqualTo("EH-PRI-27");
 		assertThat(detalle.nivel()).isEqualTo("PRIMARIA");
 		assertThat(detalle.bloquesPorSemana()).isEqualTo(8);
 		assertThat(detalle.horaEntrada()).isEqualTo("09:00");
@@ -376,14 +413,13 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 	}
 
 	@Test
-	void editarConUnCodigoDeOtraEstructuraDa409PeroConservarElPropioNo() {
+	void editarConservaElCodigoAunqueLaSolicitudTraigaOtro() {
 		UUID a = crear("EH-A", "PRIMARIA", null);
 		crear("EH-B", "SECUNDARIA", null);
 
-		assertRechazo(() -> servicio.editarEstructuraHoraria(a, edicion(" eh-b ", true, 6, LUN_A_VIE)),
-				HttpStatus.CONFLICT, "Ya existe una estructura con el código EH-B en este año.");
-		assertThat(servicio.editarEstructuraHoraria(a, edicion("EH-A", true, 6, LUN_A_VIE)).estructura().codigo())
-				.isEqualTo("EH-A");
+		assertThat(servicio.editarEstructuraHoraria(a, edicion(" eh-b ", true, 6, LUN_A_VIE)).estructura().codigo())
+				.isEqualTo(cod("EH-A"));
+		assertThat(deLaLista("EH-A").codigo()).isEqualTo("EH-PRI-27");
 	}
 
 	@Test
@@ -425,7 +461,8 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(deLaLista("EH-A").esPrincipal()).isFalse();
 		assertThat(deLaLista("EH-B").esPrincipal()).isTrue();
 		assertThat(editada.advertencias())
-				.containsExactly("EH-B pasa a ser la estructura principal de primaria; EH-A deja de serlo.");
+				.containsExactly(cod("EH-B") + " pasa a ser la estructura principal de primaria; " + cod("EH-A")
+						+ " deja de serlo.");
 	}
 
 	// ---------- Planes de evaluación ----------
@@ -547,7 +584,8 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		EstructuraGuardada editada = servicio.editarEstructuraHoraria(grande, edicion("EH-TAR", true, 8, LUN_A_VIE));
 
 		assertThat(editada.advertencias()).containsExactly(
-				"EH-TAR pasa a ser la estructura principal de secundaria; EH-SEC deja de serlo.",
+				cod("EH-TAR") + " pasa a ser la estructura principal de secundaria; " + cod("EH-SEC")
+						+ " deja de serlo.",
 				"La jornada de secundaria pasa de 30 a 40 bloques por semana. Revisa el plan de evaluación: "
 						+ "1.° de secundaria tiene 28 horas planificadas.");
 	}
@@ -563,7 +601,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 						+ "cursos planificadas. Reduce las horas del plan de evaluación o conserva al menos 28 bloques.");
 
 		assertThat(servicio.listarPorAnioEscolar(ANIO_2027).estructuras()).extracting(EstructuraHorariaResumen::codigo)
-				.containsExactly("EH-SEC");
+				.containsExactly(cod("EH-SEC"));
 		assertThat(deLaLista("EH-SEC").esPrincipal()).isTrue();
 	}
 
@@ -589,7 +627,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		servicio.eliminarEstructuraHoraria(otra);
 
 		assertThat(servicio.listarPorAnioEscolar(ANIO_2027).estructuras()).extracting(EstructuraHorariaResumen::codigo)
-				.containsExactly("EH-A");
+				.containsExactly(cod("EH-A"));
 		assertThat(recesosEnLaBase(otra)).isZero();
 	}
 
@@ -675,24 +713,22 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(vistaPrevia.valida()).isFalse();
 		assertThat(vistaPrevia.jornada()).isNull();
 		assertThat(vistaPrevia.errores()).containsExactly(
-				"Ingresa el código de la estructura.",
 				"Elige al menos un día lectivo.",
-				"Ingresa la hora de entrada.",
+				"Ingresa la hora de inicio.",
 				"Los bloques por día van de 1 a 12.",
 				"La duración del bloque va de 20 a 120 minutos.",
 				"Elige el nivel: primaria o secundaria.");
 	}
 
 	@Test
-	void laVistaPreviaAvisaDelCodigoRepetidoYDelNivelInvalido() {
+	void laVistaPreviaNoPideNiValidaElCodigoYSoloAvisaDelNivelInvalido() {
 		crear("EH-A", "PRIMARIA", null);
 
 		VistaPreviaJornada vistaPrevia = servicio.vistaPreviaEstructuraHoraria(ANIO_2027,
-				nueva(" eh-a ", "INICIAL", null));
+				nueva(" eh-pri-27 ", "INICIAL", null));
 
 		assertThat(vistaPrevia.valida()).isFalse();
-		assertThat(vistaPrevia.errores()).containsExactly("Elige el nivel: primaria o secundaria.",
-				"Ya existe una estructura con el código EH-A en este año.");
+		assertThat(vistaPrevia.errores()).containsExactly("Elige el nivel: primaria o secundaria.");
 		assertThat(vistaPrevia.jornada()).isNotNull();
 	}
 

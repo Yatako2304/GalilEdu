@@ -9,6 +9,23 @@ import {
 } from './esquemas-estructura';
 import { textoRango } from './formato';
 
+const MINUTOS_DEL_DIA = 24 * 60;
+const MINUTOS_A_LAS_18 = 18 * 60;
+
+const aMinutos = (hora: string) => {
+  const [h, m] = hora.split(':').map(Number);
+  return h * 60 + m;
+};
+
+/** El backend suma sin dar la vuelta al día («25:14»): desde las 24:00 la hora no existe y se muestra «—». */
+const horaVisible = (hora: string) =>
+  aMinutos(hora) >= MINUTOS_DEL_DIA ? '—' : hora;
+
+const rangoVisible = (inicio: string, fin: string) =>
+  aMinutos(inicio) >= MINUTOS_DEL_DIA
+    ? '—'
+    : textoRango(horaVisible(inicio), horaVisible(fin));
+
 type VistaPreviaJornadaProps = {
   /** La última respuesta del backend; undefined mientras no haya llegado ninguna. */
   vista: Vista | undefined;
@@ -42,16 +59,32 @@ export const VistaPreviaJornada = ({
   const filas = (jornada?.filas ?? []).map((fila) => {
     if (fila.tipo === 'BLOQUE') {
       bloqueAnterior = fila.numero ?? bloqueAnterior;
+      const terminaTarde = aMinutos(fila.fin) > MINUTOS_A_LAS_18;
       return (
         <li
           key={`bloque-${fila.numero}`}
-          className="flex items-center justify-between rounded-lg border border-stroke-tertiary bg-white px-3 py-2"
+          className={cn(
+            'flex items-center justify-between rounded-lg border bg-white px-3 py-2',
+            terminaTarde
+              ? 'border-stroke-error-secondary'
+              : 'border-stroke-tertiary',
+          )}
         >
-          <span className="text-label-2 font-medium text-content-primary">
+          <span
+            className={cn(
+              'text-label-2 font-medium',
+              terminaTarde ? 'text-content-error' : 'text-content-primary',
+            )}
+          >
             Bloque {fila.numero}
           </span>
-          <span className="text-body-4 text-content-primary">
-            {textoRango(fila.inicio, fila.fin)}
+          <span
+            className={cn(
+              'text-body-4',
+              terminaTarde ? 'text-content-error' : 'text-content-primary',
+            )}
+          >
+            {rangoVisible(fila.inicio, fila.fin)}
           </span>
         </li>
       );
@@ -65,7 +98,7 @@ export const VistaPreviaJornada = ({
           <Coffee className="size-4" aria-hidden="true" />
           Receso · {fila.duracionMin} min
         </span>
-        <span>{textoRango(fila.inicio, fila.fin)}</span>
+        <span>{rangoVisible(fila.inicio, fila.fin)}</span>
       </li>
     );
   });
@@ -106,7 +139,7 @@ export const VistaPreviaJornada = ({
                   pasaDeLas18 ? 'text-content-error' : 'text-content-primary',
                 )}
               >
-                {jornada.horaSalida}
+                {horaVisible(jornada.horaSalida)}
               </dd>
             </div>
             <div className="flex items-start justify-between">
@@ -126,8 +159,8 @@ export const VistaPreviaJornada = ({
         </>
       ) : (
         <p className="rounded-xl bg-surface-secondary px-3 py-4 text-body-4 text-content-tertiary">
-          Completa la hora de entrada, los bloques por día y la duración para
-          ver la jornada.
+          Completa la hora de inicio, los bloques por día y la duración para ver
+          la jornada.
         </p>
       )}
 

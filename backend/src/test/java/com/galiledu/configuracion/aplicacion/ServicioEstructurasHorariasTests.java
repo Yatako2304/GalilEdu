@@ -82,7 +82,7 @@ class ServicioEstructurasHorariasTests {
 		assertThatThrownBy(() -> servicio.crearEstructuraHoraria(ANIO_ID, solicitud()))
 				.isInstanceOfSatisfying(ExcepcionNegocio.class, e -> {
 					assertThat(e.estado()).isEqualTo(HttpStatus.CONFLICT);
-					assertThat(e).hasMessage("Ya existe una estructura con el código EH-1 en este año.");
+					assertThat(e).hasMessage("Ya existe una estructura con el código EH-PRI-27 en este año.");
 				});
 	}
 

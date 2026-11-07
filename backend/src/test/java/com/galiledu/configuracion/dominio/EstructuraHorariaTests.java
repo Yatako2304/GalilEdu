@@ -235,7 +235,7 @@ class EstructuraHorariaTests {
 		assertThat(EstructuraHoraria.calcularJornada(conBloquesYDuracion(13, 45))).isEmpty();
 		DefinicionEstructura sinEntrada = new DefinicionEstructura("EH-1", null, LUN_A_VIE, null, 8, 45, List.of());
 		assertThat(EstructuraHoraria.calcularJornada(sinEntrada)).isEmpty();
-		assertErrorDeCreacion(sinEntrada, "Ingresa la hora de entrada.");
+		assertErrorDeCreacion(sinEntrada, "Ingresa la hora de inicio.");
 	}
 
 	@Test

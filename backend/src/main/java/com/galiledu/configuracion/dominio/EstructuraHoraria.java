@@ -259,7 +259,7 @@ public class EstructuraHoraria {
 	private static List<String> erroresDeLaJornada(DefinicionEstructura d) {
 		List<String> errores = new ArrayList<>();
 		if (d.horaEntrada() == null) {
-			errores.add("Ingresa la hora de entrada.");
+			errores.add("Ingresa la hora de inicio.");
 		}
 		boolean bloquesValidos = d.bloquesPorDia() >= BLOQUES_MINIMOS_POR_DIA
 				&& d.bloquesPorDia() <= BLOQUES_MAXIMOS_POR_DIA;
