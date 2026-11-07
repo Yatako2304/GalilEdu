@@ -16,6 +16,8 @@ Aunque los frames revisados muestran «Personal administrativo» o «Administrad
 
 La escala, la regla de cálculo y la consolidación no se eligen en esta pantalla. Se leen de `configuracion.anio_escolar`, según la [decisión de parámetros de evaluación por año](../decisiones/2026-11-04-josezavaleta-parametros-evaluacion-por-anio.md).
 
+En **Calificar alumnos**, el docente selecciona únicamente el **Ítem de evaluación** entre todos los del periodo. La nota se registra una sola vez por estudiante e ítem y se reutiliza en sus competencias con los pesos configurados. No se solicita elegir una competencia para calificar, según el ajuste pedido por josezavaleta; véase la [decisión de calificación por ítem](../decisiones/2026-11-06-josezavaleta-calificar-solo-por-item.md).
+
 ## Historias de usuario
 
 | HU | Qué | Estado | Reglas principales |

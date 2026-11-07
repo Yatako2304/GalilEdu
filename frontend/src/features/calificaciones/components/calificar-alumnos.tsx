@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
 import {
-  CompetenciaOpcion,
   CursoDocente,
   FilaCalificacion,
   ItemEvaluacion,
@@ -25,7 +24,6 @@ import {
 
 import {
   descargarEvidencia,
-  SeleccionPeriodo,
   useCalificacionesItem,
   useEliminarEvidencia,
   useGuardarCalificaciones,
@@ -33,45 +31,20 @@ import {
 } from '../api/calificaciones';
 
 type Props = {
-  seleccion: SeleccionPeriodo;
   curso: CursoDocente;
   periodo: PeriodoCursoDocente;
-  competencias: CompetenciaOpcion[];
   items: ItemEvaluacion[];
 };
 
-export const CalificarAlumnos = ({
-  curso,
-  periodo,
-  competencias,
-  items,
-}: Props) => {
-  const [competenciaId, setCompetenciaId] = React.useState('');
-  const itemsFiltrados = React.useMemo(
-    () =>
-      competenciaId
-        ? items.filter((item) =>
-            item.competencias.some(
-              (competencia) => competencia.competenciaId === competenciaId,
-            ),
-          )
-        : [],
-    [competenciaId, items],
-  );
+export const CalificarAlumnos = ({ curso, periodo, items }: Props) => {
   const [itemId, setItemId] = React.useState('');
   const item = items.find((actual) => actual.id === itemId);
 
   React.useEffect(() => {
-    if (!competencias.some((c) => c.id === competenciaId)) {
-      setCompetenciaId(competencias[0]?.id ?? '');
+    if (!items.some((actual) => actual.id === itemId)) {
+      setItemId(items[0]?.id ?? '');
     }
-  }, [competenciaId, competencias]);
-
-  React.useEffect(() => {
-    if (!itemsFiltrados.some((actual) => actual.id === itemId)) {
-      setItemId(itemsFiltrados[0]?.id ?? '');
-    }
-  }, [itemId, itemsFiltrados]);
+  }, [itemId, items]);
 
   return (
     <Card className="overflow-hidden">
@@ -79,29 +52,20 @@ export const CalificarAlumnos = ({
         <div>
           <h2 className="text-h6 text-content-primary">Calificar alumnos</h2>
           <p className="mt-1 text-body-4 text-content-quartiary">
-            Selecciona una competencia y uno de sus ítems de evaluación.
+            Selecciona el ítem de evaluación que deseas calificar.
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <Select
-            label="Competencia"
-            value={competenciaId}
-            options={competencias.map((c) => ({
-              label: c.nombre,
-              value: c.id,
-            }))}
-            onChange={(e) => setCompetenciaId(e.target.value)}
-          />
+        <div className="max-w-xl">
           <Select
             label="Ítem de evaluación"
             value={itemId}
-            options={itemsFiltrados.map((actual) => ({
+            options={items.map((actual) => ({
               label: actual.nombre,
               value: actual.id,
             }))}
             onChange={(e) => setItemId(e.target.value)}
-            disabled={!itemsFiltrados.length}
-            placeholder="No hay ítems para esta competencia"
+            disabled={!items.length}
+            placeholder="No hay ítems en este periodo"
           />
         </div>
       </div>
