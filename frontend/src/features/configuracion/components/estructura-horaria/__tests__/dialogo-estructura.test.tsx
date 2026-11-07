@@ -156,9 +156,15 @@ const mostrar = async ({
 const dia = (dialogo: HTMLElement, nombre: string) =>
   within(dialogo).getByRole('button', { name: nombre });
 
+/** El campo abre con 07:30: para escribir otra hora se borra primero. */
+const ponerHoraDeInicio = async (dialogo: HTMLElement, digitos: string) => {
+  const campo = within(dialogo).getByLabelText('Hora de inicio *');
+  await userEvent.clear(campo);
+  await userEvent.type(campo, digitos);
+};
+
 /** Llena el formulario con la estructura de Figma. */
 const llenarComoEnFigma = async (dialogo: HTMLElement) => {
-  await userEvent.type(within(dialogo).getByLabelText('Código *'), 'eh-tar-26');
   await userEvent.type(
     within(dialogo).getByLabelText('Descripción'),
     'Secundaria · talleres de tarde',
@@ -170,10 +176,7 @@ const llenarComoEnFigma = async (dialogo: HTMLElement) => {
   for (const nombre of ['Lun', 'Mié', 'Vie']) {
     await userEvent.click(dia(dialogo, nombre));
   }
-  await userEvent.type(
-    within(dialogo).getByLabelText('Hora de entrada *'),
-    '1445',
-  );
+  await ponerHoraDeInicio(dialogo, '1445');
   await userEvent.type(
     within(dialogo).getByLabelText('Bloques por día *'),
     '4',
@@ -190,7 +193,6 @@ const llenarComoEnFigma = async (dialogo: HTMLElement) => {
 };
 
 const cuerpoDeFigma: SolicitudEstructuraHoraria = {
-  codigo: 'EH-TAR-26',
   descripcion: 'Secundaria · talleres de tarde',
   nivel: 'SECUNDARIA',
   esPrincipal: false,
@@ -202,7 +204,7 @@ const cuerpoDeFigma: SolicitudEstructuraHoraria = {
 };
 
 describe('al abrir', () => {
-  test('muestra el título, el subtítulo con el año y los campos vacíos', async () => {
+  test('muestra el título, el subtítulo con el año y los campos vacíos, salvo la hora de inicio que abre en 07:30', async () => {
     const { dialogo } = await mostrar();
 
     expect(
@@ -212,13 +214,15 @@ describe('al abrir', () => {
     ).toBeInTheDocument();
     expect(
       await within(dialogo).findByText(
-        /Año escolar 2027\. Los bloques se calculan a partir de la hora de entrada, la duración y los recesos\./,
+        /Año escolar 2027\. Los bloques se calculan a partir de la hora de inicio, la duración y los recesos\./,
       ),
     ).toBeVisible();
+    expect(within(dialogo).queryByLabelText(/Código/)).not.toBeInTheDocument();
+    expect(within(dialogo).getByLabelText('Hora de inicio *')).toHaveValue(
+      '07:30',
+    );
     for (const etiqueta of [
-      'Código *',
       'Descripción',
-      'Hora de entrada *',
       'Bloques por día *',
       DURACION_BLOQUE,
     ]) {
@@ -252,7 +256,7 @@ describe('al abrir', () => {
 
     expect(
       within(dialogo).getByText(
-        /Completa la hora de entrada, los bloques por día y la duración/,
+        /Completa la hora de inicio, los bloques por día y la duración/,
       ),
     ).toBeInTheDocument();
     expect(
@@ -266,28 +270,6 @@ describe('al abrir', () => {
 });
 
 describe('validaciones en vivo', () => {
-  test('el código se pasa a mayúsculas al escribir', async () => {
-    const { dialogo } = await mostrar();
-
-    await userEvent.type(
-      within(dialogo).getByLabelText('Código *'),
-      'eh-pri-26',
-    );
-
-    expect(within(dialogo).getByLabelText('Código *')).toHaveValue('EH-PRI-26');
-  });
-
-  test.each([
-    ['abc d', 'El código solo admite letras, números y guion.'],
-    ['A'.repeat(21), 'El código admite hasta 20 caracteres.'],
-  ])('el código %j avisa "%s"', async (texto, mensaje) => {
-    const { dialogo } = await mostrar();
-
-    await userEvent.type(within(dialogo).getByLabelText('Código *'), texto);
-
-    expect(await within(dialogo).findByText(mensaje)).toBeInTheDocument();
-  });
-
   test('los bloques fuera de 1 a 12 y la duración fuera de 20 a 120 avisan con los mensajes del backend', async () => {
     const { dialogo } = await mostrar();
 
@@ -328,10 +310,8 @@ describe('validaciones en vivo', () => {
     );
 
     for (const mensaje of [
-      'Ingresa el código de la estructura.',
       'Elige el nivel: primaria o secundaria.',
       'Elige al menos un día lectivo.',
-      'Ingresa la hora de entrada.',
       'Los bloques por día van de 1 a 12.',
       'La duración del bloque va de 20 a 120 minutos.',
     ]) {
@@ -466,10 +446,7 @@ describe('vista previa de la jornada', () => {
 
   test('no se pide en cada tecla: escribir "45" seguido manda una sola petición', async () => {
     const { dialogo, registro } = await mostrar();
-    await userEvent.type(
-      within(dialogo).getByLabelText('Hora de entrada *'),
-      '1445',
-    );
+    await ponerHoraDeInicio(dialogo, '1445');
     await userEvent.type(
       within(dialogo).getByLabelText('Bloques por día *'),
       '4',
@@ -503,12 +480,111 @@ describe('vista previa de la jornada', () => {
     ).toHaveTextContent('La jornada debe terminar como máximo a las 18:00.');
   });
 
+  test('los bloques que terminan después de las 18:00 se marcan en rojo con su hora normal', async () => {
+    const pasada: VistaPreviaJornada = {
+      valida: false,
+      errores: ['La jornada debe terminar como máximo a las 18:00.'],
+      jornada: {
+        filas: [
+          {
+            tipo: 'BLOQUE',
+            numero: 1,
+            inicio: '17:15',
+            fin: '18:00',
+            duracionMin: 45,
+          },
+          {
+            tipo: 'BLOQUE',
+            numero: 2,
+            inicio: '18:00',
+            fin: '18:45',
+            duracionMin: 45,
+          },
+        ],
+        horaSalida: '18:45',
+        bloquesPorSemana: 10,
+      },
+    };
+    const { dialogo } = await mostrar({ vistaPrevia: pasada });
+
+    await llenarComoEnFigma(dialogo);
+
+    // Termina justo a las 18:00: dentro del máximo. El segundo termina a las 18:45: en rojo y con su hora.
+    expect(
+      await within(dialogo).findByText('Bloque 2', undefined, ESPERA),
+    ).toHaveClass('text-content-error');
+    expect(within(dialogo).getByText('Bloque 1')).not.toHaveClass(
+      'text-content-error',
+    );
+    expect(within(dialogo).getByText('18:00 – 18:45')).toHaveClass(
+      'text-content-error',
+    );
+    expect(within(dialogo).getByText('18:45')).toHaveClass(
+      'text-content-error',
+    );
+  });
+
+  test('una jornada que pasa de medianoche nunca muestra horas como 24:, 25: o 28:', async () => {
+    const pasada: VistaPreviaJornada = {
+      valida: false,
+      errores: ['La jornada debe terminar como máximo a las 18:00.'],
+      jornada: {
+        filas: [
+          {
+            tipo: 'BLOQUE',
+            numero: 1,
+            inicio: '23:15',
+            fin: '24:00',
+            duracionMin: 45,
+          },
+          {
+            tipo: 'BLOQUE',
+            numero: 2,
+            inicio: '24:00',
+            fin: '24:45',
+            duracionMin: 45,
+          },
+          {
+            tipo: 'RECESO',
+            numero: null,
+            inicio: '24:45',
+            fin: '25:00',
+            duracionMin: 15,
+          },
+          {
+            tipo: 'BLOQUE',
+            numero: 3,
+            inicio: '25:00',
+            fin: '25:45',
+            duracionMin: 45,
+          },
+        ],
+        horaSalida: '25:45',
+        bloquesPorSemana: 15,
+      },
+    };
+    const { dialogo } = await mostrar({ vistaPrevia: pasada });
+
+    await llenarComoEnFigma(dialogo);
+
+    await within(dialogo).findByText('Bloque 3', undefined, ESPERA);
+    expect(dialogo).not.toHaveTextContent(/\b(2[4-9]|[3-9]\d):\d\d/);
+    // El primero empieza antes de medianoche (su hora normal) y termina a las 24:00 («—»); la salida también.
+    expect(within(dialogo).getByText('23:15 – —')).toBeInTheDocument();
+    expect(within(dialogo).getAllByText('—').length).toBeGreaterThanOrEqual(3);
+    // Sigue el aviso en rojo, aunque la hora de salida no se pueda mostrar.
+    expect(within(dialogo).getByRole('alert', { name: '' })).toHaveTextContent(
+      'La jornada debe terminar como máximo a las 18:00.',
+    );
+  });
+
   test('un error del backend que el formulario no cubre se muestra; los que ya salen en su campo no se repiten', async () => {
     const { dialogo } = await mostrar({
       vistaPrevia: {
         valida: false,
         errores: [
-          'Ingresa el código de la estructura.',
+          // Este ya sale junto a su campo.
+          'Ingresa la hora de inicio.',
           'El texto contiene caracteres no válidos.',
         ],
         jornada: jornadaDeFigma.jornada,
@@ -525,7 +601,7 @@ describe('vista previa de la jornada', () => {
       ),
     ).toBeInTheDocument();
     expect(
-      within(dialogo).queryByText('Ingresa el código de la estructura.'),
+      within(dialogo).queryByText('Ingresa la hora de inicio.'),
     ).not.toBeInTheDocument();
   });
 });
@@ -589,9 +665,9 @@ describe('crear', () => {
     expect(onCerrar).toHaveBeenCalledTimes(1);
   });
 
-  test('un 409 (código repetido) se muestra una sola vez y el modal sigue abierto con lo escrito', async () => {
+  test('un 409 se muestra una sola vez y el modal sigue abierto con lo escrito', async () => {
     const mensaje =
-      'Ya existe una estructura con el código EH-TAR-26 en este año.';
+      'Solo se puede modificar la estructura horaria de un año planificado.';
     const { dialogo, onCerrar, onGuardada } = await mostrar({
       respuestaCrear: () =>
         HttpResponse.json({ message: mensaje }, { status: 409 }),
@@ -606,7 +682,9 @@ describe('crear', () => {
     expect(onCerrar).not.toHaveBeenCalled();
     expect(onGuardada).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(within(dialogo).getByLabelText('Código *')).toHaveValue('EH-TAR-26');
+    expect(within(dialogo).getByLabelText('Descripción')).toHaveValue(
+      'Secundaria · talleres de tarde',
+    );
     expect(screen.queryByText('Estructura creada')).not.toBeInTheDocument();
   });
 
@@ -638,10 +716,7 @@ describe('la vista previa no desaparece al editar', () => {
     cuerpo.recesos.length > 0 ? jornadaDeFigma : sinReceso;
 
   const llenarJornada = async (dialogo: HTMLElement) => {
-    await userEvent.type(
-      within(dialogo).getByLabelText('Hora de entrada *'),
-      '1445',
-    );
+    await ponerHoraDeInicio(dialogo, '1445');
     await userEvent.type(
       within(dialogo).getByLabelText('Bloques por día *'),
       '4',
@@ -678,7 +753,7 @@ describe('la vista previa no desaparece al editar', () => {
     expect(within(dialogo).getByText('Bloque 1')).toBeInTheDocument();
     expect(within(dialogo).getByText('Bloque 4')).toBeInTheDocument();
     expect(
-      within(dialogo).queryByText(/Completa la hora de entrada/),
+      within(dialogo).queryByText(/Completa la hora de inicio/),
     ).not.toBeInTheDocument();
   });
 
@@ -744,10 +819,7 @@ describe('la vista previa no desaparece al editar', () => {
 
   test('quitar el receso vuelve a pedir la jornada sin él', async () => {
     const { dialogo } = await mostrar({ vistaPreviaSegun: segunRecesos });
-    await userEvent.type(
-      within(dialogo).getByLabelText('Hora de entrada *'),
-      '1445',
-    );
+    await ponerHoraDeInicio(dialogo, '1445');
     await userEvent.type(
       within(dialogo).getByLabelText('Bloques por día *'),
       '4',
@@ -789,7 +861,7 @@ describe('la vista previa no desaparece al editar', () => {
     ).toBeInTheDocument();
     expect(within(dialogo).getByText('Bloque 1')).toBeInTheDocument();
     expect(
-      within(dialogo).queryByText(/Completa la hora de entrada/),
+      within(dialogo).queryByText(/Completa la hora de inicio/),
     ).not.toBeInTheDocument();
     // Con 13 bloques no se pide nada: el backend respondería sin jornada.
     expect(registro.vistasPrevias.every((c) => c.bloquesPorDia !== 13)).toBe(

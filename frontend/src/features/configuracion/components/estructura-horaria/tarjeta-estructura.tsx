@@ -46,7 +46,7 @@ export const TarjetaEstructura = ({
 
   const datos = [
     { titulo: 'Días lectivos', valor: textoDias(e.diasLectivos) },
-    { titulo: 'Hora de entrada', valor: e.horaEntrada },
+    { titulo: 'Hora de inicio', valor: e.horaEntrada },
     { titulo: 'Hora de salida', valor: e.horaSalida },
     { titulo: 'Bloques por día', valor: textoBloquesPorDia(e) },
     { titulo: 'Recesos', valor: textoRecesos(e.recesos) },

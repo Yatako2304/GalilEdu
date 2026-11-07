@@ -1307,11 +1307,11 @@ export type DiaLectivo = 'LUN' | 'MAR' | 'MIE' | 'JUE' | 'VIE' | 'SAB';
 export type SolicitudReceso = { despuesDeBloque: number; duracionMin: number };
 
 /**
- * Cuerpo de crear ("Modal - Nueva estructura horaria"). El nivel y `esPrincipal` no están en Figma pero la BD los exige.
+ * Cuerpo de crear ("Modal - Nueva estructura horaria"). El código no se envía: lo genera el backend (`EH-PRI-27`,
+ * `EH-SEC-27-2`…). El nivel y `esPrincipal` no están en Figma pero la BD los exige.
  * La primera estructura de un nivel nace principal aunque `esPrincipal` sea false.
  */
 export type SolicitudEstructuraHoraria = {
-  codigo: string;
   descripcion: string | null;
   nivel: Nivel;
   esPrincipal: boolean;
@@ -1327,7 +1327,6 @@ export type SolicitudEstructuraHoraria = {
  * como 0 o vacío) y responde con la lista de errores en vez de un 400.
  */
 export type SolicitudVistaPrevia = {
-  codigo: string | null;
   descripcion: string | null;
   nivel: Nivel | null;
   esPrincipal: boolean | null;
@@ -1343,7 +1342,6 @@ export type SolicitudVistaPrevia = {
  * marca, true marca esta como principal y false sobre la principal da 409. Los recesos reemplazan a los anteriores.
  */
 export type SolicitudEdicionEstructuraHoraria = {
-  codigo: string;
   descripcion: string | null;
   esPrincipal?: boolean;
   diasLectivos: DiaLectivo[];

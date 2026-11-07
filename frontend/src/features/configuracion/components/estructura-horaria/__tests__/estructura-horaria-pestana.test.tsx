@@ -111,7 +111,7 @@ test('abre con la primera estructura elegida y muestra sus datos', async () => {
   );
   expect(datos).toEqual({
     'Días lectivos': 'Lun – Vie',
-    'Hora de entrada': '07:45',
+    'Hora de inicio': '07:45',
     'Hora de salida': '14:20',
     'Bloques por día': '8 × 45 min',
     Recesos: '20 + 15 min',
@@ -295,8 +295,14 @@ test('con el año no modificable "Nueva" no abre el modal', async () => {
 });
 
 test('al crear una estructura el modal se cierra, la lista se recarga y la nueva queda elegida', async () => {
-  const nueva = { ...secundaria, id: 'estructura-nueva', codigo: 'EH-TAR-26' };
+  // El backend genera el código: EH-SEC-26 ya existe en 2026, así que la nueva secundaria es EH-SEC-26-2.
+  const nueva = {
+    ...secundaria,
+    id: 'estructura-nueva',
+    codigo: 'EH-SEC-26-2',
+  };
   let creada = false;
+  let cuerpoEnviado: Record<string, unknown> = {};
   server.use(
     http.get(`${API}/configuracion/anios-escolares/anio-2026`, () =>
       HttpResponse.json({
@@ -334,7 +340,8 @@ test('al crear una estructura el modal se cierra, la lista se recarga y la nueva
     ),
     http.post(
       `${API}/configuracion/anios-escolares/anio-2026/estructuras-horarias`,
-      () => {
+      async ({ request }) => {
+        cuerpoEnviado = (await request.json()) as Record<string, unknown>;
         creada = true;
         return HttpResponse.json(
           { estructura: detalleDe(nueva), advertencias: [] },
@@ -350,16 +357,15 @@ test('al crear una estructura el modal se cierra, la lista se recarga y la nueva
   await userEvent.click(await screen.findByRole('button', { name: 'Nueva' }));
   const dialogo = await screen.findByRole('dialog');
 
-  await userEvent.type(within(dialogo).getByLabelText('Código *'), 'eh-tar-26');
+  expect(within(dialogo).queryByLabelText(/Código/)).not.toBeInTheDocument();
   await userEvent.selectOptions(
     within(dialogo).getByLabelText('Nivel *'),
     'SECUNDARIA',
   );
   await userEvent.click(within(dialogo).getByRole('button', { name: 'Lun' }));
-  await userEvent.type(
-    within(dialogo).getByLabelText('Hora de entrada *'),
-    '1445',
-  );
+  const hora = within(dialogo).getByLabelText('Hora de inicio *');
+  await userEvent.clear(hora);
+  await userEvent.type(hora, '1445');
   await userEvent.type(
     within(dialogo).getByLabelText('Bloques por día *'),
     '4',
@@ -377,9 +383,11 @@ test('al crear una estructura el modal se cierra, la lista se recarga y la nueva
   );
   expect(await screen.findByText('3 registradas')).toBeInTheDocument();
   expect(
-    await screen.findByRole('heading', { name: 'EH-TAR-26' }),
+    await screen.findByRole('heading', { name: 'EH-SEC-26-2' }),
   ).toBeInTheDocument();
-  expect(screen.getByRole('button', { name: /EH-TAR-26/ })).toHaveAttribute(
+  // La solicitud no lleva código: el que aparece en la lista lo generó el backend.
+  expect(cuerpoEnviado).not.toHaveProperty('codigo');
+  expect(screen.getByRole('button', { name: /EH-SEC-26-2/ })).toHaveAttribute(
     'aria-pressed',
     'true',
   );

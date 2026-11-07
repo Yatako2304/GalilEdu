@@ -38,8 +38,6 @@ import {
   aSolicitudEstructura,
   aSolicitudVistaPrevia,
   estructuraSchema,
-  PREFIJO_CODIGO_REPETIDO,
-  normalizarCodigo,
   puedeCalcularseLaJornada,
   valoresDeEstructura,
   valoresInicialesEstructura,
@@ -123,7 +121,7 @@ const FormularioEstructura = ({
     if (camposARevisar.length > 0) void form.trigger(camposARevisar);
   };
 
-  // Los errores del backend (código repetido, año no planificado, planes que no caben, desmarcar la principal) salen
+  // Los errores del backend (año no planificado, planes que no caben, desmarcar la principal) salen
   // por el interceptor.
   const alGuardar = (titulo: string) => (guardada: EstructuraGuardada) => {
     addNotification({
@@ -166,20 +164,6 @@ const FormularioEstructura = ({
       ? editar.mutate({ id: estructura.id, data: aSolicitudEdicion(datos) })
       : crear.mutate(aSolicitudEstructura(datos)),
   );
-
-  // Al editar, el backend avisa que el código ya existe aunque sea el de esta misma estructura: ese aviso no se muestra
-  // mientras el código no cambie. Si se cambia por el de otra estructura, el aviso es cierto y sí se muestra.
-  const sinAvisoDeSuPropioCodigo = (
-    vista: RespuestaVistaPrevia | undefined,
-  ): RespuestaVistaPrevia | undefined =>
-    vista && estructura && valores.codigo.trim() === estructura.codigo
-      ? {
-          ...vista,
-          errores: vista.errores.filter(
-            (error) => !error.startsWith(PREFIJO_CODIGO_REPETIDO),
-          ),
-        }
-      : vista;
 
   // Al editar, la vista previa arranca con la jornada que ya tiene la estructura, sin esperar al backend.
   const vistaInicial: RespuestaVistaPrevia | undefined = estructura && {
@@ -237,9 +221,17 @@ const FormularioEstructura = ({
             </DialogTitle>
             <DialogDescription className="text-body-3 text-content-tertiary">
               {anio.data ? `Año escolar ${anio.data.anio}. ` : ''}Los bloques se
-              calculan a partir de la hora de entrada, la duración y los
-              recesos.
+              calculan a partir de la hora de inicio, la duración y los recesos.
             </DialogDescription>
+            {editando && (
+              // El código lo genera el backend al crear y no cambia: aquí solo se lee.
+              <p className="text-body-3 text-content-tertiary">
+                Código{' '}
+                <span className="font-medium text-content-primary">
+                  {estructura.codigo}
+                </span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -247,21 +239,9 @@ const FormularioEstructura = ({
           <div className="space-y-3.5">
             <div className="grid grid-cols-2 gap-3">
               <Input
-                label="Código *"
-                autoComplete="off"
-                // El código se pasa a mayúsculas al recibir lo escrito; sin tope de largo en el campo para que el aviso
-                // "hasta 20 caracteres" pueda verse en vivo.
-                registration={register('codigo', {
-                  onChange: (evento) =>
-                    setValue('codigo', normalizarCodigo(evento.target.value), {
-                      shouldValidate: true,
-                    }),
-                })}
-                error={errores.codigo}
-              />
-              <Input
                 label="Descripción"
                 autoComplete="off"
+                wrapperClassName="col-span-2"
                 registration={register('descripcion')}
                 error={errores.descripcion}
               />
@@ -349,7 +329,7 @@ const FormularioEstructura = ({
             <div className="grid grid-cols-3 gap-3">
               <Input
                 type="time"
-                label="Hora de entrada *"
+                label="Hora de inicio *"
                 registration={register('horaEntrada')}
                 error={errores.horaEntrada}
               />
@@ -437,7 +417,7 @@ const FormularioEstructura = ({
           <VistaPreviaJornada
             // Con datos que no alcanzan para calcular no se pide nada y se sigue viendo la última vista previa (la
             // consulta conserva la respuesta anterior), atenuada y avisando que hay datos por corregir.
-            vista={sinAvisoDeSuPropioCodigo(vistaMostrada)}
+            vista={vistaMostrada}
             actualizando={
               hayConQueCalcular &&
               (vistaPrevia.isFetching || clave !== claveRetardada)

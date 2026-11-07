@@ -14,7 +14,6 @@ import {
 // como máximo a las 18:00 NO está aquí: depende de la suma de bloques y recesos y la confirma la vista previa del
 // backend (`errores`), sin repetir el cálculo en el frontend.
 
-export const LONGITUD_MAXIMA_CODIGO = 20;
 export const LONGITUD_MAXIMA_DESCRIPCION = 100;
 export const BLOQUES_MINIMOS_POR_DIA = 1;
 export const BLOQUES_MAXIMOS_POR_DIA = 12;
@@ -23,8 +22,6 @@ export const DURACION_MAXIMA_BLOQUE_MIN = 120;
 export const DURACION_MINIMA_RECESO_MIN = 5;
 export const DURACION_MAXIMA_RECESO_MIN = 60;
 
-/** Mayúsculas sin tilde, números y guion: es la misma regla del backend (el código ya viene en mayúsculas). */
-const CODIGO_VALIDO = /^[A-Z0-9-]+$/;
 const HORA_VALIDA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const DIAS: [DiaLectivo, ...DiaLectivo[]] = [
@@ -36,8 +33,7 @@ const DIAS: [DiaLectivo, ...DiaLectivo[]] = [
   'SAB',
 ];
 
-export const MENSAJE_CODIGO_INVALIDO =
-  'El código solo admite letras, números y guion.';
+export const MENSAJE_HORA_INICIO = 'Ingresa la hora de inicio.';
 export const MENSAJE_BLOQUES = `Los bloques por día van de ${BLOQUES_MINIMOS_POR_DIA} a ${BLOQUES_MAXIMOS_POR_DIA}.`;
 export const MENSAJE_DURACION_BLOQUE = `La duración del bloque va de ${DURACION_MINIMA_BLOQUE_MIN} a ${DURACION_MAXIMA_BLOQUE_MIN} minutos.`;
 export const MENSAJE_DURACION_RECESO = `El receso dura de ${DURACION_MINIMA_RECESO_MIN} a ${DURACION_MAXIMA_RECESO_MIN} minutos.`;
@@ -53,23 +49,14 @@ export const MENSAJE_JORNADA_MUY_TARDE =
   'La jornada debe terminar como máximo a las 18:00.';
 
 /**
- * Cómo empieza el error de la vista previa cuando el código ya existe en el año. La vista previa no sabe si se está
- * editando, así que al editar también lo da para el código de la propia estructura (que no es un error).
- */
-export const PREFIJO_CODIGO_REPETIDO = 'Ya existe una estructura con el código';
-
-/**
  * Los mensajes que el formulario ya muestra junto a cada campo. La vista previa del backend devuelve también estos
  * mismos errores; con esta lista el modal solo enseña los que el formulario no cubre.
  */
 const MENSAJES_DEL_ESQUEMA = new Set<string>([
-  'Ingresa el código de la estructura.',
-  `El código admite hasta ${LONGITUD_MAXIMA_CODIGO} caracteres.`,
-  MENSAJE_CODIGO_INVALIDO,
   `La descripción admite hasta ${LONGITUD_MAXIMA_DESCRIPCION} caracteres.`,
   'Elige el nivel: primaria o secundaria.',
   'Elige al menos un día lectivo.',
-  'Ingresa la hora de entrada.',
+  MENSAJE_HORA_INICIO,
   MENSAJE_BLOQUES,
   MENSAJE_DURACION_BLOQUE,
   MENSAJE_DURACION_RECESO,
@@ -82,12 +69,6 @@ const MENSAJES_DEL_ESQUEMA = new Set<string>([
 
 export const esMensajeDelEsquema = (mensaje: string) =>
   MENSAJES_DEL_ESQUEMA.has(mensaje);
-
-/**
- * El código se escribe en mayúsculas ("eh-pri-26" y "EH-PRI-26" son el mismo código). Se aplica al recibir lo que se
- * escribe; no quita espacios: uno en medio se avisa en vivo con el mensaje del esquema.
- */
-export const normalizarCodigo = (texto: string) => texto.toUpperCase();
 
 /** Entero escrito con dígitos y dentro del rango; todo lo demás (vacío, decimales, letras, signos) da el mismo mensaje. */
 const enteroEnRango = (minimo: number, maximo: number, mensaje: string) =>
@@ -111,19 +92,6 @@ const esEnteroValido = (texto: string) => /^\d+$/.test(texto.trim());
  */
 export const estructuraSchema = z
   .object({
-    codigo: z
-      .string()
-      .trim()
-      .min(1, 'Ingresa el código de la estructura.')
-      .max(
-        LONGITUD_MAXIMA_CODIGO,
-        `El código admite hasta ${LONGITUD_MAXIMA_CODIGO} caracteres.`,
-      )
-      // El código vacío ya tiene su mensaje: no se suma el de los caracteres.
-      .refine(
-        (valor) => valor === '' || CODIGO_VALIDO.test(valor),
-        MENSAJE_CODIGO_INVALIDO,
-      ),
     descripcion: z
       .string()
       .trim()
@@ -143,7 +111,7 @@ export const estructuraSchema = z
       .min(1, 'Elige al menos un día lectivo.'),
     horaEntrada: z
       .string()
-      .refine((hora) => HORA_VALIDA.test(hora), 'Ingresa la hora de entrada.'),
+      .refine((hora) => HORA_VALIDA.test(hora), MENSAJE_HORA_INICIO),
     bloquesPorDia: enteroEnRango(
       BLOQUES_MINIMOS_POR_DIA,
       BLOQUES_MAXIMOS_POR_DIA,
@@ -203,7 +171,6 @@ export type ValoresReceso = { despuesDeBloque: string; duracionMin: string };
 
 /** Lo que escribe el usuario en el modal; nada viene precargado. */
 export type ValoresEstructura = {
-  codigo: string;
   descripcion: string;
   /** '' mientras no se elija. */
   nivel: Nivel | '';
@@ -215,13 +182,15 @@ export type ValoresEstructura = {
   recesos: ValoresReceso[];
 };
 
+/** La hora con la que abre el modal «Nueva estructura horaria»: fija, no la del reloj. */
+export const HORA_INICIO_POR_DEFECTO = '07:30';
+
 export const valoresInicialesEstructura = (): ValoresEstructura => ({
-  codigo: '',
   descripcion: '',
   nivel: '',
   esPrincipal: false,
   diasLectivos: [],
-  horaEntrada: '',
+  horaEntrada: HORA_INICIO_POR_DEFECTO,
   bloquesPorDia: '',
   duracionBloqueMin: '',
   recesos: [],
@@ -231,7 +200,6 @@ export const valoresInicialesEstructura = (): ValoresEstructura => ({
 export const valoresDeEstructura = (
   e: Pick<
     EstructuraHorariaResumen,
-    | 'codigo'
     | 'descripcion'
     | 'nivel'
     | 'esPrincipal'
@@ -242,7 +210,6 @@ export const valoresDeEstructura = (
     | 'recesos'
   >,
 ): ValoresEstructura => ({
-  codigo: e.codigo,
   descripcion: e.descripcion ?? '',
   nivel: e.nivel,
   esPrincipal: e.esPrincipal,
@@ -269,7 +236,6 @@ const aEntero = (texto: string) =>
 export const aSolicitudEstructura = (
   valores: ValoresEstructura,
 ): SolicitudEstructuraHoraria => ({
-  codigo: valores.codigo.trim(),
   descripcion: valores.descripcion.trim() || null,
   nivel: valores.nivel as Nivel,
   esPrincipal: valores.esPrincipal,
@@ -292,7 +258,6 @@ export const aSolicitudEdicion = (
 ): SolicitudEdicionEstructuraHoraria => {
   const solicitud = aSolicitudEstructura(valores);
   return {
-    codigo: solicitud.codigo,
     descripcion: solicitud.descripcion,
     esPrincipal: solicitud.esPrincipal,
     diasLectivos: solicitud.diasLectivos,
@@ -307,7 +272,7 @@ const enRango = (valor: number | null, minimo: number, maximo: number) =>
   valor !== null && valor >= minimo && valor <= maximo;
 
 /**
- * Si con estos datos el backend puede calcular la jornada: hora de entrada, bloques por día y duración válidos. Con
+ * Si con estos datos el backend puede calcular la jornada: hora de inicio, bloques por día y duración válidos. Con
  * otros valores la vista previa respondería sin jornada, y la pantalla preferiría seguir mostrando la anterior.
  */
 export const puedeCalcularseLaJornada = (solicitud: SolicitudVistaPrevia) =>
@@ -356,7 +321,6 @@ export const aSolicitudVistaPrevia = (
   });
 
   return {
-    codigo: valores.codigo.trim() || null,
     descripcion: valores.descripcion.trim() || null,
     nivel: valores.nivel || null,
     esPrincipal: valores.esPrincipal,
