@@ -171,11 +171,11 @@ class SeccionIT extends PruebaIntegracion {
 	@Test
 	void cadaSeccionTraeCapacidadAlumnosQueOcupanVacanteTutorYEstado() throws Exception {
 		mvc.perform(conToken(get(rutaSeccionesDelAnio(ANIO_2026)), personalAdministrativo))
-				// 1.° A de secundaria: sin alumnos y con María como tutora, sin cotutor.
+				// 1.° A de secundaria: tres alumnos de la demo y María como tutora, sin cotutor.
 				.andExpect(jsonPath("$[6].secciones[0].nombre").value("A"))
 				.andExpect(jsonPath("$[6].secciones[0].gradoCodigo").value("SEC-1"))
 				.andExpect(jsonPath("$[6].secciones[0].capacidadMaxima").value(30))
-				.andExpect(jsonPath("$[6].secciones[0].alumnosOcupanVacante").value(0))
+				.andExpect(jsonPath("$[6].secciones[0].alumnosOcupanVacante").value(3))
 				.andExpect(jsonPath("$[6].secciones[0].tutorId").value(MARIA_FERNANDEZ))
 				.andExpect(jsonPath("$[6].secciones[0].tutor").value(NOMBRE_DE_MARIA))
 				.andExpect(jsonPath("$[6].secciones[0].cotutor").doesNotExist())
@@ -603,19 +603,27 @@ class SeccionIT extends PruebaIntegracion {
 
 	@Test
 	void eliminaUnaSeccionSinMatriculasEnUnAnioActivoYSusDocentesDelPlanSeBorranEnCascada() throws Exception {
-		UUID primeroA = seccionId(ANIO_2026, "SEC-1", "A");
+		// La demo ocupa 1.° A. Se prueba la eliminación en 1.° B, que sigue sin matrículas.
+		UUID primeroB = seccionId(ANIO_2026, "SEC-1", "B");
+		jdbc.sql("""
+				INSERT INTO academico.docente_seccion (plan_curso_id, seccion_id, docente_id)
+				SELECT pc.id, :seccionId, :docenteId FROM academico.plan_curso pc
+				JOIN academico.curso c ON c.id = pc.curso_id
+				WHERE pc.anio_escolar_id = :anioId AND pc.grado_codigo = 'SEC-1' AND c.nombre = 'Álgebra'""")
+				.param("seccionId", primeroB).param("docenteId", UUID.fromString(MARIA_FERNANDEZ))
+				.param("anioId", UUID.fromString(ANIO_2026)).update();
 		int docentesAsignadosAntes = jdbc.sql("SELECT count(*) FROM academico.docente_seccion WHERE seccion_id = :id")
-				.param("id", primeroA).query(Integer.class).single();
-		assertThat(docentesAsignadosAntes).as("María dicta un curso en 1.° A").isEqualTo(1);
+				.param("id", primeroB).query(Integer.class).single();
+		assertThat(docentesAsignadosAntes).as("Asignación del escenario aislado en 1.° B").isEqualTo(1);
 
-		mvc.perform(conToken(delete(rutaSeccion(primeroA)), personalAdministrativo))
+		mvc.perform(conToken(delete(rutaSeccion(primeroB)), personalAdministrativo))
 				.andExpect(status().isNoContent());
 
 		releerDesdeLaBaseDeDatos();
-		assertThat(jdbc.sql("SELECT count(*) FROM configuracion.seccion WHERE id = :id").param("id", primeroA)
+		assertThat(jdbc.sql("SELECT count(*) FROM configuracion.seccion WHERE id = :id").param("id", primeroB)
 				.query(Integer.class).single()).isZero();
 		assertThat(jdbc.sql("SELECT count(*) FROM academico.docente_seccion WHERE seccion_id = :id")
-				.param("id", primeroA).query(Integer.class).single()).isZero();
+				.param("id", primeroB).query(Integer.class).single()).isZero();
 		// El plan del grado no se toca: solo se quitó la asignación de esa sección.
 		assertThat(jdbc.sql("""
 				SELECT count(*) FROM academico.plan_curso

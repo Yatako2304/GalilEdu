@@ -68,9 +68,14 @@ export const MultiSelect = ({
               aria-expanded={abierto}
               aria-disabled={disabled || undefined}
               tabIndex={disabled ? -1 : 0}
+              // Evita que el label active el primer botón «Quitar» al abrir el campo.
+              onClick={(evento) => evento.preventDefault()}
+              onKeyDown={(evento) => {
+                if (evento.key === 'Escape') setAbierto(false);
+              }}
               className={cn(
                 fieldClassName(!!error),
-                'flex min-h-11 cursor-pointer items-center gap-1.5 py-1.5 pr-10 text-left',
+                'flex min-h-11 cursor-pointer flex-wrap items-center gap-1.5 py-1.5 pr-10 text-left',
                 abierto && 'border-stroke-focus ring-2 ring-deep-blue-100',
                 disabled &&
                   'pointer-events-none cursor-not-allowed border-slate-300 bg-slate-200 text-content-tertiary',
@@ -87,6 +92,7 @@ export const MultiSelect = ({
                       size="sm"
                       shape="circle"
                       onRemove={() => alternar(opcion)}
+                      className="max-w-full whitespace-normal text-left"
                     >
                       {opcion.label}
                     </SelectableTag>

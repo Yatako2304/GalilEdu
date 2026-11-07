@@ -11,9 +11,11 @@ import { ArchivoGuardado, DocumentoApoderado } from '@/types/api';
 
 import {
   abrirArchivoDelApoderado,
+  abrirEnPestana,
   descargarPlantillaDelApoderado,
   useDocumentosApoderado,
   useEnviarAValidacion,
+  useIniciarMatricula,
   useSubirDocumentoApoderado,
 } from '../api/documentos-apoderado';
 import { problemaDelArchivo, tamanoLegible } from '../archivos-matricula';
@@ -31,7 +33,11 @@ const ESTADO_ARCHIVO: Record<
 
 /**
  * Figma > Apoderado > Matrícula 2027 · "Documentos de matrícula" (HU-28 descarga la plantilla, HU-29 sube el firmado y
- * lo envía a validación). Solo se puede subir con la sección reservada y el periodo abierto.
+ * lo envía a validación). Solo con el periodo abierto.
+ *
+ * Si el hijo aún no tiene matrícula, el apoderado la inicia aquí: elige los archivos (quedan en la pantalla) y
+ * «Enviar a validación» los manda todos juntos; recién entonces se crea la matrícula y llega al colegio. Si la
+ * matrícula ya existe (la creó el colegio o devolvió un documento observado), cada archivo se sube al elegirlo.
  */
 export const DocumentosApoderado = ({
   estudianteId,
@@ -42,14 +48,20 @@ export const DocumentosApoderado = ({
   const consulta = useDocumentosApoderado(estudianteId);
   const subir = useSubirDocumentoApoderado(estudianteId);
   const enviar = useEnviarAValidacion(estudianteId);
+  const iniciar = useIniciarMatricula(estudianteId);
   const entrada = React.useRef<HTMLInputElement>(null);
   const [elegido, setElegido] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  // Archivos elegidos antes de que exista la matrícula: se envían todos con «Enviar a validación».
+  const [locales, setLocales] = React.useState<Record<string, File>>({});
 
   const datos = consulta.data;
   if (!datos) return null;
 
-  const faltan = datos.documentos.filter((d) => !d.archivo).length;
+  const sinMatricula = datos.estado === null;
+  const faltan = datos.documentos.filter((d) =>
+    sinMatricula ? !locales[d.id] : !d.archivo,
+  ).length;
   const observados = datos.documentos.filter(
     (d) => d.archivo?.estado === 'OBSERVADO',
   );
@@ -65,6 +77,10 @@ export const DocumentosApoderado = ({
     const problema = problemaDelArchivo(archivo);
     setError(problema);
     if (problema) return;
+    if (sinMatricula) {
+      setLocales((actuales) => ({ ...actuales, [elegido]: archivo }));
+      return;
+    }
     try {
       await subir.mutateAsync({ documentoId: elegido, archivo });
     } catch {
@@ -74,7 +90,12 @@ export const DocumentosApoderado = ({
 
   const enviarAValidacion = async () => {
     try {
-      await enviar.mutateAsync();
+      if (sinMatricula) {
+        await iniciar.mutateAsync(locales);
+        setLocales({});
+      } else {
+        await enviar.mutateAsync();
+      }
       addNotification({
         type: 'success',
         title: 'Enviado a validación',
@@ -85,7 +106,71 @@ export const DocumentosApoderado = ({
     }
   };
 
+  const filaLocal = (documento: DocumentoApoderado) => {
+    const local = locales[documento.id];
+    return (
+      <FileItem
+        key={documento.id}
+        name={local?.name ?? documento.nombre}
+        mimeType={local?.type}
+        meta={
+          local
+            ? `${documento.nombre} · ${tamanoLegible(local.size)}`
+            : (documento.descripcion ?? undefined)
+        }
+        actions={
+          <>
+            <Tag size="sm" color={local ? 'info' : 'warning'}>
+              {local ? 'Por enviar' : 'Pendiente'}
+            </Tag>
+            {documento.tienePlantilla && datos.puedeSubir && (
+              <BotonPlantilla
+                documento={documento.nombre}
+                alDescargar={() =>
+                  descargarPlantillaDelApoderado(
+                    estudianteId,
+                    documento.id,
+                    documento.nombre,
+                  )
+                }
+              />
+            )}
+            {local && (
+              <Button
+                type="button"
+                size="icon"
+                variant="tertiary"
+                aria-label={`Ver ${documento.nombre}`}
+                onClick={() => abrirEnPestana(local)}
+              >
+                <Eye className="size-4" aria-hidden="true" />
+              </Button>
+            )}
+            {datos.puedeSubir && (
+              <Button
+                type="button"
+                variant={local ? 'ghost' : 'primary-light'}
+                size="sm"
+                icon={
+                  local ? undefined : (
+                    <Paperclip className="size-4" aria-hidden="true" />
+                  )
+                }
+                aria-label={`${local ? 'Reemplazar' : 'Subir'} ${documento.nombre}`}
+                disabled={iniciar.isPending}
+                onClick={() => pedir(documento.id)}
+              >
+                {local ? 'Reemplazar' : 'Subir'}
+              </Button>
+            )}
+          </>
+        }
+      />
+    );
+  };
+
   const fila = (documento: DocumentoApoderado) => {
+    if (sinMatricula) return filaLocal(documento);
     const { archivo } = documento;
     const estado = archivo ? ESTADO_ARCHIVO[archivo.estado] : null;
     return (
@@ -157,9 +242,11 @@ export const DocumentosApoderado = ({
         <div>
           <CardTitle>Documentos de matrícula</CardTitle>
           <p className="mt-1 text-body-4 text-content-tertiary">
-            {datos.puedeSubir
-              ? 'Descarga cada plantilla, fírmala y súbela. PDF, JPG o PNG, máximo 10 MB.'
-              : 'Estos son los documentos de la matrícula.'}
+            {!datos.puedeSubir
+              ? 'Estos son los documentos de la matrícula.'
+              : sinMatricula
+                ? 'Descarga cada plantilla, fírmala y súbela. PDF, JPG o PNG, máximo 10 MB. Se guardan al enviarlos a validación.'
+                : 'Descarga cada plantilla, fírmala y súbela. PDF, JPG o PNG, máximo 10 MB.'}
           </p>
         </div>
       </CardHeader>
@@ -202,7 +289,7 @@ export const DocumentosApoderado = ({
           </p>
           <Button
             type="button"
-            disabled={porEnviar > 0 || enviar.isPending}
+            disabled={porEnviar > 0 || enviar.isPending || iniciar.isPending}
             onClick={enviarAValidacion}
           >
             Enviar a validación

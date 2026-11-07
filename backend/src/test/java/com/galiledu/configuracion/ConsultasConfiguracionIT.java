@@ -100,7 +100,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 
 	@Test
 	void losAlumnosMatriculadosSalenDeLaMatriculaDelAnio() {
-		assertThat(consultas.alumnosMatriculados(ANIO_2026)).isEqualTo(2);
+		assertThat(consultas.alumnosMatriculados(ANIO_2026)).isEqualTo(5);
 		assertThat(consultas.alumnosMatriculados(ANIO_2027)).isZero(); // solo hay una sección reservada
 		assertThat(consultas.alumnosMatriculados(UUID.randomUUID())).isZero();
 	}
@@ -110,11 +110,11 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		jdbc.sql("""
 				UPDATE matricula.matricula SET estado = 'RETIRADO', fecha_retiro = '2026-09-01'
 				WHERE id = '50000000-0000-0000-0000-000000000001'""").update();
-		assertThat(consultas.alumnosMatriculados(ANIO_2026)).isEqualTo(1);
+		assertThat(consultas.alumnosMatriculados(ANIO_2026)).isEqualTo(4);
 
 		jdbc.sql("UPDATE matricula.matricula SET estado = 'ANULADA' WHERE id = '50000000-0000-0000-0000-000000000003'")
 				.update();
-		assertThat(consultas.alumnosMatriculados(ANIO_2026)).isZero();
+		assertThat(consultas.alumnosMatriculados(ANIO_2026)).isEqualTo(3); // Permanecen los tres alumnos de María.
 	}
 
 	@Test

@@ -99,12 +99,6 @@ const AccionesMatricula = ({
         >
           <Eye className="mr-2 size-4" aria-hidden="true" /> Ver detalle
         </DropdownMenuItem>
-        <DropdownMenuItem disabled>
-          Completar matrícula
-          <span className="ml-auto text-label-3 text-content-quartiary">
-            Disponible pronto
-          </span>
-        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
