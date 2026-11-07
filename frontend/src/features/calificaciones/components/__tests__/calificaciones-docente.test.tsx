@@ -11,6 +11,7 @@ const { filasVacias, escenario } = vi.hoisted(() => ({
   escenario: {
     reglaNota: 'PROMEDIO_PONDERADO',
     pesoPorcentaje: 50 as number | null,
+    variasCompetencias: false,
   },
 }));
 
@@ -51,7 +52,12 @@ vi.mock('../../api/calificaciones', () => ({
     ],
   }),
   useCompetenciasCurso: () => ({
-    data: [{ id: 'competencia-1', nombre: 'Resuelve problemas de cantidad' }],
+    data: [
+      { id: 'competencia-1', nombre: 'Resuelve problemas de cantidad' },
+      ...(escenario.variasCompetencias
+        ? [{ id: 'competencia-2', nombre: 'Resuelve problemas de regularidad' }]
+        : []),
+    ],
   }),
   useItemsEvaluacion: () => ({
     isLoading: false,
@@ -69,8 +75,36 @@ vi.mock('../../api/calificaciones', () => ({
             competencia: 'Resuelve problemas de cantidad',
             pesoPorcentaje: escenario.pesoPorcentaje,
           },
+          ...(escenario.variasCompetencias
+            ? [
+                {
+                  competenciaId: 'competencia-2',
+                  competencia: 'Resuelve problemas de regularidad',
+                  pesoPorcentaje: 25,
+                },
+              ]
+            : []),
         ],
       },
+      ...(escenario.variasCompetencias
+        ? [
+            {
+              id: 'item-2',
+              nombre: 'Práctica 2',
+              descripcion: 'Resuelve ecuaciones',
+              tipo: 'PRACTICA',
+              actualizadoEn: '2026-11-04T12:00:00Z',
+              editable: true,
+              competencias: [
+                {
+                  competenciaId: 'competencia-2',
+                  competencia: 'Resuelve problemas de regularidad',
+                  pesoPorcentaje: 75,
+                },
+              ],
+            },
+          ]
+        : []),
     ],
   }),
   useEliminarItem: () => ({
@@ -115,8 +149,28 @@ describe('Calificaciones del docente', () => {
   beforeEach(() => {
     escenario.reglaNota = 'PROMEDIO_PONDERADO';
     escenario.pesoPorcentaje = 50;
+    escenario.variasCompetencias = false;
     crearItem.mockReset().mockResolvedValue({});
     editarItem.mockReset().mockResolvedValue({});
+  });
+
+  it('califica por ítem sin filtrar competencias ni duplicar los ítems compartidos', async () => {
+    escenario.variasCompetencias = true;
+    const usuario = userEvent.setup();
+    render(<CalificacionesDocente />);
+
+    await usuario.click(screen.getByRole('tab', { name: 'Calificar alumnos' }));
+
+    expect(screen.queryByLabelText('Competencia')).not.toBeInTheDocument();
+    const selector = screen.getByLabelText('Ítem de evaluación');
+    expect(
+      within(selector).getAllByRole('option', { name: 'Práctica 1' }),
+    ).toHaveLength(1);
+    expect(
+      within(selector).getByRole('option', { name: 'Práctica 2' }),
+    ).toBeInTheDocument();
+    await usuario.selectOptions(selector, 'item-2');
+    expect(selector).toHaveValue('item-2');
   });
 
   it.each([

@@ -270,13 +270,7 @@ export const CalificacionesDocente = () => {
               />
             )}
             {pestana === 'calificar' && (
-              <CalificarAlumnos
-                seleccion={seleccion}
-                curso={curso}
-                periodo={periodo}
-                competencias={competencias}
-                items={items}
-              />
+              <CalificarAlumnos curso={curso} periodo={periodo} items={items} />
             )}
           </div>
         </div>
