@@ -37,13 +37,17 @@ public final class DtosEstructurasHorarias {
 	 * Cuerpo de crear y de la vista previa ("Modal - Nueva estructura horaria"). El nivel y {@code esPrincipal} no
 	 * están en Figma pero la BD los exige. La primera estructura de un nivel nace principal aunque la casilla venga en
 	 * false. El año va en la ruta.
+	 * <p>
+	 * El {@code codigo} ya no se pide: lo genera el servicio al crear (EH-SEC-27, con sufijo -2, -3… si ya existe). Si
+	 * un cliente antiguo todavía lo manda, se ignora; el campo se conserva solo para no romper esas llamadas.
 	 */
 	public record SolicitudEstructuraHoraria(String codigo, String descripcion, String nivel, Boolean esPrincipal,
 			List<String> diasLectivos, LocalTime horaEntrada, Integer bloquesPorDia, Integer duracionBloqueMin,
 			List<SolicitudReceso> recesos) {
-		DefinicionEstructura definicion() {
-			return definicionDe(codigo, descripcion, diasLectivos, horaEntrada, bloquesPorDia, duracionBloqueMin,
-					recesos);
+		/** La definición con el código que genera el servicio (o uno provisional en la vista previa). */
+		DefinicionEstructura definicion(String codigoGenerado) {
+			return definicionDe(codigoGenerado, descripcion, diasLectivos, horaEntrada, bloquesPorDia,
+					duracionBloqueMin, recesos);
 		}
 
 		boolean pideSerPrincipal() {
@@ -56,13 +60,17 @@ public final class DtosEstructurasHorarias {
 	 * de nuevo). Los recesos reemplazan a los anteriores. {@code esPrincipal} es opcional: ausente conserva la marca
 	 * que ya tiene, true marca esta como principal (la anterior baja) y false sobre la principal se rechaza (para
 	 * cambiar de principal se marca la otra).
+	 * <p>
+	 * El {@code codigo} no se cambia al editar: la estructura conserva el que tiene. Si la solicitud trae otro, se
+	 * ignora.
 	 */
 	public record SolicitudEdicionEstructuraHoraria(String codigo, String descripcion, Boolean esPrincipal,
 			List<String> diasLectivos, LocalTime horaEntrada, Integer bloquesPorDia, Integer duracionBloqueMin,
 			List<SolicitudReceso> recesos) {
-		DefinicionEstructura definicion() {
-			return definicionDe(codigo, descripcion, diasLectivos, horaEntrada, bloquesPorDia, duracionBloqueMin,
-					recesos);
+		/** La definición con el código que ya tiene la estructura. */
+		DefinicionEstructura definicion(String codigoActual) {
+			return definicionDe(codigoActual, descripcion, diasLectivos, horaEntrada, bloquesPorDia,
+					duracionBloqueMin, recesos);
 		}
 	}
 

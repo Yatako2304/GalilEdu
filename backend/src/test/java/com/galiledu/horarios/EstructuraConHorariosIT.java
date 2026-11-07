@@ -165,7 +165,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 	@Test
 	void editarLaPrincipalSinCambiarSuMarcaConHorariosFunciona() throws Exception {
 		editar(principal, edicion("EH-T-27-B", LUN_A_VIE, 6, true)).andExpect(status().isOk())
-				.andExpect(jsonPath("$.estructura.codigo").value("EH-T-27-B"));
+				.andExpect(jsonPath("$.estructura.codigo").value("EH-T-27"));
 	}
 
 	// ---------- Otros años y otras estructuras ----------

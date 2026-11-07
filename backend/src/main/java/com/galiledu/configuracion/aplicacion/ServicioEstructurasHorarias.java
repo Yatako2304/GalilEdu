@@ -82,24 +82,19 @@ public class ServicioEstructurasHorarias {
 	}
 
 	/**
-	 * Calcula la jornada y reúne todos los errores del formulario sin guardar nada. Solo exige que el año exista (para
-	 * revisar el código repetido): no mira si el año admite cambios ni los planes de evaluación.
+	 * Calcula la jornada y reúne todos los errores del formulario sin guardar nada. Solo exige que el año exista: no
+	 * mira si el año admite cambios, ni los planes de evaluación, ni el código (que genera el servicio al crear).
 	 */
 	@Transactional(readOnly = true)
 	public VistaPreviaJornada vistaPreviaEstructuraHoraria(UUID anioId, SolicitudEstructuraHoraria solicitud) {
 		obtenerAnio(anioId);
-		DefinicionEstructura definicion = solicitud.definicion();
+		// El código lo genera el servicio al crear: aquí no se pide ni se revisa, se usa uno provisional válido.
+		DefinicionEstructura definicion = solicitud.definicion(CODIGO_PROVISIONAL);
 		List<String> errores = new ArrayList<>(EstructuraHoraria.detectarErrores(definicion));
 		try {
 			EstructuraHoraria.normalizarNivel(solicitud.nivel());
 		} catch (IllegalArgumentException nivelInvalido) {
 			errores.add(nivelInvalido.getMessage());
-		}
-		String codigo = definicion.normalizada().codigo();
-		// Un código inválido (vacío, con NUL, fuera de la regla) ya tiene su error y no se busca en la base.
-		if (EstructuraHoraria.esCodigoValido(codigo)
-				&& estructuraRepositorio.existsByAnioEscolarIdAndCodigo(anioId, codigo)) {
-			errores.add(codigoRepetido(codigo).getMessage());
 		}
 
 		JornadaCalculada jornadaCalculada = null;
@@ -132,13 +127,12 @@ public class ServicioEstructurasHorarias {
 		validarAnioModificable(anio);
 		estructuraRepositorio.bloquearEstructurasDelAnio(anioId);
 
-		DefinicionEstructura definicion = solicitud.definicion();
-		validarDefinicion(definicion);
+		// Primero la forma del formulario (con un código provisional válido), como siempre; luego el nivel, y recién con
+		// el nivel se genera el código, dentro del bloqueo del año: dos creaciones a la vez no pueden repetirlo.
+		validarDefinicion(solicitud.definicion(CODIGO_PROVISIONAL));
 		String nivel = construir(() -> EstructuraHoraria.normalizarNivel(solicitud.nivel()));
-		String codigo = definicion.normalizada().codigo();
-		if (estructuraRepositorio.existsByAnioEscolarIdAndCodigo(anioId, codigo)) {
-			throw codigoRepetido(codigo);
-		}
+		String codigo = generarCodigo(anio, nivel);
+		DefinicionEstructura definicion = solicitud.definicion(codigo);
 
 		Optional<EstructuraHoraria> principalActual = estructuraRepositorio
 				.findByAnioEscolarIdAndNivelAndEsPrincipalTrue(anioId, nivel);
@@ -177,12 +171,10 @@ public class ServicioEstructurasHorarias {
 		UUID anioId = estructura.getAnioEscolarId();
 		validarAnioModificable(obtenerAnio(anioId));
 
-		DefinicionEstructura definicion = solicitud.definicion();
+		// El código no cambia al editar: se conserva el que ya tiene la estructura (el de la solicitud se ignora).
+		String codigo = estructura.getCodigo();
+		DefinicionEstructura definicion = solicitud.definicion(codigo);
 		validarDefinicion(definicion);
-		String codigo = definicion.normalizada().codigo();
-		if (estructuraRepositorio.existsByAnioEscolarIdAndCodigoAndIdNot(anioId, codigo, estructuraId)) {
-			throw codigoRepetido(codigo);
-		}
 		boolean eraPrincipal = estructura.esPrincipal();
 		// Ausente significa "no cambiar": solo un false explícito sobre la principal es un desmarcado.
 		Boolean esPrincipalPedido = solicitud.esPrincipal();
@@ -264,6 +256,29 @@ public class ServicioEstructurasHorarias {
 	}
 
 	// ---------- Apoyo ----------
+
+	/** Un código válido que solo sirve para revisar la forma del formulario: nunca se guarda. */
+	private static final String CODIGO_PROVISIONAL = "EH-PROVISIONAL";
+
+	/**
+	 * El código de una estructura nueva: {@code EH-{PRI|SEC}-{año a 2 dígitos}} (EH-SEC-27) y, si ya existe en el año,
+	 * con sufijo -2, -3… hasta que sea único. Solo hay dos niveles (PRIMARIA y SECUNDARIA); la sigla de cualquier otro
+	 * serían sus tres primeras letras. Se llama dentro del bloqueo del año.
+	 */
+	private String generarCodigo(AnioEscolar anio, String nivel) {
+		String sigla = switch (nivel) {
+			case EstructuraHoraria.NIVEL_PRIMARIA -> "PRI";
+			case EstructuraHoraria.NIVEL_SECUNDARIA -> "SEC";
+			default -> nivel.substring(0, Math.min(3, nivel.length()));
+		};
+		String base = "EH-%s-%02d".formatted(sigla, anio.getAnio() % 100);
+		String candidato = base;
+		for (int intento = 2; estructuraRepositorio.existsByAnioEscolarIdAndCodigo(anio.getId(),
+				candidato); intento++) {
+			candidato = base + "-" + intento;
+		}
+		return candidato;
+	}
 
 	private AnioEscolar obtenerAnio(UUID anioId) {
 		return anioEscolarRepositorio.findById(anioId)

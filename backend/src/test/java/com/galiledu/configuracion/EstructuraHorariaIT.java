@@ -182,7 +182,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 	@Test
 	void creaUnaEstructuraYLaPrimeraDelNivelNaceComoPrincipal() throws Exception {
 		mvc.perform(conToken(post(rutaDelAnio(ANIO_2027)), personalAdministrativo,
-				estructura("  eh-pri-27 ", "primaria", false)))
+				estructura("  lo-que-sea ", "primaria", false)))
 				.andExpect(status().isCreated())
 				.andExpect(jsonPath("$.estructura.id").isNotEmpty())
 				.andExpect(jsonPath("$.estructura.codigo").value("EH-PRI-27"))
@@ -208,11 +208,11 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructura.esPrincipal").value(true))
 				.andExpect(jsonPath("$.advertencias", hasSize(1)))
 				.andExpect(jsonPath("$.advertencias[0]")
-						.value("EH-B pasa a ser la estructura principal de primaria; EH-A deja de serlo."));
+						.value("EH-PRI-27-2 pasa a ser la estructura principal de primaria; EH-PRI-27 deja de serlo."));
 
 		mvc.perform(conToken(get(rutaDelAnio(ANIO_2027)), personalAdministrativo))
-				.andExpect(jsonPath("$.estructuras[?(@.codigo=='EH-A')].esPrincipal", contains(false)))
-				.andExpect(jsonPath("$.estructuras[?(@.codigo=='EH-B')].esPrincipal", contains(true)));
+				.andExpect(jsonPath("$.estructuras[?(@.codigo=='EH-PRI-27')].esPrincipal", contains(false)))
+				.andExpect(jsonPath("$.estructuras[?(@.codigo=='EH-PRI-27-2')].esPrincipal", contains(true)));
 	}
 
 	@Test
@@ -233,8 +233,6 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 	@Test
 	void rechazaConSuMensajeCadaReglaDeFormaDelFormulario() throws Exception {
 		String receso = "[{\"despuesDeBloque\":%d,\"duracionMin\":%d}]";
-		exigeQueCrearDe(estructura("   ", "PRIMARIA", false), 400, "Ingresa el código de la estructura.");
-		exigeQueCrearDe(estructura("A".repeat(21), "PRIMARIA", false), 400, "El código admite hasta 20 caracteres.");
 		exigeQueCrearDe(estructura("EH-A", "D".repeat(101), "PRIMARIA", false, DIAS_LUN_A_VIE, "08:00", 6, 45, "[]"),
 				400, "La descripción admite hasta 100 caracteres.");
 		exigeQueCrearDe(estructura("EH-A", "Prueba", "PRIMARIA", false, "[]", "08:00", 6, 45, "[]"), 400,
@@ -257,14 +255,29 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 	}
 
 	@Test
-	void elCodigoRepetidoDa409AunqueVengaConEspaciosOEnMinusculas() throws Exception {
-		crear(estructura("EH-A", "PRIMARIA", false));
-
-		exigeQueCrearDe(estructura(" eh-a ", "SECUNDARIA", false), 409,
-				"Ya existe una estructura con el código EH-A en este año.");
+	void elCodigoLoGeneraElBackendYAgregaSufijoSiYaExiste() throws Exception {
+		String[] esperados = {"EH-PRI-27", "EH-PRI-27-2", "EH-PRI-27-3"};
+		for (String esperado : esperados) {
+			// El «codigo» que llegue en la solicitud se ignora: aquí siempre es el mismo.
+			mvc.perform(conToken(post(rutaDelAnio(ANIO_2027)), personalAdministrativo,
+					estructura("EH-A", "PRIMARIA", false)))
+					.andExpect(status().isCreated())
+					.andExpect(jsonPath("$.estructura.codigo").value(esperado));
+		}
+		mvc.perform(conToken(post(rutaDelAnio(ANIO_2027)), personalAdministrativo,
+				estructura("EH-A", "SECUNDARIA", false)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.estructura.codigo").value("EH-SEC-27"));
 	}
 
-	// ---------- Vista previa ----------
+	@Test
+	void crearSinElCampoCodigoFunciona() throws Exception {
+		String cuerpo = estructura("x", "SECUNDARIA", false).replaceFirst("\"codigo\":\"x\",", "");
+
+		mvc.perform(conToken(post(rutaDelAnio(ANIO_2027)), personalAdministrativo, cuerpo))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.estructura.codigo").value("EH-SEC-27"));
+	}
 
 	@Test
 	void laVistaPreviaCalculaLaJornadaDelModalYNoGuardaNada() throws Exception {
@@ -304,8 +317,8 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 		mvc.perform(conToken(post(rutaDelAnio(ANIO_2027) + "/vista-previa"), personalAdministrativo, "{}"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.valida").value(false))
-				.andExpect(jsonPath("$.errores", hasSize(6)))
-				.andExpect(jsonPath("$.errores[0]").value("Ingresa el código de la estructura."))
+				.andExpect(jsonPath("$.errores", hasSize(5)))
+				.andExpect(jsonPath("$.errores[0]").value("Elige al menos un día lectivo."))
 				.andExpect(jsonPath("$.jornada").doesNotExist());
 	}
 
@@ -327,7 +340,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				"[\"LUN\",\"MAR\"]", "09:00", 4, 50, "[{\"despuesDeBloque\":2,\"duracionMin\":30}]")))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.estructura.id").value(id))
-				.andExpect(jsonPath("$.estructura.codigo").value("EH-A2"))
+				.andExpect(jsonPath("$.estructura.codigo").value("EH-PRI-27"))
 				.andExpect(jsonPath("$.estructura.nivel").value("PRIMARIA"))
 				.andExpect(jsonPath("$.estructura.bloquesPorSemana").value(8))
 				.andExpect(jsonPath("$.estructura.horaEntrada").value("09:00"))
@@ -336,7 +349,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.advertencias", hasSize(0)));
 
 		mvc.perform(conToken(get(rutaEstructura(id)), personalAdministrativo))
-				.andExpect(jsonPath("$.codigo").value("EH-A2"))
+				.andExpect(jsonPath("$.codigo").value("EH-PRI-27"))
 				.andExpect(jsonPath("$.recesos", hasSize(1)));
 	}
 
@@ -353,13 +366,15 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 	}
 
 	@Test
-	void editarConElCodigoDeOtraEstructuraDa409() throws Exception {
+	void editarConOtroCodigoLoIgnoraYConservaElQueTenia() throws Exception {
 		String id = crear(estructura("EH-A", "PRIMARIA", false));
 		crear(estructura("EH-B", "SECUNDARIA", false));
 
-		mvc.perform(conToken(put(rutaEstructura(id)), personalAdministrativo, edicion(" eh-b ", true, 6)))
-				.andExpect(status().isConflict())
-				.andExpect(jsonPath("$.message").value("Ya existe una estructura con el código EH-B en este año."));
+		mvc.perform(conToken(put(rutaEstructura(id)), personalAdministrativo, edicion(" eh-sec-27 ", true, 6)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.estructura.codigo").value("EH-PRI-27"));
+		mvc.perform(conToken(get(rutaEstructura(id)), personalAdministrativo))
+				.andExpect(jsonPath("$.codigo").value("EH-PRI-27"));
 	}
 
 	@Test
@@ -376,7 +391,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.estructura.esPrincipal").value(true))
 				.andExpect(jsonPath("$.advertencias[0]")
-						.value("EH-B pasa a ser la estructura principal de primaria; EH-A deja de serlo."));
+						.value("EH-PRI-27-2 pasa a ser la estructura principal de primaria; EH-PRI-27 deja de serlo."));
 		mvc.perform(conToken(get(rutaEstructura(principal)), personalAdministrativo))
 				.andExpect(jsonPath("$.esPrincipal").value(false));
 	}
