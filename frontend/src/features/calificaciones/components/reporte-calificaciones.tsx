@@ -29,6 +29,8 @@ import {
   useReporteCalificaciones,
 } from '../api/calificaciones';
 
+import { NotasCompetencia } from './notas-competencia';
+
 type OpcionGrado = { value: string; label: string };
 
 const NOMBRES_REGLA: Record<string, string> = {
@@ -204,8 +206,9 @@ export const ReporteCalificacionesVista = ({
                 Incluir promedio final
               </span>
               <span className="mt-1 block max-w-md text-body-4 text-content-quartiary">
-                Calcula los resultados por competencia y el promedio general de
-                los ítems seleccionados con la regla del año escolar:{' '}
+                Calcula el promedio de este curso en cada competencia (su aporte
+                a la nota de la competencia) y un promedio general de
+                referencia, con la regla del año escolar:{' '}
                 {NOMBRES_REGLA[curso.reglaNota] ?? curso.reglaNota}.
               </span>
             </div>
@@ -266,6 +269,16 @@ export const ReporteCalificacionesVista = ({
           )}
         </Card>
       )}
+
+      {filtrosGenerados?.competenciaIds && (
+        <NotasCompetencia
+          seleccion={{
+            planCursoId: filtrosGenerados.planCursoId,
+            seccionId: filtrosGenerados.seccionId,
+          }}
+          competenciaIds={filtrosGenerados.competenciaIds.split(',')}
+        />
+      )}
     </div>
   );
 };
@@ -289,7 +302,7 @@ const TablaConsolidado = ({
         titulo:
           columna.competencia ??
           (columna.clave === 'resultado_general'
-            ? 'Resumen del curso'
+            ? 'Resumen del curso (referencial)'
             : reporte.titulo),
         columnas: 1,
       });

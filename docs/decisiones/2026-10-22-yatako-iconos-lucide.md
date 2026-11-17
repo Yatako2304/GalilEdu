@@ -71,6 +71,7 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `schedule` | `Clock` | Modal Nueva estructura horaria |
 | `coffee` | `Coffee` | Receso en la jornada y en su vista previa |
 | `supervisor_account` | `UserCog` | Modal Asignar tutor |
+| `percent` | `Percent` | Modal "Pesos de una competencia" (plan de evaluación) |
 
 ## Notas para quien siga
 

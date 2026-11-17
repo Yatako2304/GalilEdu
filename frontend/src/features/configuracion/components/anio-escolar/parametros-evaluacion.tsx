@@ -107,6 +107,14 @@ export const ParametrosEvaluacionAnio = ({
         />
       </div>
 
+      <p className="text-body-4 text-content-quartiary">
+        La nota oficial es de cada competencia: una por periodo y una final. El
+        cálculo se aplica a los ítems de cada curso y luego a los cursos que
+        evalúan la misma competencia (con promedio ponderado, según el peso de
+        cada curso en el plan de evaluación). La consolidación une los periodos
+        en la nota final.
+      </p>
+
       {actuales.editable && (
         <div className="flex justify-end">
           <Button

@@ -18,7 +18,7 @@ const PESTANAS = [
     id: 'plan-evaluacion',
     titulo: 'Plan de evaluación',
     subtitulo:
-      'Define qué cursos se dictan en cada grado, cuántas horas tienen, qué competencias evalúan y qué docente los dicta en cada sección.',
+      'Define qué cursos se dictan en cada grado, cuántas horas tienen, qué competencias evalúan, cuánto aporta cada curso a cada competencia y qué docente los dicta en cada sección.',
   },
   {
     id: 'escala',

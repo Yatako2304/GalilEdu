@@ -2,7 +2,7 @@
 
 - **HU:** HU-57, HU-59 y HU-62
 - **Estado:** ✅ terminado: backend, frontend, pruebas automatizadas y validación manual implementados
-- **Última actualización:** 2026-11-06
+- **Última actualización:** 2026-11-16
 
 ## Alcance
 
@@ -10,7 +10,10 @@ El Docente trabaja únicamente con los cursos y secciones que tiene asignados en
 
 - registrar ítems de evaluación con un criterio, tipo y competencias; el peso se solicita solo en promedio ponderado;
 - calificar a cada estudiante matriculado y adjuntar una evidencia pedagógica;
-- consultar resultados por ítem, competencia o periodo y descargar el consolidado como una tabla en PDF.
+- consultar resultados por ítem, competencia o periodo y descargar el consolidado como una tabla en PDF;
+- ver la **nota oficial de cada competencia**: una por periodo y una final, combinando todos los cursos del grado que la evalúan.
+
+**La nota oficial es de la competencia, no del curso.** El «Promedio final» del consolidado es lo que aporta este curso a la competencia en un periodo. Véase la [decisión de la nota oficial por competencia](../decisiones/2026-11-16-alex-sanchezz-nota-oficial-competencia.md).
 
 Aunque los frames revisados muestran «Personal administrativo» o «Administrador» en la barra lateral, están ubicados en la página `🌟 Docente` de Figma y corresponden al flujo del usuario Docente. La ruta implementada es `/app/docente/calificaciones` y la API exige el rol `DOCENTE`.
 
@@ -69,10 +72,30 @@ V15 elimina únicamente `NOT NULL` de `academico.item_competencia.peso_porcentaj
 - `NIVEL_MAS_FRECUENTE` elige el nivel más repetido; si hay empate, prevalece el nivel de logro mayor. `ULTIMO_NIVEL` toma el último ítem registrado.
 - El consolidado agrupa las columnas por las competencias seleccionadas. Los ítems compartidos aparecen en cada grupo al que pertenecen, pero se ofrecen una sola vez en el selector de ítems. La selección de competencias determina los ítems disponibles.
 - **Incluir promedio final** agrega el resultado de cada competencia y, si se seleccionó más de una, el promedio general del curso para la selección actual, con estado Aprobado, Desaprobado o Pendiente. Con una sola competencia se muestra un único promedio. El interruptor desactivado oculta todos los promedios.
+- El promedio general se muestra como **referencial** (grupo «Resumen del curso (referencial)»): mezcla competencias y no es una nota oficial. El PDF lo aclara en la línea de parámetros.
 - La regla se obtiene de `configuracion.anio_escolar.regla_nota`, también para el promedio general. El promedio simple cuenta cada ítem calificado una sola vez. En el ponderado, el peso de un ítem compartido es la suma de sus pesos en las competencias seleccionadas: `suma(nota × peso) / suma(peso)`. Se excluyen los ítems sin nota, se incluye el cero y se redondea a dos decimales al final; sin notas se muestra `—` y estado Pendiente.
 - Para la escala cualitativa, el resultado general usa los ítems únicos con la misma regla anual de frecuencia o último nivel. La consolidación entre periodos sigue siendo un parámetro distinto y no interviene en este reporte de un solo periodo.
-- Para la escala vigesimal, el estado Aprobado empieza en el rango A de la tabla de conversión vigente en la fecha de inicio del periodo. Para la escala cualitativa, A y AD son aprobatorios.
+- Para la escala vigesimal, el estado Aprobado empieza en el rango A de la tabla de conversión vigente en la fecha de inicio del periodo; la nota se redondea al entero (0,5 sube) antes de compararla, igual que para la letra. Para la escala cualitativa, A y AD son aprobatorios.
 - Las descargas usan el tipo MIME real: `application/pdf` para el consolidado y el tipo guardado para evidencias. La ruta CSV anterior se conserva para compatibilidad con clientes existentes; el frontend solo ofrece PDF.
+
+### Nota de la competencia
+
+Se calcula al consultarla y no se guarda (`CalculoNotas` y `ServicioNotasCompetencia`). Va por sección, en tres pasos:
+
+1. **Ítems → aporte del curso en el periodo:** la regla de nota del año sobre los ítems del curso que apuntan a la competencia. Es el mismo «Promedio final» del consolidado.
+2. **Aportes → nota de la competencia en el periodo:** con `PROMEDIO_PONDERADO` se usa el peso de cada curso del plan de evaluación (`academico.plan_competencia.peso_curso`) y se normaliza por los cursos que tienen notas. Con `PROMEDIO_SIMPLE` los cursos aportan por igual. En la escala cualitativa se aplica la regla del año a los niveles de los cursos.
+3. **Notas de periodo → nota final:** `PROMEDIO_PERIODOS` promedia los periodos con nota (en la escala cualitativa aplica la regla de nota a sus niveles). `ULTIMO_PERIODO` toma el último periodo con nota.
+
+Ejemplo con Aritmética 60 % y Geometría 40 %: en el IV bimestre Aritmética aporta 13 y Geometría 16, así que la competencia tiene 13 × 0,6 + 16 × 0,4 = 14,2.
+
+| Situación | Resultado |
+| --- | --- |
+| Un curso sin notas en el periodo, o un ítem sin calificar | Se calcula con lo que hay y se marca **Parcial** |
+| Falta algún periodo (o, con `ULTIMO_PERIODO`, el último) | La nota final se marca **Parcial** |
+| `PROMEDIO_PONDERADO` con pesos que no suman 100 % | Sin nota de competencia («—», Pendiente) y con un aviso; los aportes sí se ven |
+| Ningún curso tiene notas | «—», Pendiente |
+
+**Nivel de logro (letra).** La nota final de la competencia se muestra **siempre en nivel de logro** (AD, A, B, C), con el número como referencia. En la escala vigesimal, la nota (tal como se muestra, con 2 decimales) se **redondea al entero, 0,5 sube**, y se ubica en los rangos enteros de la tabla de conversión: 16,5 → 17 → A; 13,5 → 14 → A; 13,49 → 13 → B; 17,5 → 18 → AD. Cada periodo usa la versión de la tabla vigente al inicio del periodo; la nota final, la del inicio del último periodo. Si no hay ninguna versión, se usa C 0–10, B 11–13, A 14–17 y AD 18–20. El **estado** sigue la misma regla (Aprobado = A o AD), así que nunca contradice la letra. El consolidado por curso también aplica ese redondeo al decidir Aprobado o Desaprobado. En la pantalla, la tarjeta **Nota de la competencia** aparece debajo del consolidado al generarlo, con una tabla por cada competencia elegida. El interruptor **Ver el aporte de cada curso** muestra cuánto aporta cada curso en cada periodo. El docente ve los aportes de los cursos de sus colegas en la sección, pero no sus ítems.
 
 ## API
 
@@ -82,13 +105,14 @@ Todas las rutas usan el prefijo `/api/calificaciones/docente` y requieren rol Do
 | --- | --- | --- |
 | GET | `/cursos` | Cursos y secciones asignados, parámetros del año y periodos con estado y conteos. |
 | GET | `/cursos/{planCursoId}/secciones/{seccionId}/competencias` | Competencias seleccionadas en el plan del curso. |
+| GET | `/cursos/{planCursoId}/secciones/{seccionId}/notas-competencia?competenciaIds=` | Nota oficial de las competencias del curso (todas o las elegidas, separadas por coma): parámetros del año, periodos, cursos de cada competencia con su peso y, por estudiante, la nota de cada periodo con los aportes y la nota final (`nota`, `estado`, `parcial`). 400 si una competencia no es del curso. |
 | GET · POST | `/cursos/{planCursoId}/secciones/{seccionId}/periodos/{periodoId}/items` | Lista o crea ítems del periodo. |
 | PUT · DELETE | `/items/{itemId}` | Edita o elimina un ítem. |
 | GET · PUT | `/items/{itemId}/calificaciones` | Lista estudiantes con su nota y guarda el lote de calificaciones. |
 | POST · GET · DELETE | `/items/{itemId}/calificaciones/{matriculaId}/evidencia` | Sube, descarga o elimina la evidencia. |
 | GET | `/reportes?tipo=&planCursoId=&seccionId=&periodoId=&competenciaIds=&itemIds=&incluirPromedio=` | Con `tipo=COMPETENCIA`, genera el consolidado múltiple. `competenciaIds` e `itemIds` son UUID separados por coma; `incluirPromedio` vale `true` por defecto. Sin `itemIds` usa todos los ítems disponibles. Se mantiene `objetivoId` para clientes de una sola competencia y las variantes `ITEM` y `PERIODO`. |
 | GET | `/reportes/exportar` | El mismo consolidado en CSV UTF-8. |
-| GET | `/reportes/exportar-pdf` | El mismo consolidado como tabla PDF; acepta los mismos filtros, valida la asignación del docente y descarga `consolidado-notas.pdf`. Es la ruta usada por la interfaz. |
+| GET | `/reportes/exportar-pdf` | El mismo consolidado como tabla PDF. Con `tipo=COMPETENCIA`, al final agrega «Nota final de la competencia»: una columna por periodo y la nota final en nivel de logro (p. ej. «A · 14,2/20») con su estado, sin partir una competencia entre páginas; acepta los mismos filtros, valida la asignación del docente y descarga `consolidado-notas.pdf`. Es la ruta usada por la interfaz. |
 
 Las columnas del consolidado múltiple incluyen `competenciaId`, `competencia` y `promedio` para agruparlas en pantalla. Sus claves combinan competencia e ítem y el promedio general usa `resultado_general`; el estado de cada resultado se devuelve con el sufijo `_estado`. En CSV, cada encabezado de ítem o promedio de competencia incluye el nombre de la competencia para distinguir los ítems compartidos. El backend rechaza competencias ajenas al plan e ítems ajenos a la selección. La selección múltiple no requirió tablas ni migraciones adicionales; V15 corresponde al cambio de pesos opcionales.
 
@@ -96,7 +120,8 @@ En las solicitudes de alta y edición, `competencias[].pesoPorcentaje` es obliga
 
 ## Código y pruebas
 
-- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioCalificaciones`, `RepositorioCalificaciones`, `CalificacionController`, `ArchivoReporteCalificaciones` y DTO).
+- Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioCalificaciones`, `ServicioNotasCompetencia`, `dominio/CalculoNotas`, `RepositorioCalificaciones`, `RepositorioPesosPlan`, `CalificacionController`, `ArchivoReporteCalificaciones` y DTO).
+- Pruebas de la nota de la competencia: `dominio/CalculoNotasTests.java` (reglas, sin BD), `NotaCompetenciaIT.java` (API y pesos) y `components/__tests__/reporte-calificaciones.test.tsx` (tarjeta del docente).
 - Frontend: `frontend/src/features/calificaciones/` y la ruta `frontend/src/app/routes/app/docente/calificaciones.tsx`.
 - Pruebas: `backend/src/test/java/com/galiledu/academico/ServicioCalificacionesTests.java`, `ReporteCompetenciasTests.java`, `ArchivoReporteCalificacionesTests.java`, `CalificacionesIT.java` y `frontend/src/features/calificaciones/` (`components/__tests__/` y `api/__tests__/exportar-reporte.test.ts`). Las pruebas PDF verifican texto, escala cualitativa, ausencia de promedios, descarga y permisos, paginación por estudiantes y columnas; generan una muestra visual en `backend/target/reporte-pdf-demo.pdf` y su PNG.
 

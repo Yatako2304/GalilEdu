@@ -523,8 +523,35 @@ export type PlanGrado = {
   cursosConfigurados: number;
   docentesAsignados: number;
   docentesRequeridos: number;
+  /** Regla del año escolar: solo con PROMEDIO_PONDERADO se usa el peso de cada curso en sus competencias. */
+  reglaNota: ReglaNota;
+  /** Competencias del grado cuyos pesos por curso no suman 100 %. */
+  pesosIncompletos: number;
   secciones: SeccionPlan[];
   cursos: PlanCursoResumen[];
+};
+
+/** Un curso que evalúa la competencia en el grado, con cuánto aporta a su nota (null = sin definir). */
+export type PesoCurso = {
+  planCursoId: string;
+  curso: string;
+  pesoCurso: number | null;
+};
+
+/** Vista "Competencias del grado". completo = todos los cursos tienen peso y suman 100 %. */
+export type PesosCompetencia = {
+  competenciaId: string;
+  competencia: string;
+  area: string;
+  total: number;
+  completo: boolean;
+  cursos: PesoCurso[];
+};
+
+export type SolicitudPesosCompetencia = {
+  anioEscolarId: string;
+  gradoCodigo: string;
+  pesos: { planCursoId: string; pesoCurso: number }[];
 };
 
 export type CompetenciaPlan = {
@@ -1582,6 +1609,52 @@ export type ReporteCalificaciones = {
     matriculaId: string;
     estudiante: string;
     valores: Record<string, string>;
+  }[];
+};
+
+// ---------- Calificaciones · Nota oficial de la competencia (una por periodo y una final) ----------
+// Backend: academico/aplicacion/DtosCalificaciones.java (NotasCompetencias).
+
+/**
+ * nota es "—" si todavía no hay; nivel = AD, A, B o C (null sin nota): en vigesimal se redondea la nota al entero
+ * (0,5 sube) y se ubica en la tabla de conversión. parcial = faltan notas que influyen en ella.
+ */
+export type NotaResultado = {
+  nota: string;
+  nivel: 'AD' | 'A' | 'B' | 'C' | null;
+  estado: 'Aprobado' | 'Desaprobado' | 'Pendiente';
+  parcial: boolean;
+};
+
+export type NotaPeriodoCompetencia = NotaResultado & {
+  periodoId: string;
+  /** Lo que aporta cada curso a la competencia en el periodo ("—" si aún no tiene notas). */
+  aportes: { planCursoId: string; nota: string }[];
+};
+
+export type CompetenciaNotas = {
+  competenciaId: string;
+  competencia: string;
+  /** La regla del año es promedio ponderado: los cursos pesan según el plan de evaluación. */
+  usaPesos: boolean;
+  pesosCompletos: boolean;
+  cursos: PesoCurso[];
+};
+
+export type NotasCompetencias = {
+  escala: EscalaEvaluacion;
+  reglaNota: ReglaNota;
+  consolidacion: Consolidacion;
+  periodos: { id: string; numero: number; nombre: string }[];
+  competencias: CompetenciaNotas[];
+  filas: {
+    matriculaId: string;
+    estudiante: string;
+    competencias: {
+      competenciaId: string;
+      periodos: NotaPeriodoCompetencia[];
+      notaFinal: NotaResultado;
+    }[];
   }[];
 };
 

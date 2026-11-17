@@ -32,10 +32,12 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.CursoDocente;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.EvidenciaResumen;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.FilaCalificacion;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ItemEvaluacion;
+import com.galiledu.academico.aplicacion.DtosCalificaciones.NotasCompetencias;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ReporteCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudItem;
 import com.galiledu.academico.aplicacion.ServicioCalificaciones;
+import com.galiledu.academico.aplicacion.ServicioNotasCompetencia;
 import com.galiledu.compartido.seguridad.ServicioJwt;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 
@@ -45,9 +47,23 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 @PreAuthorize("hasRole('DOCENTE')")
 public class CalificacionController {
 	private final ServicioCalificaciones servicio;
+	private final ServicioNotasCompetencia notasCompetencia;
 
-	public CalificacionController(ServicioCalificaciones servicio) {
+	public CalificacionController(ServicioCalificaciones servicio, ServicioNotasCompetencia notasCompetencia) {
 		this.servicio = servicio;
+		this.notasCompetencia = notasCompetencia;
+	}
+
+	/**
+	 * Nota oficial de las competencias del curso en la sección: una por periodo y una final, combinando todos los
+	 * cursos
+	 * del grado que las evalúan. Sin competenciaIds, todas las del curso.
+	 */
+	@GetMapping("/cursos/{planCursoId}/secciones/{seccionId}/notas-competencia")
+	public NotasCompetencias notasCompetencia(@PathVariable UUID planCursoId, @PathVariable UUID seccionId,
+			@RequestParam(required = false) String competenciaIds, Authentication autenticacion) {
+		return notasCompetencia.notasDocente(ServicioJwt.usuarioActual(autenticacion), planCursoId, seccionId,
+				ids(competenciaIds));
 	}
 
 	@GetMapping("/cursos")
@@ -155,8 +171,16 @@ public class CalificacionController {
 			@RequestParam(required = false) String itemIds,
 			@RequestParam(required = false) String competenciaIds,
 			@RequestParam(defaultValue = "true") boolean incluirPromedio, Authentication autenticacion) {
-		byte[] contenido = servicio.exportarPdf(ServicioJwt.usuarioActual(autenticacion), tipo, planCursoId,
-				seccionId, periodoId, objetivoId, ids(itemIds), incluirPromedio, ids(competenciaIds));
+		UUID docente = ServicioJwt.usuarioActual(autenticacion);
+		// Al final del consolidado por competencia va la nota final de cada competencia, con su nivel de logro.
+		List<UUID> competencias = !ids(competenciaIds).isEmpty()
+				? ids(competenciaIds)
+				: objetivoId == null ? List.of() : List.of(objetivoId);
+		ReporteCalificaciones notasFinales = "COMPETENCIA".equalsIgnoreCase(tipo) && !competencias.isEmpty()
+				? notasCompetencia.reporteNotasFinales(docente, planCursoId, seccionId, competencias)
+				: null;
+		byte[] contenido = servicio.exportarPdf(docente, tipo, planCursoId, seccionId, periodoId, objetivoId,
+				ids(itemIds), incluirPromedio, ids(competenciaIds), notasFinales);
 		return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
 				.header(HttpHeaders.CONTENT_DISPOSITION,
 						ContentDisposition.attachment().filename("consolidado-notas.pdf").build().toString())

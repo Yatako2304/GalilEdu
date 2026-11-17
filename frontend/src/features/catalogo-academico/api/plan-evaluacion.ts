@@ -12,10 +12,12 @@ import {
   DocenteOpcion,
   DocenteSeccion,
   OrigenPlan,
+  PesosCompetencia,
   PlanCursoDetalle,
   PlanGrado,
   SolicitudConfigurarCurso,
   SolicitudCopiaPlan,
+  SolicitudPesosCompetencia,
   SolicitudPlanCurso,
 } from '@/types/api';
 
@@ -48,6 +50,17 @@ export const usePlanGrado = (filtro: GradoAnio | null) =>
       queryKey: ['plan-evaluacion', 'plan', filtro],
       queryFn: (): Promise<PlanGrado> =>
         api.get('/planes-evaluacion', { params: filtro }),
+      enabled: !!filtro,
+    }),
+  );
+
+// GET /planes-evaluacion/pesos-competencias?anioEscolarId=&grado= (vista "Competencias del grado")
+export const usePesosCompetencias = (filtro: GradoAnio | null) =>
+  useQuery(
+    queryOptions({
+      queryKey: ['plan-evaluacion', 'pesos', filtro],
+      queryFn: (): Promise<PesosCompetencia[]> =>
+        api.get('/planes-evaluacion/pesos-competencias', { params: filtro }),
       enabled: !!filtro,
     }),
   );
@@ -146,6 +159,20 @@ export const useAsignarDocentes = (onSuccess?: () => void) =>
       asignaciones: { seccionId: string; docenteId: string | null }[];
     }): Promise<DocenteSeccion[]> =>
       api.put(`/planes-evaluacion/${id}/docentes`, { asignaciones }),
+    onSuccess,
+  );
+
+// PUT /planes-evaluacion/pesos-competencias/{competenciaId} (modal "Peso de cada curso")
+export const useGuardarPesosCompetencia = (onSuccess?: () => void) =>
+  useMutacion(
+    ({
+      competenciaId,
+      data,
+    }: {
+      competenciaId: string;
+      data: SolicitudPesosCompetencia;
+    }): Promise<PesosCompetencia> =>
+      api.put(`/planes-evaluacion/pesos-competencias/${competenciaId}`, data),
     onSuccess,
   );
 

@@ -28,6 +28,7 @@ import { cn } from '@/utils/cn';
 
 import { useAniosEscolares, usePlanGrado } from '../api/plan-evaluacion';
 
+import { CompetenciasGrado } from './competencias-grado';
 import { DialogoCursoPlan, ModoCursoPlan } from './dialogo-curso-plan';
 import {
   DialogoCopiarPlan,
@@ -393,6 +394,8 @@ const ContenidoPlan = ({
           />
         </Card>
       )}
+
+      {!vacio && <CompetenciasGrado plan={plan} editable={editable} />}
     </>
   );
 };

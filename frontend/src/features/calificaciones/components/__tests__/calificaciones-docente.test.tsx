@@ -16,6 +16,7 @@ const { filasVacias, escenario } = vi.hoisted(() => ({
 }));
 
 vi.mock('../../api/calificaciones', () => ({
+  useNotasCompetencia: () => ({ isLoading: true, data: undefined }),
   useCursosDocente: () => ({
     isLoading: false,
     data: [

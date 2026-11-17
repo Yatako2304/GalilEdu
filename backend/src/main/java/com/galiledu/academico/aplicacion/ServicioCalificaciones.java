@@ -37,6 +37,7 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.ReporteCalificacione
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCompetenciaItem;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudItem;
+import com.galiledu.academico.dominio.CalculoNotas;
 import com.galiledu.academico.infraestructura.ArchivoReporteCalificaciones;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones.CalificacionFila;
@@ -318,6 +319,15 @@ public class ServicioCalificaciones {
 	@Transactional(readOnly = true)
 	public byte[] exportarPdf(UUID docenteId, String tipo, UUID planCursoId, UUID seccionId, UUID periodoId,
 			UUID objetivoId, List<UUID> itemIds, boolean incluirPromedio, List<UUID> competenciaIds) {
+		return exportarPdf(docenteId, tipo, planCursoId, seccionId, periodoId, objetivoId, itemIds, incluirPromedio,
+				competenciaIds, null);
+	}
+
+	/** notasFinales: la nota final de cada competencia, que va al final del PDF (null para no incluirla). */
+	@Transactional(readOnly = true)
+	public byte[] exportarPdf(UUID docenteId, String tipo, UUID planCursoId, UUID seccionId, UUID periodoId,
+			UUID objetivoId, List<UUID> itemIds, boolean incluirPromedio, List<UUID> competenciaIds,
+			ReporteCalificaciones notasFinales) {
 		ReporteCalificaciones reporte = reporte(docenteId, tipo, planCursoId, seccionId, periodoId, objetivoId,
 				itemIds, incluirPromedio, competenciaIds);
 		CursoFila curso = repositorio.cursos(docenteId).stream()
@@ -336,8 +346,10 @@ public class ServicioCalificaciones {
 			default -> curso.reglaNota();
 		};
 		String parametros = "Escala: " + ("VIGESIMAL".equals(curso.escala()) ? "0 a 20" : "AD, A, B, C")
-				+ " · Regla del año escolar: " + regla;
-		return ArchivoReporteCalificaciones.pdf(reporte, contexto, parametros, curso.escala());
+				+ " · Regla del año escolar: " + regla
+				+ " · El promedio final es el aporte de este curso a cada competencia; la nota oficial de la"
+				+ " competencia combina todos los cursos del grado que la evalúan.";
+		return ArchivoReporteCalificaciones.pdf(reporte, contexto, parametros, curso.escala(), notasFinales);
 	}
 
 	private ReporteCalificaciones reporteItem(List<DetalleReporteFila> detalles, ItemFila item) {
@@ -505,9 +517,8 @@ public class ServicioCalificaciones {
 			return "Pendiente";
 		}
 		if ("VIGESIMAL".equals(escala)) {
-			return new BigDecimal(resultado).compareTo(BigDecimal.valueOf(notaAprobatoria)) >= 0
-					? "Aprobado"
-					: "Desaprobado";
+			// Misma regla que la letra de la competencia: se redondea al entero y 0,5 sube (13,5 cuenta como 14).
+			return CalculoNotas.entero(new BigDecimal(resultado)) >= notaAprobatoria ? "Aprobado" : "Desaprobado";
 		}
 		return "A".equals(resultado) || "AD".equals(resultado) ? "Aprobado" : "Desaprobado";
 	}
