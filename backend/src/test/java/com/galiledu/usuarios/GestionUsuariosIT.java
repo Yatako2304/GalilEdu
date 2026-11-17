@@ -305,6 +305,52 @@ class GestionUsuariosIT extends PruebaIntegracion {
 		mvc.perform(conToken(get("/estudiantes"), tokenAna)).andExpect(status().isOk());
 	}
 
+	/** HU-10: el cambio de rol vale desde la siguiente petición, aunque el token se haya emitido antes. */
+	@Test
+	void cambiarElRolCambiaLosPermisosDelTokenYaEmitido() throws Exception {
+		String tokenMaria = token(DOCENTE);
+		mvc.perform(conToken(get("/usuarios"), tokenMaria)).andExpect(status().isForbidden());
+
+		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin, maria("[\"ADMINISTRADOR\"]")))
+				.andExpect(status().isOk());
+		mvc.perform(conToken(get("/usuarios"), tokenMaria)).andExpect(status().isOk());
+
+		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin, maria("[\"DOCENTE\"]")))
+				.andExpect(status().isOk());
+		mvc.perform(conToken(get("/usuarios"), tokenMaria)).andExpect(status().isForbidden());
+	}
+
+	@Test
+	void quitarElRolAdministradorCortaSusPermisosDeInmediato() throws Exception {
+		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin, maria("[\"ADMINISTRADOR\"]")))
+				.andExpect(status().isOk());
+		String tokenMaria = token(DOCENTE);
+		mvc.perform(conToken(get("/usuarios"), tokenMaria)).andExpect(status().isOk());
+
+		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin, maria("[\"DOCENTE\"]")))
+				.andExpect(status().isOk());
+		mvc.perform(conToken(get("/usuarios"), tokenMaria)).andExpect(status().isForbidden());
+	}
+
+	@Test
+	void losRolesSoloSeCambianEnUsuariosActivos() throws Exception {
+		mvc.perform(conToken(post("/usuarios/" + ID_MARIA + "/desactivar"), admin)).andExpect(status().isOk());
+
+		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin, maria("[\"DOCENTE\",\"COORDINADOR\"]")))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("Solo se pueden cambiar los roles de un usuario activo"));
+
+		// Los datos personales sí se editan (HU-9) mientras los roles queden igual.
+		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin,
+				maria("[\"DOCENTE\"]").replace("999888777", "911222333")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.persona.celular").value("911222333"));
+
+		mvc.perform(conToken(post("/usuarios/" + ID_MARIA + "/reactivar"), admin)).andExpect(status().isOk());
+		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin, maria("[\"DOCENTE\",\"COORDINADOR\"]")))
+				.andExpect(status().isOk());
+	}
+
 	@Test
 	void eliminarCortaLaSesionAbierta() throws Exception {
 		String tokenAna = token(PERSONAL_ADMINISTRATIVO);

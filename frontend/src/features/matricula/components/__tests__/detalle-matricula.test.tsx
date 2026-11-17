@@ -16,11 +16,16 @@ import { DetalleMatricula } from '../detalle-matricula';
 
 // HU-24 · A5 "Detalle de matrícula": datos, documentos y cambio de sección.
 
+const API = `${env.API_URL}/matricula/matriculas/m-1`;
+
+beforeEach(() => {
+  // El detalle pide el historial de cambios de sección (HU-26); por defecto no hay cambios.
+  server.use(http.get(`${API}/cambios-seccion`, () => HttpResponse.json([])));
+});
+
 afterEach(() => {
   vi.restoreAllMocks();
 });
-
-const API = `${env.API_URL}/matricula/matriculas/m-1`;
 
 const detalle = (extras: Partial<DetalleDto> = {}): DetalleDto => ({
   id: 'm-1',
@@ -192,11 +197,21 @@ test('cambia de sección tras confirmar', async () => {
     await screen.findByRole('radio', { name: 'Sección 1.° B' }),
   );
   expect(screen.getByText(/1\.° A: 12 → 11/)).toBeVisible();
+  const modal = screen.getByRole('dialog', { name: 'Cambiar sección' });
+  // HU-26 (RF-56): sin motivo no se puede continuar.
+  expect(
+    within(modal).getByRole('button', { name: 'Cambiar sección' }),
+  ).toBeDisabled();
+  await userEvent.selectOptions(
+    within(modal).getByRole('combobox', { name: 'Motivo del cambio' }),
+    'SOLICITUD_APODERADO',
+  );
+  await userEvent.type(
+    within(modal).getByRole('textbox', { name: 'Observación (opcional)' }),
+    'Vive cerca del aula',
+  );
   await userEvent.click(
-    within(screen.getByRole('dialog', { name: 'Cambiar sección' })).getByRole(
-      'button',
-      { name: 'Cambiar sección' },
-    ),
+    within(modal).getByRole('button', { name: 'Cambiar sección' }),
   );
   expect(await screen.findByText('¿Cambiar sección?')).toBeVisible();
   await userEvent.click(
@@ -207,7 +222,61 @@ test('cambia de sección tras confirmar', async () => {
     }),
   );
 
-  await waitFor(() => expect(cambios).toEqual([{ seccionId: 's-b' }]));
+  await waitFor(() =>
+    expect(cambios).toEqual([
+      {
+        seccionId: 's-b',
+        motivo: 'SOLICITUD_APODERADO',
+        observacion: 'Vive cerca del aula',
+      },
+    ]),
+  );
+});
+
+test('HU-26: el historial muestra los cambios con su motivo y quién los hizo', async () => {
+  server.use(
+    http.get(`${API}/cambios-seccion`, () =>
+      HttpResponse.json([
+        {
+          id: 'c-2',
+          origen: '1.° B',
+          destino: '1.° A',
+          motivo: 'Reorganización por cambio de año escolar',
+          observacion: null,
+          realizadoPor: 'Ana Torres Díaz',
+          realizadoEn: '2026-11-16T15:00:00Z',
+        },
+        {
+          id: 'c-1',
+          origen: '1.° A',
+          destino: '1.° B',
+          motivo: 'Solicitud del apoderado',
+          observacion: 'Vive cerca del aula',
+          realizadoPor: null,
+          realizadoEn: '2026-11-15T15:00:00Z',
+        },
+      ]),
+    ),
+  );
+  await renderApp(<DetalleMatricula matricula={detalle()} />);
+
+  expect(await screen.findByText('Cambios de sección')).toBeVisible();
+  expect(
+    screen.getByText('Reorganización por cambio de año escolar'),
+  ).toBeVisible();
+  expect(
+    screen.getByText('Solicitud del apoderado · Vive cerca del aula'),
+  ).toBeVisible();
+  expect(screen.getByText(/Ana Torres Díaz/)).toBeVisible();
+});
+
+test('HU-26: sin cambios previos no se muestra la tarjeta de historial', async () => {
+  await renderApp(<DetalleMatricula matricula={detalle()} />);
+
+  expect(
+    await screen.findByText('Datos del estudiante y apoderado'),
+  ).toBeVisible();
+  expect(screen.queryByText('Cambios de sección')).not.toBeInTheDocument();
 });
 
 test('descarga la plantilla de los documentos que la tienen', async () => {

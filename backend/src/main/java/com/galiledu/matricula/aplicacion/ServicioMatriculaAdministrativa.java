@@ -21,6 +21,7 @@ import com.galiledu.configuracion.dominio.EstadoVisiblePeriodoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoGuardado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoParaVer;
+import com.galiledu.matricula.aplicacion.DtosMatricula.CambioSeccionRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DetalleMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DocumentoDeMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionAsignada;
@@ -85,7 +86,8 @@ public class ServicioMatriculaAdministrativa {
 
 	/** Mueve la matrícula a otra sección del mismo grado con cupo, liberando la vacante de la anterior. */
 	@Transactional
-	public void cambiarSeccion(UUID matriculaId, UUID destinoId, UUID usuarioId) {
+	public void cambiarSeccion(UUID matriculaId, UUID destinoId, MotivoCambioSeccion motivo, String observacion,
+			UUID usuarioId) {
 		MatriculaDetalleFila m = buscar(matriculaId);
 		if (!puedeCambiarSeccion(m)) {
 			throw ExcepcionNegocio.conflicto("No se puede cambiar la sección de esta matrícula.");
@@ -99,7 +101,18 @@ public class ServicioMatriculaAdministrativa {
 		if (destino.alumnosOcupanVacante() >= destino.capacidadMaxima()) {
 			throw ExcepcionNegocio.conflicto("La sección " + etiqueta(destino) + " no tiene vacantes.");
 		}
-		escrituras.cambiarSeccion(matriculaId, m.seccionId(), destinoId, usuarioId);
+		escrituras.cambiarSeccion(matriculaId, m.seccionId(), destinoId, motivo.texto(observacion), usuarioId);
+	}
+
+	/** HU-26: cambios de sección de la matrícula, del más reciente al más antiguo. */
+	@Transactional(readOnly = true)
+	public List<CambioSeccionRegistrado> cambiosDeSeccion(UUID matriculaId) {
+		buscar(matriculaId);
+		return consultas.cambiosDeSeccion(matriculaId).stream()
+				.map(c -> new CambioSeccionRegistrado(c.id(), c.origen(), c.destino(),
+						MotivoCambioSeccion.etiquetaDe(c.motivo()), MotivoCambioSeccion.observacionDe(c.motivo()),
+						c.realizadoPor(), c.realizadoEn()))
+				.toList();
 	}
 
 	/** El archivo guardado de un documento, para verlo en el navegador. */

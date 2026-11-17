@@ -21,6 +21,7 @@ import jakarta.persistence.criteria.Predicate;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -227,6 +228,10 @@ public class ServicioUsuarios {
 		solicitud.persona().exigirCompletos();
 		Usuario usuario = obtener(id);
 		Set<Rol> roles = rolesDelFormulario(usuario.getRoles(), solicitud.roles());
+		// HU-10: los roles solo se cambian en cuentas activas; los datos personales (HU-9) se editan siempre.
+		if (usuario.getEstado() != EstadoUsuario.ACTIVO && !roles.equals(usuario.getRoles())) {
+			throw new ExcepcionNegocio(HttpStatus.CONFLICT, "Solo se pueden cambiar los roles de un usuario activo");
+		}
 		personas.actualizar(usuario.getPersona(), solicitud.persona());
 		usuario.reemplazarRoles(roles);
 		return detalleDe(usuario);

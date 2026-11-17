@@ -15,6 +15,8 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
@@ -29,7 +31,6 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
-import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -39,7 +40,8 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 
 /**
  * Seguridad sin sesión: el login entrega un JWT y el frontend lo envía en "Authorization: Bearer ...".
- * Los roles del token se convierten en autoridades ROLE_X, así que en los controladores se usa
+ * Los roles actuales de la cuenta (no los del token) se convierten en autoridades ROLE_X, así que en los controladores
+ * se usa
  * {@code @PreAuthorize("hasRole('ADMINISTRADOR')")}.
  */
 @Configuration
@@ -47,12 +49,13 @@ import com.nimbusds.jose.jwk.source.ImmutableSecret;
 public class SeguridadConfig {
 
 	@Bean
-	SecurityFilterChain cadenaSeguridad(HttpSecurity http) throws Exception {
-		JwtGrantedAuthoritiesConverter roles = new JwtGrantedAuthoritiesConverter();
-		roles.setAuthoritiesClaimName("roles");
-		roles.setAuthorityPrefix("ROLE_");
+	SecurityFilterChain cadenaSeguridad(HttpSecurity http, VerificadorSesion verificador) throws Exception {
+		// Los permisos salen de los roles que la cuenta tiene ahora, no de los que traía el token al iniciar sesión.
 		JwtAuthenticationConverter convertidor = new JwtAuthenticationConverter();
-		convertidor.setJwtGrantedAuthoritiesConverter(roles);
+		convertidor.setJwtGrantedAuthoritiesConverter(jwt -> verificador
+				.rolesVigentes(UUID.fromString(jwt.getSubject())).stream()
+				.<GrantedAuthority>map(rol -> new SimpleGrantedAuthority("ROLE_" + rol))
+				.toList());
 
 		http
 				.csrf(csrf -> csrf.disable())
