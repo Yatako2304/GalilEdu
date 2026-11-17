@@ -64,9 +64,17 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 	}
 
 	private ResultActions cambiar(UUID destino) throws Exception {
+		return cambiarConCuerpo("{\"seccionId\":\"" + destino + "\",\"motivo\":\"REORGANIZACION\"}");
+	}
+
+	private ResultActions cambiarConCuerpo(String json) throws Exception {
 		em.clear();
 		return mvc.perform(conToken(put("/matricula/matriculas/{id}/seccion", matriculaDeMateo())
-				.contentType(MediaType.APPLICATION_JSON).content("{\"seccionId\":\"" + destino + "\"}"),
+				.contentType(MediaType.APPLICATION_JSON).content(json), token(PERSONAL_ADMINISTRATIVO)));
+	}
+
+	private ResultActions historial() throws Exception {
+		return mvc.perform(conToken(get("/matricula/matriculas/{id}/cambios-seccion", matriculaDeMateo()),
 				token(PERSONAL_ADMINISTRATIVO)));
 	}
 
@@ -116,12 +124,65 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 		cambiar(seccion("B")).andExpect(status().isOk()).andExpect(jsonPath("$.seccion.etiqueta").value("1.° B"));
 		Assertions.assertEquals(1, jdbc.sql("""
 				SELECT count(*) FROM matricula.cambio_seccion WHERE matricula_id = ? AND seccion_destino_id = ?
-				AND motivo IS NULL""").params(matriculaDeMateo(), seccion("B")).query(Integer.class).single());
+				AND motivo = 'Reorganización por cambio de año escolar'""").params(matriculaDeMateo(), seccion("B"))
+				.query(Integer.class).single());
 		em.clear();
 		mvc.perform(conToken(get("/matricula/matriculas/{id}/secciones", matriculaDeMateo()),
 				token(PERSONAL_ADMINISTRATIVO)))
 				.andExpect(jsonPath("$.secciones[0].ocupadas").value(0))
 				.andExpect(jsonPath("$.secciones[1].ocupadas").value(1));
+	}
+
+	/** HU-26 (RF-56): el motivo es obligatorio y debe ser uno de los dos conocidos. */
+	@Test
+	void elCambioDeSeccionExigeUnMotivoValido() throws Exception {
+		abrirPeriodo2027();
+		String destino = seccion("B").toString();
+		cambiarConCuerpo("{\"seccionId\":\"" + destino + "\"}").andExpect(status().isBadRequest());
+		cambiarConCuerpo("{\"seccionId\":\"" + destino + "\",\"motivo\":\"CAPRICHO\"}")
+				.andExpect(status().isBadRequest());
+		cambiarConCuerpo("{\"seccionId\":\"" + destino + "\",\"motivo\":\"SOLICITUD_APODERADO\",\"observacion\":\""
+				+ "x".repeat(301) + "\"}").andExpect(status().isBadRequest());
+		Assertions.assertEquals(0, jdbc.sql("SELECT count(*) FROM matricula.cambio_seccion")
+				.query(Integer.class).single());
+		cambiarConCuerpo("{\"seccionId\":\"" + destino + "\",\"motivo\":\"SOLICITUD_APODERADO\"}")
+				.andExpect(status().isOk());
+	}
+
+	/** HU-26: el historial muestra origen, destino, motivo, observación y quién lo hizo, el más reciente primero. */
+	@Test
+	void elHistorialListaLosCambiosDelMasRecienteAlMasAntiguo() throws Exception {
+		abrirPeriodo2027();
+		historial().andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+
+		cambiarConCuerpo("{\"seccionId\":\"" + seccion("B") + "\",\"motivo\":\"SOLICITUD_APODERADO\","
+				+ "\"observacion\":\"La familia vive cerca del aula\"}").andExpect(status().isOk());
+		cambiarConCuerpo("{\"seccionId\":\"" + seccion("A") + "\",\"motivo\":\"REORGANIZACION\"}")
+				.andExpect(status().isOk());
+		// Los dos cambios caen en el mismo instante de la transacción de prueba: se fuerza el orden por fecha.
+		jdbc.sql("""
+				UPDATE matricula.cambio_seccion SET realizado_en = now() - interval '1 day'
+				WHERE seccion_destino_id = ?""").param(seccion("B")).update();
+
+		historial().andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(2))
+				.andExpect(jsonPath("$[0].origen").value("1.° B"))
+				.andExpect(jsonPath("$[0].destino").value("1.° A"))
+				.andExpect(jsonPath("$[0].motivo").value("Reorganización por cambio de año escolar"))
+				.andExpect(jsonPath("$[0].observacion").doesNotExist())
+				.andExpect(jsonPath("$[1].origen").value("1.° A"))
+				.andExpect(jsonPath("$[1].destino").value("1.° B"))
+				.andExpect(jsonPath("$[1].motivo").value("Solicitud del apoderado"))
+				.andExpect(jsonPath("$[1].observacion").value("La familia vive cerca del aula"))
+				.andExpect(jsonPath("$[1].realizadoPor").isNotEmpty());
+	}
+
+	@Test
+	void elHistorialSoloLoVeElPersonalAdministrativoYDaNoEncontradoSiNoExiste() throws Exception {
+		mvc.perform(conToken(get("/matricula/matriculas/{id}/cambios-seccion", matriculaDeMateo()), token(DOCENTE)))
+				.andExpect(status().isForbidden());
+		mvc.perform(conToken(get("/matricula/matriculas/{id}/cambios-seccion", UUID.randomUUID()),
+				token(PERSONAL_ADMINISTRATIVO))).andExpect(status().isNotFound());
 	}
 
 	@Test

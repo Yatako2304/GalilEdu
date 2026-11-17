@@ -71,15 +71,15 @@ public class EscriturasMatricula {
 	}
 
 	/** Mueve la matrícula a otra sección y deja el rastro en el historial de cambios (HU-26). */
-	public void cambiarSeccion(UUID matriculaId, UUID origenId, UUID destinoId, UUID realizadoPor) {
+	public void cambiarSeccion(UUID matriculaId, UUID origenId, UUID destinoId, String motivo, UUID realizadoPor) {
 		jdbc.sql("UPDATE matricula.matricula SET seccion_id = ?, actualizado_en = now() WHERE id = ?")
 				.params(destinoId, matriculaId).update();
 		if (origenId != null) {
 			jdbc.sql("""
 					INSERT INTO matricula.cambio_seccion (matricula_id, seccion_origen_id, seccion_destino_id,
-					                                      realizado_por)
-					VALUES (?, ?, ?, ?)""")
-					.params(matriculaId, origenId, destinoId, realizadoPor).update();
+					                                      motivo, realizado_por)
+					VALUES (?, ?, ?, ?, ?)""")
+					.params(matriculaId, origenId, destinoId, motivo, realizadoPor).update();
 		}
 	}
 

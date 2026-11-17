@@ -1686,6 +1686,20 @@ export type SeccionesDelGrado = {
   secciones: SeccionOpcion[];
 };
 
+/** HU-26 (RF-56): por qué se cambia de sección a un estudiante matriculado. */
+export type MotivoCambioSeccion = 'REORGANIZACION' | 'SOLICITUD_APODERADO';
+
+/** Un cambio de sección ya hecho; `motivo`, `observacion` y `realizadoPor` pueden faltar en los registros antiguos. */
+export type CambioSeccionRegistrado = {
+  id: string;
+  origen: string;
+  destino: string;
+  motivo: string | null;
+  observacion: string | null;
+  realizadoPor: string | null;
+  realizadoEn: string;
+};
+
 export type ArchivoGuardado = {
   nombre: string;
   tipoMime: string;

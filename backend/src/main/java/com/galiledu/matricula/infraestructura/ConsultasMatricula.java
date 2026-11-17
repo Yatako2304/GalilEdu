@@ -295,6 +295,33 @@ public class ConsultasMatricula {
 				.optional();
 	}
 
+	/** Un cambio de sección del historial (HU-26); {@code motivo} es el texto guardado, con su observación. */
+	public record CambioSeccionFila(UUID id, String origen, String destino, String motivo, String realizadoPor,
+			OffsetDateTime realizadoEn) {
+	}
+
+	/** Cambios de sección de la matrícula, del más reciente al más antiguo. */
+	public List<CambioSeccionFila> cambiosDeSeccion(UUID matriculaId) {
+		return jdbc.sql("""
+				SELECT c.id,
+				       split_part(so.grado_codigo, '-', 2) || '.° ' || so.nombre,
+				       split_part(sd.grado_codigo, '-', 2) || '.° ' || sd.nombre,
+				       c.motivo,
+				       concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno),
+				       c.realizado_en
+				FROM matricula.cambio_seccion c
+				JOIN configuracion.seccion so ON so.id = c.seccion_origen_id
+				JOIN configuracion.seccion sd ON sd.id = c.seccion_destino_id
+				LEFT JOIN seguridad.usuario u ON u.id = c.realizado_por
+				LEFT JOIN personas.persona p ON p.id = u.persona_id
+				WHERE c.matricula_id = ?
+				ORDER BY c.realizado_en DESC, c.id""")
+				.param(matriculaId)
+				.query((rs, i) -> new CambioSeccionFila(rs.getObject(1, UUID.class), rs.getString(2),
+						rs.getString(3), rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class)))
+				.list();
+	}
+
 	public record ContactoFila(String nombre, String parentesco, String celular) {
 	}
 

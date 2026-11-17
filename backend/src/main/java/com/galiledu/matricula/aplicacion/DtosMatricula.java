@@ -129,6 +129,14 @@ public final class DtosMatricula {
 	public record SeccionesDelGrado(String grado, UUID seleccionadaId, List<SeccionOpcion> secciones) {
 	}
 
+	/**
+	 * HU-26: un cambio de sección ya hecho. {@code motivo} y {@code observacion} pueden ser null en los cambios
+	 * anteriores a que se pidiera el motivo; {@code realizadoPor} es null si se desconoce quién lo hizo.
+	 */
+	public record CambioSeccionRegistrado(UUID id, String origen, String destino, String motivo, String observacion,
+			String realizadoPor, OffsetDateTime realizadoEn) {
+	}
+
 	/** Archivo ya guardado de un documento (sin su contenido). {@code estado}: EN_REVISION, APROBADO u OBSERVADO. */
 	public record ArchivoGuardado(String nombre, String tipoMime, int tamanoBytes, String estado, String observacion,
 			OffsetDateTime subidoEn) {

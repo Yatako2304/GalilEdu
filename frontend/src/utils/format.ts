@@ -13,6 +13,14 @@ export const formatDay = (date: number | string) =>
 export const formatFecha = (date: number | string) =>
   dayjs(date).format('DD MMM YYYY');
 
+/** Instante ISO → "16/11/2026, 7:05 p. m." en la hora de Lima (historiales: importa la hora, no solo el día). */
+export const formatFechaHoraLima = (instante: string) =>
+  new Intl.DateTimeFormat('es-PE', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+    timeZone: 'America/Lima',
+  }).format(new Date(instante));
+
 /** Instante ISO → "02/02/2027" en la hora de Lima (los periodos del colegio se configuran en esa zona). */
 export const formatFechaLima = (instante: string) =>
   new Intl.DateTimeFormat('es-PE', {

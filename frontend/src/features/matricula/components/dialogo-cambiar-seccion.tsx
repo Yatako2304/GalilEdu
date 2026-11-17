@@ -8,22 +8,46 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { DialogoConfirmacion } from '@/components/ui/dialog/dialogo-confirmacion';
+import { Select, Textarea } from '@/components/ui/form';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Tag } from '@/components/ui/tag';
-import { SeccionOpcion, SeccionesDelGrado } from '@/types/api';
+import {
+  MotivoCambioSeccion,
+  SeccionOpcion,
+  SeccionesDelGrado,
+} from '@/types/api';
 import { cn } from '@/utils/cn';
 
 const vacantes = (s: SeccionOpcion) => Math.max(0, s.capacidad - s.ocupadas);
 const llena = (s: SeccionOpcion) => vacantes(s) === 0;
 
+const OPCIONES_MOTIVO: { label: string; value: MotivoCambioSeccion }[] = [
+  {
+    label: 'Reorganización por cambio de año escolar',
+    value: 'REORGANIZACION',
+  },
+  { label: 'Solicitud del apoderado', value: 'SOLICITUD_APODERADO' },
+];
+
+const MAXIMO_OBSERVACION = 300;
+
+/** Motivo del cambio (RF-56): obligatorio, con una observación opcional. */
+export type MotivoElegido = {
+  motivo: MotivoCambioSeccion;
+  observacion?: string;
+};
+
 const plural = (n: number) =>
   n === 1 ? '1 vacante libre' : `${n} vacantes libres`;
 
 // Figma > Personal Administrativo > A5 · modal "Cambiar sección" y su confirmación "¿Cambiar sección?". HU-24.
+// Con `pedirMotivo` (cambio de un estudiante ya matriculado, HU-26) pide el motivo; en Nueva matrícula no hay cambio
+// que registrar, solo se elige la sección.
 export const DialogoCambiarSeccion = ({
   secciones,
   cargando,
   guardando,
+  pedirMotivo = false,
   alConfirmar,
   onCerrar,
 }: {
@@ -31,17 +55,21 @@ export const DialogoCambiarSeccion = ({
   secciones?: SeccionesDelGrado;
   cargando: boolean;
   guardando: boolean;
-  alConfirmar: (seccionId: string) => void;
+  pedirMotivo?: boolean;
+  alConfirmar: (seccionId: string, motivo?: MotivoElegido) => void;
   onCerrar: () => void;
 }) => {
   const [elegidaId, setElegidaId] = React.useState<string>();
   const [confirmando, setConfirmando] = React.useState(false);
+  const [motivo, setMotivo] = React.useState<MotivoCambioSeccion | ''>('');
+  const [observacion, setObservacion] = React.useState('');
 
   const actual = secciones?.secciones.find(
     (s) => s.id === secciones.seleccionadaId,
   );
   const destino = secciones?.secciones.find((s) => s.id === elegidaId);
   const hayCambio = !!destino && destino.id !== actual?.id;
+  const faltaMotivo = pedirMotivo && !motivo;
 
   return (
     <>
@@ -141,6 +169,27 @@ export const DialogoCambiarSeccion = ({
                 </ul>
               </div>
             )}
+
+            {pedirMotivo && (
+              <div className="space-y-3">
+                <Select
+                  label="Motivo del cambio"
+                  placeholder="Selecciona un motivo"
+                  value={motivo}
+                  options={OPCIONES_MOTIVO}
+                  onChange={(e) =>
+                    setMotivo(e.target.value as MotivoCambioSeccion | '')
+                  }
+                />
+                <Textarea
+                  label="Observación (opcional)"
+                  value={observacion}
+                  maxLength={MAXIMO_OBSERVACION}
+                  showCount
+                  onChange={(e) => setObservacion(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-3 border-t border-stroke-tertiary p-4">
@@ -149,7 +198,7 @@ export const DialogoCambiarSeccion = ({
             </Button>
             <Button
               type="button"
-              disabled={!hayCambio || guardando}
+              disabled={!hayCambio || faltaMotivo || guardando}
               onClick={() => setConfirmando(true)}
             >
               Cambiar sección
@@ -171,7 +220,12 @@ export const DialogoCambiarSeccion = ({
           cargando={guardando}
           onConfirmar={() => {
             setConfirmando(false);
-            alConfirmar(destino.id);
+            alConfirmar(
+              destino.id,
+              motivo
+                ? { motivo, observacion: observacion.trim() || undefined }
+                : undefined,
+            );
           }}
         />
       )}
