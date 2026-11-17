@@ -2,7 +2,7 @@
 
 - **HU:** HU-1, HU-6, HU-9, HU-12 (iteración 1) · HU-8, HU-10 (2) · HU-3, HU-4, HU-5 (3)
 - **Estado:** 🚧 en desarrollo
-- **Última actualización:** 2026-11-05
+- **Última actualización:** 2026-11-16
 
 ## Alcance
 
@@ -17,7 +17,7 @@ Inicio de sesión de todos los roles y gestión de cuentas por el Administrador.
 | HU-9 | Edición de datos personales | ✅ | Misma validación y control de duplicados (RF-22, RF-23). En "Ver/Editar usuario", si tiene el rol Apoderado se listan sus estudiantes a cargo con los datos del vínculo de la inscripción (parentesco, relación, vive con el estudiante, patria potestad, responsable de matrícula, documento que lo acredita); si tiene el rol Tutor, sus secciones del año actual. Ambas secciones son solo de vista (`features/usuarios/components/vinculos-usuario.tsx`). No están en Figma. Desde la validación de la iteración 1, **cada padre, madre o apoderado presente** de una inscripción tiene cuenta (no solo el responsable de matrícula; el fallecido no tiene). Quien deja de ser familiar presente de todos sus estudiantes pierde el rol Apoderado (`ServicioUsuarios.retirarRolApoderado`): si era su único rol, la cuenta queda inactiva (ver [decisión](../decisiones/2026-11-05-scuro-star-familiar-fallecido-y-cuentas.md)). |
 | HU-12 | Desactivación de usuario | ✅ | También reactivación y "Eliminar" (borrado lógico). |
 | HU-8 | Carga masiva desde Excel/CSV | ⏸️ | **Oculta en la interfaz** (es un "could have"): se quitaron el botón de Usuarios, el acceso rápido del Inicio y `?carga=1`. El modal (`dialogo-carga-masiva.tsx`), `api/carga-masiva.ts` y los endpoints `/usuarios/carga-masiva` siguen en el código; para reactivarla basta volver a montar el modal en `app/routes/app/admin/usuarios.tsx` y su acceso rápido en `inicio-administrador.tsx`. Cómo funciona: modal de 3 pasos de Figma: plantilla .xlsx, validación por fila sin crear nada, creación de las filas válidas y descarga del detalle de errores (CSV). Mismas reglas que HU-6; varios roles separados por coma; máx. 10 MB y 1000 filas. Diferencia con Figma: el resumen tiene un solo botón "Finalizar" (Figma muestra "Cancelar/Guardar", pero en ese punto los usuarios ya están creados). |
-| HU-10 | Cambio de rol | ✅* | Ya se puede desde "Editar usuario"; falta revisar si requiere pantalla propia. |
+| HU-10 | Cambio de rol | ✅ | Sin pantalla propia: se hace desde "Editar usuario" (HU-9). El cambio vale desde la siguiente petición: los permisos del backend se calculan con los roles actuales de la base de datos en cada petición (`VerificadorSesion.rolesVigentes`, usado por `SeguridadConfig`), no con los del token emitido al iniciar sesión; quitar un rol corta sus permisos y agregar uno los da sin cerrar sesión. Solo se cambian roles de cuentas **activas**: en una inactiva el backend responde 409 si los roles cambian (`ServicioUsuarios.actualizar`) y el formulario deshabilita los botones de rol; los datos personales sí se editan. |
 | HU-4, HU-5 | Recuperar / cambiar contraseña | ⏳ | Pantallas en Figma › Autenticación. |
 | HU-3 | Inicio de sesión con Google | ⏳ | |
 

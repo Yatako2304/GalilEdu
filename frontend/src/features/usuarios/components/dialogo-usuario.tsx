@@ -192,8 +192,11 @@ const FormularioUsuario = ({
     });
   };
 
+  // HU-10: los roles solo se cambian en cuentas activas.
+  const rolesBloqueadosPorEstado = !!usuario && usuario.estado !== 'ACTIVO';
+
   const alternarRol = (rol: ROLES) => {
-    if (ROLES_SOLO_LECTURA.includes(rol)) return;
+    if (ROLES_SOLO_LECTURA.includes(rol) || rolesBloqueadosPorEstado) return;
     const actuales = form.getValues('roles');
     form.setValue(
       'roles',
@@ -284,14 +287,20 @@ const FormularioUsuario = ({
           <div className="flex flex-wrap gap-2">
             {(roles.data ?? []).map((rol) => {
               const elegido = rolesElegidos.includes(rol.codigo);
-              const bloqueado = ROLES_SOLO_LECTURA.includes(rol.codigo);
+              const bloqueado =
+                ROLES_SOLO_LECTURA.includes(rol.codigo) ||
+                rolesBloqueadosPorEstado;
               return (
                 <button
                   key={rol.codigo}
                   type="button"
                   disabled={soloLectura || bloqueado}
                   aria-pressed={elegido}
-                  title={MOTIVO_SOLO_LECTURA[rol.codigo]}
+                  title={
+                    rolesBloqueadosPorEstado
+                      ? 'Activa la cuenta para cambiar sus roles'
+                      : MOTIVO_SOLO_LECTURA[rol.codigo]
+                  }
                   onClick={() => alternarRol(rol.codigo)}
                   className={cn(
                     'inline-flex items-center gap-1 rounded-full border px-3 py-1 text-body-4 transition-colors disabled:cursor-default',
