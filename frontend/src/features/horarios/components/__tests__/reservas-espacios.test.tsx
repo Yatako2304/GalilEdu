@@ -422,7 +422,9 @@ test('cambiar la hora a una desde la que la duración elegida no cabe, la limpia
 
   await elegir('Hora', '10:30 am');
 
-  expect(botonDelSelect('Duración')).not.toHaveTextContent('135 min');
+  await waitFor(() =>
+    expect(botonDelSelect('Duración')).not.toHaveTextContent('135 min'),
+  );
 });
 
 test('cambiar el grado vacía la sección, la hora y la duración', async () => {
@@ -435,7 +437,9 @@ test('cambiar el grado vacía la sección, la hora y la duración', async () => 
 
   await elegir('Grado', '4.° de secundaria');
 
-  expect(botonDelSelect('Sección')).not.toHaveTextContent('B');
+  await waitFor(() =>
+    expect(botonDelSelect('Sección')).not.toHaveTextContent('B'),
+  );
   expect(botonDelSelect('Hora')).toBeDisabled();
   expect(botonDelSelect('Duración')).toBeDisabled();
 });
@@ -697,10 +701,16 @@ const abrirEdicion = async () => {
     ),
   );
   const modal = await dialogo();
-  // Espera a que lleguen la jornada (la hora guardada se ve) y los selectores.
-  await waitFor(() =>
-    expect(botonDelSelect('Hora', modal)).toHaveTextContent('08:15 am'),
-  );
+  // Espera a que lleguen la jornada (la hora guardada se ve) y las opciones de cada selector (cada una es una petición).
+  const esperar = (etiqueta: string, texto: string) =>
+    waitFor(() =>
+      expect(botonDelSelect(etiqueta, modal)).toHaveTextContent(texto),
+    );
+  await esperar('Hora', '08:15 am');
+  await esperar('Ambiente', 'Biblioteca');
+  await esperar('Responsable', 'María Fernández Ríos');
+  await esperar('Grado', '5.° de secundaria');
+  await esperar('Sección', 'A');
   return modal;
 };
 
