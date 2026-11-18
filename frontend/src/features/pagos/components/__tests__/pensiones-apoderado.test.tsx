@@ -269,3 +269,70 @@ test('sin cuotas por pagar, "Pagar seleccionadas" queda deshabilitado', async ()
     screen.getByRole('button', { name: /Pagar seleccionadas/ }),
   ).toBeDisabled();
 });
+
+// HU-41 · Si el apoderado cerró la pasarela, puede retomar o cancelar el pago (no espera a que la orden venza).
+test('con un pago abierto ofrece continuarlo o cancelarlo', async () => {
+  let cancelada = false;
+  const ordenAbierta = {
+    codigo: 'OP-2026-000016',
+    total: 1091.4,
+    expiraEn: '2026-11-18T11:41:00-05:00',
+    urlPago: 'https://checkout.stripe.com/c/pay/cs_test_123',
+  };
+  server.use(
+    http.get(`${env.API_URL}/pagos/apoderado/estudiantes`, () =>
+      HttpResponse.json(hijos),
+    ),
+    http.get(`${env.API_URL}/pagos/apoderado/estudiantes/:id/compromisos`, () =>
+      HttpResponse.json([
+        { id: 'compromiso-1', anio: 2026, estado: 'VIGENTE' },
+      ]),
+    ),
+    http.get(`${env.API_URL}/pagos/apoderado/compromisos/:id`, () =>
+      HttpResponse.json(detalle),
+    ),
+    http.get(`${env.API_URL}/pagos/pago-en-linea/cuotas`, () =>
+      HttpResponse.json({
+        estudiantes: [],
+        ordenEnProceso: cancelada ? null : ordenAbierta,
+      }),
+    ),
+    http.post(
+      `${env.API_URL}/pagos/pago-en-linea/ordenes/:codigo/cancelar`,
+      () => {
+        cancelada = true;
+        return HttpResponse.json({
+          codigo: 'OP-2026-000016',
+          estado: 'RECHAZADA',
+          total: 1091.4,
+          montoConfirmado: null,
+          motivo: 'Cancelaste el pago.',
+          creadoEn: '2026-11-18T11:11:00-05:00',
+          expiraEn: '2026-11-18T11:41:00-05:00',
+          urlPago: ordenAbierta.urlPago,
+          cuotas: [],
+          constancias: [],
+        });
+      },
+    ),
+  );
+  const asignar = vi.fn();
+  vi.stubGlobal('location', { ...window.location, assign: asignar });
+
+  await renderApp(<PensionesApoderado />);
+  const aviso = await screen.findByRole('alert');
+  expect(aviso).toHaveTextContent('Tienes un pago en proceso por S/ 1,091.40');
+  expect(aviso).toHaveTextContent('Orden OP-2026-000016');
+  expect(aviso).toHaveTextContent('11:41');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Continuar pago' }));
+  expect(asignar).toHaveBeenCalledWith(ordenAbierta.urlPago);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Cancelar pago' }));
+  await waitFor(() =>
+    expect(
+      screen.queryByText(/Tienes un pago en proceso/),
+    ).not.toBeInTheDocument(),
+  );
+  vi.unstubAllGlobals();
+});

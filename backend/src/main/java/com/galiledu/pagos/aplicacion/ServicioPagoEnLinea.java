@@ -32,6 +32,7 @@ import com.galiledu.pagos.aplicacion.DtosPagoEnLinea.EstudianteConCuotas;
 import com.galiledu.pagos.aplicacion.DtosPagoEnLinea.LineaOrden;
 import com.galiledu.pagos.aplicacion.DtosPagoEnLinea.OrdenCreada;
 import com.galiledu.pagos.aplicacion.DtosPagoEnLinea.OrdenDetalle;
+import com.galiledu.pagos.aplicacion.DtosPagoEnLinea.OrdenEnProceso;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Cobro;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Concepto;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Resultado;
@@ -93,7 +94,7 @@ public class ServicioPagoEnLinea {
 	public CuotasPorPagar cuotasPorPagar(UUID usuarioId) {
 		List<EstudianteACargo> hijos = consultas.estudiantesDelUsuario(usuarioId);
 		if (hijos.isEmpty()) {
-			return new CuotasPorPagar(List.of());
+			return new CuotasPorPagar(List.of(), null);
 		}
 		LocalDate hoy = LocalDate.now(reloj);
 		Map<UUID, List<Cuota>> porEstudiante = cuotas.deEstudiantes(hijos.stream().map(EstudianteACargo::id).toList())
@@ -108,7 +109,12 @@ public class ServicioPagoEnLinea {
 			List<CuotaPorPagar> filas = suyas.stream().map(q -> fila(q, suyas, hoy)).toList();
 			resultado.add(new EstudianteConCuotas(hijo.id(), hijo.nombre(), filas));
 		}
-		return new CuotasPorPagar(resultado);
+		OrdenEnProceso abierta = ordenes
+				.findFirstByUsuarioIdAndEstadoAndExpiraEnAfterOrderByCreadoEnDesc(usuarioId, EstadoOrdenPago.EN_PROCESO,
+						OffsetDateTime.now(reloj))
+				.map(o -> new OrdenEnProceso(o.getCodigo(), o.getMontoTotal(), o.getExpiraEn(), o.getUrlPago()))
+				.orElse(null);
+		return new CuotasPorPagar(resultado, abierta);
 	}
 
 	private CuotaPorPagar fila(Cuota q, List<Cuota> delEstudiante, LocalDate hoy) {

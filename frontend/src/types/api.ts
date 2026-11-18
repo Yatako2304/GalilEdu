@@ -1480,7 +1480,18 @@ export type EstudianteConCuotas = {
   cuotas: CuotaPorPagar[];
 };
 
-export type CuotasPorPagar = { estudiantes: EstudianteConCuotas[] };
+/** El pago que el apoderado dejó abierto al cerrar la pasarela (null si no hay). */
+export type OrdenEnProceso = {
+  codigo: string;
+  total: number;
+  expiraEn: string;
+  urlPago: string;
+};
+
+export type CuotasPorPagar = {
+  estudiantes: EstudianteConCuotas[];
+  ordenEnProceso?: OrdenEnProceso | null;
+};
 
 export type OrdenCreada = {
   codigo: string;

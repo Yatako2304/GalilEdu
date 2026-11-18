@@ -16,8 +16,14 @@ public final class DtosPagoEnLinea {
 	private DtosPagoEnLinea() {
 	}
 
-	/** GET /pagos/pago-en-linea/cuotas: las cuotas por pagar de cada hijo del apoderado. */
-	public record CuotasPorPagar(List<EstudianteConCuotas> estudiantes) {
+	/**
+	 * GET /pagos/pago-en-linea/cuotas: las cuotas por pagar de cada hijo del apoderado. {@code ordenEnProceso}: el pago
+	 * que el apoderado dejó abierto en la pasarela (cerró la pestaña), para retomarlo o cancelarlo; null si no hay.
+	 */
+	public record CuotasPorPagar(List<EstudianteConCuotas> estudiantes, OrdenEnProceso ordenEnProceso) {
+	}
+
+	public record OrdenEnProceso(String codigo, BigDecimal total, OffsetDateTime expiraEn, String urlPago) {
 	}
 
 	public record EstudianteConCuotas(UUID estudianteId, String nombre, List<CuotaPorPagar> cuotas) {

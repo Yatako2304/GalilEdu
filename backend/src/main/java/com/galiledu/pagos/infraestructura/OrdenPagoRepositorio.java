@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
+import com.galiledu.pagos.dominio.EstadoOrdenPago;
 import com.galiledu.pagos.dominio.OrdenPago;
 
 public interface OrdenPagoRepositorio extends JpaRepository<OrdenPago, UUID> {
@@ -27,6 +28,10 @@ public interface OrdenPagoRepositorio extends JpaRepository<OrdenPago, UUID> {
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@Query("SELECT o FROM OrdenPago o WHERE o.referenciaPasarela = :referencia")
 	Optional<OrdenPago> bloquearPorReferencia(String referencia);
+
+	/** La orden más reciente del apoderado que sigue abierta y sin vencer (la que dejó al cerrar la pasarela). */
+	Optional<OrdenPago> findFirstByUsuarioIdAndEstadoAndExpiraEnAfterOrderByCreadoEnDesc(UUID usuarioId,
+			EstadoOrdenPago estado, OffsetDateTime ahora);
 
 	@Query("""
 			SELECT o.codigo FROM OrdenPago o
