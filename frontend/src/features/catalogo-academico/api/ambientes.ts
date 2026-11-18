@@ -1,4 +1,5 @@
 import {
+  keepPreviousData,
   queryOptions,
   useMutation,
   useQuery,
@@ -54,12 +55,17 @@ export const useResumenAmbientes = () =>
     }),
   );
 
+/**
+ * Al cambiar un filtro o escribir en el buscador se mantiene la lista anterior mientras llega la nueva
+ * (`isPlaceholderData`), para que la tabla no parpadee a "cargando" en cada cambio.
+ */
 export const useAmbientes = (filtros: FiltrosAmbientes = {}) => {
   const normalizados = normalizarFiltros(filtros);
   return useQuery(
     queryOptions({
       queryKey: ['ambientes', 'lista', normalizados],
       queryFn: () => getAmbientes(normalizados),
+      placeholderData: keepPreviousData,
     }),
   );
 };
