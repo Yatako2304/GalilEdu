@@ -23,4 +23,14 @@ public interface AmbienteRepositorio extends JpaRepository<Ambiente, UUID> {
 	 */
 	@Query("SELECT a.codigo FROM Ambiente a WHERE a.codigo LIKE CONCAT(:prefijo, '-%')")
 	List<String> codigosConPrefijo(@Param("prefijo") String prefijo);
+
+	/**
+	 * Serializa, hasta el fin de la transacción, a quien crea o renombra ambientes: la segunda petición espera a que la
+	 * primera confirme y recién entonces valida el nombre. Hace falta porque la BD no tiene restricción de nombre, y la
+	 * del código solo frena a dos altas del mismo tipo (A-… contra E-… no chocan). Es el mismo mecanismo que usan las
+	 * secciones y las estructuras horarias, con otra clave. El resultado no se usa; se convierte a texto porque
+	 * pg_advisory_xact_lock devuelve void, que JPA no sabe leer.
+	 */
+	@Query(value = "SELECT CAST(pg_advisory_xact_lock(hashtextextended('configuracion.ambiente:nombre', 0)) AS text)", nativeQuery = true)
+	String bloquearNombres();
 }

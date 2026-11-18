@@ -121,6 +121,9 @@ public class ServicioAmbientes {
 
 	/** Un intento, dentro de su transacción: nombre libre, código siguiente e INSERT inmediato. */
 	private AmbienteResumen guardarNuevo(TipoAmbiente tipo, String nombre, int aforoMaximo, List<String> recursos) {
+		// Primero el bloqueo y luego las lecturas: si otra petición está creando o renombrando, se espera a que
+		// confirme y la comprobación del nombre ve su resultado. El bloqueo se suelta al confirmar este intento.
+		ambientes.bloquearNombres();
 		if (ambientes.existsByNombreIgnoreCase(nombre)) {
 			throw nombreRepetido(nombre);
 		}
@@ -144,6 +147,9 @@ public class ServicioAmbientes {
 		validar(() -> Ambiente.validarAforo(ambiente.getTipo(), nuevoAforo));
 		List<String> recursos = construir(() -> Ambiente.normalizarRecursos(solicitud.recursos()));
 
+		// Igual que al crear: se espera a quien esté creando o renombrando antes de mirar si el nombre está libre. El
+		// bloqueo dura hasta confirmar esta transacción, es decir, hasta después del flush del cambio.
+		ambientes.bloquearNombres();
 		if (ambientes.existsByNombreIgnoreCaseAndIdNot(nombre, id)) {
 			throw nombreRepetido(nombre);
 		}
