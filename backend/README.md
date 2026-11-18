@@ -104,6 +104,11 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/areas/{id}/cursos` | Personal adm. | Nuevo curso `{nombre, grados: ["SEC-1", …]}` (HU-54). 409 si el área está inactiva o el nombre ya existe |
 | PUT | `/cursos/{id}` | Personal adm. | Edita el curso. 409 si quita un grado en el que ya está planificado |
 | POST | `/cursos/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado del curso |
+| GET | `/ambientes/resumen` | Personal adm. | Tarjetas de CI-26: `{activos, total, aulasRegulares, espaciosEspeciales, aforoTotal}`. Cuentan solo los activos y no dependen de los filtros de la lista (HU-43) |
+| GET | `/ambientes?tipo=&estado=&q=` | Personal adm. | Ambientes por nombre, sin paginar; filtros opcionales (`tipo`: `AULA_REGULAR`/`ESPACIO_ESPECIAL`, `estado`: `ACTIVO`/`INACTIVO`, `q`: busca en el nombre). `[{id, codigo, nombre, tipo, aforoMaximo, recursos, estado}]`; el código es de solo lectura. 400 con un tipo o estado desconocido |
+| POST | `/ambientes` | Personal adm. | Nuevo ambiente `{tipo, nombre, aforoMaximo, recursos}` (201). El código lo genera el backend (`A-001` aula regular, `E-001` espacio especial). 400 con datos inválidos (aula regular de más de 45, aforo 0, recurso de más de 60 caracteres…); 409 si el nombre ya existe (sin importar mayúsculas ni espacios) |
+| PUT | `/ambientes/{id}` | Personal adm. | Edita `{nombre, aforoMaximo, recursos}`; el código y el tipo no cambian (si vienen, se ignoran). 404; 409 si el nombre ya existe o si el aforo queda por debajo de los matriculados de una sección que usa el ambiente (RF-111) |
+| POST | `/ambientes/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado; responde 200 aunque ya estuviera en ese estado. Desactivar se permite aunque esté en uso. 404 |
 | GET | `/tablas-conversion` | Personal adm. | Versiones de la tabla de conversión (HU-55), de la más nueva a la más antigua; `estado`: PROGRAMADA, VIGENTE o ANTERIOR (se calcula con la fecha de hoy) |
 | GET | `/tablas-conversion/vigente` | Personal adm. | La versión que rige hoy. 404 si no hay ninguna |
 | POST | `/tablas-conversion` | Personal adm. | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}`. 400 si la fecha es pasada o los rangos no cubren 0–20 sin vacíos ni cruces; 409 si ya hay una versión con esa fecha |
