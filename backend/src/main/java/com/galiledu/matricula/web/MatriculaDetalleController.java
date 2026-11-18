@@ -1,5 +1,6 @@
 package com.galiledu.matricula.web;
 
+import java.util.List;
 import java.util.UUID;
 
 import jakarta.validation.constraints.NotBlank;
@@ -24,8 +25,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.galiledu.compartido.seguridad.ServicioJwt;
 import com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoParaVer;
+import com.galiledu.matricula.aplicacion.DtosMatricula.CambioSeccionRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DetalleMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionesDelGrado;
+import com.galiledu.matricula.aplicacion.MotivoCambioSeccion;
 import com.galiledu.matricula.aplicacion.ServicioMatriculaAdministrativa;
 
 /** Figma > Personal administrativo > A5, B6, B7 "Detalle de matrícula" y su modal "Cambiar sección" (HU-24). */
@@ -39,7 +42,9 @@ public class MatriculaDetalleController {
 		this.servicio = servicio;
 	}
 
-	public record CambioSeccion(@NotNull UUID seccionId) {
+	/** {@code motivo} es obligatorio (RF-56); {@code observacion} es opcional. */
+	public record CambioSeccion(@NotNull UUID seccionId, @NotNull MotivoCambioSeccion motivo,
+			@Size(max = 300) String observacion) {
 	}
 
 	/** GET /api/matricula/matriculas/{id} */
@@ -58,8 +63,15 @@ public class MatriculaDetalleController {
 	@PutMapping("/{id}/seccion")
 	public DetalleMatricula cambiarSeccion(@PathVariable UUID id,
 			@RequestBody @jakarta.validation.Valid CambioSeccion cuerpo, Authentication autenticacion) {
-		servicio.cambiarSeccion(id, cuerpo.seccionId(), ServicioJwt.usuarioActual(autenticacion));
+		servicio.cambiarSeccion(id, cuerpo.seccionId(), cuerpo.motivo(), cuerpo.observacion(),
+				ServicioJwt.usuarioActual(autenticacion));
 		return servicio.detalle(id);
+	}
+
+	/** GET /api/matricula/matriculas/{id}/cambios-seccion · historial de cambios de sección (HU-26). */
+	@GetMapping("/{id}/cambios-seccion")
+	public List<CambioSeccionRegistrado> cambiosDeSeccion(@PathVariable UUID id) {
+		return servicio.cambiosDeSeccion(id);
 	}
 
 	/** GET /api/matricula/matriculas/{id}/documentos/{documentoId}/archivo · el archivo, para verlo. */

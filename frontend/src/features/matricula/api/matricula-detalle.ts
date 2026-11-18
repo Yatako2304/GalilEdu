@@ -1,7 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { api } from '@/lib/api-client';
-import { DetalleMatricula, SeccionesDelGrado } from '@/types/api';
+import {
+  CambioSeccionRegistrado,
+  DetalleMatricula,
+  MotivoCambioSeccion,
+  SeccionesDelGrado,
+} from '@/types/api';
 
 // Endpoints de backend/matricula/web/MatriculaDetalleController.java (HU-24 · A5, B6, B7).
 
@@ -39,13 +44,33 @@ const useRefrescarDetalle = (matriculaId: string) => {
   };
 };
 
-// PUT /matricula/matriculas/{id}/seccion
+// GET /matricula/matriculas/{id}/cambios-seccion · historial de cambios de sección (HU-26)
+export const useCambiosDeSeccion = (matriculaId: string) =>
+  useQuery({
+    queryKey: ['matricula', 'detalle', matriculaId, 'cambios-seccion'],
+    queryFn: (): Promise<CambioSeccionRegistrado[]> =>
+      api.get(`/matricula/matriculas/${matriculaId}/cambios-seccion`),
+  });
+
+export type DatosCambioSeccion = {
+  seccionId: string;
+  motivo: MotivoCambioSeccion;
+  observacion?: string;
+};
+
+// PUT /matricula/matriculas/{id}/seccion · el motivo es obligatorio (RF-56)
 export const useCambiarSeccion = (matriculaId: string) => {
   const refrescar = useRefrescarDetalle(matriculaId);
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (seccionId: string): Promise<DetalleMatricula> =>
-      api.put(`/matricula/matriculas/${matriculaId}/seccion`, { seccionId }),
-    onSuccess: refrescar,
+    mutationFn: (datos: DatosCambioSeccion): Promise<DetalleMatricula> =>
+      api.put(`/matricula/matriculas/${matriculaId}/seccion`, datos),
+    onSuccess: async (detalle) => {
+      await refrescar(detalle);
+      await queryClient.invalidateQueries({
+        queryKey: ['matricula', 'detalle', matriculaId, 'cambios-seccion'],
+      });
+    },
   });
 };
 

@@ -122,7 +122,7 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           icon: BookOpenCheck,
         },
         {
-          label: 'Ambientes físicos',
+          label: 'Reserva de espacios especiales',
           href: paths.app.coordinador.ambientes.getHref(),
           icon: Building2,
         },

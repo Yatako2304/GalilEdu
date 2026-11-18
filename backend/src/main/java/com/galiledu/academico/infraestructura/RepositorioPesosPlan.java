@@ -10,7 +10,7 @@ import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
 /**
- * Peso de cada curso en la nota de una competencia (academico.plan_competencia.peso_curso, V16). Se guarda con SQL y
+ * Peso de cada curso en la nota de una competencia (academico.plan_competencia.peso_curso, V18). Se guarda con SQL y
  * no en {@code CompetenciaEvaluada}: la colección de JPA solo sabe qué competencias evalúa el curso, y así una
  * reconfiguración del curso no borra los pesos de las competencias que siguen marcadas.
  */

@@ -141,6 +141,52 @@ test('un usuario sin esos roles no muestra estudiantes a cargo ni tutoría', asy
   expect(screen.queryByText('Tutoría del año actual')).not.toBeInTheDocument();
 });
 
+test('HU-10: en una cuenta inactiva los roles no se pueden cambiar, pero los datos sí', async () => {
+  server.use(
+    http.get(`${env.API_URL}/usuarios/u1`, () =>
+      HttpResponse.json(
+        detalle({ estado: 'INACTIVO', roles: [ROLES.DOCENTE] }),
+      ),
+    ),
+  );
+
+  await renderApp(
+    <DialogoUsuario
+      estado={{ modo: 'editar', id: 'u1' }}
+      onCerrar={vi.fn()}
+      onCreado={vi.fn()}
+    />,
+    { user: await createUser({ roles: [ROLES.ADMINISTRADOR] }) },
+  );
+
+  expect(await screen.findByDisplayValue('Carmen')).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Docente' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Administrador' })).toBeDisabled();
+});
+
+test('HU-10: en una cuenta activa los roles se pueden cambiar', async () => {
+  server.use(
+    http.get(`${env.API_URL}/usuarios/u1`, () =>
+      HttpResponse.json(detalle({ roles: [ROLES.DOCENTE] })),
+    ),
+  );
+
+  await renderApp(
+    <DialogoUsuario
+      estado={{ modo: 'editar', id: 'u1' }}
+      onCerrar={vi.fn()}
+      onCreado={vi.fn()}
+    />,
+    { user: await createUser({ roles: [ROLES.ADMINISTRADOR] }) },
+  );
+
+  expect(await screen.findByDisplayValue('Carmen')).toBeEnabled();
+  const administrador = screen.getByRole('button', { name: 'Administrador' });
+  expect(administrador).toBeEnabled();
+  await userEvent.click(administrador);
+  expect(administrador).toHaveAttribute('aria-pressed', 'true');
+});
+
 test('el documento de otro usuario se marca en el campo junto con los demás errores', async () => {
   server.use(
     http.get(`${env.API_URL}/usuarios/u1`, () =>

@@ -621,6 +621,47 @@ export type SolicitudCopiaPlan = {
   origenGradoCodigo: string;
 };
 
+// ---------- Catálogo académico · Ambientes físicos (HU-43) ----------
+// Iguales a backend/.../academico/aplicacion/DtosAmbientes.java
+
+export type TipoAmbiente = 'AULA_REGULAR' | 'ESPACIO_ESPECIAL';
+export type EstadoAmbiente = 'ACTIVO' | 'INACTIVO';
+
+/** Tarjetas de CI-26: solo cuentan los ambientes activos y no dependen de los filtros de la lista. */
+export type ResumenAmbientes = {
+  activos: number;
+  total: number;
+  aulasRegulares: number;
+  espaciosEspeciales: number;
+  aforoTotal: number;
+};
+
+/** El código lo genera el backend (A-001, E-001): es de solo lectura y la pantalla no lo muestra. */
+export type AmbienteResumen = {
+  id: string;
+  codigo: string;
+  nombre: string;
+  tipo: TipoAmbiente;
+  aforoMaximo: number;
+  recursos: string[];
+  estado: EstadoAmbiente;
+};
+
+/** Modal "Nuevo ambiente físico". Sin código: lo genera el backend. */
+export type SolicitudAmbiente = {
+  tipo: TipoAmbiente;
+  nombre: string;
+  aforoMaximo: number;
+  recursos: string[];
+};
+
+/** Edición: el código y el tipo no cambian. */
+export type SolicitudEdicionAmbiente = {
+  nombre: string;
+  aforoMaximo: number;
+  recursos: string[];
+};
+
 // ---------- Matrícula · consulta del apoderado (HU-27 / HU-30) ----------
 // Iguales a backend/.../matricula/aplicacion/DtosMatricula.java
 
@@ -1757,6 +1798,20 @@ export type SeccionesDelGrado = {
   /** La sección actual (o la propuesta, en Nueva matrícula). */
   seleccionadaId: string | null;
   secciones: SeccionOpcion[];
+};
+
+/** HU-26 (RF-56): por qué se cambia de sección a un estudiante matriculado. */
+export type MotivoCambioSeccion = 'REORGANIZACION' | 'SOLICITUD_APODERADO';
+
+/** Un cambio de sección ya hecho; `motivo`, `observacion` y `realizadoPor` pueden faltar en los registros antiguos. */
+export type CambioSeccionRegistrado = {
+  id: string;
+  origen: string;
+  destino: string;
+  motivo: string | null;
+  observacion: string | null;
+  realizadoPor: string | null;
+  realizadoEn: string;
 };
 
 export type ArchivoGuardado = {

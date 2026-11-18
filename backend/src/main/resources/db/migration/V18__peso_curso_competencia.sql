@@ -1,5 +1,5 @@
 -- =====================================================================
--- V16 · Peso de cada curso en la nota de una competencia (HU-56, HU-62).
+-- V18 · Peso de cada curso en la nota de una competencia (HU-56, HU-62).
 -- Una competencia puede evaluarse en varios cursos del mismo grado y año (Álgebra y Aritmética
 -- evalúan "Resuelve problemas de cantidad"). La nota oficial es de la competencia: una por periodo
 -- y una final. peso_curso dice cuánto aporta cada curso a esa nota.

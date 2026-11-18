@@ -72,6 +72,9 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `coffee` | `Coffee` | Receso en la jornada y en su vista previa |
 | `supervisor_account` | `UserCog` | Modal Asignar tutor |
 | `percent` | `Percent` | Modal "Pesos de una competencia" (plan de evaluación) |
+| `domain` | `Building2` | KPI "Ambientes activos" y modal Nuevo ambiente físico (CI-26) |
+| `meeting_room` | `DoorOpen` | KPI "Aulas regulares" (CI-26) |
+| `science` | `FlaskConical` | KPI "Espacios especiales" (CI-26) |
 
 ## Notas para quien siga
 

@@ -35,8 +35,12 @@ import { descargarPlantillaDelPeriodo } from '../api/plantillas-matricula';
 import { problemaDelArchivo, tamanoLegible } from '../archivos-matricula';
 
 import { BotonPlantilla } from './boton-plantilla';
-import { DialogoCambiarSeccion } from './dialogo-cambiar-seccion';
+import {
+  DialogoCambiarSeccion,
+  MotivoElegido,
+} from './dialogo-cambiar-seccion';
 import { DialogoObservarDocumento } from './dialogo-observar-documento';
+import { HistorialCambiosSeccion } from './historial-cambios-seccion';
 
 const PASOS = [
   { label: 'Datos y documentos' },
@@ -439,9 +443,11 @@ export const DetalleMatricula = ({
     setValidando(false);
   };
 
-  const confirmarCambio = async (seccionId: string) => {
+  const confirmarCambio = async (seccionId: string, motivo?: MotivoElegido) => {
+    // El modal pide el motivo en este detalle; sin él no se envía nada (el backend también lo exige).
+    if (!motivo) return;
     try {
-      const nuevo = await cambiarSeccion.mutateAsync(seccionId);
+      const nuevo = await cambiarSeccion.mutateAsync({ seccionId, ...motivo });
       addNotification({
         type: 'success',
         title: 'Sección cambiada',
@@ -470,6 +476,7 @@ export const DetalleMatricula = ({
         <div className="flex flex-col gap-6">
           <DatosMatricula matricula={matricula} />
           <DocumentosMatricula matricula={matricula} />
+          <HistorialCambiosSeccion matriculaId={matricula.id} />
         </div>
         {enProceso ? (
           <PagoPendienteValidacion />
@@ -519,6 +526,7 @@ export const DetalleMatricula = ({
           secciones={secciones.data}
           cargando={secciones.isLoading}
           guardando={cambiarSeccion.isPending}
+          pedirMotivo
           onCerrar={() => setCambiando(false)}
           alConfirmar={confirmarCambio}
         />

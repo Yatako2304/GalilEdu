@@ -16,7 +16,7 @@ Esta entrada reemplaza el enfoque de la rama `feat/catalogo-peso-curso-competenc
 
 ## Archivos principales
 
-- `backend/src/main/resources/db/migration/V16__peso_curso_competencia.sql`
+- `backend/src/main/resources/db/migration/V18__peso_curso_competencia.sql`
 - `backend/src/main/java/com/galiledu/academico/dominio/CalculoNotas.java`
 - `backend/src/main/java/com/galiledu/academico/aplicacion/ServicioNotasCompetencia.java`
 - `backend/src/main/java/com/galiledu/academico/aplicacion/ServicioPlanEvaluacion.java`
@@ -77,7 +77,7 @@ Esta entrada reemplaza el enfoque de la rama `feat/catalogo-peso-curso-competenc
 
 ## Cambios en los esquemas de base de datos
 
-`V16__peso_curso_competencia.sql` agrega una columna a `academico.plan_competencia`:
+`V18__peso_curso_competencia.sql` agrega una columna a `academico.plan_competencia`:
 
 | Columna | Tipo | Regla |
 | --- | --- | --- |
@@ -101,3 +101,4 @@ Los planes existentes reparten el 100 % en partes iguales entre los cursos de ca
 - `RepositorioPesosPlan.completarUnicos` se llama después de agregar, configurar, quitar o copiar cursos.
 - Los cambios de pesos de un grado se serializan con un bloqueo consultivo de PostgreSQL.
 - Si tu base local tenía la V13 de la rama anterior, Flyway no arranca: crea de nuevo la base `galiledu` (y `galiledu_test`) vacía.
+- La migración se escribió como V16 y se renumeró a **V18** al integrar `main`, que ya traía (y desplegaba) `V17__horarios_reserva_ambiente.sql`: Flyway no acepta una versión menor que la última aplicada. Si aplicaste la V16 de esta rama en tu base local, créala de nuevo.
