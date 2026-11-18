@@ -198,6 +198,31 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 	}
 
 	@Test
+	void siCierraLaPasarelaPuedeRetomarOCancelarElPagoDesdePensiones() throws Exception {
+		mvc.perform(conToken(get("/pagos/pago-en-linea/cuotas"), token))
+				.andExpect(jsonPath("$.ordenEnProceso").doesNotExist());
+
+		String codigo = crearOrden(SEPTIEMBRE);
+		mvc.perform(conToken(get("/pagos/pago-en-linea/cuotas"), token))
+				.andExpect(jsonPath("$.ordenEnProceso.codigo").value(codigo))
+				.andExpect(jsonPath("$.ordenEnProceso.total").value(612.0))
+				.andExpect(jsonPath("$.ordenEnProceso.urlPago").isNotEmpty())
+				.andExpect(jsonPath("$.ordenEnProceso.expiraEn").isNotEmpty());
+
+		mvc.perform(conToken(post("/pagos/pago-en-linea/ordenes/{codigo}/cancelar", codigo), token));
+		mvc.perform(conToken(get("/pagos/pago-en-linea/cuotas"), token))
+				.andExpect(jsonPath("$.ordenEnProceso").doesNotExist());
+	}
+
+	@Test
+	void unaOrdenVencidaYaNoSeOfreceParaRetomar() throws Exception {
+		crearOrden(SEPTIEMBRE);
+		reloj.fijarEn(LocalDate.of(2026, 11, 2));
+		mvc.perform(conToken(get("/pagos/pago-en-linea/cuotas"), token))
+				.andExpect(jsonPath("$.ordenEnProceso").doesNotExist());
+	}
+
+	@Test
 	void laOrdenSinPagarExpiraALosTreintaMinutos() throws Exception {
 		String codigo = crearOrden(SEPTIEMBRE);
 		assertThat(servicio.ordenesVencidas()).doesNotContain(codigo);
