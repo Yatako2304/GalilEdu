@@ -11,6 +11,7 @@ import {
   cruceHandler,
   horariosCoordinadorHandlers,
 } from './horarios-coordinador';
+import { reservasAmbienteHandlers } from './reservas-ambiente';
 
 // Handlers de módulos que AÚN NO tienen backend. Se usan en el navegador (npm run dev con
 // VITE_APP_ENABLE_API_MOCKING=true). Cuando un módulo tenga endpoints reales, quítalo de aquí.
@@ -30,6 +31,7 @@ export const handlers = [
   ...horariosHandlers,
   ...horarioDocenteHandlers,
   ...horariosCoordinadorHandlers,
+  ...reservasAmbienteHandlers,
   ...browserHandlers.filter(
     (h) => !horariosBrowserHandlers.includes(h) && h !== cruceHandler,
   ),

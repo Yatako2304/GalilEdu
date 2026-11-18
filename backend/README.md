@@ -27,7 +27,7 @@ src/main/java/com/galiledu/
 ├── academico/      catálogo académico (plan curricular, escala de calificación y plan de evaluación: HU-52 a HU-56) y calificaciones del docente (HU-57, HU-59, HU-62)
 ├── matricula/      matrícula del apoderado: consulta y estado (HU-27, HU-30)
 ├── pagos/          compromisos, cuotas, descuentos y deuda del apoderado (HU-36, HU-37, HU-35, HU-38 a HU-40)
-└── horarios/       horario semanal de una sección para el Coordinador (HU-45), detección de cruces (HU-46), horario del docente y del tutor (HU-49) y del apoderado (HU-51)
+└── horarios/       horario semanal de una sección para el Coordinador (HU-45), detección de cruces (HU-46), horario del docente y del tutor (HU-49) y del apoderado (HU-51) y reserva de espacios especiales (HU-48)
 
 Asistencia todavía no tiene paquete (iteración 3).
 
@@ -57,6 +57,7 @@ Reglas: un esquema de BD por módulo; los controladores no tocan repositorios di
 | `V10__horarios.sql` | `horarios` | Horario semanal de una sección (`horario_seccion`) y sus bloques asignados (`horario_bloque`) |
 | `V11__calificaciones_docente.sql` | `academico` | Ítems, competencias evaluadas, calificaciones y evidencias del docente; claves compuestas con curso, periodo, sección y matrícula |
 | `V15__calificaciones_peso_solo_ponderado.sql` | `academico` | Permite `NULL` en `item_competencia.peso_porcentaje` para reglas sin ponderación; conserva porcentajes existentes y su restricción de rango. La aplicación exige pesos solo con promedio ponderado. |
+| `V17__horarios_reserva_ambiente.sql` | `horarios` | Reserva de un espacio especial para una sección en una fecha y franja horaria (`reserva_ambiente`); estado `ACTIVA` o `CANCELADA` y `version` para el bloqueo optimista |
 
 Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V11…).
 
@@ -129,6 +130,12 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/horarios/apoderado/estudiantes/{id}/horario?anio=` | Apoderado | Horario de la sección del hijo ese año (sin `anio`, el más reciente): `{estudianteId, nombreCompleto, anio, grado, nivel, seccion, tutor {nombre, celular, correo}, disponible, jornada, clases: [{dia, numeroBloque, curso, docente, aula}]}`. `disponible = false` (sin jornada ni clases) si el Coordinador aún no guardó el horario. 404 si no es su hijo o no está matriculado ese año |
 | GET | `/horarios/docente/anios` | Docente, Tutor | Años en que el usuario que inició sesión tiene al menos un bloque como titular de `docente_seccion` (HU-49): `[{id, anio, estado}]`, del más reciente al más antiguo; `[]` si no dicta |
 | GET | `/horarios/docente/horario?anioId=` | Docente, Tutor | Sus clases de dictado, un horario por estructura horaria (primaria antes que secundaria) (HU-49): `{anio {id, anio, estado} o null, horarios: [{nivel, titulo, jornada {dias, bloques, recesos}, clases: [{dia, numeroBloque, curso, seccion, ambiente}]}]}`. Sin `anioId`, el año ACTIVO si tiene clases y, si no, el más reciente con clases; con un año sin clases, `horarios` vacío. Si una celda tiene dos clases, se devuelven las dos. 400 si `anioId` no es un UUID; 404 «El año escolar no existe.» |
+| GET | `/horarios/reservas?filtro=&page=&size=` | Coordinador | Historial de reservas de espacios especiales **activas** (HU-48), de la más reciente a la más antigua: `{data: [Reserva], meta: {page, size, total, totalPages}}`. `filtro` = `SEMANA` (por defecto, lunes a domingo de hoy), `MES` o `ANIO` (calendario); `page` desde 1, `size` 10 (máximo 100). Cada reserva: `{id, ambiente {id, codigo, nombre}, actividad, anioId, gradoCodigo, seccion {id, etiqueta}, responsable {id, nombre}, fecha, horaInicio, horaFin, estado PENDIENTE o FINALIZADO, editable, version}`. 400 si el filtro no existe |
+| GET | `/horarios/reservas/opciones` | Coordinador | Modal «Nueva reserva»: `{ambientes, responsables}`; ambientes = espacios especiales activos por código (`{id, nombre, codigo, tipo, aforoMaximo}`), responsables = usuarios activos con rol DOCENTE o TUTOR (`{id, nombre}`) |
+| GET | `/horarios/reservas/{id}` | Coordinador | Una reserva. 404 «La reserva no existe.» si no existe o ya fue cancelada |
+| POST | `/horarios/reservas` | Coordinador | Crea la reserva. Cuerpo `{ambienteId, seccionId, responsableId, actividad (máx. 120), fecha, horaInicio, horaFin}`, todos obligatorios. 201 con la reserva. 400 por forma (ambiente que no es un espacio especial activo, aforo, responsable que no es docente ni tutor, fecha u hora pasada, fuera del año, de los periodos, de los días lectivos o de la jornada) o por cuerpo inválido; 404 si la sección no existe; 409 por año cerrado o cruces (reserva, horario semanal, responsable, sección). Toma el bloqueo del año |
+| PUT | `/horarios/reservas/{id}` | Coordinador | Reemplaza los datos; cuerpo como el POST más `version` (obligatoria). 200 con la reserva. 404; 409 si la versión cambió («La reserva cambió mientras la editabas…»), si ya finalizó o fue cancelada, o por cruces |
+| DELETE | `/horarios/reservas/{id}?version=` | Coordinador | «Eliminar»: cancela la reserva (la fila se conserva como `CANCELADA`). `version` opcional. 204. 404; 409 si ya finalizó, ya está cancelada o la versión cambió |
 | GET | `/calificaciones/docente/cursos` | Docente | Cursos y secciones asignados, con los parámetros del año y sus periodos (HU-57, HU-59, HU-62) |
 | GET | `/calificaciones/docente/cursos/{planCursoId}/secciones/{seccionId}/competencias` | Docente | Competencias del plan del curso asignado |
 | GET · POST | `/calificaciones/docente/cursos/{planCursoId}/secciones/{seccionId}/periodos/{periodoId}/items` | Docente | Lista o registra ítems con criterio, tipo y competencias; `pesoPorcentaje` se exige solo en promedio ponderado y es anulable en las respuestas |
