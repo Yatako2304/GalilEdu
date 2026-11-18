@@ -12,6 +12,7 @@ import {
   EvidenciaCalificacion,
   FilaCalificacion,
   ItemEvaluacion,
+  NotasCompetencias,
   ReporteCalificaciones,
   SolicitudItemEvaluacion,
   TipoReporteCalificaciones,
@@ -155,6 +156,28 @@ export const useEliminarEvidencia = () =>
       api.delete(
         `${base}/items/${itemId}/calificaciones/${matriculaId}/evidencia`,
       ),
+  );
+
+// Nota oficial de las competencias: una por periodo y una final, entre todos los cursos del grado.
+export const useNotasCompetencia = (
+  seleccion: SeleccionCurso | null,
+  competenciaIds: string[],
+) =>
+  useQuery(
+    queryOptions({
+      queryKey: [
+        'calificaciones-docente',
+        'notas-competencia',
+        seleccion,
+        competenciaIds,
+      ],
+      queryFn: (): Promise<NotasCompetencias> =>
+        api.get(
+          `${base}/cursos/${seleccion?.planCursoId}/secciones/${seleccion?.seccionId}/notas-competencia`,
+          { params: { competenciaIds: competenciaIds.join(',') } },
+        ),
+      enabled: !!seleccion && competenciaIds.length > 0,
+    }),
   );
 
 export type FiltrosReporte = SeleccionPeriodo & {

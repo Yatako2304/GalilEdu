@@ -9,6 +9,7 @@
 El Personal administrativo arma el catálogo curricular. Cada **área** agrupa sus **competencias** y sus **cursos**. Para cada año escolar define el **plan de evaluación**:
 - qué cursos se dictan en cada grado y cuántas horas tienen;
 - qué competencias evalúa cada curso; la escala, la regla de nota final y la consolidación de periodos se toman del año escolar;
+- cuánto aporta cada curso a la nota de una competencia cuando varios cursos la evalúan (vista **Competencias del grado**);
 - qué docente dicta cada curso en cada sección.
 
 También mantiene la **tabla de conversión** de vigesimal a AD/A/B/C, que tiene versiones, y el catálogo de **ambientes físicos**.
@@ -29,6 +30,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan. Un ár
 | HU-54 | Cursos de un área y sus grados | ✅ | Nombre único y al menos un grado. No se puede quitar un grado en el que el curso ya está en un plan de evaluación. |
 | HU-55 | Escala de calificación | ✅ | Las versiones no se editan: se agrega una nueva con su fecha "Vigente desde", que no puede ser anterior a hoy. Si la fecha es futura, queda **programada**. El estado (vigente, programada, anterior) se calcula con la fecha de hoy y no se guarda. **Diferencia con Figma:** debajo de la tabla vigente agregamos "Otras versiones" (programadas y anteriores), porque CI-23 no muestra dónde ver la versión programada ni el historial que menciona el modal. |
 | HU-56 | Plan de evaluación | ✅ | Por grado y año: agregar cursos con sus horas y competencias, configurarlos, quitarlos, asignar docentes por sección y copiar el plan de otro grado o año a un grado vacío (sin docentes). Un año CERRADO es de solo lectura. El modal del curso solo pide las horas semanales y las competencias; la escala, la regla de nota y la consolidación se definen una vez en el año escolar. **Diferencias con Figma:** (1) se retiraron los tres selectores por competencia según la [decisión](../decisiones/2026-11-04-josezavaleta-parametros-evaluacion-por-anio.md); (2) la columna Estado dice "Configurado" o "Sin configurar" (curso sin competencias); (3) el menú de cada curso tiene "Configurar competencias", "Asignar docentes" y "Quitar del plan"; (4) "Copiar plan" solo aparece cuando el grado está vacío. |
+| HU-56 | Peso de cada curso por competencia | ✅ | Vista **Competencias del grado**, debajo de los cursos: cada competencia con los cursos que la evalúan y su peso. **Ajustar pesos** edita todos los cursos de la competencia a la vez y exige que sumen exactamente 100 %. Con un solo curso, el peso es 100 % automático. Cuenta con promedio ponderado (pondera las notas) y en la escala de letras (cada curso vota por su nivel con su peso; si empatan, gana el nivel mayor). Con promedio simple la vista dice que los cursos aportan por igual. **No está en Figma:** véase la [decisión de la nota oficial por competencia](../decisiones/2026-11-16-alex-sanchezz-nota-oficial-competencia.md). |
 | HU-43 | Ambientes físicos | ✅ | Aulas regulares y espacios especiales con aforo y recursos; tarjetas, lista con filtros, alta, edición, desactivar y reactivar. **Diferencias con Figma:** (1) el **código no se ingresa**: lo genera el backend (`A-001` para aula regular, `E-001` para espacio especial), no cambia y la interfaz no lo muestra, aunque Figma todavía muestra el campo «Código» y la columna; (2) el **nombre es único** (sin importar mayúsculas ni espacios sobrantes, incluso entre inactivos), cosa que Figma no dice; (3) Figma no define el modal «¿Desactivar …?»: desactivar se permite aunque el ambiente esté en uso y el frontend pide una confirmación genérica; (4) los mensajes de nombre repetido, ambiente inexistente y aforo por debajo de la matrícula los redactamos nosotros. Ver la [decisión](../decisiones/2026-11-18-valeriaacevedop-ambientes-fisicos.md). |
 
 ## Pantallas (Figma)
@@ -42,7 +44,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan. Un ár
 
 ## Base de datos
 
-- **Esquemas:** `academico` y `configuracion` (ambientes) · **Migraciones:** `V6__catalogo_academico.sql`, `V9__parametros_evaluacion_por_anio.sql`. HU-43 **no agregó migraciones**: usa `configuracion.ambiente` tal como la creó V6.
+- **Esquemas:** `academico` y `configuracion` (ambientes) · **Migraciones:** `V6__catalogo_academico.sql`, `V9__parametros_evaluacion_por_anio.sql`, `V18__peso_curso_competencia.sql`. HU-43 **no agregó migraciones**: usa `configuracion.ambiente` tal como la creó V6.
 
 | Tabla | Para qué |
 | --- | --- |
@@ -51,7 +53,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan. Un ár
 | `academico.curso` | Curso de un área. |
 | `academico.curso_grado` | Grados en los que se dicta el curso. |
 | `academico.plan_curso` | Curso que se dicta en un grado y año, con sus horas semanales (de 1 a 20). La BD impide planificar un curso en un grado donde no se dicta. |
-| `academico.plan_competencia` | Competencia que evalúa el curso en ese plan. Desde V9 la relación efectiva solo necesita `plan_curso_id` y `competencia_id`. Las columnas anteriores de escala, regla y consolidación se conservan temporalmente para no perder información, pero la aplicación ya no las usa. |
+| `academico.plan_competencia` | Competencia que evalúa el curso en ese plan. Desde V9 la relación efectiva solo necesita `plan_curso_id` y `competencia_id`. Las columnas anteriores de escala, regla y consolidación se conservan temporalmente para no perder información, pero la aplicación ya no las usa. Desde V18, `peso_curso` (`NUMERIC(5,2)`, `NULL` = sin definir, `ck_plan_competencia_peso_curso`: mayor que 0 y hasta 100) dice cuánto aporta el curso a la nota de la competencia; entre los cursos del grado y año suma 100. Se guarda con SQL (`RepositorioPesosPlan`), no en la colección de JPA. |
 | `academico.docente_seccion` | Docente que dicta un curso del plan en una sección. |
 | `academico.tabla_conversion`, `tabla_conversion_nivel` | Versiones de la tabla de conversión, con su fecha de vigencia y los rangos de AD, A, B y C (de 0 a 20). |
 | `configuracion.ambiente` | Aula regular (aforo máximo 45) o espacio especial, con sus recursos (`VARCHAR(60)[]`). `codigo` es `UNIQUE`; el **nombre no tiene restricción en la BD** (lo valida el servicio). Además, `configuracion.seccion.ambiente_id` indica el aula de cada sección y Horarios guarda el ambiente de cada bloque (`horarios.horario_bloque.ambiente_id`). La entidad `Ambiente` vive en `academico` y mapea esta tabla del esquema `configuracion`. |
@@ -86,6 +88,7 @@ El backend ya no recibe, lee ni decide estos tres valores por competencia. `acad
 - La sección del docente es del mismo grado y año, y el docente es un usuario activo con rol Docente.
 - Solo se copia a un grado sin cursos. Se copian los cursos y las competencias que siguen activos, sin los docentes.
 - Un año escolar CERRADO no se modifica.
+- Los pesos de una competencia se guardan todos juntos: deben incluir a todos los cursos que la evalúan y sumar exactamente 100 %. Después de agregar, configurar, quitar o copiar cursos, una competencia que queda en un solo curso recibe el 100 %; un curso nuevo en una competencia compartida queda sin peso hasta ajustarlo (la tarjeta muestra cuántas competencias tienen pesos incompletos). Copiar un plan copia los pesos. Los cambios de pesos de un grado se serializan con un bloqueo consultivo.
 
 **Lo valida el servicio de ambientes (`ServicioAmbientes`, HU-43):**
 - **Código:** lo genera el servicio y no se ingresa ni se edita. El prefijo es `A` (aula regular) o `E` (espacio especial) y el formato `A-001`: el mayor número que ya existe con ese prefijo, más uno. Los códigos que no siguen ese formato (`LAB-01`, `AUD-01`) no cuentan, así que con los datos de prueba el primero es `A-206` y `E-001`. Si otra petición se lleva el mismo código a la vez, la restricción `UNIQUE` lo rechaza y el servicio **reintenta hasta 3 veces**, cada intento en su propia transacción; solo se reintenta por esa restricción y, con otra violación o al tercer choque, responde 409 «No pudimos registrar el ambiente. Inténtalo de nuevo.».
@@ -105,7 +108,7 @@ El backend ya no recibe, lee ni decide estos tres valores por competencia. `acad
 - Las 12 áreas de Figma. Formación complementaria está inactiva.
 - Las competencias de Matemática, Comunicación y Ciencia y Tecnología.
 - Los 16 cursos de secundaria.
-- El plan 2026 de 1.° de secundaria, con sus horas y las competencias de Matemática y Comunicación.
+- El plan 2026 de 1.° de secundaria, con sus horas y las competencias de Matemática y Comunicación. «Resuelve problemas de cantidad» la evalúan Aritmética (60 %) y Geometría (40 %); las demás competencias tienen un solo curso (100 %).
 - María Fernández (`U20260004`) dicta Álgebra en 1.° A.
 - La tabla de conversión vigente desde 2025 y la versión programada para 2027.
 - 8 ambientes (`A-101`, `A-102`, `A-201`, `A-205` inactiva, `LAB-01`, `LAB-02`, `BIB-01`, `AUD-01`). 1.° A usa el aula A-101 y 1.° B la A-102. Sus códigos no siguen el formato nuevo (`A-001`/`E-001`): no se renombraron y el generador ignora los que no encajan.
@@ -133,6 +136,8 @@ Rol: Personal administrativo; las rutas de `/planes-evaluacion` también las usa
 | POST | `/planes-evaluacion` · `/planes-evaluacion/copias` | Agrega un curso con `{anioEscolarId, gradoCodigo, cursoId, horasSemanales, competencias: [{competenciaId}]}` · copia otro plan a un grado vacío |
 | GET · PUT · DELETE | `/planes-evaluacion/{id}` | Detalle del curso en el plan · cambia `{horasSemanales, competencias: [{competenciaId}]}` · quitarlo |
 | GET · PUT | `/planes-evaluacion/{id}/docentes` | Docente de cada sección |
+| GET | `/planes-evaluacion/pesos-competencias?anioEscolarId=&grado=` | Vista "Competencias del grado": cursos de cada competencia con su peso, total y si está completa |
+| PUT | `/planes-evaluacion/pesos-competencias/{competenciaId}` | Guarda `{anioEscolarId, gradoCodigo, pesos: [{planCursoId, pesoCurso}]}`; deben sumar 100 |
 | GET | `/ambientes/resumen` | Tarjetas de CI-26 `{activos, total, aulasRegulares, espaciosEspeciales, aforoTotal}`: cuentan solo ambientes activos y no dependen de los filtros de la lista (HU-43) |
 | GET | `/ambientes?tipo=&estado=&q=` | Lista simple, sin paginar, por nombre. `tipo` (`AULA_REGULAR`, `ESPACIO_ESPECIAL`), `estado` (`ACTIVO`, `INACTIVO`) y `q` (busca solo en el nombre) son opcionales. Cada fila trae `{id, codigo, nombre, tipo, aforoMaximo, recursos, estado}`; el código es de solo lectura. 400 con un tipo o estado desconocido |
 | POST | `/ambientes` | Nuevo ambiente `{tipo, nombre, aforoMaximo, recursos}` (201); el código sale generado. 400 con datos inválidos; 409 si el nombre ya existe |
@@ -143,7 +148,7 @@ Rol: Personal administrativo; las rutas de `/planes-evaluacion` también las usa
 
 - Backend: `backend/src/main/java/com/galiledu/academico/` (`ServicioPlanCurricular`, `ServicioEscalaCalificacion`, `ServicioPlanEvaluacion` y sus controladores). Lo que se lee de otros módulos (años, secciones, estructura horaria, docentes) está en `infraestructura/ConsultasCatalogo.java`.
   - **Ambientes (HU-43):** `dominio/{Ambiente, TipoAmbiente, EstadoAmbiente, CodigoAmbiente}`, `infraestructura/{AmbienteRepositorio, ConsultasAmbientes}`, `aplicacion/{ServicioAmbientes, DtosAmbientes}` y `web/AmbienteController`. `ConsultasAmbientes` lee con SQL de solo lectura las secciones que usan un aula y sus matrículas (RF-111).
-- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular`, `EscalaCalificacion`, `PlanEvaluacion` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas; `src/app/routes/app/coordinador/plan-evaluacion.tsx` muestra solo el plan de evaluación.
+- Frontend: `frontend/src/features/catalogo-academico/` (`PlanCurricular`, `EscalaCalificacion`, `PlanEvaluacion`, `CompetenciasGrado` y sus modales). La ruta `src/app/routes/app/administrativo/competencias.tsx` tiene las 3 pestañas; `src/app/routes/app/coordinador/plan-evaluacion.tsx` muestra solo el plan de evaluación.
   - **Ambientes (HU-43), archivos nuevos:**
     - `api/ambientes.ts`: consultas (resumen y lista con `tipo`, `estado` y `q`) y mutaciones (crear, editar, desactivar y reactivar), con invalidación de consultas. Crear y editar muestran sus errores en el modal, por eso silencian el toast global.
     - `components/ambientes.tsx`: la página (tarjetas, filtros y tabla). La dividen `ambientes-resumen.tsx` (4 tarjetas), `ambientes-filtros.tsx` (buscador, chips de tipo y filtro de estado, con Activos preseleccionado), `ambientes-tabla.tsx` (columnas Nombre, Tipo, Aforo máx., Recursos, Estado y menú ⋮; sin columna Código) y `ambientes-orden.ts` (orden en el cliente).

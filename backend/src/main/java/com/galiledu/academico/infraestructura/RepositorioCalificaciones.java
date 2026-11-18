@@ -10,6 +10,8 @@ import java.util.UUID;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Repository;
 
+import com.galiledu.academico.dominio.CalculoNotas;
+
 @Repository
 public class RepositorioCalificaciones {
 	private final JdbcClient jdbc;
@@ -342,13 +344,43 @@ public class RepositorioCalificaciones {
 				.params(planCursoId, periodoId, seccionId).query(DetalleReporteFila.class).list();
 	}
 
-	public Optional<Integer> notaAprobatoria(LocalDate fecha) {
-		return jdbc.sql("""
-				SELECT n.nota_desde
-				FROM academico.tabla_conversion t
-				JOIN academico.tabla_conversion_nivel n ON n.tabla_id = t.id AND n.nivel = 'A'
-				WHERE t.vigente_desde <= ?
-				ORDER BY t.vigente_desde DESC
-				LIMIT 1""").param(fecha).query(Integer.class).optional();
+	/** Un ítem de cualquier curso del grado que apunta a la competencia, con la nota del estudiante si ya la tiene. */
+	public record CalificacionCompetenciaFila(UUID matriculaId, UUID competenciaId, UUID planCursoId, UUID periodoId,
+			BigDecimal pesoPorcentaje, BigDecimal notaNumerica, String nivelLogro, Instant ordenItem) {
 	}
+
+	/**
+	 * Ítems de todos los cursos de la sección que evalúan las competencias, en todos los periodos, cruzados con cada
+	 * estudiante matriculado. Un ítem sin nota aparece con nota nula: así se sabe que la nota está a medias.
+	 */
+	public List<CalificacionCompetenciaFila> calificacionesCompetencias(UUID seccionId, List<UUID> competenciaIds) {
+		if (competenciaIds.isEmpty()) {
+			return List.of();
+		}
+		return jdbc.sql("""
+				SELECT m.id AS matricula_id, ic.competencia_id, ie.plan_curso_id,
+				       ie.periodo_academico_id AS periodo_id, ic.peso_porcentaje,
+				       ci.nota_numerica, ci.nivel_logro, ie.creado_en AS orden_item
+				FROM academico.item_evaluacion ie
+				JOIN academico.item_competencia ic ON ic.item_evaluacion_id = ie.id
+				JOIN matricula.matricula m ON m.seccion_id = ie.seccion_id AND m.estado = 'MATRICULADO'
+				JOIN estudiantes.estudiante e ON e.id = m.estudiante_id AND NOT e.eliminado
+				LEFT JOIN academico.calificacion_item ci
+				  ON ci.item_evaluacion_id = ie.id AND ci.matricula_id = m.id
+				WHERE ie.seccion_id = :seccion AND ic.competencia_id IN (:competencias)
+				ORDER BY ie.creado_en""")
+				.param("seccion", seccionId).param("competencias", competenciaIds)
+				.query(CalificacionCompetenciaFila.class).list();
+	}
+
+	/** Rangos de la versión de la tabla de conversión vigente en la fecha; vacío si no hay ninguna. */
+	public List<CalculoNotas.Rango> rangosConversion(LocalDate fecha) {
+		return jdbc.sql("""
+				SELECT n.nivel, n.nota_desde, n.nota_hasta
+				FROM academico.tabla_conversion_nivel n
+				WHERE n.tabla_id = (SELECT t.id FROM academico.tabla_conversion t
+				                    WHERE t.vigente_desde <= ? ORDER BY t.vigente_desde DESC LIMIT 1)
+				ORDER BY n.nota_desde DESC""").param(fecha).query(CalculoNotas.Rango.class).list();
+	}
+
 }

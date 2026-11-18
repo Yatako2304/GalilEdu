@@ -1,11 +1,14 @@
 package com.galiledu.academico.aplicacion;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -22,6 +25,8 @@ import com.galiledu.academico.aplicacion.DtosAcademico.CursoDisponible;
 import com.galiledu.academico.aplicacion.DtosAcademico.DocenteOpcion;
 import com.galiledu.academico.aplicacion.DtosAcademico.DocenteSeccion;
 import com.galiledu.academico.aplicacion.DtosAcademico.OrigenPlan;
+import com.galiledu.academico.aplicacion.DtosAcademico.PesoCurso;
+import com.galiledu.academico.aplicacion.DtosAcademico.PesosCompetencia;
 import com.galiledu.academico.aplicacion.DtosAcademico.PlanCursoDetalle;
 import com.galiledu.academico.aplicacion.DtosAcademico.PlanCursoResumen;
 import com.galiledu.academico.aplicacion.DtosAcademico.PlanGrado;
@@ -30,8 +35,11 @@ import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudCompetenciaPlan;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudConfigurarCurso;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudCopiaPlan;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudDocentes;
+import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudPesoCurso;
+import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudPesosCompetencia;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudPlanCurso;
 import com.galiledu.academico.dominio.Area;
+import com.galiledu.academico.dominio.CalculoNotas;
 import com.galiledu.academico.dominio.Competencia;
 import com.galiledu.academico.dominio.CompetenciaEvaluada;
 import com.galiledu.academico.dominio.Curso;
@@ -44,27 +52,34 @@ import com.galiledu.academico.infraestructura.ConsultasCatalogo.AnioEscolar;
 import com.galiledu.academico.infraestructura.ConsultasCatalogo.SeccionGrado;
 import com.galiledu.academico.infraestructura.CursoRepositorio;
 import com.galiledu.academico.infraestructura.PlanCursoRepositorio;
+import com.galiledu.academico.infraestructura.RepositorioPesosPlan;
+import com.galiledu.academico.infraestructura.RepositorioPesosPlan.PesoFila;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 
 /**
  * Plan de evaluación de cada grado y año (Figma CI-17 y CI-20, HU-56): qué cursos se dictan y cuántas horas, qué
- * competencias evalúan y qué docente los dicta en cada sección. La escala y las reglas son únicas por año.
+ * competencias evalúan, cuánto aporta cada curso a la nota de cada competencia y qué docente los dicta en cada
+ * sección. La escala y las reglas son únicas por año.
  */
 @Service
 public class ServicioPlanEvaluacion {
+	private static final BigDecimal PESO_TOTAL = new BigDecimal("100");
+
 	private final PlanCursoRepositorio planes;
 	private final CursoRepositorio cursos;
 	private final AreaRepositorio areas;
 	private final CompetenciaRepositorio competencias;
 	private final ConsultasCatalogo consultas;
+	private final RepositorioPesosPlan pesos;
 
 	public ServicioPlanEvaluacion(PlanCursoRepositorio planes, CursoRepositorio cursos, AreaRepositorio areas,
-			CompetenciaRepositorio competencias, ConsultasCatalogo consultas) {
+			CompetenciaRepositorio competencias, ConsultasCatalogo consultas, RepositorioPesosPlan pesos) {
 		this.planes = planes;
 		this.cursos = cursos;
 		this.areas = areas;
 		this.competencias = competencias;
 		this.consultas = consultas;
+		this.pesos = pesos;
 	}
 
 	// ---------- Consultas ----------
@@ -111,7 +126,8 @@ public class ServicioPlanEvaluacion {
 						.map(CompetenciaEvaluada::getCompetenciaId).distinct().count(),
 				(int) filas.stream().filter(f -> f.competencias() > 0).count(),
 				filas.stream().mapToInt(PlanCursoResumen::docentesAsignados).sum(),
-				secciones.size() * filas.size(),
+				secciones.size() * filas.size(), anio.reglaNota().name(),
+				(int) pesosCompetencias(anioEscolarId, gradoCodigo).stream().filter(p -> !p.completo()).count(),
 				secciones.stream().map(s -> new SeccionPlan(s.id(), s.nombre(), s.tutor())).toList(),
 				filas);
 	}
@@ -134,6 +150,72 @@ public class ServicioPlanEvaluacion {
 				obtenerArea(curso.getAreaId()).getNombre(), obtenerAnio(plan.getAnioEscolarId()).anio(),
 				consultas.nombreDeGrado(plan.getGradoCodigo()), plan.getHorasSemanales(), plan.getActualizadoEn(),
 				filas);
+	}
+
+	/**
+	 * Vista "Competencias del grado": cada competencia evaluada en el grado y año, con los cursos que la evalúan y
+	 * cuánto aporta cada uno a su nota. La regla del año decide después si los pesos se usan (promedio ponderado y
+	 * escala cualitativa; no promedio simple).
+	 */
+	@Transactional(readOnly = true)
+	public List<PesosCompetencia> pesosCompetencias(UUID anioEscolarId, String gradoCodigo) {
+		obtenerAnio(anioEscolarId);
+		validarGrado(gradoCodigo);
+		Map<UUID, List<PesoFila>> porCompetencia = pesos.delGrado(anioEscolarId, gradoCodigo).stream()
+				.collect(Collectors.groupingBy(PesoFila::competenciaId, LinkedHashMap::new, Collectors.toList()));
+		return porCompetencia.values().stream().map(ServicioPlanEvaluacion::pesosDe).toList();
+	}
+
+	private static PesosCompetencia pesosDe(List<PesoFila> filas) {
+		PesoFila primera = filas.get(0);
+		BigDecimal total = filas.stream().map(PesoFila::pesoCurso).filter(Objects::nonNull).reduce(BigDecimal.ZERO,
+				BigDecimal::add);
+		return new PesosCompetencia(primera.competenciaId(), primera.competencia(), primera.area(), total,
+				CalculoNotas.pesosCompletos(filas.stream().map(PesoFila::pesoCurso).toList()),
+				filas.stream().map(f -> new PesoCurso(f.planCursoId(), f.curso(), f.pesoCurso())).toList());
+	}
+
+	/**
+	 * Modal "Pesos de una competencia": guarda a la vez el peso de todos los cursos del grado que la evalúan, para que
+	 * la
+	 * suma sea exactamente 100 %.
+	 */
+	@Transactional
+	public PesosCompetencia guardarPesos(UUID competenciaId, SolicitudPesosCompetencia solicitud) {
+		AnioEscolar anio = obtenerAnioEditable(solicitud.anioEscolarId());
+		String grado = solicitud.gradoCodigo();
+		validarGrado(grado);
+		pesos.bloquearGrado(anio.id(), grado);
+		List<PesoFila> actuales = pesos.delGrado(anio.id(), grado).stream()
+				.filter(f -> f.competenciaId().equals(competenciaId)).toList();
+		if (actuales.isEmpty()) {
+			throw ExcepcionNegocio.noEncontrado("Ningún curso de %s %d evalúa esa competencia."
+					.formatted(consultas.nombreDeGrado(grado), anio.anio()));
+		}
+		String nombre = actuales.get(0).competencia();
+		Set<UUID> cursosDeLaCompetencia = actuales.stream().map(PesoFila::planCursoId).collect(Collectors.toSet());
+		Set<UUID> pedidos = new HashSet<>();
+		for (SolicitudPesoCurso p : solicitud.pesos()) {
+			if (!cursosDeLaCompetencia.contains(p.planCursoId())) {
+				throw ExcepcionNegocio.invalido("Uno de los cursos no evalúa \"%s\" en %s."
+						.formatted(nombre, consultas.nombreDeGrado(grado)));
+			}
+			if (!pedidos.add(p.planCursoId())) {
+				throw ExcepcionNegocio.invalido("Cada curso se indica una sola vez.");
+			}
+		}
+		if (!pedidos.equals(cursosDeLaCompetencia)) {
+			throw ExcepcionNegocio.invalido("Indica el peso de todos los cursos que evalúan \"%s\".".formatted(nombre));
+		}
+		BigDecimal total = solicitud.pesos().stream().map(SolicitudPesoCurso::pesoCurso).reduce(BigDecimal.ZERO,
+				BigDecimal::add);
+		if (total.compareTo(PESO_TOTAL) != 0) {
+			throw ExcepcionNegocio.invalido("Los pesos de \"%s\" deben sumar 100 %%; ahora suman %s %%."
+					.formatted(nombre, total.stripTrailingZeros().toPlainString()));
+		}
+		solicitud.pesos().forEach(p -> pesos.guardar(p.planCursoId(), competenciaId, p.pesoCurso()));
+		return pesosDe(pesos.delGrado(anio.id(), grado).stream().filter(f -> f.competenciaId().equals(competenciaId))
+				.toList());
 	}
 
 	/** Figma: "Solo aparecen cursos activos que aún no están en el plan del grado." */
@@ -210,8 +292,11 @@ public class ServicioPlanEvaluacion {
 		}
 		validarHoras(anio.id(), grado, null, solicitud.horasSemanales());
 		var evaluadas = competenciasEvaluadas(curso, solicitud.competencias(), Set.of());
+		pesos.bloquearGrado(anio.id(), grado);
 		PlanCurso plan = planes.save(new PlanCurso(anio.id(), grado, curso.getId(), solicitud.horasSemanales(),
 				evaluadas));
+		planes.flush();
+		pesos.completarUnicos(anio.id(), grado);
 		return detalle(plan.getId());
 	}
 
@@ -234,17 +319,26 @@ public class ServicioPlanEvaluacion {
 							"No se puede quitar la competencia \"%s\" porque ya tiene ítems de evaluación."
 									.formatted(nombre));
 				});
+		pesos.bloquearGrado(plan.getAnioEscolarId(), plan.getGradoCodigo());
 		plan.configurar(solicitud.horasSemanales(), nuevas);
 		planes.flush();
+		pesos.completarUnicos(plan.getAnioEscolarId(), plan.getGradoCodigo());
 		return detalle(plan.getId());
 	}
 
-	/** Quita el curso del plan del grado, con sus competencias y docentes. */
+	/**
+	 * Quita el curso del plan del grado, con sus competencias y docentes. Si una competencia queda en un solo curso,
+	 * ese
+	 * curso pasa a aportar el 100 %; si queda en varios, sus pesos quedan incompletos hasta que se ajusten.
+	 */
 	@Transactional
 	public void quitarCurso(UUID id) {
 		PlanCurso plan = obtenerPlan(id);
 		obtenerAnioEditable(plan.getAnioEscolarId());
+		pesos.bloquearGrado(plan.getAnioEscolarId(), plan.getGradoCodigo());
 		planes.delete(plan);
+		planes.flush();
+		pesos.completarUnicos(plan.getAnioEscolarId(), plan.getGradoCodigo());
 	}
 
 	@Transactional
@@ -280,8 +374,9 @@ public class ServicioPlanEvaluacion {
 	}
 
 	/**
-	 * Copia al grado vacío los cursos de otro plan que siguen activos (y se dictan en el grado), sus horas y sus
-	 * competencias activas. Los docentes no se copian (Figma: "Los docentes se asignan después").
+	 * Copia al grado vacío los cursos de otro plan que siguen activos (y se dictan en el grado), sus horas, sus
+	 * competencias activas y el peso de cada curso en ellas. Los docentes no se copian (Figma: "Los docentes se asignan
+	 * después"). Si se salta un curso, sus competencias quedan con los pesos incompletos, nunca excedidos.
 	 */
 	@Transactional
 	public PlanGrado copiarPlan(SolicitudCopiaPlan solicitud) {
@@ -289,6 +384,7 @@ public class ServicioPlanEvaluacion {
 		String grado = solicitud.gradoCodigo();
 		validarGrado(grado);
 		obtenerAnio(solicitud.origenAnioEscolarId());
+		pesos.bloquearGrado(anio.id(), grado);
 		if (!planes.findByAnioEscolarIdAndGradoCodigo(anio.id(), grado).isEmpty()) {
 			throw ExcepcionNegocio.conflicto("%s ya tiene cursos en %d: solo se copia a un plan vacío."
 					.formatted(consultas.nombreDeGrado(grado), anio.anio()));
@@ -302,6 +398,7 @@ public class ServicioPlanEvaluacion {
 		Map<UUID, Area> areasPorId = porId(areas.findAll(), Area::getId);
 		Map<UUID, Competencia> competenciasPorId = porId(competencias.findAll(), Competencia::getId);
 		List<PlanCurso> copias = new ArrayList<>();
+		Map<PlanCurso, UUID> origenDeCopia = new HashMap<>();
 		for (PlanCurso p : origen) {
 			Curso curso = cursosPorId.get(p.getCursoId());
 			if (!curso.estaActivo() || !areasPorId.get(curso.getAreaId()).estaActiva()
@@ -312,7 +409,9 @@ public class ServicioPlanEvaluacion {
 					.filter(c -> competenciasPorId.get(c.getCompetenciaId()).estaActiva())
 					.map(c -> new CompetenciaEvaluada(c.getCompetenciaId()))
 					.toList();
-			copias.add(new PlanCurso(anio.id(), grado, curso.getId(), p.getHorasSemanales(), activas));
+			PlanCurso copia = new PlanCurso(anio.id(), grado, curso.getId(), p.getHorasSemanales(), activas);
+			copias.add(copia);
+			origenDeCopia.put(copia, p.getId());
 		}
 		if (copias.isEmpty()) {
 			throw ExcepcionNegocio.conflicto(
@@ -327,6 +426,12 @@ public class ServicioPlanEvaluacion {
 		});
 		planes.saveAll(copias);
 		planes.flush();
+		for (PlanCurso copia : copias) {
+			Map<UUID, BigDecimal> pesosOrigen = pesos.delCurso(origenDeCopia.get(copia));
+			copia.getCompetencias().stream().map(CompetenciaEvaluada::getCompetenciaId)
+					.forEach(c -> pesos.guardar(copia.getId(), c, pesosOrigen.get(c)));
+		}
+		pesos.completarUnicos(anio.id(), grado);
 		return plan(anio.id(), grado);
 	}
 

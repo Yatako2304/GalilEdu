@@ -66,6 +66,12 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 	}
 
 	@Test
+	void elPesoDeUnCursoEnUnaCompetenciaVaDe0A100() {
+		rechazaPor("ck_plan_competencia_peso_curso", () -> jdbc.sql("""
+				UPDATE academico.plan_competencia SET peso_curso = 101""").update());
+	}
+
+	@Test
 	void losRangosDeLaTablaDeConversionVanDe0A20() {
 		rechazaPor("ck_tabla_conversion_rango", () -> jdbc.sql("""
 				UPDATE academico.tabla_conversion_nivel SET nota_hasta = 21 WHERE nivel = 'AD'""").update());

@@ -365,11 +365,13 @@ JOIN (VALUES ('Álgebra', 3), ('Geometría', 2), ('Aritmética', 2), ('Comunicac
 ON CONFLICT DO NOTHING;
 
 -- Competencias de los cursos de Matemática y Comunicación (Aritmética evalúa 2, como en el modal de Figma).
+-- "Resuelve problemas de cantidad" la evalúan Aritmética y Geometría: su nota oficial combina los dos cursos.
 INSERT INTO academico.plan_competencia (plan_curso_id, competencia_id, escala, regla_nota, consolidacion)
 SELECT pc.id, co.id, 'VIGESIMAL', 'PROMEDIO_PONDERADO', 'PROMEDIO_PERIODOS'
 FROM academico.plan_curso pc
 JOIN academico.curso cu ON cu.id = pc.curso_id
 JOIN (VALUES ('Álgebra', 'Resuelve problemas de regularidad, equivalencia y cambio'),
+             ('Geometría', 'Resuelve problemas de cantidad'),
              ('Geometría', 'Resuelve problemas de forma, movimiento y localización'),
              ('Aritmética', 'Resuelve problemas de cantidad'),
              ('Aritmética', 'Resuelve problemas de gestión de datos e incertidumbre')) AS x (curso, competencia)
@@ -385,6 +387,31 @@ JOIN academico.curso cu ON cu.id = pc.curso_id AND cu.nombre = 'Comunicación'
 JOIN academico.competencia co ON co.area_id = cu.area_id
 WHERE pc.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND pc.grado_codigo = 'SEC-1'
 ON CONFLICT DO NOTHING;
+
+-- Peso de cada curso en la nota de la competencia (V18). Solo se completan los que siguen sin definir, para no
+-- pisar lo que el colegio ajuste desde el plan de evaluación: Aritmética aporta 60 % y Geometría 40 % a
+-- "Resuelve problemas de cantidad"; una competencia con un solo curso recibe el 100 %.
+UPDATE academico.plan_competencia pco
+SET peso_curso = CASE cu.nombre WHEN 'Aritmética' THEN 60 ELSE 40 END
+FROM academico.plan_curso pc
+JOIN academico.curso cu ON cu.id = pc.curso_id AND cu.nombre IN ('Aritmética', 'Geometría')
+JOIN academico.competencia co ON co.nombre = 'Resuelve problemas de cantidad'
+WHERE pc.id = pco.plan_curso_id AND pco.competencia_id = co.id
+  AND pc.anio_escolar_id = '30000000-0000-0000-0000-000000002026' AND pc.grado_codigo = 'SEC-1'
+  AND NOT EXISTS (SELECT 1 FROM academico.plan_competencia x
+                  JOIN academico.plan_curso px ON px.id = x.plan_curso_id
+                  WHERE x.competencia_id = co.id AND px.anio_escolar_id = pc.anio_escolar_id
+                    AND px.grado_codigo = pc.grado_codigo AND x.peso_curso IS NOT NULL
+                    AND x.peso_curso <> 100);
+
+UPDATE academico.plan_competencia pco
+SET peso_curso = 100
+FROM academico.plan_curso pc
+WHERE pc.id = pco.plan_curso_id AND pco.peso_curso IS NULL
+  AND (SELECT count(*) FROM academico.plan_competencia x
+       JOIN academico.plan_curso px ON px.id = x.plan_curso_id
+       WHERE x.competencia_id = pco.competencia_id AND px.anio_escolar_id = pc.anio_escolar_id
+         AND px.grado_codigo = pc.grado_codigo) = 1;
 
 -- María Fernández (Docente + Tutor) dicta Álgebra en 1.° A de 2026.
 INSERT INTO academico.docente_seccion (plan_curso_id, seccion_id, docente_id)

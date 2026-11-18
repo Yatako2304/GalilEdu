@@ -1,5 +1,6 @@
 package com.galiledu.academico.aplicacion;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -7,6 +8,9 @@ import java.util.Set;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -129,11 +133,38 @@ public final class DtosAcademico {
 			int competencias, String escala, int docentesAsignados) {
 	}
 
-	/** Plan de un grado en un año (CI-17), con las tarjetas de la cabecera. */
+	/**
+	 * Plan de un grado en un año (CI-17), con las tarjetas de la cabecera. reglaNota es la del año escolar: decide si
+	 * se usan los pesos de los cursos. pesosIncompletos cuenta las competencias cuyos pesos no suman 100 %.
+	 */
 	public record PlanGrado(UUID anioEscolarId, int anio, String estadoAnio, String gradoCodigo, String grado,
 			Integer bloquesDisponibles, int horasAsignadas, int competenciasEvaluadas, int cursosConfigurados,
-			int docentesAsignados, int docentesRequeridos, List<SeccionPlan> secciones,
-			List<PlanCursoResumen> cursos) {
+			int docentesAsignados, int docentesRequeridos, String reglaNota, int pesosIncompletos,
+			List<SeccionPlan> secciones, List<PlanCursoResumen> cursos) {
+	}
+
+	/** Un curso que evalúa la competencia, con cuánto aporta a su nota (null = sin definir). */
+	public record PesoCurso(UUID planCursoId, String curso, BigDecimal pesoCurso) {
+	}
+
+	/**
+	 * Vista "Competencias del grado": cada competencia con los cursos que la evalúan. completo = todos tienen peso y
+	 * suman 100 %.
+	 */
+	public record PesosCompetencia(UUID competenciaId, String competencia, String area, BigDecimal total,
+			boolean completo, List<PesoCurso> cursos) {
+	}
+
+	public record SolicitudPesoCurso(
+			@NotNull(message = "Falta el curso.") UUID planCursoId,
+			@NotNull(message = "Ingresa el peso de cada curso.") @DecimalMin(value = "0.01", message = "El peso de cada curso va de 0,01 a 100.") @DecimalMax(value = "100", message = "El peso de cada curso va de 0,01 a 100.") @Digits(integer = 3, fraction = 2, message = "El peso admite hasta 2 decimales.") BigDecimal pesoCurso) {
+	}
+
+	/** Modal "Pesos de <competencia>": el peso de todos los cursos que la evalúan, que deben sumar 100 %. */
+	public record SolicitudPesosCompetencia(
+			@NotNull(message = "Falta el año escolar.") UUID anioEscolarId,
+			@NotBlank(message = "Falta el grado.") String gradoCodigo,
+			@NotEmpty(message = "Ingresa el peso de cada curso.") List<@Valid SolicitudPesoCurso> pesos) {
 	}
 
 	/** Competencia del área en el modal de configuración; el curso solo decide si la evalúa. */

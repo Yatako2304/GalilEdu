@@ -151,7 +151,7 @@ export const DialogoCopiarPlan = ({
       onCerrar={onCerrar}
       icono={<Copy className="size-5" aria-hidden="true" />}
       titulo={`Copiar plan a ${plan.grado} ${plan.anio}`}
-      descripcion="Se copiarán los cursos activos, sus horas y la configuración de competencias. Los docentes se asignan después."
+      descripcion="Se copiarán los cursos activos, sus horas, la configuración de competencias y el peso de cada curso en ellas. Los docentes se asignan después."
       formId="form-copiar-plan"
       textoGuardar="Copiar plan"
       guardando={copiar.isPending}
@@ -256,7 +256,8 @@ export const DialogoQuitarCurso = ({
           </DialogTitle>
           <DialogDescription className="pb-5 text-body-3 text-content-tertiary">
             Se quitarán sus competencias y docentes de {plan.grado} {plan.anio}.
-            El curso sigue en el plan curricular.
+            El curso sigue en el plan curricular. Si comparte una competencia
+            con otros cursos, revisa sus pesos en Competencias del grado.
           </DialogDescription>
         </div>
         <div className="flex justify-end gap-3 border-t border-stroke-tertiary px-6 py-4">

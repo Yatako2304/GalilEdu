@@ -79,4 +79,51 @@ public final class DtosCalificaciones {
 
 	public record ArchivoEvidencia(String nombreArchivo, String tipoMime, byte[] contenido) {
 	}
+
+	// ---------- Nota de la competencia (una por periodo y una final, entre todos los cursos del grado) ----------
+
+	public record PeriodoNotas(UUID id, int numero, String nombre) {
+	}
+
+	/** Un curso que evalúa la competencia. pesoCurso es el del plan; solo se usa con promedio ponderado. */
+	public record CursoCompetencia(UUID planCursoId, String curso, BigDecimal pesoCurso) {
+	}
+
+	/**
+	 * Una competencia elegida. usaPesos: la regla del año usa el peso de los cursos (promedio ponderado o escala
+	 * cualitativa). Con usaPesos y pesos incompletos no se
+	 * calcula la nota de la competencia (solo los aportes de cada curso).
+	 */
+	public record CompetenciaNotas(UUID competenciaId, String competencia, boolean usaPesos, boolean pesosCompletos,
+			List<CursoCompetencia> cursos) {
+	}
+
+	/**
+	 * nota es "—" si todavía no hay; nivel: AD, A, B o C (null sin nota), en la escala vigesimal sale de redondear la
+	 * nota al entero y ubicarla en la tabla de conversión; logro: significado del nivel («Logro destacado», «Logro
+	 * esperado», «En proceso», «En inicio») o «Pendiente» sin nota; parcial: faltan notas que influyen.
+	 */
+	public record NotaResultado(String nota, String nivel, String logro, boolean parcial) {
+	}
+
+	/** Lo que aporta un curso a la competencia en un periodo ("—" si aún no tiene notas). */
+	public record AporteCurso(UUID planCursoId, String nota) {
+	}
+
+	public record NotaPeriodoCompetencia(UUID periodoId, String nota, String nivel, String logro, boolean parcial,
+			List<AporteCurso> aportes) {
+	}
+
+	public record NotasEstudianteCompetencia(UUID competenciaId, List<NotaPeriodoCompetencia> periodos,
+			NotaResultado notaFinal) {
+	}
+
+	public record FilaNotasCompetencia(UUID matriculaId, String estudiante,
+			List<NotasEstudianteCompetencia> competencias) {
+	}
+
+	/** Notas oficiales de las competencias de una sección, con los parámetros del año que las produjeron. */
+	public record NotasCompetencias(String escala, String reglaNota, String consolidacion,
+			List<PeriodoNotas> periodos, List<CompetenciaNotas> competencias, List<FilaNotasCompetencia> filas) {
+	}
 }

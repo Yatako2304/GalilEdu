@@ -14,8 +14,10 @@ import {
   AnioEscolarOpcion,
   CursoDisponible,
   OrigenPlan,
+  PesosCompetencia,
   PlanGrado,
   SolicitudCopiaPlan,
+  SolicitudPesosCompetencia,
   SolicitudPlanCurso,
 } from '@/types/api';
 
@@ -40,6 +42,8 @@ const plan1ro: PlanGrado = {
   cursosConfigurados: 1,
   docentesAsignados: 1,
   docentesRequeridos: 4,
+  reglaNota: 'PROMEDIO_PONDERADO',
+  pesosIncompletos: 1,
   secciones: [
     { id: 's1', nombre: 'A', tutor: 'María Fernández Ríos' },
     { id: 's2', nombre: 'B', tutor: null },
@@ -121,13 +125,55 @@ const origenes: OrigenPlan[] = [
   },
 ];
 
+const pesos: PesosCompetencia[] = [
+  {
+    competenciaId: 'cantidad',
+    competencia: 'Resuelve problemas de cantidad',
+    area: 'Matemática',
+    total: 60,
+    completo: false,
+    cursos: [
+      { planCursoId: 'p1', curso: 'Aritmética', pesoCurso: 60 },
+      { planCursoId: 'p3', curso: 'Geometría', pesoCurso: null },
+    ],
+  },
+  {
+    competenciaId: 'datos',
+    competencia: 'Resuelve problemas de gestión de datos e incertidumbre',
+    area: 'Matemática',
+    total: 100,
+    completo: true,
+    cursos: [{ planCursoId: 'p1', curso: 'Aritmética', pesoCurso: 100 }],
+  },
+];
+
 let cursoEnviado: SolicitudPlanCurso | null = null;
 let copiaEnviada: SolicitudCopiaPlan | null = null;
+let pesosEnviados: {
+  competenciaId: string;
+  cuerpo: SolicitudPesosCompetencia;
+} | null = null;
+let reglaDelPlan: PlanGrado['reglaNota'] = 'PROMEDIO_PONDERADO';
 
 beforeEach(() => {
   cursoEnviado = null;
   copiaEnviada = null;
+  pesosEnviados = null;
+  reglaDelPlan = 'PROMEDIO_PONDERADO';
   server.use(
+    http.get(`${env.API_URL}/planes-evaluacion/pesos-competencias`, () =>
+      HttpResponse.json(pesos),
+    ),
+    http.put(
+      `${env.API_URL}/planes-evaluacion/pesos-competencias/:competenciaId`,
+      async ({ request, params }) => {
+        pesosEnviados = {
+          competenciaId: params.competenciaId as string,
+          cuerpo: (await request.json()) as SolicitudPesosCompetencia,
+        };
+        return HttpResponse.json({ ...pesos[0], completo: true, total: 100 });
+      },
+    ),
     http.get(`${env.API_URL}/planes-evaluacion/anios`, () =>
       HttpResponse.json(anios),
     ),
@@ -135,7 +181,7 @@ beforeEach(() => {
       const params = new URL(request.url).searchParams;
       return HttpResponse.json(
         params.get('anioEscolarId') === 'a26' && params.get('grado') === 'SEC-1'
-          ? plan1ro
+          ? { ...plan1ro, reglaNota: reglaDelPlan }
           : vacio(params.get('grado')!, '3.° de secundaria'),
       );
     }),
@@ -172,7 +218,7 @@ test('muestra el plan del año activo con sus tarjetas y cursos', async () => {
   ).toBeInTheDocument();
   expect(screen.getByText('1 / 4')).toBeInTheDocument();
   expect(screen.getByText('2 secciones × 2 cursos')).toBeInTheDocument();
-  const tabla = within(screen.getByRole('table'));
+  const tabla = within(screen.getAllByRole('table')[0]);
   expect(tabla.getByText('Vigesimal')).toBeInTheDocument();
   expect(tabla.getByText('Sin configurar')).toBeInTheDocument();
   expect(tabla.getByText('1 / 2')).toBeInTheDocument();
@@ -239,4 +285,90 @@ test('agrega un curso con las competencias marcadas', async () => {
       ],
     }),
   );
+});
+
+test('muestra cuánto aporta cada curso a cada competencia del grado', async () => {
+  await renderizar();
+
+  const seccion = within(
+    (await screen.findByText('Competencias del grado')).closest('div.p-5')!,
+  );
+  expect(
+    await seccion.findByText('Resuelve problemas de cantidad'),
+  ).toBeInTheDocument();
+  expect(seccion.getByText('Aritmética · 60 %')).toBeInTheDocument();
+  expect(seccion.getByText('Geometría · sin peso')).toBeInTheDocument();
+  expect(seccion.getByText('Suma 60 %')).toBeInTheDocument();
+  expect(seccion.getByText('Un solo curso')).toBeInTheDocument();
+  expect(
+    seccion.getByText('1 competencia con pesos incompletos'),
+  ).toBeInTheDocument();
+  // Una competencia con un solo curso no tiene nada que repartir.
+  expect(
+    seccion.getAllByRole('button', { name: 'Ajustar pesos' }),
+  ).toHaveLength(1);
+});
+
+test('ajusta los pesos de una competencia y exige que sumen 100 %', async () => {
+  await renderizar();
+  await userEvent.click(
+    await screen.findByRole('button', { name: 'Ajustar pesos' }),
+  );
+
+  const modal = within(await screen.findByRole('dialog'));
+  await userEvent.click(modal.getByRole('button', { name: 'Guardar' }));
+  expect(modal.getByText('Ingresa el peso del curso.')).toBeInTheDocument();
+  expect(modal.getByText('Los pesos deben sumar 100 %.')).toBeInTheDocument();
+  expect(pesosEnviados).toBeNull();
+
+  await userEvent.click(
+    modal.getByRole('button', { name: 'Repartir en partes iguales' }),
+  );
+  expect(modal.getByText('100 %')).toBeInTheDocument();
+  await userEvent.click(modal.getByRole('button', { name: 'Guardar' }));
+
+  await vi.waitFor(() =>
+    expect(pesosEnviados).toEqual({
+      competenciaId: 'cantidad',
+      cuerpo: {
+        anioEscolarId: 'a26',
+        gradoCodigo: 'SEC-1',
+        pesos: [
+          { planCursoId: 'p1', pesoCurso: 50 },
+          { planCursoId: 'p3', pesoCurso: 50 },
+        ],
+      },
+    }),
+  );
+});
+
+test('sin promedio ponderado los cursos aportan por igual y no hay pesos que editar', async () => {
+  reglaDelPlan = 'PROMEDIO_SIMPLE';
+  await renderizar();
+
+  expect(
+    await screen.findByText(
+      'El año usa promedio simple: los cursos de una competencia aportan por igual.',
+    ),
+  ).toBeInTheDocument();
+  expect(await screen.findByText('Aportan por igual')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Ajustar pesos' }),
+  ).not.toBeInTheDocument();
+});
+
+test('en escala de letras los pesos se usan como votos y se pueden ajustar', async () => {
+  reglaDelPlan = 'NIVEL_MAS_FRECUENTE';
+  await renderizar();
+
+  expect(
+    await screen.findByText(
+      'El año usa escala de letras: cada curso vota por su nivel con su peso.',
+    ),
+  ).toBeInTheDocument();
+  expect(await screen.findByText('Aritmética · 60 %')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Ajustar pesos' }));
+  expect(
+    await screen.findByText(/Cuánto pesa el nivel de cada curso/),
+  ).toBeInTheDocument();
 });

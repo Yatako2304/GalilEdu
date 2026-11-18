@@ -5,20 +5,24 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   CursoDocente,
   ItemEvaluacion,
+  NotasCompetencias,
   ReporteCalificaciones,
 } from '@/types/api';
 
 import { FiltrosReporte } from '../../api/calificaciones';
 import { ReporteCalificacionesVista } from '../reporte-calificaciones';
 
-const { consultar, exportar } = vi.hoisted(() => ({
+const { consultar, exportar, notas } = vi.hoisted(() => ({
   consultar: vi.fn(),
   exportar: vi.fn(),
+  notas: vi.fn(),
 }));
 
 vi.mock('../../api/calificaciones', () => ({
   useReporteCalificaciones: (filtros: FiltrosReporte | null) =>
     consultar(filtros),
+  useNotasCompetencia: (seleccion: unknown, competenciaIds: string[]) =>
+    notas(seleccion, competenciaIds),
   exportarReporte: exportar,
 }));
 
@@ -127,13 +131,13 @@ const reporte: ReporteCalificaciones = {
       valores: {
         'c1:i1': '17',
         'c1:resultado': '17',
-        'c1:resultado_estado': 'Aprobado',
+        'c1:resultado_estado': 'A · Logro esperado',
         'c2:i1': '17',
         'c2:i2': '9',
         'c2:resultado': '13',
-        'c2:resultado_estado': 'Desaprobado',
+        'c2:resultado_estado': 'B · En proceso',
         resultado_general: '14.33',
-        resultado_general_estado: 'Aprobado',
+        resultado_general_estado: 'A · Logro esperado',
       },
     },
   ],
@@ -164,6 +168,7 @@ const mostrar = () =>
 describe('Consolidado con varias competencias', () => {
   beforeEach(() => {
     exportar.mockReset();
+    notas.mockReset().mockReturnValue({ isLoading: true, data: undefined });
     consultar
       .mockReset()
       .mockImplementation((filtros: FiltrosReporte | null) => ({
@@ -219,8 +224,9 @@ describe('Consolidado con varias competencias', () => {
       within(tabla).getByRole('columnheader', { name: 'Promedio general' }),
     ).toBeVisible();
     expect(within(tabla).getByText('14,33/20')).toBeVisible();
-    expect(within(tabla).getByText('Desaprobado')).toHaveClass(
-      'text-content-error',
+    // Nivel de logro, no aprobado/desaprobado: B (en proceso) va en ámbar.
+    expect(within(tabla).getByText('B · En proceso')).toHaveClass(
+      'text-content-warning',
     );
     await usuario.click(screen.getByRole('button', { name: 'Descargar PDF' }));
     expect(exportar).toHaveBeenCalledWith({
@@ -275,5 +281,137 @@ describe('Consolidado con varias competencias', () => {
     expect(
       screen.getByRole('combobox', { name: 'Ítems de calificación' }),
     ).toHaveAttribute('aria-disabled', 'true');
+  });
+});
+
+describe('Nota de la competencia', () => {
+  const notasCantidad: NotasCompetencias = {
+    escala: 'VIGESIMAL',
+    reglaNota: 'PROMEDIO_PONDERADO',
+    consolidacion: 'PROMEDIO_PERIODOS',
+    periodos: [
+      { id: 'periodo-3', numero: 3, nombre: 'III Bimestre' },
+      { id: 'periodo-4', numero: 4, nombre: 'IV Bimestre' },
+    ],
+    competencias: [
+      {
+        competenciaId: 'c1',
+        competencia: 'Cantidad',
+        usaPesos: true,
+        pesosCompletos: true,
+        cursos: [
+          { planCursoId: 'plan-1', curso: 'Álgebra', pesoCurso: 40 },
+          { planCursoId: 'plan-2', curso: 'Aritmética', pesoCurso: 60 },
+        ],
+      },
+    ],
+    filas: [
+      {
+        matriculaId: 'm1',
+        estudiante: 'Ana Pérez',
+        competencias: [
+          {
+            competenciaId: 'c1',
+            periodos: [
+              {
+                periodoId: 'periodo-3',
+                nota: '13.6',
+                nivel: 'A',
+                logro: 'Logro esperado',
+                parcial: false,
+                aportes: [
+                  { planCursoId: 'plan-1', nota: '16' },
+                  { planCursoId: 'plan-2', nota: '12' },
+                ],
+              },
+              {
+                periodoId: 'periodo-4',
+                nota: '15.6',
+                nivel: 'AD',
+                logro: 'Logro esperado',
+                parcial: true,
+                aportes: [
+                  { planCursoId: 'plan-1', nota: '18' },
+                  { planCursoId: 'plan-2', nota: '14' },
+                ],
+              },
+            ],
+            notaFinal: {
+              nota: '14.6',
+              nivel: 'A',
+              logro: 'Logro esperado',
+              parcial: true,
+            },
+          },
+        ],
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    consultar.mockReset().mockReturnValue({ isLoading: false, data: reporte });
+    notas
+      .mockReset()
+      .mockReturnValue({ isLoading: false, data: notasCantidad });
+  });
+
+  it('muestra la nota oficial por periodo y la final, con el aporte de cada curso', async () => {
+    const usuario = userEvent.setup();
+    mostrar();
+    expect(
+      screen.queryByText('Nota de la competencia'),
+    ).not.toBeInTheDocument();
+    await usuario.click(
+      screen.getByRole('button', { name: 'Generar consolidado' }),
+    );
+
+    expect(notas).toHaveBeenLastCalledWith(
+      { planCursoId: 'plan-1', seccionId: 'seccion-1' },
+      ['c1'],
+    );
+    const tabla = within(
+      screen.getByRole('table', { name: 'Nota de la competencia Cantidad' }),
+    );
+    expect(
+      tabla.getByRole('columnheader', { name: 'III Bimestre' }),
+    ).toBeVisible();
+    expect(
+      tabla.getByRole('columnheader', { name: 'Nota final (nivel de logro)' }),
+    ).toBeVisible();
+    expect(tabla.getByText('13,6/20')).toBeVisible();
+    expect(tabla.getByText('· AD')).toBeVisible();
+    // La nota final va en letra, con el número como referencia.
+    expect(tabla.getByLabelText('Nivel de logro A')).toHaveTextContent('A');
+    expect(tabla.getByText('14,6/20')).toBeVisible();
+    expect(tabla.getAllByText(/Parcial/)).toHaveLength(2);
+    expect(screen.getByText('Álgebra 40 % · Aritmética 60 %')).toBeVisible();
+    expect(tabla.queryByText('Álgebra: 16/20')).not.toBeInTheDocument();
+
+    await usuario.click(
+      screen.getByRole('switch', { name: 'Ver el aporte de cada curso' }),
+    );
+    expect(tabla.getByText('Álgebra: 16/20')).toBeVisible();
+    expect(tabla.getByText('Aritmética: 14/20')).toBeVisible();
+  });
+
+  it('avisa cuando los pesos de los cursos no suman 100 %', async () => {
+    notas.mockReturnValue({
+      isLoading: false,
+      data: {
+        ...notasCantidad,
+        competencias: [
+          { ...notasCantidad.competencias[0], pesosCompletos: false },
+        ],
+      },
+    });
+    const usuario = userEvent.setup();
+    mostrar();
+    await usuario.click(
+      screen.getByRole('button', { name: 'Generar consolidado' }),
+    );
+
+    expect(
+      screen.getByText('Los pesos de los cursos no suman 100 %.'),
+    ).toBeVisible();
   });
 });

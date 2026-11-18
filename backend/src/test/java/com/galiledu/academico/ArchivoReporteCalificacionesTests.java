@@ -36,7 +36,8 @@ class ArchivoReporteCalificacionesTests {
 			String texto = new PDFTextStripper().getText(pdf);
 			assertThat(texto).contains("Consolidado de notas", "Álgebra", "IV Bimestre", "Regla del año escolar",
 					"Práctica 1", "Práctica 2", "Promedio final", "Promedio general", "Ana Lucía García López",
-					"Diego José Quispe Mendoza", "Camila Sofía Torres Vargas", "17/20", "Aprobado", "Desaprobado",
+					"Diego José Quispe Mendoza", "Camila Sofía Torres Vargas", "17/20", "A · Logro esperado",
+					"B · En proceso",
 					"Página 1 de 1");
 			Files.write(Path.of("target/reporte-pdf-demo.pdf"), archivo);
 			ImageIO.write(new PDFRenderer(pdf).renderImageWithDPI(0, 125), "png",
@@ -66,10 +67,10 @@ class ArchivoReporteCalificacionesTests {
 		ReporteCalificaciones base = reporte(1, 1);
 		var reporte = new ReporteCalificaciones(base.titulo(), base.detalle(), base.columnas(), List.of(
 				new FilaReporte(UUID.randomUUID(), "Ana Pérez", Map.of("c1:i1", "AD", "c1:i2", "—",
-						"c1:resultado", "AD", "c1:resultado_estado", "Aprobado"))));
+						"c1:resultado", "AD", "c1:resultado_estado", "Logro destacado"))));
 		try (PDDocument pdf = Loader.loadPDF(ArchivoReporteCalificaciones.pdf(reporte, CONTEXTO,
 				"Escala: AD, A, B, C · Regla del año escolar: Último nivel", "CUALITATIVA"))) {
-			assertThat(new PDFTextStripper().getText(pdf)).contains("AD", "—", "Aprobado").doesNotContain("/20");
+			assertThat(new PDFTextStripper().getText(pdf)).contains("AD", "—", "Logro destacado").doesNotContain("/20");
 		}
 	}
 
@@ -109,7 +110,7 @@ class ArchivoReporteCalificacionesTests {
 			for (ColumnaReporte columna : columnas) {
 				valores.put(columna.clave(), nota);
 				if (columna.promedio())
-					valores.put(columna.clave() + "_estado", alumno % 3 == 2 ? "Desaprobado" : "Aprobado");
+					valores.put(columna.clave() + "_estado", alumno % 3 == 2 ? "B · En proceso" : "A · Logro esperado");
 			}
 			filas.add(new FilaReporte(UUID.randomUUID(), alumno < 3 ? nombres[alumno] : "Estudiante " + (alumno + 1),
 					valores));

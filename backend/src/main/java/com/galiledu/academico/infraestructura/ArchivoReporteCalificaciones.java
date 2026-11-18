@@ -30,6 +30,7 @@ public final class ArchivoReporteCalificaciones {
 	private static final Color CLARO = new Color(238, 243, 251);
 	private static final Color VERDE = new Color(32, 119, 61);
 	private static final Color ROJO = new Color(184, 38, 49);
+	private static final Color AMBAR = new Color(154, 91, 0);
 	private final PDDocument documento;
 	private final PDType0Font fuente;
 
@@ -45,13 +46,33 @@ public final class ArchivoReporteCalificaciones {
 	}
 
 	public static byte[] pdf(ReporteCalificaciones reporte, String contexto, String parametros, String escala) {
+		return pdf(reporte, contexto, parametros, escala, null);
+	}
+
+	/**
+	 * El consolidado del curso y, al final, la nota final de cada competencia con su nivel de logro (AD, A, B, C).
+	 * notasFinales es null cuando no corresponde (reportes por ítem o por periodo).
+	 */
+	public static byte[] pdf(ReporteCalificaciones reporte, String contexto, String parametros, String escala,
+			ReporteCalificaciones notasFinales) {
 		try (PDDocument documento = new PDDocument(); ByteArrayOutputStream salida = new ByteArrayOutputStream()) {
 			documento.getDocumentInformation().setTitle("Consolidado de notas");
 			documento.getDocumentInformation().setAuthor("GalilEdu");
 			var archivo = new ArchivoReporteCalificaciones(documento);
 			List<List<ColumnaReporte>> bloques = bloques(reporte.columnas());
 			for (int indice = 0; indice < bloques.size(); indice++) {
-				archivo.tabla(reporte, bloques.get(indice), contexto, parametros, escala, indice + 1, bloques.size());
+				archivo.tabla("Consolidado de notas", reporte, bloques.get(indice), contexto, parametros, escala,
+						indice + 1, bloques.size());
+			}
+			if (notasFinales != null && !notasFinales.columnas().isEmpty()) {
+				String explicacion = "Nota oficial de la competencia: combina todos los cursos del grado que la evalúan."
+						+ " La nota final se expresa en nivel de logro (AD, A, B, C): la nota vigesimal se redondea"
+						+ " al entero (0,5 sube) y se ubica en la tabla de conversión vigente. Parcial: aún faltan notas.";
+				List<List<ColumnaReporte>> finales = bloquesPorCompetencia(notasFinales.columnas());
+				for (int indice = 0; indice < finales.size(); indice++) {
+					archivo.tabla("Nota final de la competencia", notasFinales, finales.get(indice), contexto,
+							explicacion, escala, indice + 1, finales.size());
+				}
 			}
 			archivo.numerarPaginas();
 			documento.save(salida);
@@ -77,8 +98,26 @@ public final class ArchivoReporteCalificaciones {
 		return bloques;
 	}
 
-	private void tabla(ReporteCalificaciones reporte, List<ColumnaReporte> columnas, String contexto,
-			String parametros, String escala, int bloque, int totalBloques) throws IOException {
+	/** Agrupa columnas sin partir una competencia entre páginas (hasta 7 columnas por bloque). */
+	private static List<List<ColumnaReporte>> bloquesPorCompetencia(List<ColumnaReporte> columnas) {
+		List<List<ColumnaReporte>> bloques = new ArrayList<>();
+		List<ColumnaReporte> actual = new ArrayList<>();
+		for (int inicio = 0; inicio < columnas.size();) {
+			int fin = finGrupo(columnas, inicio);
+			if (!actual.isEmpty() && actual.size() + (fin - inicio) > 7) {
+				bloques.add(actual);
+				actual = new ArrayList<>();
+			}
+			actual.addAll(columnas.subList(inicio, fin));
+			inicio = fin;
+		}
+		if (!actual.isEmpty())
+			bloques.add(actual);
+		return bloques;
+	}
+
+	private void tabla(String encabezado, ReporteCalificaciones reporte, List<ColumnaReporte> columnas,
+			String contexto, String parametros, String escala, int bloque, int totalBloques) throws IOException {
 		int siguiente = 0;
 		do {
 			PDPage pagina = new PDPage(new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth()));
@@ -86,13 +125,15 @@ public final class ArchivoReporteCalificaciones {
 			try (PDPageContentStream lienzo = new PDPageContentStream(documento, pagina)) {
 				float ancho = pagina.getMediaBox().getWidth() - 2 * MARGEN;
 				texto(lienzo, "Galiledu", MARGEN, 568, 11, AZUL, true);
-				texto(lienzo, "Consolidado de notas", MARGEN, 546, 20, AZUL, true);
+				texto(lienzo, encabezado, MARGEN, 546, 20, AZUL, true);
 				float y = parrafo(lienzo, contexto, MARGEN, 520, ancho, 10, TEXTO, false) - 8;
 				y = parrafo(lienzo, parametros, MARGEN, y, ancho, 9, GRIS, false) - 8;
 				if (totalBloques > 1) {
 					y = parrafo(lienzo, "Bloque " + bloque + " de " + totalBloques
-							+ ". El promedio general corresponde a toda la selección.", MARGEN, y, ancho, 8, GRIS,
-							false) - 8;
+							+ (reporte.columnas().stream().anyMatch(c -> "resultado_general".equals(c.clave()))
+									? ". El promedio general corresponde a toda la selección."
+									: "."),
+							MARGEN, y, ancho, 8, GRIS, false) - 8;
 				}
 				float anchoDato = (ancho - ANCHO_ESTUDIANTE) / Math.max(1, columnas.size());
 				y = encabezados(lienzo, reporte.titulo(), columnas, y, anchoDato);
@@ -159,7 +200,7 @@ public final class ArchivoReporteCalificaciones {
 	private static String grupo(ColumnaReporte columna, String titulo) {
 		return columna.competencia() != null
 				? columna.competencia()
-				: "resultado_general".equals(columna.clave()) ? "Resumen del curso" : titulo;
+				: "resultado_general".equals(columna.clave()) ? "Resumen del curso (referencial)" : titulo;
 	}
 
 	private float altoFila(FilaReporte fila, List<ColumnaReporte> columnas, float anchoDato, String escala)
@@ -185,10 +226,20 @@ public final class ArchivoReporteCalificaciones {
 			float base = parrafo(lienzo, valor, x + 6, y - 10, anchoDato - 12, 10, AZUL, columna.promedio());
 			String estado = fila.valores().get(columna.clave() + "_estado");
 			if (columna.promedio() && estado != null) {
-				texto(lienzo, estado, x + 6, base - 4, 7.5f,
-						"Aprobado".equals(estado) ? VERDE : "Desaprobado".equals(estado) ? ROJO : GRIS, false);
+				texto(lienzo, estado, x + 6, base - 4, 7.5f, colorLogro(estado), false);
 			}
 		}
+	}
+
+	/** Un color por nivel de logro: AD y A en verde, B en ámbar, C en rojo; sin nota, gris. */
+	private static Color colorLogro(String logro) {
+		if (logro.contains("Logro destacado") || logro.contains("Logro esperado"))
+			return VERDE;
+		if (logro.contains("En proceso"))
+			return AMBAR;
+		if (logro.contains("En inicio"))
+			return ROJO;
+		return GRIS;
 	}
 
 	private static String nota(String valor, ColumnaReporte columna, String escala) {
