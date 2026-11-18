@@ -135,7 +135,7 @@ class AmbienteTests {
 	void rechazaUnAulaRegularDeMasDe45(int aforo) {
 		assertThatThrownBy(() -> Ambiente.crear(TipoAmbiente.AULA_REGULAR, CODIGO, "Aula 206", aforo, List.of()))
 				.isInstanceOf(IllegalArgumentException.class)
-				.hasMessage("Un aula regular admite como máximo 45 estudiantes.");
+				.hasMessage("Un aula regular admite como máximo 45.");
 	}
 
 	@Test
@@ -237,7 +237,7 @@ class AmbienteTests {
 	@Test
 	void editarConUnAulaRegularRespetaElLimiteDe45YUnEspacioEspecialNo() {
 		assertThatThrownBy(() -> aula().editar("Aula 206", 46, List.of()))
-				.hasMessage("Un aula regular admite como máximo 45 estudiantes.");
+				.hasMessage("Un aula regular admite como máximo 45.");
 		var auditorio = espacio();
 		auditorio.editar("Auditorio", 300, List.of());
 		assertThat(auditorio.getAforoMaximo()).isEqualTo(300);

@@ -44,7 +44,8 @@ public class Ambiente {
 	public static final String MENSAJE_NOMBRE_OBLIGATORIO = "Ingresa el nombre del ambiente.";
 	public static final String MENSAJE_NOMBRE_LARGO = "El nombre admite como máximo 80 caracteres.";
 	public static final String MENSAJE_AFORO_INVALIDO = "El aforo debe ser mayor que 0.";
-	public static final String MENSAJE_AFORO_AULA_REGULAR = "Un aula regular admite como máximo 45 estudiantes.";
+	/** Texto del modal "Nuevo ambiente físico" (Figma 857:11500): "Personas. Un aula regular admite como máximo 45." */
+	public static final String MENSAJE_AFORO_AULA_REGULAR = "Un aula regular admite como máximo 45.";
 	public static final String MENSAJE_AFORO_GRANDE = "El aforo no puede ser mayor que 32767.";
 	public static final String MENSAJE_RECURSO_LARGO = "Cada recurso admite como máximo 60 caracteres.";
 	public static final String MENSAJE_CARACTERES_NO_VALIDOS = "El texto contiene caracteres no válidos.";
