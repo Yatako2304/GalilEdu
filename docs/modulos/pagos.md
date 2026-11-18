@@ -64,7 +64,7 @@ Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Códig
 | CAHU41-5 | "Pagar seleccionadas" crea la orden, pone las cuotas en proceso y lleva a la pasarela; el sistema no pide ni guarda datos de tarjeta. |
 | CAHU41-6 | Pago aprobado: pago con constancia `C-AAAA-NNNNN` por estudiante, cuotas pagadas con el recargo cubierto y pantalla "Pago realizado". |
 | CAHU41-7 | Pago rechazado: la orden queda rechazada con su motivo y las cuotas vuelven a su estado anterior. |
-| CAHU41-8 | Sin confirmación en 30 minutos la orden expira y las cuotas vuelven a pendiente. |
+| CAHU41-8 | Sin confirmación en 30 minutos la orden expira y las cuotas vuelven a pendiente. Si el apoderado cerró la pasarela, Pensiones le muestra el aviso "Tienes un pago en proceso" con **Continuar pago** (vuelve a la pasarela) y **Cancelar pago** (libera las cuotas al momento); `GET /cuotas` trae la orden abierta en `ordenEnProceso`. |
 | CAHU41-9 | Si la notificación no llega, al volver el apoderado (o al expirar) se consulta el estado a la pasarela. |
 | CAHU41-10 | Una notificación repetida no registra dos pagos. |
 | CAHU41-11 | Si la pasarela confirma otro monto, el pago queda OBSERVADO con la diferencia. |

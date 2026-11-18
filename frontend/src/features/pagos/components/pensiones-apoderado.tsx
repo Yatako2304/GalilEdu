@@ -30,7 +30,11 @@ import { Tag } from '@/components/ui/tag';
 import { CompromisoDetalle, HijoConDeuda } from '@/types/api';
 import { formatDay } from '@/utils/format';
 
-import { useCrearOrdenPago, useCuotasPorPagar } from '../api/pago-en-linea';
+import {
+  useCancelarOrdenPago,
+  useCrearOrdenPago,
+  useCuotasPorPagar,
+} from '../api/pago-en-linea';
 import {
   useCompromisoApoderado,
   useCompromisosApoderado,
@@ -38,6 +42,7 @@ import {
   usePagosApoderado,
 } from '../api/pensiones-apoderado';
 
+import { AvisoPagoEnProceso } from './aviso-pago-en-proceso';
 import { BarraPagoCuotas } from './barra-pago-cuotas';
 import { ResumenCompromiso } from './cronograma-cuotas';
 import { etiquetaCuota, soles } from './formato';
@@ -238,6 +243,8 @@ export const PensionesApoderado = () => {
   const porPagar = useCuotasPorPagar();
   const seleccion = useSeleccionCuotas(porPagar.data);
   const crear = useCrearOrdenPago();
+  const cancelar = useCancelarOrdenPago();
+  const ordenAbierta = porPagar.data?.ordenEnProceso;
   const [params] = useSearchParams();
   const [estudianteId, setEstudianteId] = React.useState(
     params.get('estudiante') ?? '',
@@ -322,6 +329,19 @@ export const PensionesApoderado = () => {
         elegido={elegido}
         onElegir={elegirEstudiante}
       />
+
+      {ordenAbierta && (
+        <AvisoPagoEnProceso
+          orden={ordenAbierta}
+          cancelando={cancelar.isPending}
+          onCancelar={() =>
+            cancelar.mutate(ordenAbierta.codigo, {
+              // El cronograma también muestra las cuotas "En proceso".
+              onSuccess: () => compromiso.refetch(),
+            })
+          }
+        />
+      )}
 
       {!compromisos.isLoading && !compromisos.data?.length ? (
         <Card className="p-8 text-center text-body-3 text-content-tertiary">
