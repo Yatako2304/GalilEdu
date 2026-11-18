@@ -1,5 +1,7 @@
 package com.galiledu.academico;
 
+import static com.galiledu.academico.AmbientesDePrueba.CODIGOS_SEMILLA;
+import static com.galiledu.academico.AmbientesDePrueba.PREFIJO;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -47,9 +49,10 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
  * <li>Solo se borran las filas que la prueba creó: las que no estaban en la base al empezar cada prueba. Las de la
  * semilla nunca, y se comprueba que sigan las 8 antes y después.</li>
  * <li>Al empezar también se borran los restos de una ejecución interrumpida (nombres con el prefijo
- * {@value #PREFIJO}), para que A-206 y E-001 estén libres. Ninguna otra prueba depende de eso: las que usan esos
- * códigos los calculan solo sobre los códigos de la semilla.</li>
+ * {@value AmbientesDePrueba#PREFIJO}), para que A-206 y E-001 estén libres. Ninguna otra prueba depende de eso: las
+ * que usan esos códigos los calculan solo sobre los códigos de la semilla.</li>
  * </ul>
+ * La limpieza está en {@link AmbientesDePrueba}, que comparte con {@code AmbienteCrearIT}.
  * <p>
  * El choque de código se simula con un espía del repositorio: el primer intento recibe una lista de códigos
  * <b>vieja</b> (como si otra petición hubiera confirmado un código entre la lectura y el INSERT), calcula un código
@@ -57,11 +60,6 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
  */
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
 class ServicioAmbientesCrearIT extends PruebaIntegracion {
-	/** Todos los nombres que crea esta clase empiezan así. */
-	static final String PREFIJO = "ZZ-IT ";
-	private static final List<String> CODIGOS_SEMILLA = List.of("A-101", "A-102", "A-201", "A-205", "LAB-01", "LAB-02",
-			"BIB-01", "AUD-01");
-
 	@Autowired
 	private ServicioAmbientes servicio;
 	@Autowired
@@ -75,24 +73,12 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 
 	@BeforeEach
 	void empezarLimpio() {
-		// Restos de una ejecución interrumpida. Por nombre, que ninguna fila de la semilla empieza así.
-		jdbc.sql("DELETE FROM configuracion.ambiente WHERE nombre LIKE :prefijo").param("prefijo", PREFIJO + "%")
-				.update();
-		exigirSemillaIntacta();
-		idsAlEmpezar = Set.copyOf(jdbc.sql("SELECT id FROM configuracion.ambiente").query(UUID.class).list());
+		idsAlEmpezar = AmbientesDePrueba.empezarLimpio(jdbc);
 	}
 
 	@AfterEach
 	void borrarLoQueCreoLaPrueba() {
-		// Todo lo que no estaba al empezar: nunca una fila de la semilla, porque todas estaban.
-		jdbc.sql("DELETE FROM configuracion.ambiente WHERE id NOT IN (:ids)").param("ids", idsAlEmpezar).update();
-		exigirSemillaIntacta();
-	}
-
-	private void exigirSemillaIntacta() {
-		int presentes = jdbc.sql("SELECT count(*)::int FROM configuracion.ambiente WHERE codigo IN (:codigos)")
-				.param("codigos", CODIGOS_SEMILLA).query(Integer.class).single();
-		assertThat(presentes).as("las 8 filas de la semilla").isEqualTo(CODIGOS_SEMILLA.size());
+		AmbientesDePrueba.borrarLoCreadoDesde(jdbc, idsAlEmpezar);
 	}
 
 	// ---------- Apoyo ----------
