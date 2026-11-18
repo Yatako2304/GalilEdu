@@ -2,6 +2,7 @@ package com.galiledu.academico;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -43,6 +44,35 @@ final class AmbientesDePrueba {
 	static void borrarLoCreadoDesde(JdbcClient jdbc, Set<UUID> idsAlEmpezar) {
 		jdbc.sql("DELETE FROM configuracion.ambiente WHERE id NOT IN (:ids)").param("ids", idsAlEmpezar).update();
 		exigirSemillaIntacta(jdbc);
+	}
+
+	/**
+	 * Iniciar sesión sin transacción de prueba <b>confirma</b> {@code ultimo_acceso} (y {@code actualizado_en}) del
+	 * usuario. Son los valores que se guardan al empezar para restaurarlos al terminar.
+	 */
+	record Acceso(String usuario, OffsetDateTime ultimoAcceso, OffsetDateTime actualizadoEn) {
+	}
+
+	static List<Acceso> accesos(JdbcClient jdbc, String... usuarios) {
+		return jdbc.sql("""
+				SELECT nombre_usuario, ultimo_acceso, actualizado_en FROM seguridad.usuario
+				WHERE nombre_usuario IN (:usuarios)""").param("usuarios", List.of(usuarios))
+				.query((rs, fila) -> new Acceso(rs.getString("nombre_usuario"),
+						rs.getObject("ultimo_acceso", OffsetDateTime.class),
+						rs.getObject("actualizado_en", OffsetDateTime.class)))
+				.list();
+	}
+
+	/** Deja el acceso de esos usuarios como estaba al empezar, y lo comprueba releyéndolo de la base. */
+	static void restaurarAccesos(JdbcClient jdbc, List<Acceso> alEmpezar, String... usuarios) {
+		for (Acceso acceso : alEmpezar) {
+			int filas = jdbc.sql("""
+					UPDATE seguridad.usuario SET ultimo_acceso = :ultimoAcceso, actualizado_en = :actualizadoEn
+					WHERE nombre_usuario = :usuario""").param("ultimoAcceso", acceso.ultimoAcceso())
+					.param("actualizadoEn", acceso.actualizadoEn()).param("usuario", acceso.usuario()).update();
+			assertThat(filas).as("restaurar el acceso de " + acceso.usuario()).isEqualTo(1);
+		}
+		assertThat(accesos(jdbc, usuarios)).containsExactlyInAnyOrderElementsOf(alEmpezar);
 	}
 
 	static void exigirSemillaIntacta(JdbcClient jdbc) {

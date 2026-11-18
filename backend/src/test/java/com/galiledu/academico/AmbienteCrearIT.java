@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -39,14 +38,11 @@ import com.jayway.jsonpath.JsonPath;
 class AmbienteCrearIT extends PruebaIntegracion {
 	private static final String[] USUARIOS = {ADMIN, PERSONAL_ADMINISTRATIVO, DOCENTE, COORDINADOR};
 
-	private record Acceso(String usuario, OffsetDateTime ultimoAcceso, OffsetDateTime actualizadoEn) {
-	}
-
 	@Autowired
 	private JdbcClient jdbc;
 
 	private Set<UUID> idsAlEmpezar;
-	private List<Acceso> accesosAlEmpezar;
+	private List<AmbientesDePrueba.Acceso> accesosAlEmpezar;
 	private String personal;
 
 	// ---------- Limpieza ----------
@@ -54,7 +50,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 	@BeforeEach
 	void empezarLimpio() throws Exception {
 		idsAlEmpezar = AmbientesDePrueba.empezarLimpio(jdbc);
-		accesosAlEmpezar = accesos();
+		accesosAlEmpezar = AmbientesDePrueba.accesos(jdbc, USUARIOS);
 		assertThat(accesosAlEmpezar).as("los 4 usuarios de prueba").hasSize(USUARIOS.length);
 		personal = token(PERSONAL_ADMINISTRATIVO);
 	}
@@ -62,26 +58,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 	@AfterEach
 	void limpiar() {
 		AmbientesDePrueba.borrarLoCreadoDesde(jdbc, idsAlEmpezar);
-		for (Acceso acceso : accesosAlEmpezar) {
-			int filas = jdbc.sql("""
-					UPDATE seguridad.usuario SET ultimo_acceso = :ultimoAcceso, actualizado_en = :actualizadoEn
-					WHERE nombre_usuario = :usuario""").param("ultimoAcceso", acceso.ultimoAcceso())
-					.param("actualizadoEn", acceso.actualizadoEn()).param("usuario", acceso.usuario()).update();
-			assertThat(filas).as("restaurar el acceso de " + acceso.usuario()).isEqualTo(1);
-		}
-		// Releído de la base (confirmado, sin transacción de prueba): quedó igual que al empezar.
-		assertThat(accesos()).containsExactlyInAnyOrderElementsOf(accesosAlEmpezar);
-	}
-
-	/** Último acceso de los usuarios con los que inician sesión estas pruebas: el login lo confirma. */
-	private List<Acceso> accesos() {
-		return jdbc.sql("""
-				SELECT nombre_usuario, ultimo_acceso, actualizado_en FROM seguridad.usuario
-				WHERE nombre_usuario IN (:usuarios)""").param("usuarios", List.of(USUARIOS))
-				.query((rs, fila) -> new Acceso(rs.getString("nombre_usuario"),
-						rs.getObject("ultimo_acceso", OffsetDateTime.class),
-						rs.getObject("actualizado_en", OffsetDateTime.class)))
-				.list();
+		AmbientesDePrueba.restaurarAccesos(jdbc, accesosAlEmpezar, USUARIOS);
 	}
 
 	// ---------- Apoyo ----------
