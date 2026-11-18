@@ -35,7 +35,8 @@ type Props = { plan: PlanGrado; editable: boolean };
 /**
  * Vista "Competencias del grado" (debajo de los cursos del plan). La nota oficial es de la competencia: una por
  * periodo y una final. Cuando varios cursos evalúan la misma competencia, aquí se define cuánto aporta cada uno.
- * Solo con promedio ponderado se usan los pesos; con las demás reglas los cursos aportan por igual.
+ * Los pesos se usan con promedio ponderado (ponderan las notas) y en la escala cualitativa (pesan el voto de cada
+ * curso); con promedio simple los cursos aportan por igual.
  */
 export const CompetenciasGrado = ({ plan, editable }: Props) => {
   const pesos = usePesosCompetencias({
@@ -43,7 +44,10 @@ export const CompetenciasGrado = ({ plan, editable }: Props) => {
     grado: plan.gradoCodigo,
   });
   const [editando, setEditando] = React.useState<PesosCompetencia | null>(null);
-  const ponderado = plan.reglaNota === 'PROMEDIO_PONDERADO';
+  const usaPesos = plan.reglaNota !== 'PROMEDIO_SIMPLE';
+  const cualitativa =
+    plan.reglaNota === 'NIVEL_MAS_FRECUENTE' ||
+    plan.reglaNota === 'ULTIMO_NIVEL';
   const filas: FilaCompetencia[] = (pesos.data ?? []).map((p) => ({
     ...p,
     id: p.competenciaId,
@@ -62,7 +66,7 @@ export const CompetenciasGrado = ({ plan, editable }: Props) => {
             parte de esa nota.
           </p>
         </div>
-        {ponderado && plan.pesosIncompletos > 0 && (
+        {usaPesos && plan.pesosIncompletos > 0 && (
           <Tag color="warning" size="sm">
             {plan.pesosIncompletos === 1
               ? '1 competencia con pesos incompletos'
@@ -71,14 +75,25 @@ export const CompetenciasGrado = ({ plan, editable }: Props) => {
         )}
       </div>
 
-      {!ponderado && (
+      {!usaPesos && (
         <Alert
           className="mt-4"
           type="info"
           size="sm"
           title={`El año usa ${NOMBRE_REGLA[plan.reglaNota]}: los cursos de una competencia aportan por igual.`}
         >
-          Los pesos por curso solo se usan con promedio ponderado.
+          Los pesos por curso se usan con promedio ponderado y en la escala de
+          letras.
+        </Alert>
+      )}
+      {cualitativa && (
+        <Alert
+          className="mt-4"
+          type="info"
+          size="sm"
+          title="El año usa escala de letras: cada curso vota por su nivel con su peso."
+        >
+          Gana el nivel con más peso acumulado; si empatan, el nivel mayor.
         </Alert>
       )}
 
@@ -118,7 +133,7 @@ export const CompetenciasGrado = ({ plan, editable }: Props) => {
                     {entry.cursos.map((c) => (
                       <li key={c.planCursoId}>
                         <Tag color="neutral" size="sm">
-                          {ponderado
+                          {usaPesos
                             ? `${c.curso} · ${c.pesoCurso == null ? 'sin peso' : porcentaje(c.pesoCurso)}`
                             : c.curso}
                         </Tag>
@@ -135,7 +150,7 @@ export const CompetenciasGrado = ({ plan, editable }: Props) => {
                     <Tag color="info" size="sm">
                       Un solo curso
                     </Tag>
-                  ) : !ponderado ? (
+                  ) : !usaPesos ? (
                     <Tag color="info" size="sm">
                       Aportan por igual
                     </Tag>
@@ -153,7 +168,7 @@ export const CompetenciasGrado = ({ plan, editable }: Props) => {
                 title: '',
                 field: 'id',
                 Cell: ({ entry }) =>
-                  editable && ponderado && entry.cursos.length > 1 ? (
+                  editable && usaPesos && entry.cursos.length > 1 ? (
                     <Button
                       size="sm"
                       variant="primary-light"
@@ -239,7 +254,12 @@ export const DialogoPesosCompetencia = ({
       onCerrar={onCerrar}
       icono={<Percent className="size-5" aria-hidden="true" />}
       titulo={`Pesos de «${competencia.competencia}»`}
-      descripcion={`${plan.grado} · ${plan.anio}. Cuánto aporta cada curso a la nota de la competencia en cada periodo. Deben sumar 100 %.`}
+      descripcion={`${plan.grado} · ${plan.anio}. ${
+        plan.reglaNota === 'NIVEL_MAS_FRECUENTE' ||
+        plan.reglaNota === 'ULTIMO_NIVEL'
+          ? 'Cuánto pesa el nivel de cada curso al decidir el nivel de la competencia'
+          : 'Cuánto aporta cada curso a la nota de la competencia'
+      } en cada periodo. Deben sumar 100 %.`}
       formId="form-pesos-competencia"
       textoGuardar="Guardar"
       guardando={guardar.isPending}

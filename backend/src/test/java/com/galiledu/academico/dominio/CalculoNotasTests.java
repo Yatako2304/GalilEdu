@@ -131,19 +131,63 @@ class CalculoNotasTests {
 	}
 
 	@Test
-	void enLaEscalaCualitativaAplicaLaReglaDelAnioEntreLosCursos() {
-		ResultadoCompetencia frecuente = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
+	void enLaEscalaCualitativaCadaCursoVotaConSuPeso() {
+		// Álgebra (40 %) B y Aritmética (60 %) A: gana A con 60.
+		ResultadoCompetencia a = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
 				List.of(nivel(ALGEBRA, P1, "B", "2026-05-01T10:00:00Z"),
 						nivel(ARITMETICA, P1, "A", "2026-05-02T10:00:00Z")),
 				"NIVEL_MAS_FRECUENTE", "ULTIMO_PERIODO");
-		// Empate entre B y A: prevalece el nivel mayor.
-		assertThat(texto(frecuente, 0)).isEqualTo("A");
+		assertThat(texto(a, 0)).isEqualTo("A");
 
-		ResultadoCompetencia ultimo = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
-				List.of(nivel(ALGEBRA, P1, "AD", "2026-05-01T10:00:00Z"),
-						nivel(ARITMETICA, P1, "C", "2026-05-03T10:00:00Z")),
+		// El de más peso decide aunque su nivel sea menor: Álgebra (40 %) AD y Aritmética (60 %) B → B.
+		ResultadoCompetencia b = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
+				List.of(nivel(ALGEBRA, P1, "AD", "2026-05-03T10:00:00Z"),
+						nivel(ARITMETICA, P1, "B", "2026-05-01T10:00:00Z")),
+				"NIVEL_MAS_FRECUENTE", "ULTIMO_PERIODO");
+		assertThat(texto(b, 0)).isEqualTo("B");
+	}
+
+	@Test
+	void conUltimoNivelLosCursosTambienVotanConSuPeso() {
+		// Dentro de cada curso manda el último ítem; entre cursos decide el peso, no quién calificó al último.
+		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
+				List.of(nivel(ALGEBRA, P1, "C", "2026-05-01T10:00:00Z"),
+						nivel(ALGEBRA, P1, "AD", "2026-05-09T10:00:00Z"),
+						nivel(ARITMETICA, P1, "A", "2026-05-02T10:00:00Z")),
 				"ULTIMO_NIVEL", "ULTIMO_PERIODO");
-		assertThat(texto(ultimo, 0)).isEqualTo("C");
+		assertThat(r.periodos().get(0).aportes().get(ALGEBRA).map(CalculoNotas::texto)).contains("AD");
+		assertThat(texto(r, 0)).isEqualTo("A");
+	}
+
+	@Test
+	void unEmpateDeVotosLoGanaElNivelMayor() {
+		List<CursoPeso> mitades = List.of(new CursoPeso(ALGEBRA, new BigDecimal("50")),
+				new CursoPeso(ARITMETICA, new BigDecimal("50")));
+		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), mitades,
+				List.of(nivel(ALGEBRA, P1, "A", "2026-05-01T10:00:00Z"),
+						nivel(ARITMETICA, P1, "B", "2026-05-02T10:00:00Z")),
+				"NIVEL_MAS_FRECUENTE", "ULTIMO_PERIODO");
+		assertThat(texto(r, 0)).isEqualTo("A");
+	}
+
+	@Test
+	void enLaEscalaCualitativaConPesosIncompletosNoHayNota() {
+		List<CursoPeso> incompletos = List.of(new CursoPeso(ALGEBRA, new BigDecimal("40")),
+				new CursoPeso(ARITMETICA, null));
+		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), incompletos,
+				List.of(nivel(ALGEBRA, P1, "A", "2026-05-01T10:00:00Z"),
+						nivel(ARITMETICA, P1, "B", "2026-05-02T10:00:00Z")),
+				"NIVEL_MAS_FRECUENTE", "ULTIMO_PERIODO");
+		assertThat(r.periodos().get(0).nota()).isEmpty();
+		assertThat(r.periodos().get(0).aportes().get(ARITMETICA).map(CalculoNotas::texto)).contains("B");
+	}
+
+	@Test
+	void unCursoSinNotaNoVotaYLaNotaQuedaParcial() {
+		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
+				List.of(nivel(ALGEBRA, P1, "C", "2026-05-01T10:00:00Z")), "NIVEL_MAS_FRECUENTE", "ULTIMO_PERIODO");
+		assertThat(texto(r, 0)).isEqualTo("C");
+		assertThat(r.periodos().get(0).parcial()).isTrue();
 	}
 
 	@Test

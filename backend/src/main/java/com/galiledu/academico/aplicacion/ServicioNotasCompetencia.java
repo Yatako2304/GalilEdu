@@ -79,7 +79,7 @@ public class ServicioNotasCompetencia {
 	private NotasCompetencias calcular(CursoFila curso, UUID seccionId, List<PeriodoFila> periodos,
 			List<CompetenciaFila> elegidas) {
 		String regla = curso.reglaNota();
-		boolean usaPesos = CalculoNotas.PROMEDIO_PONDERADO.equals(regla);
+		boolean usaPesos = CalculoNotas.usaPesosDeCurso(regla);
 		Map<UUID, List<PesoFila>> cursosPorCompetencia = pesos.delGrado(curso.anioEscolarId(), curso.gradoCodigo())
 				.stream()
 				.collect(Collectors.groupingBy(PesoFila::competenciaId, LinkedHashMap::new, Collectors.toList()));

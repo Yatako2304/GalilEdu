@@ -154,7 +154,8 @@ public class ServicioPlanEvaluacion {
 
 	/**
 	 * Vista "Competencias del grado": cada competencia evaluada en el grado y año, con los cursos que la evalúan y
-	 * cuánto aporta cada uno a su nota. La regla del año decide después si los pesos se usan (solo PROMEDIO_PONDERADO).
+	 * cuánto aporta cada uno a su nota. La regla del año decide después si los pesos se usan (promedio ponderado y
+	 * escala cualitativa; no promedio simple).
 	 */
 	@Transactional(readOnly = true)
 	public List<PesosCompetencia> pesosCompetencias(UUID anioEscolarId, String gradoCodigo) {

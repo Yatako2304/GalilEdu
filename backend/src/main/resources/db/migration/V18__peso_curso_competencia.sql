@@ -4,7 +4,7 @@
 -- evalúan "Resuelve problemas de cantidad"). La nota oficial es de la competencia: una por periodo
 -- y una final. peso_curso dice cuánto aporta cada curso a esa nota.
 -- NULL significa "sin definir". La suma exacta de 100 % entre los cursos cruza filas y la valida
--- el servicio (ServicioPlanEvaluacion). Solo se usa cuando la regla del año es PROMEDIO_PONDERADO.
+-- el servicio (ServicioPlanEvaluacion). Se usa con PROMEDIO_PONDERADO (pondera notas) y en la escala cualitativa (pesa el voto de cada curso).
 -- =====================================================================
 
 ALTER TABLE academico.plan_competencia
@@ -14,7 +14,7 @@ ALTER TABLE academico.plan_competencia
 
 COMMENT ON COLUMN academico.plan_competencia.peso_curso IS
     'Porcentaje con el que el curso aporta a la nota de la competencia en su grado y año. '
-    'Entre los cursos de una competencia suma 100. NULL = sin definir. Solo cuenta con PROMEDIO_PONDERADO.';
+    'Entre los cursos de una competencia suma 100. NULL = sin definir. Cuenta con PROMEDIO_PONDERADO y en la escala cualitativa; no con PROMEDIO_SIMPLE.';
 
 -- Los planes existentes reparten el 100 % en partes iguales entre los cursos de cada competencia.
 -- El primer curso recibe el resto del redondeo para que la suma sea exacta (33,34 + 33,33 + 33,33).

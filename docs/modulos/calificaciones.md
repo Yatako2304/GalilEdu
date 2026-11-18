@@ -83,7 +83,7 @@ V15 elimina únicamente `NOT NULL` de `academico.item_competencia.peso_porcentaj
 Se calcula al consultarla y no se guarda (`CalculoNotas` y `ServicioNotasCompetencia`). Va por sección, en tres pasos:
 
 1. **Ítems → aporte del curso en el periodo:** la regla de nota del año sobre los ítems del curso que apuntan a la competencia. Es el mismo «Promedio final» del consolidado.
-2. **Aportes → nota de la competencia en el periodo:** con `PROMEDIO_PONDERADO` se usa el peso de cada curso del plan de evaluación (`academico.plan_competencia.peso_curso`) y se normaliza por los cursos que tienen notas. Con `PROMEDIO_SIMPLE` los cursos aportan por igual. En la escala cualitativa se aplica la regla del año a los niveles de los cursos.
+2. **Aportes → nota de la competencia en el periodo:** con `PROMEDIO_PONDERADO` se usa el peso de cada curso del plan de evaluación (`academico.plan_competencia.peso_curso`) y se normaliza por los cursos que tienen notas. Con `PROMEDIO_SIMPLE` los cursos aportan por igual. En la escala cualitativa (`NIVEL_MAS_FRECUENTE` o `ULTIMO_NIVEL`) cada curso **vota por su nivel con su peso**: gana el nivel con más peso acumulado y, si empatan, el nivel mayor (Aritmética 60 % B y Geometría 40 % AD → B). Los cursos sin nota no votan. La regla del año (más frecuente o último) se sigue aplicando dentro de cada curso, a sus ítems, y entre periodos.
 3. **Notas de periodo → nota final:** `PROMEDIO_PERIODOS` promedia los periodos con nota (en la escala cualitativa aplica la regla de nota a sus niveles). `ULTIMO_PERIODO` toma el último periodo con nota.
 
 Ejemplo con Aritmética 60 % y Geometría 40 %: en el IV bimestre Aritmética aporta 13 y Geometría 16, así que la competencia tiene 13 × 0,6 + 16 × 0,4 = 14,2.
@@ -92,7 +92,7 @@ Ejemplo con Aritmética 60 % y Geometría 40 %: en el IV bimestre Aritmética ap
 | --- | --- |
 | Un curso sin notas en el periodo, o un ítem sin calificar | Se calcula con lo que hay y se marca **Parcial** |
 | Falta algún periodo (o, con `ULTIMO_PERIODO`, el último) | La nota final se marca **Parcial** |
-| `PROMEDIO_PONDERADO` con pesos que no suman 100 % | Sin nota de competencia («—», Pendiente) y con un aviso; los aportes sí se ven |
+| `PROMEDIO_PONDERADO` o escala cualitativa con pesos que no suman 100 % | Sin nota de competencia («—», Pendiente) y con un aviso; los aportes sí se ven |
 | Ningún curso tiene notas | «—», Pendiente |
 
 **Nivel de logro (letra).** La nota final de la competencia se muestra **siempre en nivel de logro** (AD, A, B, C), con el número como referencia. En la escala vigesimal, la nota (tal como se muestra, con 2 decimales) se **redondea al entero, 0,5 sube**, y se ubica en los rangos enteros de la tabla de conversión: 16,5 → 17 → A; 13,5 → 14 → A; 13,49 → 13 → B; 17,5 → 18 → AD. Cada periodo usa la versión de la tabla vigente al inicio del periodo; la nota final, la del inicio del último periodo. Si no hay ninguna versión, se usa C 0–10, B 11–13, A 14–17 y AD 18–20. El **estado** sigue la misma regla (Aprobado = A o AD), así que nunca contradice la letra. El consolidado por curso también aplica ese redondeo al decidir Aprobado o Desaprobado. En la pantalla, la tarjeta **Nota de la competencia** aparece debajo del consolidado al generarlo, con una tabla por cada competencia elegida. El interruptor **Ver el aporte de cada curso** muestra cuánto aporta cada curso en cada periodo. El docente ve los aportes de los cursos de sus colegas en la sección, pero no sus ítems.

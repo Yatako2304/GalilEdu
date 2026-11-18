@@ -20,8 +20,8 @@ import java.util.stream.Collectors;
  * <li><b>Ítems → aporte del curso en el periodo:</b> la regla de nota del año sobre los ítems del curso que apuntan a
  * la competencia (es el «Promedio final» del consolidado del docente).</li>
  * <li><b>Aportes → nota de la competencia en el periodo:</b> con PROMEDIO_PONDERADO se usa el peso de cada curso del
- * plan de evaluación; con PROMEDIO_SIMPLE los cursos pesan igual; en la escala cualitativa se aplica la regla del año
- * a los niveles de los cursos.</li>
+ * plan de evaluación; con PROMEDIO_SIMPLE los cursos pesan igual; en la escala cualitativa cada curso vota por su
+ * nivel con su peso del plan (gana el nivel con más peso; si empatan, el mayor).</li>
  * <li><b>Notas de periodo → nota final:</b> la consolidación del año (promedio de periodos o último periodo).</li>
  * </ol>
  *
@@ -66,8 +66,9 @@ public final class CalculoNotas {
 	}
 
 	/**
-	 * Calcula la nota de una competencia para un estudiante. Con PROMEDIO_PONDERADO y pesos incompletos no hay nota de
-	 * competencia (solo aportes): normalizar pesos que el colegio no terminó de definir inventaría la nota.
+	 * Calcula la nota de una competencia para un estudiante. Cuando la regla usa el peso de los cursos (promedio
+	 * ponderado o escala cualitativa) y los pesos están incompletos, no hay nota de competencia (solo aportes):
+	 * normalizar pesos que el colegio no terminó de definir inventaría la nota.
 	 *
 	 * @param periodos
 	 *            ids de los periodos del año, en orden
@@ -75,7 +76,8 @@ public final class CalculoNotas {
 	public static ResultadoCompetencia notaCompetencia(List<UUID> periodos, List<CursoPeso> cursos,
 			List<Calificacion> calificaciones, String regla, String consolidacion) {
 		boolean ponderado = PROMEDIO_PONDERADO.equals(regla);
-		boolean calculable = !ponderado || pesosCompletos(cursos.stream().map(CursoPeso::peso).toList());
+		boolean cualitativa = esCualitativa(regla);
+		boolean calculable = !usaPesosDeCurso(regla) || pesosCompletos(cursos.stream().map(CursoPeso::peso).toList());
 		List<ResultadoPeriodo> resultados = new ArrayList<>();
 		for (UUID periodoId : periodos) {
 			Map<UUID, Optional<Nota>> aportes = new LinkedHashMap<>();
@@ -92,13 +94,51 @@ public final class CalculoNotas {
 				aportes.put(curso.planCursoId(), aporte);
 				// Un ítem del curso sin calificar, o un curso sin ninguna nota, deja la nota a medias.
 				parcial |= items.stream().anyMatch(c -> c.numerica() == null && c.nivel() == null) || aporte.isEmpty();
-				aporte.ifPresent(a -> paraCombinar.add(new Nota(ponderado ? curso.peso() : BigDecimal.ONE,
-						a.numerica(), a.nivel(), a.orden())));
+				aporte.ifPresent(
+						a -> paraCombinar.add(new Nota(ponderado || cualitativa ? curso.peso() : BigDecimal.ONE,
+								a.numerica(), a.nivel(), a.orden())));
 			}
-			Optional<Nota> nota = calculable ? combinar(paraCombinar, regla) : Optional.empty();
+			Optional<Nota> nota = !calculable
+					? Optional.empty()
+					: cualitativa ? votoPonderado(paraCombinar) : combinar(paraCombinar, regla);
 			resultados.add(new ResultadoPeriodo(periodoId, nota, nota.isPresent() && parcial, aportes));
 		}
 		return consolidarCompetencia(resultados, consolidacion, regla);
+	}
+
+	/** Regla de la escala cualitativa (AD, A, B, C): nivel más frecuente o último nivel. */
+	public static boolean esCualitativa(String regla) {
+		return "NIVEL_MAS_FRECUENTE".equals(regla) || ULTIMO_NIVEL.equals(regla);
+	}
+
+	/**
+	 * El peso de cada curso del plan cuenta con promedio ponderado (pondera las notas) y en la escala cualitativa (pesa
+	 * el voto de cada curso). Con promedio simple los cursos aportan por igual.
+	 */
+	public static boolean usaPesosDeCurso(String regla) {
+		return PROMEDIO_PONDERADO.equals(regla) || esCualitativa(regla);
+	}
+
+	/**
+	 * Escala cualitativa, cursos → competencia: cada curso vota por su nivel con su peso del plan; gana el nivel con
+	 * más
+	 * peso acumulado y, si empatan, el nivel mayor. Así un curso que pesa 60 % no queda empatado con uno de 40 %. Los
+	 * cursos sin nota en el periodo no votan.
+	 */
+	public static Optional<Nota> votoPonderado(List<Nota> niveles) {
+		List<Nota> conNivel = niveles.stream().filter(n -> n.nivel() != null).toList();
+		if (conNivel.isEmpty()) {
+			return Optional.empty();
+		}
+		Map<String, BigDecimal> votos = new LinkedHashMap<>();
+		conNivel.forEach(n -> votos.merge(n.nivel(), n.peso() == null ? BigDecimal.ZERO : n.peso(), BigDecimal::add));
+		String ganador = votos.entrySet().stream()
+				.max(Map.Entry.<String, BigDecimal>comparingByValue()
+						.thenComparing(e -> ORDEN_NIVEL.getOrDefault(e.getKey(), -1)))
+				.orElseThrow().getKey();
+		Instant orden = conNivel.stream().map(Nota::orden).filter(Objects::nonNull).max(Comparator.naturalOrder())
+				.orElse(null);
+		return Optional.of(new Nota(BigDecimal.ONE, null, ganador, orden));
 	}
 
 	private static ResultadoCompetencia consolidarCompetencia(List<ResultadoPeriodo> periodos, String consolidacion,

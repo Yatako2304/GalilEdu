@@ -110,9 +110,11 @@ export const ParametrosEvaluacionAnio = ({
       <p className="text-body-4 text-content-quartiary">
         La nota oficial es de cada competencia: una por periodo y una final. El
         cálculo se aplica a los ítems de cada curso y luego a los cursos que
-        evalúan la misma competencia (con promedio ponderado, según el peso de
-        cada curso en el plan de evaluación). La consolidación une los periodos
-        en la nota final.
+        evalúan la misma competencia, según el peso de cada curso en el plan de
+        evaluación: con promedio ponderado pondera las notas y en la escala de
+        letras cada curso vota por su nivel con su peso (con promedio simple los
+        cursos aportan por igual). La consolidación une los periodos en la nota
+        final.
       </p>
 
       {actuales.editable && (

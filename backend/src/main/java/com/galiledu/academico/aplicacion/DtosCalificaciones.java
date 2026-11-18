@@ -90,7 +90,8 @@ public final class DtosCalificaciones {
 	}
 
 	/**
-	 * Una competencia elegida. usaPesos: la regla del año es promedio ponderado. Con usaPesos y pesos incompletos no se
+	 * Una competencia elegida. usaPesos: la regla del año usa el peso de los cursos (promedio ponderado o escala
+	 * cualitativa). Con usaPesos y pesos incompletos no se
 	 * calcula la nota de la competencia (solo los aportes de cada curso).
 	 */
 	public record CompetenciaNotas(UUID competenciaId, String competencia, boolean usaPesos, boolean pesosCompletos,

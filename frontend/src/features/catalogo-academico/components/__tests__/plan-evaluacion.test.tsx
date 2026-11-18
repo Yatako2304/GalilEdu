@@ -356,3 +356,19 @@ test('sin promedio ponderado los cursos aportan por igual y no hay pesos que edi
     screen.queryByRole('button', { name: 'Ajustar pesos' }),
   ).not.toBeInTheDocument();
 });
+
+test('en escala de letras los pesos se usan como votos y se pueden ajustar', async () => {
+  reglaDelPlan = 'NIVEL_MAS_FRECUENTE';
+  await renderizar();
+
+  expect(
+    await screen.findByText(
+      'El año usa escala de letras: cada curso vota por su nivel con su peso.',
+    ),
+  ).toBeInTheDocument();
+  expect(await screen.findByText('Aritmética · 60 %')).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: 'Ajustar pesos' }));
+  expect(
+    await screen.findByText(/Cuánto pesa el nivel de cada curso/),
+  ).toBeInTheDocument();
+});

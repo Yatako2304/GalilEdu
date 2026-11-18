@@ -50,12 +50,13 @@ Esta entrada reemplaza el enfoque de la rama `feat/catalogo-peso-curso-competenc
 
   **Por qué:** no hay que configurar nada en el caso común, y no se reparten pesos a escondidas.
   **Alternativas descartadas:** volver a repartir en partes iguales al cambiar los cursos, porque pisaría pesos que el colegio ya eligió.
-- **Decisión:** el peso del curso solo se usa con `PROMEDIO_PONDERADO`.
-  - Con `PROMEDIO_SIMPLE` los cursos aportan por igual.
-  - En la escala cualitativa se aplica la regla del año a los niveles de los cursos (`NIVEL_MAS_FRECUENTE` desempata por el nivel mayor; `ULTIMO_NIVEL` toma el más reciente).
+- **Decisión:** el peso del curso se usa con `PROMEDIO_PONDERADO` y en la escala cualitativa; con `PROMEDIO_SIMPLE` los cursos aportan por igual.
+  - Con promedio ponderado, pondera las notas de los cursos.
+  - En la escala cualitativa (`NIVEL_MAS_FRECUENTE` o `ULTIMO_NIVEL`), cada curso **vota por su nivel con su peso**: gana el nivel con más peso acumulado y, si empatan, el nivel mayor. Por ejemplo, Aritmética (60 %) B y Geometría (40 %) AD dan B. La regla del año sigue aplicándose dentro de cada curso (a sus ítems) y entre periodos.
 
-  **Por qué:** es lo mismo que ya se hace con el peso de los ítems ([decisión de pesos solo en ponderado](2026-11-06-josezavaleta-pesos-solo-promedio-ponderado.md)).
-- **Decisión:** con promedio ponderado y pesos incompletos no se calcula la nota de la competencia («—» y un aviso), pero sí se ven los aportes.
+  **Por qué:** con dos cursos, aplicar «nivel más frecuente» entre cursos siempre empata y gana el nivel mayor, aunque el otro curso pese más. Con «último nivel» decidía qué docente calificó al último. El voto ponderado respeta el peso que el colegio definió. Lo pidió alex-sanchezz el 2026-11-18. El peso de los ítems sigue usándose solo en ponderado ([decisión de pesos solo en ponderado](2026-11-06-josezavaleta-pesos-solo-promedio-ponderado.md)).
+  **Alternativas descartadas:** convertir los niveles a números (AD = 4, A = 3…) y promediarlos, porque inventa una escala que el colegio no definió y la evaluación por competencias pide no promediar niveles; y la regla del año entre cursos, por lo explicado arriba.
+- **Decisión:** con promedio ponderado o escala cualitativa y pesos incompletos no se calcula la nota de la competencia («—» y un aviso), pero sí se ven los aportes.
   **Por qué:** normalizar pesos que el colegio no terminó de definir inventaría la nota.
 - **Decisión:** un curso sin notas en el periodo no cuenta y la nota se marca **Parcial**. También es parcial si un ítem está sin calificar.
   - La nota final es parcial mientras falte algún periodo.
@@ -87,7 +88,7 @@ Los planes existentes reparten el 100 % en partes iguales entre los cursos de ca
 
 ## Pendientes / problemas conocidos
 
-- [ ] Confirmar con el PO estas reglas: pesos solo en ponderado, «parcial» con notas faltantes, sin nota con pesos incompletos, promedio general referencial y el redondeo al entero (0,5 sube) para la letra y el estado.
+- [ ] Confirmar con el PO estas reglas: pesos en ponderado y voto ponderado en la escala de letras, «parcial» con notas faltantes, sin nota con pesos incompletos, promedio general referencial y el redondeo al entero (0,5 sube) para la letra y el estado.
 - [ ] Revisar en Figma si hay diseño para «Competencias del grado» y para la nota de la competencia; si no, confirmar la excepción con el equipo.
 - [ ] Mostrar la nota de la competencia a Tutor, Coordinador, Apoderado y Estudiante cuando se implementen sus pantallas (hoy son marcadores). El cálculo ya está en `ServicioNotasCompetencia`.
 - [x] La nota final de la competencia, en nivel de logro, va al final del PDF del consolidado.

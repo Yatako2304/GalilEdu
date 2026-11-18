@@ -73,6 +73,26 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 
 	/** Un ítem del curso en el periodo, que apunta solo a la competencia, con la nota de un estudiante. */
 	private void itemConNota(String curso, int numeroPeriodo, String competenciaId, String matriculaId, int nota) {
+		String item = item(curso, numeroPeriodo, competenciaId);
+		jdbc.sql("""
+				INSERT INTO academico.calificacion_item
+				    (item_evaluacion_id, seccion_id, matricula_id, nota_numerica, registrado_por)
+				VALUES (?::uuid, ?::uuid, ?::uuid, ?, ?::uuid)""")
+				.params(item, seccionA(), matriculaId, nota, MARIA_FERNANDEZ).update();
+	}
+
+	/** Como itemConNota, pero con un nivel de logro (escala cualitativa). */
+	private void itemConNivel(String curso, int numeroPeriodo, String competenciaId, String matriculaId,
+			String nivel) {
+		String item = item(curso, numeroPeriodo, competenciaId);
+		jdbc.sql("""
+				INSERT INTO academico.calificacion_item
+				    (item_evaluacion_id, seccion_id, matricula_id, nivel_logro, registrado_por)
+				VALUES (?::uuid, ?::uuid, ?::uuid, ?, ?::uuid)""")
+				.params(item, seccionA(), matriculaId, nivel, MARIA_FERNANDEZ).update();
+	}
+
+	private String item(String curso, int numeroPeriodo, String competenciaId) {
 		String item = id("""
 				INSERT INTO academico.item_evaluacion
 				    (plan_curso_id, anio_escolar_id, grado_codigo, seccion_id, periodo_academico_id,
@@ -85,11 +105,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 						INSERT INTO academico.item_competencia (item_evaluacion_id, plan_curso_id, competencia_id, peso_porcentaje)
 						VALUES (?::uuid, ?::uuid, ?::uuid, 100)""")
 				.params(item, plan(curso), competenciaId).update();
-		jdbc.sql("""
-				INSERT INTO academico.calificacion_item
-				    (item_evaluacion_id, seccion_id, matricula_id, nota_numerica, registrado_por)
-				VALUES (?::uuid, ?::uuid, ?::uuid, ?, ?::uuid)""")
-				.params(item, seccionA(), matriculaId, nota, MARIA_FERNANDEZ).update();
+		return item;
 	}
 
 	// ---------- Plan de evaluación: pesos ----------
@@ -230,6 +246,30 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 			org.assertj.core.api.Assertions.assertThat(new org.apache.pdfbox.text.PDFTextStripper().getText(documento))
 					.contains("Nota final de la competencia", "A · 14,6/20", "Aprobado · Parcial", "13,6/20");
 		}
+	}
+
+	@Test
+	void enEscalaDeLetrasCadaCursoVotaConSuPeso() throws Exception {
+		jdbc.sql("""
+				UPDATE configuracion.anio_escolar
+				SET escala_evaluacion = 'CUALITATIVA', regla_nota = 'NIVEL_MAS_FRECUENTE'
+				WHERE id = ?::uuid""").param(ANIO_2026).update();
+		String cantidad = competencia(CANTIDAD);
+		String ana = matriculaDe("Ana Lucía");
+		// Aritmética (60 %) da B y Geometría (40 %) da AD: gana B por peso, no AD por ser mayor.
+		itemConNivel("Aritmética", 4, cantidad, ana, "B");
+		itemConNivel("Geometría", 4, cantidad, ana, "AD");
+
+		String filaAna = "$.filas[?(@.matriculaId == '%s')].competencias[0]".formatted(ana);
+		mvc.perform(conToken(get("/calificaciones/docente/cursos/%s/secciones/%s/notas-competencia"
+				.formatted(plan("Geometría"), seccionA())).param("competenciaIds", cantidad), docente))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.escala").value("CUALITATIVA"))
+				.andExpect(jsonPath("$.competencias[0].usaPesos").value(true))
+				.andExpect(jsonPath(filaAna + ".periodos[3].nota").value(contains("B")))
+				.andExpect(jsonPath(filaAna + ".periodos[3].nivel").value(contains("B")))
+				.andExpect(jsonPath(filaAna + ".periodos[3].estado").value(contains("Desaprobado")))
+				.andExpect(jsonPath(filaAna + ".notaFinal.nivel").value(contains("B")));
 	}
 
 	@Test
