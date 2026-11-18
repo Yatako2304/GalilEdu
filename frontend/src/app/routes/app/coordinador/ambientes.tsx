@@ -1,16 +1,8 @@
-import { ContentLayout } from '@/components/layouts';
-import { ModulePlaceholder } from '@/components/module-placeholder';
+import { ReservasEspacios } from '@/features/horarios/components/reservas-espacios';
 
+// Figma > Coordinador > «Reserva de espacios especiales» (308:1874), HU-48. La ruta sigue siendo `coordinador/ambientes`.
 const CoordinadorAmbientesRoute = () => {
-  return (
-    <ContentLayout title="Ambientes físicos">
-      <ModulePlaceholder
-        feature="ambientes"
-        historias={['HU-48']}
-        figmaNodeId="308:1874"
-      />
-    </ContentLayout>
-  );
+  return <ReservasEspacios />;
 };
 
 export default CoordinadorAmbientesRoute;

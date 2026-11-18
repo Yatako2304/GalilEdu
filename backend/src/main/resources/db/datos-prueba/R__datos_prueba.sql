@@ -584,3 +584,33 @@ BEGIN
     END LOOP;
 END $$;
 -- FIN DEMO CALIFICACIONES DOCENTE
+
+-- ---------------------------------------------------------------------
+-- HU-48 · Reservas de espacios especiales (V17), para ver el historial de «Reserva de espacios especiales».
+-- Registradas por Carlos Ramírez (Coordinador, U20260005) con María Fernández (U20260004) de responsable, en secciones
+-- de 2026 (jornada de secundaria de 7:30 a 14:50, lunes a viernes). Respetan las reglas 1 a 8 entre sí: cada una cae en
+-- un día lectivo del IV bimestre, dentro de la jornada, en un espacio especial activo y sin superponerse con otra reserva
+-- activa del mismo ambiente, de la misma sección ni de María. Los datos de prueba no traen horarios semanales.
+--   · Futuras: jueves 19/11 y viernes 20/11 (esta semana), y miércoles 9/12.
+--   · Pasadas (se ven «Finalizado»): martes 3/11 y jueves 12/11.
+--   · Cancelada (no aparece en el listado): viernes 27/11.
+-- ---------------------------------------------------------------------
+INSERT INTO horarios.reserva_ambiente (id, ambiente_id, seccion_id, responsable_id, actividad, fecha, hora_inicio,
+                                       hora_fin, estado, creado_por)
+SELECT r.id::uuid, a.id, s.id, responsable.id, r.actividad, r.fecha::date, r.hora_inicio::time, r.hora_fin::time,
+       r.estado, coordinador.id
+FROM (VALUES
+    ('71000000-0000-0000-0000-000000000001', 'LAB-01', 'SEC-1', 'A', 'Práctica de laboratorio de química',      '2026-11-19', '08:15', '09:45', 'ACTIVA'),
+    ('71000000-0000-0000-0000-000000000002', 'LAB-02', 'SEC-4', 'A', 'Taller de programación',                  '2026-11-20', '10:05', '11:35', 'ACTIVA'),
+    ('71000000-0000-0000-0000-000000000003', 'BIB-01', 'SEC-5', 'A', 'Sesión de lectura y búsqueda de fuentes', '2026-12-09', '08:15', '09:45', 'ACTIVA'),
+    ('71000000-0000-0000-0000-000000000004', 'LAB-01', 'SEC-2', 'A', 'Experimento de densidad',                 '2026-11-03', '07:30', '09:00', 'ACTIVA'),
+    ('71000000-0000-0000-0000-000000000005', 'LAB-02', 'SEC-1', 'B', 'Taller de hojas de cálculo',              '2026-11-12', '10:05', '11:35', 'ACTIVA'),
+    ('71000000-0000-0000-0000-000000000006', 'LAB-01', 'SEC-3', 'A', 'Práctica de microscopía',                 '2026-11-27', '08:15', '09:45', 'CANCELADA')
+) AS r (id, ambiente, grado, seccion, actividad, fecha, hora_inicio, hora_fin, estado)
+JOIN configuracion.ambiente a ON a.codigo = r.ambiente
+JOIN configuracion.seccion s ON s.anio_escolar_id = '30000000-0000-0000-0000-000000002026'
+                            AND s.grado_codigo = r.grado AND s.nombre = r.seccion
+JOIN seguridad.usuario responsable ON responsable.nombre_usuario = 'U20260004'
+JOIN seguridad.usuario coordinador ON coordinador.nombre_usuario = 'U20260005'
+ON CONFLICT DO NOTHING;
+-- FIN HU-48 RESERVAS DE ESPACIOS ESPECIALES
