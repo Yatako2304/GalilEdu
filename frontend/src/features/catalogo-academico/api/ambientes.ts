@@ -79,6 +79,7 @@ const useRefrescarAmbientes = () => {
 const useMutacion = <V, R>(
   mutationFn: (variables: V) => Promise<R>,
   onSuccess?: (resultado: R) => void,
+  onError?: (error: unknown) => void,
 ) => {
   const refrescar = useRefrescarAmbientes();
   return useMutation({
@@ -87,22 +88,32 @@ const useMutacion = <V, R>(
       refrescar();
       onSuccess?.(resultado);
     },
+    onError,
   });
 };
+
+/**
+ * El modal de crear y editar muestra el error por su cuenta (en el campo que corresponde o en una alerta del modal),
+ * así que el interceptor no lo repite como notificación; llega a `onError`.
+ */
+const SIN_NOTIFICACION = { silenciarNotificacion: true } as const;
 
 // POST /ambientes (201). El código sale generado: no se envía.
 export const useCrearAmbiente = (
   onSuccess?: (ambiente: AmbienteResumen) => void,
+  onError?: (error: unknown) => void,
 ) =>
   useMutacion(
     (data: SolicitudAmbiente): Promise<AmbienteResumen> =>
-      api.post('/ambientes', data),
+      api.post('/ambientes', data, SIN_NOTIFICACION),
     onSuccess,
+    onError,
   );
 
 // PUT /ambientes/{id}: nombre, aforo y recursos (el código y el tipo no cambian)
 export const useEditarAmbiente = (
   onSuccess?: (ambiente: AmbienteResumen) => void,
+  onError?: (error: unknown) => void,
 ) =>
   useMutacion(
     ({
@@ -111,8 +122,10 @@ export const useEditarAmbiente = (
     }: {
       id: string;
       data: SolicitudEdicionAmbiente;
-    }): Promise<AmbienteResumen> => api.put(`/ambientes/${id}`, data),
+    }): Promise<AmbienteResumen> =>
+      api.put(`/ambientes/${id}`, data, SIN_NOTIFICACION),
     onSuccess,
+    onError,
   );
 
 // POST /ambientes/{id}/desactivar (se permite aunque esté en uso; 200 si ya estaba inactivo)

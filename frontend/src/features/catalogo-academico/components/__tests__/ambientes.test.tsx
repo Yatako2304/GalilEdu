@@ -488,10 +488,17 @@ test('desactivar pide confirmación y, al confirmar, desactiva y recarga la list
   expect(
     modal.getByText('¿Desactivar el ambiente Aula 101?'),
   ).toBeInTheDocument();
+  // Figma no define este modal: avisa que lo ya existente no cambia, solo lo nuevo.
+  expect(
+    modal.getByText(
+      'Seguirá en los horarios y reservas existentes, pero no podrá elegirse en nuevos.',
+    ),
+  ).toBeInTheDocument();
   expect(accion).toBe(''); // todavía no se envió nada
   await userEvent.click(modal.getByRole('button', { name: 'Desactivar' }));
 
   await waitFor(() => expect(accion).toBe('a101/desactivar'));
+  expect(await screen.findByText('Ambiente desactivado.')).toBeInTheDocument();
   await waitFor(() => expect(pedidos.length).toBeGreaterThan(consultas));
   await waitFor(() => expect(resumenes).toBeGreaterThan(1));
   await waitFor(() =>
@@ -555,9 +562,13 @@ test('un ambiente inactivo ofrece Reactivar', async () => {
   expect(
     modal.getByText('¿Reactivar el ambiente Aula 205?'),
   ).toBeInTheDocument();
+  expect(
+    modal.getByText('Volverá a poder elegirse en nuevos horarios y reservas.'),
+  ).toBeInTheDocument();
   await userEvent.click(modal.getByRole('button', { name: 'Reactivar' }));
 
   await waitFor(() => expect(accion).toBe('a205/reactivar'));
+  expect(await screen.findByText('Ambiente reactivado.')).toBeInTheDocument();
 });
 
 test('Editar llama a onEditar con el ambiente de la fila', async () => {

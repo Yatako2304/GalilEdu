@@ -190,17 +190,21 @@ const Acciones = ({
   onEditado,
   onDesactivado,
   onReactivado,
+  onErrorCrear,
+  onErrorEditar,
 }: {
   onCreado?: (a: AmbienteResumen) => void;
   onEditado?: (a: AmbienteResumen) => void;
+  onErrorCrear?: (error: unknown) => void;
+  onErrorEditar?: (error: unknown) => void;
   onDesactivado?: (a: AmbienteResumen) => void;
   onReactivado?: (a: AmbienteResumen) => void;
 }) => {
   const resumenConsulta = useResumenAmbientes();
   const lista = useAmbientes();
   const filtrada = useAmbientes({ estado: 'INACTIVO' });
-  const crear = useCrearAmbiente(onCreado);
-  const editar = useEditarAmbiente(onEditado);
+  const crear = useCrearAmbiente(onCreado, onErrorCrear);
+  const editar = useEditarAmbiente(onEditado, onErrorEditar);
   const desactivar = useDesactivarAmbiente(onDesactivado);
   const reactivar = useReactivarAmbiente(onReactivado);
   return (
@@ -366,9 +370,18 @@ test('desactivar y reactivar llaman a su ruta sin cuerpo y recargan las tarjetas
   await waitFor(() => expect(contador.inactivos).toBe(3));
 });
 
-test('si el backend rechaza el alta (409) no se ejecuta onSuccess ni se recarga nada', async () => {
+/** Mensaje y estado de un error de axios, tal como los lee el modal. */
+const respuestaDe = (error: unknown) => {
+  const { response } = error as {
+    response: { status: number; data: { message: string } };
+  };
+  return { estado: response.status, mensaje: response.data.message };
+};
+
+test('si el backend rechaza el alta (409) no se ejecuta onSuccess, no se recarga nada y el error llega a onError sin notificación', async () => {
   const contador = consultasDelServidor();
   const creados: AmbienteResumen[] = [];
+  const errores: unknown[] = [];
   server.use(
     http.post(`${API}/ambientes`, () =>
       HttpResponse.json(
@@ -378,24 +391,34 @@ test('si el backend rechaza el alta (409) no se ejecuta onSuccess ni se recarga 
     ),
   );
 
-  await renderApp(<Acciones onCreado={(a) => creados.push(a)} />, {
-    user: await administrativo(),
-  });
+  await renderApp(
+    <Acciones
+      onCreado={(a) => creados.push(a)}
+      onErrorCrear={(e) => errores.push(e)}
+    />,
+    { user: await administrativo() },
+  );
   await screen.findByText('Activos: 7');
 
   await userEvent.click(screen.getByRole('button', { name: 'crear' }));
 
-  // El interceptor muestra el mensaje del backend tal cual.
+  // El modal muestra este error en el campo Nombre: el interceptor no lo repite como notificación.
+  await waitFor(() => expect(errores).toHaveLength(1));
+  expect(respuestaDe(errores[0])).toEqual({
+    estado: 409,
+    mensaje: 'Ya existe un ambiente llamado "Aula 101".',
+  });
   expect(
-    await screen.findByText('Ya existe un ambiente llamado "Aula 101".'),
-  ).toBeInTheDocument();
+    screen.queryByText('Ya existe un ambiente llamado "Aula 101".'),
+  ).not.toBeInTheDocument();
   expect(creados).toEqual([]);
   expect(contador).toEqual({ resumen: 1, lista: 1, inactivos: 1 });
 });
 
-test('si el backend rechaza el cambio de aforo (409) no se recarga nada', async () => {
+test('si el backend rechaza el cambio de aforo (409) no se recarga nada y el error llega a onError sin notificación', async () => {
   const contador = consultasDelServidor();
   const editados: AmbienteResumen[] = [];
+  const errores: unknown[] = [];
   server.use(
     http.put(`${API}/ambientes/amb-1`, () =>
       HttpResponse.json(
@@ -408,16 +431,25 @@ test('si el backend rechaza el cambio de aforo (409) no se recarga nada', async 
     ),
   );
 
-  await renderApp(<Acciones onEditado={(a) => editados.push(a)} />, {
-    user: await administrativo(),
-  });
+  await renderApp(
+    <Acciones
+      onEditado={(a) => editados.push(a)}
+      onErrorEditar={(e) => errores.push(e)}
+    />,
+    { user: await administrativo() },
+  );
   await screen.findByText('Activos: 7');
 
   await userEvent.click(screen.getByRole('button', { name: 'editar' }));
 
+  await waitFor(() => expect(errores).toHaveLength(1));
+  expect(respuestaDe(errores[0]).estado).toBe(409);
+  expect(respuestaDe(errores[0]).mensaje).toMatch(
+    /No puedes bajar el aforo a 2/,
+  );
   expect(
-    await screen.findByText(/No puedes bajar el aforo a 2/),
-  ).toBeInTheDocument();
+    screen.queryByText(/No puedes bajar el aforo a 2/),
+  ).not.toBeInTheDocument();
   expect(editados).toEqual([]);
   expect(contador).toEqual({ resumen: 1, lista: 1, inactivos: 1 });
 });
