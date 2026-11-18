@@ -100,17 +100,17 @@ public final class DtosCalificaciones {
 
 	/**
 	 * nota es "—" si todavía no hay; nivel: AD, A, B o C (null sin nota), en la escala vigesimal sale de redondear la
-	 * nota al entero y ubicarla en la tabla de conversión; estado: Aprobado, Desaprobado o Pendiente; parcial: faltan
-	 * notas que influyen.
+	 * nota al entero y ubicarla en la tabla de conversión; logro: significado del nivel («Logro destacado», «Logro
+	 * esperado», «En proceso», «En inicio») o «Pendiente» sin nota; parcial: faltan notas que influyen.
 	 */
-	public record NotaResultado(String nota, String nivel, String estado, boolean parcial) {
+	public record NotaResultado(String nota, String nivel, String logro, boolean parcial) {
 	}
 
 	/** Lo que aporta un curso a la competencia en un periodo ("—" si aún no tiene notas). */
 	public record AporteCurso(UUID planCursoId, String nota) {
 	}
 
-	public record NotaPeriodoCompetencia(UUID periodoId, String nota, String nivel, String estado, boolean parcial,
+	public record NotaPeriodoCompetencia(UUID periodoId, String nota, String nivel, String logro, boolean parcial,
 			List<AporteCurso> aportes) {
 	}
 

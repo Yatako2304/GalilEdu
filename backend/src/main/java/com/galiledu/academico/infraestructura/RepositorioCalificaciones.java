@@ -383,13 +383,4 @@ public class RepositorioCalificaciones {
 				ORDER BY n.nota_desde DESC""").param(fecha).query(CalculoNotas.Rango.class).list();
 	}
 
-	public Optional<Integer> notaAprobatoria(LocalDate fecha) {
-		return jdbc.sql("""
-				SELECT n.nota_desde
-				FROM academico.tabla_conversion t
-				JOIN academico.tabla_conversion_nivel n ON n.tabla_id = t.id AND n.nivel = 'A'
-				WHERE t.vigente_desde <= ?
-				ORDER BY t.vigente_desde DESC
-				LIMIT 1""").param(fecha).query(Integer.class).optional();
-	}
 }

@@ -131,13 +131,13 @@ const reporte: ReporteCalificaciones = {
       valores: {
         'c1:i1': '17',
         'c1:resultado': '17',
-        'c1:resultado_estado': 'Aprobado',
+        'c1:resultado_estado': 'A · Logro esperado',
         'c2:i1': '17',
         'c2:i2': '9',
         'c2:resultado': '13',
-        'c2:resultado_estado': 'Desaprobado',
+        'c2:resultado_estado': 'B · En proceso',
         resultado_general: '14.33',
-        resultado_general_estado: 'Aprobado',
+        resultado_general_estado: 'A · Logro esperado',
       },
     },
   ],
@@ -224,8 +224,9 @@ describe('Consolidado con varias competencias', () => {
       within(tabla).getByRole('columnheader', { name: 'Promedio general' }),
     ).toBeVisible();
     expect(within(tabla).getByText('14,33/20')).toBeVisible();
-    expect(within(tabla).getByText('Desaprobado')).toHaveClass(
-      'text-content-error',
+    // Nivel de logro, no aprobado/desaprobado: B (en proceso) va en ámbar.
+    expect(within(tabla).getByText('B · En proceso')).toHaveClass(
+      'text-content-warning',
     );
     await usuario.click(screen.getByRole('button', { name: 'Descargar PDF' }));
     expect(exportar).toHaveBeenCalledWith({
@@ -316,7 +317,7 @@ describe('Nota de la competencia', () => {
                 periodoId: 'periodo-3',
                 nota: '13.6',
                 nivel: 'A',
-                estado: 'Aprobado',
+                logro: 'Logro esperado',
                 parcial: false,
                 aportes: [
                   { planCursoId: 'plan-1', nota: '16' },
@@ -327,7 +328,7 @@ describe('Nota de la competencia', () => {
                 periodoId: 'periodo-4',
                 nota: '15.6',
                 nivel: 'AD',
-                estado: 'Aprobado',
+                logro: 'Logro esperado',
                 parcial: true,
                 aportes: [
                   { planCursoId: 'plan-1', nota: '18' },
@@ -338,7 +339,7 @@ describe('Nota de la competencia', () => {
             notaFinal: {
               nota: '14.6',
               nivel: 'A',
-              estado: 'Aprobado',
+              logro: 'Logro esperado',
               parcial: true,
             },
           },

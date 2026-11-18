@@ -22,6 +22,8 @@ import { cn } from '@/utils/cn';
 
 import { SeleccionCurso, useNotasCompetencia } from '../api/calificaciones';
 
+import { colorLogro } from './logro';
+
 const CONSOLIDACION: Record<NotasCompetencias['consolidacion'], string> = {
   PROMEDIO_PERIODOS: 'el promedio de los periodos',
   ULTIMO_PERIODO: 'la nota del último periodo',
@@ -234,15 +236,8 @@ const Celda = ({
       </span>
     )}
     {nota.nota !== '—' && (
-      <span
-        className={cn(
-          'mt-1 block text-caption-1',
-          nota.estado === 'Aprobado'
-            ? 'text-content-success'
-            : 'text-content-error',
-        )}
-      >
-        {nota.estado}
+      <span className={cn('mt-1 block text-caption-1', colorLogro(nota.logro))}>
+        {nota.logro}
         {nota.parcial && (
           <span className="text-content-quartiary"> · Parcial</span>
         )}

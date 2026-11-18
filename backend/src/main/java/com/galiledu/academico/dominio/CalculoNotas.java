@@ -204,15 +204,17 @@ public final class CalculoNotas {
 		return nota.numerica().setScale(2, RoundingMode.HALF_UP).stripTrailingZeros().toPlainString();
 	}
 
+	/** Lo que se muestra cuando todavía no hay nota. */
+	public static final String PENDIENTE = "Pendiente";
+
 	/**
-	 * Aprobado con A o AD. En la escala vigesimal equivale a que la nota, redondeada al entero (0,5 sube), llegue al
-	 * inicio del rango A: así el estado nunca contradice la letra.
+	 * Significado del nivel de logro de una nota, como se informa en la evaluación por competencias: «Logro destacado»
+	 * (AD), «Logro esperado» (A), «En proceso» (B) o «En inicio» (C). No hay «aprobado» ni «desaprobado» por
+	 * competencia: aprobar es la situación final del año (promoción), que se decide con todas las competencias.
 	 */
-	public static String estado(Nota nota, int notaAprobatoria) {
-		if (nota.numerica() != null) {
-			return entero(nota.numerica()) >= notaAprobatoria ? "Aprobado" : "Desaprobado";
-		}
-		return "A".equals(nota.nivel()) || "AD".equals(nota.nivel()) ? "Aprobado" : "Desaprobado";
+	public static String logro(Nota nota, List<Rango> rangos) {
+		String nivel = nivel(nota, rangos);
+		return nivel == null ? PENDIENTE : NivelLogro.valueOf(nivel).significado();
 	}
 
 	/** Rango de la tabla de conversión vigesimal → nivel de logro (academico.tabla_conversion_nivel). */
@@ -237,13 +239,8 @@ public final class CalculoNotas {
 				.findFirst().orElse(null);
 	}
 
-	/** Inicio del rango A: la nota aprobatoria de esa versión de la tabla. */
-	public static int notaAprobatoria(List<Rango> rangos) {
-		return rangos.stream().filter(r -> "A".equals(r.nivel())).mapToInt(Rango::notaDesde).findFirst().orElse(14);
-	}
-
 	/**
-	 * Redondeo al entero para convertir a letra y decidir el estado: 0,5 sube. Parte de la nota que se muestra (2
+	 * Redondeo al entero para convertir a letra: 0,5 sube. Parte de la nota que se muestra (2
 	 * decimales), para que un 13,495 que se ve como «13,5» también cuente como 14.
 	 */
 	public static int entero(BigDecimal nota) {

@@ -29,6 +29,7 @@ import {
   useReporteCalificaciones,
 } from '../api/calificaciones';
 
+import { colorLogro } from './logro';
 import { NotasCompetencia } from './notas-competencia';
 
 type OpcionGrado = { value: string; label: string };
@@ -373,11 +374,7 @@ const TablaConsolidado = ({
                     <span
                       className={cn(
                         'mt-1 block text-caption-1',
-                        estado === 'Aprobado'
-                          ? 'text-content-success'
-                          : estado === 'Desaprobado'
-                            ? 'text-content-error'
-                            : 'text-content-quartiary',
+                        colorLogro(estado),
                       )}
                     >
                       {estado}

@@ -85,7 +85,7 @@ class ReporteCompetenciasTests {
 				.containsEntry(COMPETENCIA_1 + ":resultado", primera)
 				.containsEntry(COMPETENCIA_2 + ":resultado", segunda)
 				.containsEntry("resultado_general", general)
-				.containsEntry("resultado_general_estado", "Aprobado");
+				.containsEntry("resultado_general_estado", "A · Logro esperado");
 		assertThat(reporte.filas().get(1).valores()).containsEntry("resultado_general", "—")
 				.containsEntry(COMPETENCIA_1 + ":resultado_estado", "Pendiente");
 	}
@@ -101,7 +101,7 @@ class ReporteCompetenciasTests {
 				.containsEntry(COMPETENCIA_1 + ":resultado", primera)
 				.containsEntry(COMPETENCIA_2 + ":resultado", segunda)
 				.containsEntry("resultado_general", general)
-				.containsEntry("resultado_general_estado", "Desaprobado");
+				.containsEntry("resultado_general_estado", "En proceso");
 	}
 
 	@Test

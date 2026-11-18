@@ -67,13 +67,13 @@ Esta entrada reemplaza el enfoque de la rama `feat/catalogo-peso-curso-competenc
   **Por qué:** las competencias no se promedian entre sí para la nota oficial, pero el docente lo usaba como resumen.
 - **Decisión:** la nota final de la competencia se muestra **siempre en nivel de logro** (AD, A, B, C), en pantalla y al final del PDF del consolidado.
   - La nota vigesimal, tal como se muestra (2 decimales), se redondea al entero con 0,5 hacia arriba y se ubica en la tabla de conversión vigente (16,5 → 17 → A; 13,5 → 14 → A; 17,5 → 18 → AD).
-  - El estado usa la misma regla, también en el consolidado por curso.
+  - Junto a la letra se muestra su significado. Ya no se usa «Aprobado/Desaprobado»: ver la [decisión del 18/11](2026-11-18-alex-sanchezz-nivel-de-logro-sin-aprobado.md).
 
-  **Por qué:** lo pidió alex-sanchezz: la nota final de las competencias tiene que estar en letras. La tabla de conversión solo tiene rangos enteros, así que una nota con decimales necesita una regla. Redondear con 0,5 hacia arriba es la práctica habitual de la escala vigesimal, y aplicar la misma regla al estado evita un «A» desaprobado.
-  **Alternativas descartadas:** truncar (13,5 → 13 → B), que perjudica al estudiante en el borde; comparar el estado con decimales y la letra con enteros, que se contradirían.
+  **Por qué:** lo pidió alex-sanchezz: la nota final de las competencias tiene que estar en letras. La tabla de conversión solo tiene rangos enteros, así que una nota con decimales necesita una regla. Redondear con 0,5 hacia arriba es la práctica habitual de la escala vigesimal.
+  **Alternativas descartadas:** truncar (13,5 → 13 → B), que perjudica al estudiante en el borde.
 - **Decisión:** la nota de la competencia se calcula al consultarla y no se guarda.
   **Por qué:** cambia con cada nota o peso. Guardarla hará falta cuando exista un cierre oficial del año, fuera de este alcance.
-- **Decisión:** los pasos intermedios no se redondean. Solo se redondea lo que se muestra (2 decimales, `HALF_UP`), y el estado se decide con la nota redondeada.
+- **Decisión:** los pasos intermedios no se redondean. Solo se redondea lo que se muestra (2 decimales, `HALF_UP`), y la letra se decide con la nota redondeada.
   **Por qué:** evita acumular redondeos entre cursos y periodos. Por eso, en casos raros, la cuenta a mano con los aportes mostrados puede diferir en 0,01.
 
 ## Cambios en los esquemas de base de datos

@@ -396,7 +396,7 @@ public class ServicioCalificaciones {
 		if (incluirPromedio) {
 			columnas.add(new ColumnaReporte("resultado", "Promedio final"));
 		}
-		int notaAprobatoria = repositorio.notaAprobatoria(periodo.fechaInicio()).orElse(14);
+		List<CalculoNotas.Rango> rangos = rangosConversion(periodo.fechaInicio());
 		Map<UUID, List<DetalleReporteFila>> porEstudiante = competencia.stream()
 				.collect(Collectors.groupingBy(DetalleReporteFila::matriculaId, LinkedHashMap::new,
 						Collectors.toList()));
@@ -406,7 +406,7 @@ public class ServicioCalificaciones {
 			if (incluirPromedio) {
 				String resultado = resultado(lista, periodo.reglaNota());
 				valores.put("resultado", resultado);
-				valores.put("resultado_estado", estadoResultado(resultado, periodo.escala(), notaAprobatoria));
+				valores.put("resultado_estado", logroResultado(resultado, periodo.escala(), rangos));
 			}
 			return new FilaReporte(lista.get(0).matriculaId(), lista.get(0).estudiante(), valores);
 		}).toList();
@@ -464,7 +464,7 @@ public class ServicioCalificaciones {
 				&& elegidos.contains(d.itemId())).toList();
 		Map<UUID, List<DetalleReporteFila>> porEstudiante = filtrados.stream()
 				.collect(Collectors.groupingBy(DetalleReporteFila::matriculaId));
-		int notaAprobatoria = repositorio.notaAprobatoria(periodo.fechaInicio()).orElse(14);
+		List<CalculoNotas.Rango> rangos = rangosConversion(periodo.fechaInicio());
 		List<FilaReporte> filas = repositorio.estudiantes(seccionId).stream().map(estudiante -> {
 			List<DetalleReporteFila> lista = porEstudiante.getOrDefault(estudiante.matriculaId(), List.of());
 			Map<String, String> valores = new LinkedHashMap<>();
@@ -474,11 +474,11 @@ public class ServicioCalificaciones {
 					String resultado = resultado(lista.stream()
 							.filter(d -> d.competenciaId().equals(competenciaId)).toList(), periodo.reglaNota());
 					registrarResultado(valores, claveReporte(competenciaId, "resultado"), resultado, periodo,
-							notaAprobatoria);
+							rangos);
 				}
 				if (promedioGeneral) {
 					registrarResultado(valores, "resultado_general", resultadoDeItemsUnicos(lista, periodo.reglaNota()),
-							periodo, notaAprobatoria);
+							periodo, rangos);
 				}
 			}
 			return new FilaReporte(estudiante.matriculaId(), estudiante.estudiante(), valores);
@@ -493,9 +493,9 @@ public class ServicioCalificaciones {
 	}
 
 	private static void registrarResultado(Map<String, String> valores, String clave, String resultado,
-			PeriodoContexto periodo, int notaAprobatoria) {
+			PeriodoContexto periodo, List<CalculoNotas.Rango> rangos) {
 		valores.put(clave, resultado);
-		valores.put(clave + "_estado", estadoResultado(resultado, periodo.escala(), notaAprobatoria));
+		valores.put(clave + "_estado", logroResultado(resultado, periodo.escala(), rangos));
 	}
 
 	private static String resultadoDeItemsUnicos(List<DetalleReporteFila> detalles, String regla) {
@@ -512,15 +512,27 @@ public class ServicioCalificaciones {
 		return resultado(new ArrayList<>(unicos.values()), regla);
 	}
 
-	private static String estadoResultado(String resultado, String escala, int notaAprobatoria) {
+	/**
+	 * Nivel de logro del resultado, como se informa en la evaluación por competencias: en vigesimal «A · Logro
+	 * esperado» (la nota se redondea al entero, 0,5 sube, y se ubica en la tabla de conversión); en la cualitativa, el
+	 * significado del nivel. No hay «aprobado» ni «desaprobado» por competencia.
+	 */
+	private static String logroResultado(String resultado, String escala, List<CalculoNotas.Rango> rangos) {
 		if ("—".equals(resultado)) {
-			return "Pendiente";
+			return CalculoNotas.PENDIENTE;
 		}
 		if ("VIGESIMAL".equals(escala)) {
-			// Misma regla que la letra de la competencia: se redondea al entero y 0,5 sube (13,5 cuenta como 14).
-			return CalculoNotas.entero(new BigDecimal(resultado)) >= notaAprobatoria ? "Aprobado" : "Desaprobado";
+			var nota = new CalculoNotas.Nota(BigDecimal.ONE, new BigDecimal(resultado), null, null);
+			String nivel = CalculoNotas.nivel(nota, rangos);
+			return nivel == null ? CalculoNotas.PENDIENTE : nivel + " · " + CalculoNotas.logro(nota, rangos);
 		}
-		return "A".equals(resultado) || "AD".equals(resultado) ? "Aprobado" : "Desaprobado";
+		return CalculoNotas.logro(new CalculoNotas.Nota(BigDecimal.ONE, null, resultado, null), rangos);
+	}
+
+	/** Tabla de conversión vigente en la fecha; la escala habitual si todavía no hay ninguna versión. */
+	private List<CalculoNotas.Rango> rangosConversion(LocalDate fecha) {
+		List<CalculoNotas.Rango> vigentes = repositorio.rangosConversion(fecha);
+		return vigentes.isEmpty() ? CalculoNotas.RANGOS_POR_DEFECTO : vigentes;
 	}
 
 	private ReporteCalificaciones reportePeriodo(List<DetalleReporteFila> detalles, String regla) {

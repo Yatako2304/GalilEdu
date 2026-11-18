@@ -136,7 +136,7 @@ vi.mock('../../api/calificaciones', () => ({
               valores: {
                 'item-1': '17',
                 resultado: '17',
-                resultado_estado: 'Aprobado',
+                resultado_estado: 'A · Logro esperado',
               },
             },
           ],
@@ -375,7 +375,7 @@ describe('Calificaciones del docente', () => {
     expect(
       within(tabla).getByRole('columnheader', { name: 'Promedio final' }),
     ).toBeVisible();
-    expect(within(tabla).getByText('Aprobado')).toBeVisible();
+    expect(within(tabla).getByText('A · Logro esperado')).toBeVisible();
     expect(within(tabla).getAllByText('17/20')).toHaveLength(2);
     expect(screen.getByRole('button', { name: 'Descargar PDF' })).toBeEnabled();
   });

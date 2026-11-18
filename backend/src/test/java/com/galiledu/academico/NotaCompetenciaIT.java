@@ -225,7 +225,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.competencias[0].cursos.length()").value(2))
 				// III bimestre: 16 × 40 % + 12 × 60 % = 13,6. IV: 18 × 40 % + 14 × 60 % = 15,6.
 				.andExpect(jsonPath(filaAna + ".periodos[2].nota").value(contains("13.6")))
-				.andExpect(jsonPath(filaAna + ".periodos[2].estado").value(contains("Aprobado")))
+				.andExpect(jsonPath(filaAna + ".periodos[2].logro").value(contains("Logro esperado")))
 				.andExpect(jsonPath(filaAna + ".periodos[3].nota").value(contains("15.6")))
 				.andExpect(jsonPath(filaAna + ".periodos[3].aportes[*].nota").value(hasItem("18")))
 				.andExpect(jsonPath(filaAna + ".periodos[0].nota").value(contains("—")))
@@ -244,7 +244,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 				docente)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
 		try (var documento = org.apache.pdfbox.Loader.loadPDF(pdf)) {
 			org.assertj.core.api.Assertions.assertThat(new org.apache.pdfbox.text.PDFTextStripper().getText(documento))
-					.contains("Nota final de la competencia", "A · 14,6/20", "Aprobado · Parcial", "13,6/20");
+					.contains("Nota final de la competencia", "A · 14,6/20", "Logro esperado · Parcial", "13,6/20");
 		}
 	}
 
@@ -268,7 +268,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.competencias[0].usaPesos").value(true))
 				.andExpect(jsonPath(filaAna + ".periodos[3].nota").value(contains("B")))
 				.andExpect(jsonPath(filaAna + ".periodos[3].nivel").value(contains("B")))
-				.andExpect(jsonPath(filaAna + ".periodos[3].estado").value(contains("Desaprobado")))
+				.andExpect(jsonPath(filaAna + ".periodos[3].logro").value(contains("En proceso")))
 				.andExpect(jsonPath(filaAna + ".notaFinal.nivel").value(contains("B")));
 	}
 

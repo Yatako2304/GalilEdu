@@ -1663,7 +1663,13 @@ export type ReporteCalificaciones = {
 export type NotaResultado = {
   nota: string;
   nivel: 'AD' | 'A' | 'B' | 'C' | null;
-  estado: 'Aprobado' | 'Desaprobado' | 'Pendiente';
+  /** Significado del nivel de logro; no hay «aprobado» ni «desaprobado» por competencia. */
+  logro:
+    | 'Logro destacado'
+    | 'Logro esperado'
+    | 'En proceso'
+    | 'En inicio'
+    | 'Pendiente';
   parcial: boolean;
 };
 

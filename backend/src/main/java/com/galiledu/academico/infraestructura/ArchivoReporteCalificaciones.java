@@ -30,6 +30,7 @@ public final class ArchivoReporteCalificaciones {
 	private static final Color CLARO = new Color(238, 243, 251);
 	private static final Color VERDE = new Color(32, 119, 61);
 	private static final Color ROJO = new Color(184, 38, 49);
+	private static final Color AMBAR = new Color(154, 91, 0);
 	private final PDDocument documento;
 	private final PDType0Font fuente;
 
@@ -225,10 +226,20 @@ public final class ArchivoReporteCalificaciones {
 			float base = parrafo(lienzo, valor, x + 6, y - 10, anchoDato - 12, 10, AZUL, columna.promedio());
 			String estado = fila.valores().get(columna.clave() + "_estado");
 			if (columna.promedio() && estado != null) {
-				texto(lienzo, estado, x + 6, base - 4, 7.5f,
-						estado.startsWith("Aprobado") ? VERDE : estado.startsWith("Desaprobado") ? ROJO : GRIS, false);
+				texto(lienzo, estado, x + 6, base - 4, 7.5f, colorLogro(estado), false);
 			}
 		}
+	}
+
+	/** Un color por nivel de logro: AD y A en verde, B en ámbar, C en rojo; sin nota, gris. */
+	private static Color colorLogro(String logro) {
+		if (logro.contains("Logro destacado") || logro.contains("Logro esperado"))
+			return VERDE;
+		if (logro.contains("En proceso"))
+			return AMBAR;
+		if (logro.contains("En inicio"))
+			return ROJO;
+		return GRIS;
 	}
 
 	private static String nota(String valor, ColumnaReporte columna, String escala) {

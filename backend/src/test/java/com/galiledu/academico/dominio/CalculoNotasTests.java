@@ -217,13 +217,18 @@ class CalculoNotasTests {
 	}
 
 	@Test
-	void elEstadoNuncaContradiceLaLetra() {
-		var limite = new CalculoNotas.Nota(BigDecimal.ONE, new BigDecimal("13.5"), null, null);
-		assertThat(CalculoNotas.nivel(limite, CalculoNotas.RANGOS_POR_DEFECTO)).isEqualTo("A");
-		assertThat(CalculoNotas.estado(limite, CalculoNotas.notaAprobatoria(CalculoNotas.RANGOS_POR_DEFECTO)))
-				.isEqualTo("Aprobado");
-		var debajo = new CalculoNotas.Nota(BigDecimal.ONE, new BigDecimal("13.49"), null, null);
-		assertThat(CalculoNotas.estado(debajo, 14)).isEqualTo("Desaprobado");
+	void elLogroEsElSignificadoDelNivelSinAprobadoNiDesaprobado() {
+		var rangos = CalculoNotas.RANGOS_POR_DEFECTO;
+		assertThat(CalculoNotas.logro(numerica("18"), rangos)).isEqualTo("Logro destacado");
+		assertThat(CalculoNotas.logro(numerica("13.5"), rangos)).isEqualTo("Logro esperado");
+		assertThat(CalculoNotas.logro(numerica("13.49"), rangos)).isEqualTo("En proceso");
+		assertThat(CalculoNotas.logro(numerica("10.4"), rangos)).isEqualTo("En inicio");
+		assertThat(CalculoNotas.logro(new CalculoNotas.Nota(BigDecimal.ONE, null, "B", null), rangos))
+				.isEqualTo("En proceso");
+	}
+
+	private static CalculoNotas.Nota numerica(String nota) {
+		return new CalculoNotas.Nota(BigDecimal.ONE, new BigDecimal(nota), null, null);
 	}
 
 	@Test
@@ -233,15 +238,15 @@ class CalculoNotasTests {
 				new CalculoNotas.Rango("B", 11, 14), new CalculoNotas.Rango("C", 0, 10));
 		var catorce = new CalculoNotas.Nota(BigDecimal.ONE, new BigDecimal("14.4"), null, null);
 		assertThat(CalculoNotas.nivel(catorce, rangos2027)).isEqualTo("B");
-		assertThat(CalculoNotas.notaAprobatoria(rangos2027)).isEqualTo(15);
+		assertThat(CalculoNotas.logro(catorce, rangos2027)).isEqualTo("En proceso");
 		assertThat(CalculoNotas.nivel(new CalculoNotas.Nota(BigDecimal.ONE, null, "AD", null), rangos2027))
 				.isEqualTo("AD");
 	}
 
 	@Test
-	void elEstadoSeDecideConLaNotaRedondeada() {
+	void elNivelSeDecideConLaNotaQueSeMuestra() {
 		var nota = new CalculoNotas.Nota(BigDecimal.ONE, new BigDecimal("13.995"), null, null);
 		assertThat(CalculoNotas.texto(nota)).isEqualTo("14");
-		assertThat(CalculoNotas.estado(nota, 14)).isEqualTo("Aprobado");
+		assertThat(CalculoNotas.nivel(nota, CalculoNotas.RANGOS_POR_DEFECTO)).isEqualTo("A");
 	}
 }

@@ -138,19 +138,19 @@ public class ServicioNotasCompetencia {
 		NotaResultado nota = resultado(periodo.nota(), periodo.parcial(), rangos);
 		List<AporteCurso> aportes = periodo.aportes().entrySet().stream()
 				.map(e -> new AporteCurso(e.getKey(), e.getValue().map(CalculoNotas::texto).orElse("—"))).toList();
-		return new NotaPeriodoCompetencia(periodo.periodoId(), nota.nota(), nota.nivel(), nota.estado(),
+		return new NotaPeriodoCompetencia(periodo.periodoId(), nota.nota(), nota.nivel(), nota.logro(),
 				nota.parcial(), aportes);
 	}
 
 	private static NotaResultado resultado(Optional<Nota> nota, boolean parcial, List<Rango> rangos) {
 		return nota.map(n -> new NotaResultado(CalculoNotas.texto(n), CalculoNotas.nivel(n, rangos),
-				CalculoNotas.estado(n, CalculoNotas.notaAprobatoria(rangos)), parcial))
-				.orElse(new NotaResultado("—", null, "Pendiente", false));
+				CalculoNotas.logro(n, rangos), parcial))
+				.orElse(new NotaResultado("—", null, CalculoNotas.PENDIENTE, false));
 	}
 
 	/**
 	 * Las mismas notas como tabla para el final del PDF del consolidado: por competencia, una columna por periodo y la
-	 * nota final con su nivel de logro (p. ej. «A · 13,9/20») y su estado.
+	 * nota final con su nivel de logro (p. ej. «A · 13,9/20») y su significado («Logro esperado»).
 	 */
 	@Transactional(readOnly = true)
 	public ReporteCalificaciones reporteNotasFinales(UUID docenteId, UUID planCursoId, UUID seccionId,
@@ -173,7 +173,7 @@ public class ServicioNotasCompetencia {
 				valores.put(clave, f.nivel() == null
 						? f.nota()
 						: vigesimal ? f.nivel() + " · " + f.nota().replace('.', ',') + "/20" : f.nivel());
-				valores.put(clave + "_estado", f.parcial() ? f.estado() + " · Parcial" : f.estado());
+				valores.put(clave + "_estado", f.parcial() ? f.logro() + " · Parcial" : f.logro());
 			}
 			return new FilaReporte(fila.matriculaId(), fila.estudiante(), valores);
 		}).toList();
