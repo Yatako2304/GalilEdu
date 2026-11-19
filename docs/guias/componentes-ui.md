@@ -44,6 +44,7 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | Dropdown Item, Dropdown Item List | `DropdownMenu` (`dropdown`) | Menú ⋮ de una fila. |
 | cell-table, cell-table-header | `Table` (`table`) | Tablas con columnas declarativas. |
 | Pagination, Count | `PaginationBar` (`table`) | "Mostrando 1-10 de 200" con flechas y números. |
+| Selector de asistencia (Tutor › AS-01, no está en Componentes) | `SegmentedControl` (`segmented-control`) | Opción única en botones pegados ("Presente / Tardanza / Falta"), con color por opción (`success`, `warning`, `error`, `accent`), `invalid` para el borde rojo y `role="radiogroup"`. |
 | Informative Tag | `Tag` (`tag`) | Etiqueta de solo lectura: `primary`, `info`, `success`, `warning`, `error`, `neutral`. Usa `appearance="outline"` para los estados delineados de Figma. |
 | Status | `Status` (`tag`) | Punto + "Activo" / "Inactivo". |
 | Selectable Tag(s) | `SelectableTag` (`tag`) | Etiqueta que se marca (filtros). Con `onRemove` muestra la X para quitarla. Con `readOnly` (y `shape="circle"`, `size="md"`) es la pastilla de estado de una tabla ("Programado", "Abierto", "Cerrado"): un `<span>`, no un botón. |

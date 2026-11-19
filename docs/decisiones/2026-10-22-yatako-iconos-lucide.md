@@ -75,6 +75,8 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `domain` | `Building2` | KPI "Ambientes activos" y modal Nuevo ambiente físico (CI-26) |
 | `meeting_room` | `DoorOpen` | KPI "Aulas regulares" (CI-26) |
 | `science` | `FlaskConical` | KPI "Espacios especiales" (CI-26) |
+| `fact_check` | `ListChecks` | Asistencia: modal "¿Guardar la asistencia de hoy?" (AS-04) |
+| `summarize` | `FileText` | Asistencia: botón "Reporte mensual" (AS-01) |
 
 ## Notas para quien siga
 

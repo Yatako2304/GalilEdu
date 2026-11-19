@@ -58,6 +58,7 @@ Reglas: un esquema de BD por módulo; los controladores no tocan repositorios di
 | `V11__calificaciones_docente.sql` | `academico` | Ítems, competencias evaluadas, calificaciones y evidencias del docente; claves compuestas con curso, periodo, sección y matrícula |
 | `V15__calificaciones_peso_solo_ponderado.sql` | `academico` | Permite `NULL` en `item_competencia.peso_porcentaje` para reglas sin ponderación; conserva porcentajes existentes y su restricción de rango. La aplicación exige pesos solo con promedio ponderado. |
 | `V17__horarios_reserva_ambiente.sql` | `horarios` | Reserva de un espacio especial para una sección en una fecha y franja horaria (`reserva_ambiente`); estado `ACTIVA` o `CANCELADA` y `version` para el bloqueo optimista |
+| `V19__asistencia.sql` | `asistencia` | Asistencia diaria (HU-65): `registro_diario` (una por sección y día, quién registró y corrigió, `version`), `asistencia_estudiante` (PRESENTE, TARDANZA con hora o FALTA) y `correccion` (historial) |
 
 Qué tabla sirve para qué y qué reglas valida la BD: en la ficha de cada módulo ([`docs/modulos/`](../docs/modulos/README.md)). Una migración ya subida **no se edita**: los cambios van en una nueva (V11…).
 
@@ -236,6 +237,9 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/pagos/apoderado/estudiantes/{id}/compromisos` | Apoderado | Compromisos del hijo (selector "Compromiso 2026"). 404 si no es su hijo |
 | GET | `/pagos/apoderado/compromisos/{id}` | Apoderado | RF-96: el mismo detalle de P8 (montos ya rebajados, sin el motivo del descuento) con `recargo` por cuota. 404 si no es de su hijo |
 | GET | `/pagos/apoderado/compromisos/{id}/pagos` | Apoderado | RF-97: pagos con fecha, monto y constancia, del más reciente al más antiguo. 404 si no es de su hijo |
+| GET | `/asistencia/secciones` | Tutor | HU-65: secciones ACTIVAS del año ACTIVO de las que el usuario es tutor o cotutor (`{id, anio, grado, nombre, cargo}`) |
+| GET | `/asistencia/secciones/{id}/dias/{fecha}` | Tutor | RF-143: asistencia del día (`YYYY-MM-DD`): `{seccion, fecha, hoy, editable, motivoNoEscolar, registro, resumen, estudiantes}`. Cada estudiante (matrícula MATRICULADO, por apellidos) trae `estado` y `horaLlegada` (null si no se registró) y `modificado`. `editable` solo si es hoy y día escolar. 404 si no es su sección |
+| PUT | `/asistencia/secciones/{id}/dias/{fecha}` | Tutor | HU-65: registra (`version: null`) o corrige (`version` del registro) la asistencia de **hoy** con todos los estudiantes: `{version, asistencias: [{matriculaId, estado, horaLlegada}]}`. 400 si falta marcar a alguien, una tardanza no tiene hora, un estudiante no es de la sección o no hay cambios; 409 si no es hoy, no es día escolar o la versión cambió |
 
 **Estructuras horarias (HU-44):** `advertencias` (en crear y editar) avisa de que cambiar los bloques por semana de la principal obliga a revisar el plan de evaluación, o de que otra estructura pasa a ser la principal; no rechaza nada. Detalle en [`docs/decisiones/2026-10-22-valeriaacevedop-estructura-horaria.md`](../docs/decisiones/2026-10-22-valeriaacevedop-estructura-horaria.md).
 

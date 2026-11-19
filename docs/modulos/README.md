@@ -14,6 +14,6 @@ Hay un archivo por módulo, creado desde [`_plantilla.md`](_plantilla.md). Quien
 | Pagos y pensiones | [pagos.md](pagos.md) | HU-36, 37 · HU-35, 38–42 | 1 · 2 | 🚧 HU-36, HU-37 y HU-41 (pago en línea con Stripe o pasarela simulada) hechas; falta integrar HU-36 al detalle de HU-24 y el resto de la iteración 2 |
 | Horarios | [horarios.md](horarios.md) | HU-45, 46, 49, 50, 51 · HU-48 · (HU-47) | 2 · 3 | 🚧 HU-45 hecha (backend y pantalla del Coordinador); HU-46 hecha (backend y frontend); HU-49 hecha (backend y frontend); HU-51 (horario del apoderado) hecha; HU-48 (reserva de espacios especiales): backend y frontend terminados; la vista del Estudiante (HU-50, Could) sigue con datos simulados (MSW) |
 | Académico (calificaciones) | [calificaciones.md](calificaciones.md) | HU-57, 59, 62 · (HU-60, 63, 64, 69) | 3 | ✅ HU-57, HU-59 y HU-62 terminadas y verificadas |
-| Asistencia | — | HU-65, 67, 68 | 3 | ⏳ |
+| Asistencia | [asistencia.md](asistencia.md) | HU-65, 67, 68 | 3 | 🚧 HU-65 hecha (registro y corrección del día); faltan HU-67 y HU-68 |
 
 Las HU y su iteración vienen del plan de iteraciones de Notion. Cuando crees la ficha de tu módulo, enlázala aquí.

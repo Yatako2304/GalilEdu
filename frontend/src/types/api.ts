@@ -1889,3 +1889,58 @@ export type DocumentosApoderado = {
   puedeSubir: boolean;
   documentos: DocumentoApoderado[];
 };
+
+// Asistencia · HU-65 (registro y corrección de la asistencia diaria)
+export type EstadoAsistencia = 'PRESENTE' | 'TARDANZA' | 'FALTA';
+
+export type SeccionAsistencia = {
+  id: string;
+  anio: number;
+  grado: string;
+  nombre: string;
+  cargo: 'TUTOR' | 'COTUTOR';
+};
+
+export type RegistroDelDia = {
+  id: string;
+  version: number;
+  registradoEn: string;
+  registradoPor: string | null;
+  corregidoEn: string | null;
+  corregidoPor: string | null;
+};
+
+export type FilaAsistencia = {
+  matriculaId: string;
+  estudianteId: string;
+  nombres: string;
+  apellidos: string;
+  documento: string;
+  estado: EstadoAsistencia | null;
+  /** "08:10:00" o null. */
+  horaLlegada: string | null;
+  modificado: boolean;
+};
+
+export type AsistenciaDelDia = {
+  seccion: SeccionAsistencia;
+  fecha: string;
+  hoy: string;
+  editable: boolean;
+  motivoNoEscolar: string | null;
+  registro: RegistroDelDia | null;
+  resumen: {
+    presentes: number;
+    tardanzas: number;
+    faltas: number;
+    sinMarcar: number;
+    total: number;
+  };
+  estudiantes: FilaAsistencia[];
+};
+
+export type MarcaAsistencia = {
+  matriculaId: string;
+  estado: EstadoAsistencia;
+  horaLlegada?: string | null;
+};
