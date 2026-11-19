@@ -51,8 +51,9 @@ public final class DtosMatricula {
 	 * {@code confirmadoEn}
 	 * es la fecha y hora exacta de la confirmación (solo MATRICULADO).
 	 */
+	/** {@code extemporanea}: la registró el colegio con el periodo cerrado (HU-25); se completa y paga igual. */
 	public record MatriculaActual(UUID id, String estado, String grado, String seccion, String codigo,
-			int documentosRequeridos, int documentosEntregados, OffsetDateTime confirmadoEn) {
+			int documentosRequeridos, int documentosEntregados, OffsetDateTime confirmadoEn, boolean extemporanea) {
 	}
 
 	/** RF-60: motivo por el que no puede continuar. tipo: PERIODO, INSCRIPCION, DOCUMENTOS o DEUDA. */
@@ -151,13 +152,14 @@ public final class DtosMatricula {
 
 	/**
 	 * Figma Personal administrativo › A5, B6 y B7 "Detalle de matrícula". {@code pasoActual} es el del indicador de
-	 * pasos (2 con la sección reservada o en validación, 3 pendiente de pago, 4 matriculado).
+	 * pasos (2 con la sección reservada o en validación, 3 pendiente de pago, 4 matriculado). {@code extemporanea} y
+	 * {@code motivoExtemporanea}: constancia del registro fuera de fecha (HU-25).
 	 */
 	public record DetalleMatricula(UUID id, UUID periodoId, int anio, UUID estudianteId, String nombre,
 			String documento, String tipo, String gradoCodigo, String grado, SeccionAsignada seccion, String estado,
 			String codigo, int pasoActual, String apoderado, String contacto, String contactoEmergencia,
 			String informacionMedica, boolean puedeCambiarSeccion, boolean puedeEditarDocumentos, boolean puedeValidar,
-			List<DocumentoDeMatricula> documentos) {
+			List<DocumentoDeMatricula> documentos, boolean extemporanea, String motivoExtemporanea) {
 	}
 
 	/** Un documento de la matrícula visto por el apoderado: con su plantilla para descargar y lo que ya subió. */

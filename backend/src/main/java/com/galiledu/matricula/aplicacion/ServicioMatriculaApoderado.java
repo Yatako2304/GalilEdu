@@ -194,9 +194,10 @@ public class ServicioMatriculaApoderado {
 		return c;
 	}
 
+	/** Con el periodo abierto o, si el colegio la registró fuera de fecha, con el periodo cerrado (HU-25). */
 	private boolean editable(Contexto c) {
-		return "SECCION_RESERVADA".equals(c.matricula().estado())
-				&& periodos.estadoEn(c.periodo().id(), reloj.instant()) == EstadoVisiblePeriodoMatricula.ABIERTO;
+		return "SECCION_RESERVADA".equals(c.matricula().estado()) && (c.matricula().extemporanea()
+				|| periodos.estadoEn(c.periodo().id(), reloj.instant()) == EstadoVisiblePeriodoMatricula.ABIERTO);
 	}
 
 	private void exigirEditable(Contexto c) {
