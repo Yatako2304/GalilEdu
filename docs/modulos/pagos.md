@@ -1,8 +1,8 @@
 # Pagos y pensiones
 
-- **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** 🚧 en desarrollo: HU-35, 36, 37, 38, 39, 40 y 41 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
-- **Última actualización:** 2026-11-06
+- **HU:** HU-36, 37 (iteración 1) · HU-35, 38–41 (2) · HU-42 (3)
+- **Estado:** 🚧 en desarrollo: HU-35 a HU-42 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
+- **Última actualización:** 2026-11-19
 
 ## Alcance
 
@@ -73,6 +73,24 @@ Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Códig
 
 Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaStripeTests`; `seleccion-cuotas.test.ts` y `pensiones-apoderado.test.tsx`.
 
+## HU-42 · Constancia de pago
+
+Ver la [decisión](../decisiones/2026-11-19-yatako-constancia-de-pago-pdf.md). Código: `ArchivoConstanciaPago` (PDF con PDFBox, mismo estilo que el reporte de notas), `ConsultasPagos.constancia` y `detalleConstancia`, `ServicioDeudaApoderado.constancia` y `constanciaPdf`, y `GET /pagos/apoderado/pagos/{id}/constancia`. Frontend: `descargarConstancia` (`api/pensiones-apoderado.ts`) y la columna de descarga de `TablaPagos`.
+
+- **Dónde:** Apoderado › Pensiones › pestaña **Pagos**: cada fila tiene el botón ⬇ "Descargar constancia C-AAAA-NNNNN". La tabla sigue siendo **una fila por pago** (una constancia), no una por concepto como en Figma (ver la decisión). P9 del personal usa la misma tabla **sin** el botón.
+- **Contenido (RF-107):** número de constancia, estudiante y documento, año escolar con grado y sección, fecha y hora del pago (Lima), referencia de la pasarela, estado (Confirmado u Observado con su observación), una fila por cuota cancelada (concepto, cuota, vencimiento, monto, recargo y subtotal) y los totales: monto de cuotas, recargo por mora y total pagado. Si hay muchas cuotas, la tabla continúa en otra página y los totales van al final.
+- **Historial (RF-108):** es la misma pestaña Pagos, ya ordenada del pago más reciente al más antiguo (RF-97).
+- **Acceso:** cualquier padre, madre o apoderado vinculado al estudiante (como HU-40). Un pago de otra familia o inexistente responde 404.
+
+| Código | Criterio de aceptación |
+| --- | --- |
+| CAHU42-1 | El apoderado ve en Pagos cada pago de su hijo con su número de constancia, del más reciente al más antiguo. |
+| CAHU42-2 | Al pulsar ⬇ descarga `constancia-C-AAAA-NNNNN.pdf` con los datos del RF-107. |
+| CAHU42-3 | No puede descargar la constancia de un pago de otra familia (404). |
+| CAHU42-4 | El personal administrativo no usa la vista del apoderado (403) y en P9 no aparece el botón. |
+
+Pruebas: `ArchivoConstanciaPagoTests` (contenido, pago observado y paginación), `DeudaApoderadoIT` (descarga, otra familia, pago inexistente y personal); `tablas-pagos.test.tsx` y `pensiones-apoderado.test.tsx` (botón y descarga).
+
 ## Pantallas (Figma)
 
 | Pantalla | Frame en Figma |
@@ -123,4 +141,5 @@ Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaS
 - [x] Pasarela de pagos (HU-41): Stripe Checkout en modo de prueba, con una pasarela simulada mientras no haya llaves. Probado de punta a punta con Stripe en local (06/11): pago aprobado con la tarjeta 4242 y confirmado por consulta directa. Se quitó `payment_method_types` (Stripe ya no lo acepta; los métodos de pago se eligen en el dashboard).
 - [x] HU-40 + HU-41 (front): las casillas del cronograma de HU-40 arman el pago en línea con `useSeleccionCuotas` y `BarraPagoCuotas`; se quitó la tabla mínima `PagoCuotas`.
 - [ ] Crear la cuenta de Stripe en modo de prueba y configurar el webhook en el servidor (necesita HTTPS para el modo real).
-- [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).
+- [x] HU-42: PDF de la constancia y su descarga desde el historial del apoderado (RF-107 y RF-108).
+- [ ] Generar el PDF del estado de cuenta (RF-98).

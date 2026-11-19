@@ -236,6 +236,7 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/pagos/apoderado/estudiantes/{id}/compromisos` | Apoderado | Compromisos del hijo (selector "Compromiso 2026"). 404 si no es su hijo |
 | GET | `/pagos/apoderado/compromisos/{id}` | Apoderado | RF-96: el mismo detalle de P8 (montos ya rebajados, sin el motivo del descuento) con `recargo` por cuota. 404 si no es de su hijo |
 | GET | `/pagos/apoderado/compromisos/{id}/pagos` | Apoderado | RF-97: pagos con fecha, monto y constancia, del más reciente al más antiguo. 404 si no es de su hijo |
+| GET | `/pagos/apoderado/pagos/{id}/constancia` | Apoderado | HU-42, RF-107/108: constancia del pago en PDF (`constancia-C-2026-00007.pdf`): estudiante, documento, año, grado y sección, fecha, referencia, estado, cuotas con concepto, vencimiento, monto y recargo, y total pagado. 404 si el pago no existe o no es de su hijo |
 
 **Estructuras horarias (HU-44):** `advertencias` (en crear y editar) avisa de que cambiar los bloques por semana de la principal obliga a revisar el plan de evaluación, o de que otra estructura pasa a ser la principal; no rechaza nada. Detalle en [`docs/decisiones/2026-10-22-valeriaacevedop-estructura-horaria.md`](../docs/decisiones/2026-10-22-valeriaacevedop-estructura-horaria.md).
 

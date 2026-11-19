@@ -27,7 +27,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
-import { CompromisoDetalle, HijoConDeuda } from '@/types/api';
+import { CompromisoDetalle, HijoConDeuda, PagoRealizado } from '@/types/api';
 import { formatDay } from '@/utils/format';
 
 import {
@@ -36,6 +36,7 @@ import {
   useCuotasPorPagar,
 } from '../api/pago-en-linea';
 import {
+  descargarConstancia,
   useCompromisoApoderado,
   useCompromisosApoderado,
   useHijosConDeuda,
@@ -256,6 +257,18 @@ export const PensionesApoderado = () => {
   const pagos = usePagosApoderado(
     pestana === 'pagos' ? compromisoId : undefined,
   );
+  const [descargandoId, setDescargandoId] = React.useState<string | null>(null);
+  // HU-42: constancia del pago en PDF.
+  const descargar = async (pago: PagoRealizado) => {
+    setDescargandoId(pago.id);
+    try {
+      await descargarConstancia(pago);
+    } catch {
+      // Notificado por el interceptor de la API.
+    } finally {
+      setDescargandoId(null);
+    }
+  };
 
   React.useEffect(() => {
     if (
@@ -406,7 +419,12 @@ export const PensionesApoderado = () => {
                 />
               </>
             ) : (
-              <TablaPagos pagos={pagos.data} isLoading={pagos.isLoading} />
+              <TablaPagos
+                pagos={pagos.data}
+                isLoading={pagos.isLoading}
+                onDescargar={descargar}
+                descargandoId={descargandoId}
+              />
             )}
           </Card>
         </>
