@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.UUID;
 
 import com.galiledu.asistencia.dominio.EstadoAsistencia;
+import com.galiledu.asistencia.dominio.MotivoJustificacion;
 
 /** Contrato de la API de Asistencia (HU-65). */
 public final class DtosAsistencia {
@@ -22,9 +23,22 @@ public final class DtosAsistencia {
 			OffsetDateTime corregidoEn, String corregidoPor) {
 	}
 
-	/** Fila de la tabla: {@code estado} y {@code horaLlegada} son null si aún no se registró el día. */
+	/**
+	 * Fila de la tabla: {@code estado} y {@code horaLlegada} son null si aún no se registró el día;
+	 * {@code justificacion} es null si la falta o tardanza no está justificada (HU-67).
+	 */
 	public record FilaAsistencia(UUID matriculaId, UUID estudianteId, String nombres, String apellidos,
-			String documento, EstadoAsistencia estado, LocalTime horaLlegada, boolean modificado) {
+			String documento, EstadoAsistencia estado, LocalTime horaLlegada, boolean modificado,
+			JustificacionDia justificacion) {
+	}
+
+	/** HU-67: la justificación de una falta o tardanza. {@code archivoNombre} es null si no tiene sustento. */
+	public record JustificacionDia(MotivoJustificacion motivo, String detalle, String archivoNombre,
+			OffsetDateTime registradaEn, String registradaPor) {
+	}
+
+	/** Sustento adjunto de una justificación, para descargarlo. */
+	public record ArchivoJustificacion(String nombre, String tipo, byte[] contenido) {
 	}
 
 	/** Tarjetas de AS-01: presentes, tardanzas, faltas y sin marcar. */

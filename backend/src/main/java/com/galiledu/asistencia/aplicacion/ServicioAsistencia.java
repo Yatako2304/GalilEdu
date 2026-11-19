@@ -1,5 +1,6 @@
 package com.galiledu.asistencia.aplicacion;
 
+import java.io.IOException;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -16,10 +17,13 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.galiledu.asistencia.aplicacion.CalendarioEscolar.CalendarioDelNivel;
+import com.galiledu.asistencia.aplicacion.DtosAsistencia.ArchivoJustificacion;
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.AsistenciaDelDia;
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.FilaAsistencia;
+import com.galiledu.asistencia.aplicacion.DtosAsistencia.JustificacionDia;
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.MarcaSolicitud;
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.RegistroDelDia;
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.Resumen;
@@ -30,9 +34,12 @@ import com.galiledu.asistencia.aplicacion.SeccionesTutoradas.SeccionTutorada;
 import com.galiledu.asistencia.dominio.AsistenciaEstudiante;
 import com.galiledu.asistencia.dominio.CorreccionAsistencia;
 import com.galiledu.asistencia.dominio.EstadoAsistencia;
+import com.galiledu.asistencia.dominio.Justificacion;
 import com.galiledu.asistencia.dominio.MarcaAsistencia;
+import com.galiledu.asistencia.dominio.MotivoJustificacion;
 import com.galiledu.asistencia.dominio.RegistroAsistencia;
 import com.galiledu.asistencia.infraestructura.CorreccionAsistenciaRepositorio;
+import com.galiledu.asistencia.infraestructura.JustificacionRepositorio;
 import com.galiledu.asistencia.infraestructura.NombresDeUsuario;
 import com.galiledu.asistencia.infraestructura.RegistroAsistenciaRepositorio;
 import com.galiledu.compartido.web.ExcepcionNegocio;
@@ -49,21 +56,26 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 public class ServicioAsistencia {
 	static final String MENSAJE_SOLO_HOY = "Solo puedes registrar o corregir la asistencia del día de hoy.";
 	static final String MENSAJE_CAMBIO = "La asistencia cambió mientras la editabas. Vuelve a cargarla.";
+	static final String MENSAJE_YA_JUSTIFICADA = "Esta falta o tardanza ya está justificada.";
+	static final Set<String> TIPOS_SUSTENTO = Set.of("application/pdf", "image/jpeg", "image/png");
+	static final long TAMANO_SUSTENTO = 5L * 1024 * 1024;
 
 	private final SeccionesTutoradas secciones;
 	private final CalendarioEscolar calendario;
 	private final RegistroAsistenciaRepositorio registros;
 	private final CorreccionAsistenciaRepositorio correcciones;
+	private final JustificacionRepositorio justificaciones;
 	private final NombresDeUsuario nombres;
 	private final Clock reloj;
 
 	public ServicioAsistencia(SeccionesTutoradas secciones, CalendarioEscolar calendario,
 			RegistroAsistenciaRepositorio registros, CorreccionAsistenciaRepositorio correcciones,
-			NombresDeUsuario nombres, Clock reloj) {
+			JustificacionRepositorio justificaciones, NombresDeUsuario nombres, Clock reloj) {
 		this.secciones = secciones;
 		this.calendario = calendario;
 		this.registros = registros;
 		this.correcciones = correcciones;
+		this.justificaciones = justificaciones;
 		this.nombres = nombres;
 		this.reloj = reloj;
 	}
@@ -120,6 +132,7 @@ public class ServicioAsistencia {
 		Set<UUID> registrados = registro.getAsistencias().stream().map(AsistenciaEstudiante::getMatriculaId)
 				.collect(Collectors.toSet());
 		List<MarcaAsistencia> nuevos = marcas.stream().filter(m -> !registrados.contains(m.matriculaId())).toList();
+		exigirSinJustificar(registro, marcas);
 		List<CorreccionAsistencia> cambios = registro.corregir(marcas, usuarioId, ahora);
 		nuevos.forEach(registro::agregar);
 		if (cambios.isEmpty() && nuevos.isEmpty()) {
@@ -127,6 +140,99 @@ public class ServicioAsistencia {
 		}
 		registros.saveAndFlush(registro);
 		correcciones.saveAll(cambios);
+	}
+
+	/**
+	 * HU-67: una falta o tardanza ya justificada no se corrige. Se rechaza en vez de borrar la justificación sin
+	 * avisar.
+	 */
+	private void exigirSinJustificar(RegistroAsistencia registro, List<MarcaAsistencia> marcas) {
+		Map<UUID, AsistenciaEstudiante> porMatricula = registro.getAsistencias().stream()
+				.collect(Collectors.toMap(AsistenciaEstudiante::getMatriculaId, Function.identity()));
+		List<UUID> cambiadas = new ArrayList<>();
+		for (MarcaAsistencia marca : marcas) {
+			AsistenciaEstudiante actual = porMatricula.get(marca.matriculaId());
+			if (actual != null && !marca.igualA(actual.getEstado(), actual.getHoraLlegada())) {
+				cambiadas.add(actual.getId());
+			}
+		}
+		if (!cambiadas.isEmpty() && justificaciones.existsByAsistenciaEstudianteIdIn(cambiadas)) {
+			throw ExcepcionNegocio.conflicto("No puedes corregir una falta o tardanza que ya está justificada.");
+		}
+	}
+
+	/**
+	 * HU-67 · RF-145: justifica la falta o tardanza de un estudiante en un día ya registrado (hoy o antes), con motivo,
+	 * detalle y un sustento opcional (PDF, JPG o PNG de hasta 5 MB).
+	 */
+	@Transactional
+	public AsistenciaDelDia justificar(UUID usuarioId, UUID seccionId, LocalDate fecha, UUID matriculaId,
+			MotivoJustificacion motivo, String detalle, MultipartFile archivo) {
+		SeccionTutorada seccion = seccionDelTutor(usuarioId, seccionId);
+		AsistenciaEstudiante asistencia = asistenciaDe(seccion, fecha, matriculaId);
+		if (justificaciones.findByAsistenciaEstudianteId(asistencia.getId()).isPresent()) {
+			throw ExcepcionNegocio.conflicto(MENSAJE_YA_JUSTIFICADA);
+		}
+		Justificacion justificacion;
+		try {
+			justificacion = Justificacion.de(asistencia, motivo, detalle, usuarioId, OffsetDateTime.now(reloj));
+		} catch (IllegalArgumentException excepcion) {
+			throw ExcepcionNegocio.invalido(excepcion.getMessage());
+		} catch (IllegalStateException excepcion) {
+			throw ExcepcionNegocio.conflicto(excepcion.getMessage());
+		}
+		if (archivo != null && !archivo.isEmpty()) {
+			if (!TIPOS_SUSTENTO.contains(archivo.getContentType())) {
+				throw ExcepcionNegocio.invalido("El sustento debe ser PDF, JPG o PNG.");
+			}
+			if (archivo.getSize() > TAMANO_SUSTENTO) {
+				throw ExcepcionNegocio.invalido("El sustento no puede pesar más de 5 MB.");
+			}
+			justificacion.adjuntar(nombreSeguro(archivo.getOriginalFilename()), archivo.getContentType(),
+					bytes(archivo));
+		}
+		try {
+			justificaciones.saveAndFlush(justificacion);
+		} catch (DataIntegrityViolationException excepcion) {
+			throw ExcepcionNegocio.conflicto(MENSAJE_YA_JUSTIFICADA);
+		}
+		return vista(seccion, fecha);
+	}
+
+	/** HU-67: descarga el sustento adjunto de una justificación. */
+	@Transactional(readOnly = true)
+	public ArchivoJustificacion sustento(UUID usuarioId, UUID seccionId, LocalDate fecha, UUID matriculaId) {
+		SeccionTutorada seccion = seccionDelTutor(usuarioId, seccionId);
+		AsistenciaEstudiante asistencia = asistenciaDe(seccion, fecha, matriculaId);
+		return justificaciones.findByAsistenciaEstudianteId(asistencia.getId())
+				.filter(j -> j.getArchivoNombre() != null)
+				.map(j -> new ArchivoJustificacion(j.getArchivoNombre(), j.getArchivoTipo(), j.getArchivoContenido()))
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("La justificación no tiene sustento adjunto."));
+	}
+
+	private AsistenciaEstudiante asistenciaDe(SeccionTutorada seccion, LocalDate fecha, UUID matriculaId) {
+		RegistroAsistencia registro = registros.findBySeccionIdAndFecha(seccion.id(), fecha)
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No hay asistencia registrada ese día."));
+		return registro.getAsistencias().stream().filter(a -> a.getMatriculaId().equals(matriculaId)).findFirst()
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El estudiante no tiene asistencia ese día."));
+	}
+
+	/** Sin rutas: solo el nombre del archivo, de hasta 200 caracteres. */
+	static String nombreSeguro(String nombre) {
+		String base = nombre == null || nombre.isBlank() ? "sustento" : nombre.strip();
+		base = base.substring(Math.max(base.lastIndexOf('/'), base.lastIndexOf('\\')) + 1);
+		if (base.isBlank()) {
+			base = "sustento";
+		}
+		return base.length() > 200 ? base.substring(base.length() - 200) : base;
+	}
+
+	private static byte[] bytes(MultipartFile archivo) {
+		try {
+			return archivo.getBytes();
+		} catch (IOException excepcion) {
+			throw ExcepcionNegocio.invalido("No se pudo leer el sustento.");
+		}
 	}
 
 	/** Valida la lista completa: cada estudiante de la sección una sola vez, y ninguno de otra sección. */
@@ -168,15 +274,18 @@ public class ServicioAsistencia {
 		Map<UUID, AsistenciaEstudiante> marcadas = registro.map(r -> r.getAsistencias().stream()
 				.collect(Collectors.toMap(AsistenciaEstudiante::getMatriculaId, Function.identity())))
 				.orElse(Map.of());
-		Set<UUID> modificadas = marcadas.isEmpty()
-				? Set.of()
-				: new HashSet<>(correcciones.conCorrecciones(
-						marcadas.values().stream().map(AsistenciaEstudiante::getId).toList()));
+		List<UUID> ids = marcadas.values().stream().map(AsistenciaEstudiante::getId).toList();
+		Set<UUID> modificadas = ids.isEmpty() ? Set.of() : new HashSet<>(correcciones.conCorrecciones(ids));
+		Map<UUID, JustificacionDia> justificadas = ids.isEmpty()
+				? Map.of()
+				: justificaciones.findByAsistenciaEstudianteIdIn(ids).stream()
+						.collect(Collectors.toMap(Justificacion::getAsistenciaEstudianteId, this::aDto));
 		List<FilaAsistencia> filas = secciones.estudiantes(seccion.id()).stream().map(e -> {
 			AsistenciaEstudiante marca = marcadas.get(e.matriculaId());
 			return new FilaAsistencia(e.matriculaId(), e.estudianteId(), e.nombres(), e.apellidos(), e.documento(),
 					marca == null ? null : marca.getEstado(), marca == null ? null : marca.getHoraLlegada(),
-					marca != null && modificadas.contains(marca.getId()));
+					marca != null && modificadas.contains(marca.getId()),
+					marca == null ? null : justificadas.get(marca.getId()));
 		}).toList();
 		RegistroDelDia delDia = registro.map(this::aDto).orElse(null);
 		return new AsistenciaDelDia(aDto(seccion), fecha, hoy, motivo == null && fecha.equals(hoy), motivo, delDia,
@@ -204,6 +313,11 @@ public class ServicioAsistencia {
 	private SeccionTutorada seccionDelTutor(UUID usuarioId, UUID seccionId) {
 		return secciones.delUsuario(usuarioId).stream().filter(s -> s.id().equals(seccionId)).findFirst()
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No eres tutor de esta sección."));
+	}
+
+	private JustificacionDia aDto(Justificacion j) {
+		return new JustificacionDia(j.getMotivo(), j.getDetalle(), j.getArchivoNombre(), j.getRegistradoEn(),
+				nombres.de(j.getRegistradoPor()));
 	}
 
 	private RegistroDelDia aDto(RegistroAsistencia registro) {

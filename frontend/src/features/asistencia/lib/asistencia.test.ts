@@ -22,6 +22,7 @@ const fila = (
   estado,
   horaLlegada,
   modificado: false,
+  justificacion: null,
 });
 
 test('el botón de fecha dice el día como en Figma', () => {

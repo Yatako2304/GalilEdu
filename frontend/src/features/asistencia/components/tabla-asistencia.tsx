@@ -1,6 +1,7 @@
-import { CircleAlert } from 'lucide-react';
+import { CircleAlert, Download } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/form';
 import { SegmentedControl } from '@/components/ui/segmented-control';
 import {
@@ -12,6 +13,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
+import { Tooltip } from '@/components/ui/tooltip';
 import { EstadoAsistencia, FilaAsistencia } from '@/types/api';
 import { cn } from '@/utils/cn';
 
@@ -19,6 +21,7 @@ import {
   Borrador,
   COLOR_ESTADO,
   ETIQUETA_ESTADO,
+  ETIQUETA_MOTIVO,
   horaCorta,
   nombreCompleto,
   OPCIONES_ASISTENCIA,
@@ -37,6 +40,9 @@ type TablaAsistenciaProps = {
   cambiadas?: Set<string>;
   onMarcar: (matriculaId: string, estado: EstadoAsistencia) => void;
   onHora: (matriculaId: string, hora: string) => void;
+  /** HU-67 (AS-05): columna "Justificación" en modo consulta. Sin ella no se muestra la columna. */
+  onJustificar?: (fila: FilaAsistencia) => void;
+  onDescargarSustento?: (fila: FilaAsistencia) => void;
 };
 
 // Figma > Tutor > AS-01 a AS-06: N.°, Estudiante, Asistencia y Hora de llegada.
@@ -48,6 +54,8 @@ export const TablaAsistencia = ({
   cambiadas,
   onMarcar,
   onHora,
+  onJustificar,
+  onDescargarSustento,
 }: TablaAsistenciaProps) => (
   <TableElement>
     <TableHeader>
@@ -56,6 +64,9 @@ export const TablaAsistencia = ({
         <TableHead>Estudiante</TableHead>
         <TableHead>Asistencia</TableHead>
         <TableHead className="w-40">Hora de llegada</TableHead>
+        {!borrador && onJustificar && (
+          <TableHead className="w-48">Justificación</TableHead>
+        )}
       </TableRow>
     </TableHeader>
     <TableBody>
@@ -141,9 +152,66 @@ export const TablaAsistencia = ({
                 </span>
               )}
             </TableCell>
+            {!borrador && onJustificar && (
+              <TableCell>
+                <CeldaJustificacion
+                  fila={fila}
+                  onJustificar={onJustificar}
+                  onDescargarSustento={onDescargarSustento}
+                />
+              </TableCell>
+            )}
           </TableRow>
         );
       })}
     </TableBody>
   </TableElement>
 );
+
+const CeldaJustificacion = ({
+  fila,
+  onJustificar,
+  onDescargarSustento,
+}: {
+  fila: FilaAsistencia;
+  onJustificar: (fila: FilaAsistencia) => void;
+  onDescargarSustento?: (fila: FilaAsistencia) => void;
+}) => {
+  const { justificacion } = fila;
+  if (justificacion) {
+    return (
+      <span className="flex items-center gap-1">
+        <Tooltip
+          content={ETIQUETA_MOTIVO[justificacion.motivo]}
+          description={justificacion.detalle ?? undefined}
+        >
+          <Tag size="sm" color="success">
+            Justificada
+          </Tag>
+        </Tooltip>
+        {justificacion.archivoNombre && onDescargarSustento && (
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={`Descargar sustento de ${nombreCompleto(fila)}`}
+            icon={<Download className="size-4" aria-hidden="true" />}
+            onClick={() => onDescargarSustento(fila)}
+          />
+        )}
+      </span>
+    );
+  }
+  if (fila.estado === 'FALTA' || fila.estado === 'TARDANZA') {
+    return (
+      <Button
+        variant="tertiary"
+        size="sm"
+        aria-label={`Justificar ${ETIQUETA_ESTADO[fila.estado].toLowerCase()} de ${nombreCompleto(fila)}`}
+        onClick={() => onJustificar(fila)}
+      >
+        Justificar
+      </Button>
+    );
+  }
+  return <span className="text-content-quartiary">—</span>;
+};

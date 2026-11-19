@@ -4,6 +4,7 @@ import { api } from '@/lib/api-client';
 import {
   AsistenciaDelDia,
   MarcaAsistencia,
+  MotivoJustificacion,
   SeccionAsistencia,
 } from '@/types/api';
 
@@ -49,4 +50,56 @@ export const useGuardarAsistencia = (seccionId: string, fecha: string) => {
       queryClient.setQueryData(claveDia(seccionId, fecha), dia);
     },
   });
+};
+
+export type SolicitudJustificacion = {
+  matriculaId: string;
+  motivo: MotivoJustificacion;
+  detalle: string;
+  archivo: File | null;
+};
+
+/** HU-67: justifica una falta o tardanza (multipart, con sustento opcional). */
+export const useJustificar = (seccionId: string, fecha: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      matriculaId,
+      motivo,
+      detalle,
+      archivo,
+    }: SolicitudJustificacion): Promise<AsistenciaDelDia> => {
+      const datos = new FormData();
+      datos.append('matriculaId', matriculaId);
+      datos.append('motivo', motivo);
+      if (detalle.trim()) datos.append('detalle', detalle.trim());
+      if (archivo) datos.append('archivo', archivo);
+      return api.post(
+        `${RUTA}/${seccionId}/dias/${fecha}/justificaciones`,
+        datos,
+      );
+    },
+    onSuccess: (dia) => {
+      queryClient.setQueryData(claveDia(seccionId, fecha), dia);
+    },
+  });
+};
+
+/** HU-67: descarga el sustento adjunto de una justificación. */
+export const descargarSustento = async (
+  seccionId: string,
+  fecha: string,
+  matriculaId: string,
+  nombre: string,
+) => {
+  const contenido = (await api.get(
+    `${RUTA}/${seccionId}/dias/${fecha}/justificaciones/${matriculaId}/sustento`,
+    { responseType: 'blob' },
+  )) as Blob;
+  const url = URL.createObjectURL(contenido);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.click();
+  URL.revokeObjectURL(url);
 };

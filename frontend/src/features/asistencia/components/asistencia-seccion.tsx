@@ -5,16 +5,23 @@ import { ContentLayout } from '@/components/layouts';
 import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Calendar } from '@/components/ui/date-picker';
 import { useNotifications } from '@/components/ui/notifications';
 import { ProgressBar } from '@/components/ui/progress-bar';
 import { Spinner } from '@/components/ui/spinner';
 import { PaginationBar } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
-import { AsistenciaDelDia, EstadoAsistencia } from '@/types/api';
+import {
+  AsistenciaDelDia,
+  EstadoAsistencia,
+  FilaAsistencia,
+} from '@/types/api';
 
 import {
+  descargarSustento,
   useAsistenciaDelDia,
   useGuardarAsistencia,
+  useJustificar,
   useSeccionesAsistencia,
 } from '../api/asistencia';
 import {
@@ -22,6 +29,7 @@ import {
   borradorDe,
   cambios as calcularCambios,
   contar,
+  ETIQUETA_MOTIVO,
   fechaLarga,
   hoyEnLima,
   horaLima,
@@ -29,6 +37,7 @@ import {
   tardanzaSinHora,
 } from '../lib/asistencia';
 
+import { DialogoJustificar } from './dialogo-justificar';
 import {
   DialogoConfirmarCorreccion,
   DialogoGuardarAsistencia,
@@ -43,7 +52,7 @@ type Modo = 'consulta' | 'registro' | 'correccion';
 export const AsistenciaSeccion = () => {
   const secciones = useSeccionesAsistencia();
   const seccion = secciones.data?.[0];
-  const [fecha] = React.useState(hoyEnLima);
+  const [fecha, setFecha] = React.useState(hoyEnLima);
   const dia = useAsistenciaDelDia(seccion?.id, fecha);
 
   if (secciones.isLoading || (seccion && dia.isLoading)) {
@@ -72,12 +81,28 @@ export const AsistenciaSeccion = () => {
     );
   }
   if (!dia.data) return null;
-  return <PantallaAsistencia key={dia.data.fecha} dia={dia.data} />;
+  return (
+    <PantallaAsistencia
+      key={dia.data.fecha}
+      dia={dia.data}
+      onCambiarFecha={setFecha}
+    />
+  );
 };
 
-const PantallaAsistencia = ({ dia }: { dia: AsistenciaDelDia }) => {
+const PantallaAsistencia = ({
+  dia,
+  onCambiarFecha,
+}: {
+  dia: AsistenciaDelDia;
+  onCambiarFecha: (fecha: string) => void;
+}) => {
   const { addNotification } = useNotifications();
   const guardar = useGuardarAsistencia(dia.seccion.id, dia.fecha);
+  const justificar = useJustificar(dia.seccion.id, dia.fecha);
+  const [justificando, setJustificando] = React.useState<FilaAsistencia | null>(
+    null,
+  );
   const sinRegistro = dia.registro === null;
   const [modo, setModo] = React.useState<Modo>(
     sinRegistro && dia.editable ? 'registro' : 'consulta',
@@ -101,6 +126,12 @@ const PantallaAsistencia = ({ dia }: { dia: AsistenciaDelDia }) => {
   const editando = modo !== 'consulta';
   const conteo = editando ? contar(dia.estudiantes, borrador) : dia.resumen;
   const pendientes = calcularCambios(dia.estudiantes, borrador);
+  // Cambiar de día descartaría lo marcado: se bloquea mientras haya algo sin guardar.
+  const hayCambiosSinGuardar =
+    modo === 'correccion'
+      ? pendientes.length > 0
+      : modo === 'registro' &&
+        dia.estudiantes.some((f) => borrador[f.matriculaId]?.estado);
   const totalPaginas = Math.max(
     1,
     Math.ceil(dia.estudiantes.length / POR_PAGINA),
@@ -201,13 +232,12 @@ const PantallaAsistencia = ({ dia }: { dia: AsistenciaDelDia }) => {
       <div className="flex flex-col gap-5">
         <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div className="flex flex-wrap items-center gap-3">
-            {/* La elección de otro día llega con HU-67 (justificaciones). */}
-            <Button
-              variant="primary"
-              icon={<CalendarDays className="size-4" aria-hidden="true" />}
-            >
-              {fechaLarga(dia.fecha)}
-            </Button>
+            <SelectorFecha
+              fecha={dia.fecha}
+              hoy={dia.hoy}
+              onChange={onCambiarFecha}
+              disabled={hayCambiosSinGuardar}
+            />
             <EstadoDelDia dia={dia} modo={modo} />
           </div>
           <div className="flex flex-wrap gap-3">
@@ -297,6 +327,19 @@ const PantallaAsistencia = ({ dia }: { dia: AsistenciaDelDia }) => {
                 }
                 onMarcar={marcar}
                 onHora={cambiarHora}
+                onJustificar={
+                  modo === 'consulta' && dia.registro
+                    ? setJustificando
+                    : undefined
+                }
+                onDescargarSustento={(fila) =>
+                  descargarSustento(
+                    dia.seccion.id,
+                    dia.fecha,
+                    fila.matriculaId,
+                    fila.justificacion?.archivoNombre ?? 'sustento',
+                  )
+                }
               />
               <div className="flex justify-end px-4 py-3">
                 <PaginationBar
@@ -359,6 +402,25 @@ const PantallaAsistencia = ({ dia }: { dia: AsistenciaDelDia }) => {
         resumen={conteo}
         onConfirmar={confirmar}
         cargando={guardar.isPending}
+      />
+      <DialogoJustificar
+        fila={justificando}
+        seccion={`${dia.seccion.grado} ${dia.seccion.nombre}`}
+        fecha={dia.fecha}
+        onOpenChange={(abierto) => !abierto && setJustificando(null)}
+        cargando={justificar.isPending}
+        onGuardar={(solicitud) =>
+          justificar.mutate(solicitud, {
+            onSuccess: () => {
+              addNotification({
+                type: 'success',
+                title: 'Justificación registrada',
+                message: `${justificando ? nombreCompleto(justificando) : ''}: ${ETIQUETA_MOTIVO[solicitud.motivo]}.`,
+              });
+              setJustificando(null);
+            },
+          })
+        }
       />
       <DialogoConfirmarCorreccion
         open={dialogo === 'corregir'}
@@ -428,6 +490,13 @@ const AvisoDelDia = ({
   sinMarcar: string[];
   tardanzasSinHora: number;
 }) => {
+  if (!dia.editable && !dia.registro && !dia.motivoNoEscolar) {
+    return (
+      <Alert type="default" title="No se registró la asistencia de este día.">
+        Solo se registra la asistencia del día de hoy.
+      </Alert>
+    );
+  }
   if (dia.motivoNoEscolar) {
     return (
       <Alert type="default" title="No se registra asistencia en esta fecha.">
@@ -506,3 +575,72 @@ const Dato = ({
     </span>
   </div>
 );
+
+/**
+ * Botón de la fecha (AS-01) con el calendario desplegable: elige un día de hoy hacia atrás para consultarlo o
+ * justificar sus faltas y tardanzas (HU-67).
+ */
+const SelectorFecha = ({
+  fecha,
+  hoy,
+  onChange,
+  disabled,
+}: {
+  fecha: string;
+  hoy: string;
+  onChange: (fecha: string) => void;
+  disabled: boolean;
+}) => {
+  const [abierto, setAbierto] = React.useState(false);
+  const contenedor = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (!abierto) return;
+    const alClickFuera = (evento: MouseEvent) => {
+      if (!contenedor.current?.contains(evento.target as Node))
+        setAbierto(false);
+    };
+    const alTeclear = (evento: KeyboardEvent) => {
+      if (evento.key === 'Escape') setAbierto(false);
+    };
+    document.addEventListener('mousedown', alClickFuera);
+    document.addEventListener('keydown', alTeclear);
+    return () => {
+      document.removeEventListener('mousedown', alClickFuera);
+      document.removeEventListener('keydown', alTeclear);
+    };
+  }, [abierto]);
+
+  return (
+    <div ref={contenedor} className="relative">
+      <Button
+        variant="primary"
+        icon={<CalendarDays className="size-4" aria-hidden="true" />}
+        aria-haspopup="dialog"
+        aria-expanded={abierto}
+        aria-label={`Fecha: ${fechaLarga(fecha)}. Elegir otro día`}
+        title={
+          disabled
+            ? 'Guarda o descarta los cambios para ver otro día'
+            : undefined
+        }
+        disabled={disabled}
+        onClick={() => setAbierto(!abierto)}
+      >
+        {fechaLarga(fecha)}
+      </Button>
+      {abierto && (
+        <div className="absolute left-0 top-full z-20 mt-2">
+          <Calendar
+            value={fecha}
+            max={hoy}
+            onChange={(nueva) => {
+              setAbierto(false);
+              if (nueva !== fecha) onChange(nueva);
+            }}
+          />
+        </div>
+      )}
+    </div>
+  );
+};

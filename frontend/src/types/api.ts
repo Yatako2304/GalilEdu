@@ -1920,6 +1920,20 @@ export type FilaAsistencia = {
   /** "08:10:00" o null. */
   horaLlegada: string | null;
   modificado: boolean;
+  /** HU-67: null si la falta o tardanza no está justificada. */
+  justificacion: JustificacionDia | null;
+};
+
+export type MotivoJustificacion =
+  'CITA_MEDICA' | 'ENFERMEDAD' | 'TRAMITE_OFICIAL' | 'OTRO';
+
+export type JustificacionDia = {
+  motivo: MotivoJustificacion;
+  detalle: string | null;
+  /** null si no tiene sustento adjunto. */
+  archivoNombre: string | null;
+  registradaEn: string;
+  registradaPor: string | null;
 };
 
 export type AsistenciaDelDia = {

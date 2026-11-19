@@ -1,4 +1,8 @@
-import { EstadoAsistencia, FilaAsistencia } from '@/types/api';
+import {
+  EstadoAsistencia,
+  FilaAsistencia,
+  MotivoJustificacion,
+} from '@/types/api';
 
 /** Marca en edición de un estudiante: estado (null = sin marcar) y hora "HH:mm" (solo tardanza). */
 export type Marca = { estado: EstadoAsistencia | null; hora: string };
@@ -114,3 +118,18 @@ export const cambios = (filas: FilaAsistencia[], borrador: Borrador) =>
 /** Una tardanza necesita su hora de llegada (acordado el 19/11). */
 export const tardanzaSinHora = (marca?: Marca) =>
   marca?.estado === 'TARDANZA' && !marca.hora;
+
+/** HU-67: motivos acordados el 19/11 (Figma solo muestra "Cita Médica"). */
+export const MOTIVOS_JUSTIFICACION: {
+  value: MotivoJustificacion;
+  label: string;
+}[] = [
+  { value: 'CITA_MEDICA', label: 'Cita médica' },
+  { value: 'ENFERMEDAD', label: 'Enfermedad' },
+  { value: 'TRAMITE_OFICIAL', label: 'Trámite oficial' },
+  { value: 'OTRO', label: 'Otro' },
+];
+
+export const ETIQUETA_MOTIVO = Object.fromEntries(
+  MOTIVOS_JUSTIFICACION.map((m) => [m.value, m.label]),
+) as Record<MotivoJustificacion, string>;
