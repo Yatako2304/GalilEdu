@@ -7,7 +7,9 @@ import org.springframework.stereotype.Repository;
 
 import com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoMatricula;
 
-/** Escrituras de la matrícula del Personal administrativo (HU-24, HU-72). SQL directo, igual que las consultas. */
+/**
+ * Escrituras de la matrícula del Personal administrativo (HU-24, HU-25, HU-72). SQL directo, igual que las consultas.
+ */
 @Repository
 public class EscriturasMatricula {
 	private final JdbcClient jdbc;
@@ -29,6 +31,18 @@ public class EscriturasMatricula {
 				                                 tipo_estudiante, estado, creado_por)
 				VALUES (?, ?, ?, ?, ?, 'SECCION_RESERVADA', ?) RETURNING id""")
 				.params(estudianteId, anioEscolarId, gradoCodigo, seccionId, tipo, creadoPor)
+				.query(UUID.class).single();
+	}
+
+	/** HU-25: matrícula registrada con el periodo cerrado; el motivo deja constancia del caso excepcional. */
+	public UUID insertarMatriculaExtemporanea(UUID estudianteId, UUID anioEscolarId, String gradoCodigo,
+			UUID seccionId, String tipo, String motivo, UUID creadoPor) {
+		return jdbc.sql("""
+				INSERT INTO matricula.matricula (estudiante_id, anio_escolar_id, grado_codigo, seccion_id,
+				                                 tipo_estudiante, estado, extemporanea, motivo_extemporanea,
+				                                 creado_por)
+				VALUES (?, ?, ?, ?, ?, 'SECCION_RESERVADA', TRUE, ?, ?) RETURNING id""")
+				.params(estudianteId, anioEscolarId, gradoCodigo, seccionId, tipo, motivo, creadoPor)
 				.query(UUID.class).single();
 	}
 
@@ -61,6 +75,13 @@ public class EscriturasMatricula {
 				.params(matriculaId, documentoRequeridoId, archivo.nombre(), archivo.tipoMime(),
 						archivo.contenido().length, archivo.contenido(), subidoPor)
 				.update();
+	}
+
+	/** HU-72: quita el archivo de un documento del expediente. Devuelve false si no había archivo. */
+	public boolean eliminarDocumento(UUID matriculaId, UUID documentoRequeridoId) {
+		return jdbc.sql("""
+				DELETE FROM matricula.documento_matricula WHERE matricula_id = ? AND documento_requerido_id = ?""")
+				.params(matriculaId, documentoRequeridoId).update() > 0;
 	}
 
 	/** Pasa de SECCION_RESERVADA a EN_VALIDACION: los documentos quedan completos y el colegio debe revisarlos. */
