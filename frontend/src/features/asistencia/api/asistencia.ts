@@ -5,7 +5,9 @@ import {
   AsistenciaDelDia,
   MarcaAsistencia,
   MotivoJustificacion,
+  ReporteAsistencia as ReporteAsistenciaDto,
   SeccionAsistencia,
+  TipoReporteAsistencia,
 } from '@/types/api';
 
 const RUTA = '/asistencia/secciones';
@@ -96,6 +98,39 @@ export const descargarSustento = async (
     `${RUTA}/${seccionId}/dias/${fecha}/justificaciones/${matriculaId}/sustento`,
     { responseType: 'blob' },
   )) as Blob;
+  const url = URL.createObjectURL(contenido);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = nombre;
+  enlace.click();
+  URL.revokeObjectURL(url);
+};
+
+export type FiltroReporte = { tipo?: TipoReporteAsistencia; valor?: string };
+
+/** HU-68: reporte por mes o periodo. Sin filtro, el mes actual. */
+export const useReporteAsistencia = (
+  seccionId?: string,
+  filtro?: FiltroReporte,
+) =>
+  useQuery({
+    queryKey: ['asistencia', 'secciones', seccionId, 'reporte', filtro ?? {}],
+    queryFn: (): Promise<ReporteAsistenciaDto> =>
+      api.get(`${RUTA}/${seccionId}/reporte`, { params: filtro }),
+    enabled: Boolean(seccionId),
+    placeholderData: (anterior) => anterior,
+  });
+
+/** HU-68: descarga el reporte en PDF. */
+export const exportarReporteAsistencia = async (
+  seccionId: string,
+  filtro: FiltroReporte,
+  nombre: string,
+) => {
+  const contenido = (await api.get(`${RUTA}/${seccionId}/reporte/pdf`, {
+    params: filtro,
+    responseType: 'blob',
+  })) as Blob;
   const url = URL.createObjectURL(contenido);
   const enlace = document.createElement('a');
   enlace.href = url;

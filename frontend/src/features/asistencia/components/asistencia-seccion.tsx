@@ -1,5 +1,6 @@
 import { CalendarDays, Check, Clock, FileText, Pencil } from 'lucide-react';
 import * as React from 'react';
+import { useNavigate } from 'react-router';
 
 import { ContentLayout } from '@/components/layouts';
 import { Alert } from '@/components/ui/alert';
@@ -11,6 +12,7 @@ import { ProgressBar } from '@/components/ui/progress-bar';
 import { Spinner } from '@/components/ui/spinner';
 import { PaginationBar } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
+import { paths } from '@/config/paths';
 import {
   AsistenciaDelDia,
   EstadoAsistencia,
@@ -98,6 +100,7 @@ const PantallaAsistencia = ({
   onCambiarFecha: (fecha: string) => void;
 }) => {
   const { addNotification } = useNotifications();
+  const navigate = useNavigate();
   const guardar = useGuardarAsistencia(dia.seccion.id, dia.fecha);
   const justificar = useJustificar(dia.seccion.id, dia.fecha);
   const [justificando, setJustificando] = React.useState<FilaAsistencia | null>(
@@ -253,8 +256,9 @@ const PantallaAsistencia = ({
             <Button
               variant="secondary"
               icon={<FileText className="size-4" aria-hidden="true" />}
-              disabled
-              title="Disponible pronto"
+              onClick={() =>
+                navigate(paths.app.tutor.asistenciaReporte.getHref())
+              }
             >
               Reporte mensual
             </Button>

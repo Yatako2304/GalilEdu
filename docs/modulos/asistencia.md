@@ -1,14 +1,14 @@
 # Asistencia
 
 - **HU:** HU-65, HU-67, HU-68 (iteración 3)
-- **Estado:** 🚧 en desarrollo: HU-65 y HU-67 hechas (backend y frontend); falta HU-68
+- **Estado:** 🚧 en desarrollo: HU-65, HU-67 y HU-68 hechas (backend y frontend); falta la revisión del PR
 - **Última actualización:** 2026-11-19
 
 ## Alcance
 
 El tutor o cotutor de una sección (RF-143: los dos con los mismos permisos) registra cada día la asistencia de sus estudiantes: Presente, Tardanza (con hora de llegada) o Falta. Solo puede corregirla ese mismo día, y cada corrección queda en un historial. Más adelante justificará faltas y tardanzas (HU-67) y sacará el reporte mensual o por bimestre (HU-68).
 
-Decisiones del 19/11 ([decisión](../decisiones/2026-11-19-yatako-asistencia-diaria.md)):
+Decisiones del 19/11 ([HU-65](../decisiones/2026-11-19-yatako-asistencia-diaria.md), [HU-67](../decisiones/2026-11-19-yatako-justificacion-asistencia.md) y [HU-68](../decisiones/2026-11-19-yatako-reporte-asistencia.md)):
 - RF-143 dice "Ausente"; Figma dice **Falta**, y manda Figma.
 - La **hora de llegada** es obligatoria en la tardanza.
 - La corrección **no pide motivo**: el modal de Figma no lo tiene, y la HU y el RF tampoco lo piden. Se quitó "y el motivo" del aviso de AS-06.
@@ -20,7 +20,7 @@ Decisiones del 19/11 ([decisión](../decisiones/2026-11-19-yatako-asistencia-dia
 | --- | --- | --- | --- |
 | HU-65 | Registro y corrección de la asistencia diaria (RF-143) | ✅ | Solo el día de hoy (hora de Lima) y en día escolar. |
 | HU-67 | Justificación de inasistencias y tardanzas (RF-145) | ✅ | Motivo obligatorio (Cita médica, Enfermedad, Trámite oficial, Otro), detalle de hasta 500 caracteres y sustento opcional (PDF, JPG o PNG de hasta 5 MB). También en días pasados, eligiéndolos con el botón de fecha. |
-| HU-68 | Reporte de inasistencias y tardanzas (RF-146) | ⏳ | Sin pantalla en Figma. Por mes **o bimestre** (el plan de pruebas pide bimestre), ordenado por apellidos y exportable a PDF. |
+| HU-68 | Reporte de inasistencias y tardanzas (RF-146) | ✅ | Sin pantalla en Figma: se armó con los componentes de AS-01. Por mes **o por periodo** (el plan de pruebas pide bimestre), ordenado por apellidos y exportable a PDF. |
 
 | Código | Criterio de aceptación (HU-65) |
 | --- | --- |
@@ -41,6 +41,14 @@ Decisiones del 19/11 ([decisión](../decisiones/2026-11-19-yatako-asistencia-dia
 | CAHU67-4 | Al guardar, la fila muestra "Justificada" (con el motivo y el detalle al pasar el mouse) y, si hay sustento, el botón para descargarlo. El tipo original (falta o tardanza) se conserva. |
 | CAHU67-5 | Una falta o tardanza se justifica una sola vez, y una justificada ya no se corrige (409). |
 
+| Código | Criterio de aceptación (HU-68) |
+| --- | --- |
+| CAHU68-1 | "Reporte mensual" (AS-01) abre el reporte del mes actual de la sección. |
+| CAHU68-2 | Se elige "Por mes" (meses del año que ya empezaron) o "Por bimestre/trimestre" (periodos que ya empezaron; se abre el más reciente). |
+| CAHU68-3 | Una fila por estudiante, por apellidos: faltas y tardanzas (con las justificadas incluidas) y cuántas de ellas están justificadas, más el total de la sección. Solo cuentan los días con asistencia registrada, y se dice cuántos son. |
+| CAHU68-4 | "Exportar PDF" descarga el mismo reporte (A4, con la sección, el rango, la fecha de generación y las páginas numeradas). |
+| CAHU68-5 | Un mes o periodo ajeno al año escolar se rechaza (400); una sección ajena no se ve (404). |
+
 ## Pantallas (Figma)
 
 | Pantalla | Frame en Figma | Ruta |
@@ -50,10 +58,12 @@ Decisiones del 19/11 ([decisión](../decisiones/2026-11-19-yatako-asistencia-dia
 | Registrada | Tutor › "AS-05 · Asistencia registrada (modo consulta del día)" | `/app/tutor/asistencia` |
 | Corregir | Tutor › "AS-06 · Corregir asistencia del día (HU-65)" y "Modal - Confirmar corrección de asistencia" | `/app/tutor/asistencia` |
 | Justificar (HU-67) | Tutor › "Frame 57" (modales "Justificar inasistencia" y "Justificar Tardanza") | (modal desde la columna "Justificación") |
+| Reporte (HU-68) | No existe en Figma (diseño acordado el 19/11) | `/app/tutor/asistencia/reporte` |
 
 - El "Selector de asistencia" (Presente | Tardanza | Falta) no está en Componentes. Se creó `SegmentedControl` en `components/ui`.
 - El "Cód." de Figma es el número de documento del estudiante, porque la ficha no tiene otro código (igual que en HU-40).
-- El botón de fecha abre el calendario (`Calendar` de `components/ui`); mientras haya cambios sin guardar se bloquea para no perderlos. "Reporte mensual" está deshabilitado hasta HU-68.
+- El botón de fecha abre el calendario (`Calendar` de `components/ui`); mientras haya cambios sin guardar se bloquea para no perderlos. "Reporte mensual" abre el reporte (HU-68).
+- Los meses se nombran como en Perú (`es-PE`): "Setiembre", igual que el "set." de Figma.
 - Figma no dibuja una falta ya justificada: se muestra la etiqueta "Justificada" con el motivo en un tooltip.
 
 ## Base de datos
@@ -76,6 +86,8 @@ Decisiones del 19/11 ([decisión](../decisiones/2026-11-19-yatako-asistencia-dia
 | PUT | `/asistencia/secciones/{id}/dias/{fecha}` | Tutor | Registra (`version: null`) o corrige (`version`) la de hoy con todos los estudiantes. |
 | POST | `/asistencia/secciones/{id}/dias/{fecha}/justificaciones` | Tutor | Justifica una falta o tardanza (multipart: `matriculaId`, `motivo`, `detalle`, `archivo`). |
 | GET | `/asistencia/secciones/{id}/dias/{fecha}/justificaciones/{matriculaId}/sustento` | Tutor | Descarga el sustento. |
+| GET | `/asistencia/secciones/{id}/reporte?tipo=&valor=` | Tutor | Reporte por mes (`MES`, `2026-11`) o periodo (`PERIODO`, `4`); sin parámetros, el mes actual. |
+| GET | `/asistencia/secciones/{id}/reporte/pdf?tipo=&valor=` | Tutor | El mismo reporte en PDF. |
 
 Detalle de respuestas y errores en [`backend/README.md`](../../backend/README.md).
 
@@ -83,19 +95,19 @@ Detalle de respuestas y errores en [`backend/README.md`](../../backend/README.md
 
 - Backend: `backend/src/main/java/com/galiledu/asistencia/`:
   - `dominio/RegistroAsistencia`, `AsistenciaEstudiante`, `CorreccionAsistencia`, `MarcaAsistencia`, `EstadoAsistencia`, `Justificacion` y `MotivoJustificacion`;
-  - `aplicacion/ServicioAsistencia`, `ReglaDiaEscolar` y los puertos de solo lectura `SeccionesTutoradas` y `CalendarioEscolar`;
-  - `infraestructura/` (SQL de solo lectura sobre Configuración y Matrícula, y los repositorios);
+  - `aplicacion/ServicioAsistencia`, `ReglaDiaEscolar`, `ServicioReporteAsistencia`, `RangoReporte` y los puertos de solo lectura `SeccionesTutoradas` y `CalendarioEscolar`;
+  - `infraestructura/` (SQL de solo lectura sobre Configuración y Matrícula, `ConsultasReporteAsistencia`, el PDF `ArchivoReporteAsistencia` y los repositorios);
   - `web/AsistenciaController`.
-- Frontend: `frontend/src/features/asistencia/` (`asistencia-seccion.tsx`, `tabla-asistencia.tsx`, `dialogos-asistencia.tsx`, `dialogo-justificar.tsx`, `lib/asistencia.ts`) y `components/ui/segmented-control`.
+- Frontend: `frontend/src/features/asistencia/` (`asistencia-seccion.tsx`, `tabla-asistencia.tsx`, `dialogos-asistencia.tsx`, `dialogo-justificar.tsx`, `reporte-asistencia.tsx`, `lib/asistencia.ts`) y `components/ui/segmented-control`.
 - Pruebas:
-  - Backend: `AsistenciaIT` y `JustificacionIT` (reloj fijo el martes 15/09/2026), `RegistroAsistenciaTests`, `JustificacionTests`, `ReglaDiaEscolarTests`.
-  - Frontend: `asistencia-seccion.test.tsx`, `lib/asistencia.test.ts`, `segmented-control.test.tsx`.
+  - Backend: `AsistenciaIT`, `JustificacionIT` y `ReporteAsistenciaIT` (reloj fijo el martes 15/09/2026), `RegistroAsistenciaTests`, `JustificacionTests`, `ReglaDiaEscolarTests`, `RangoReporteTests` y `ArchivoReporteAsistenciaTests`.
+  - Frontend: `asistencia-seccion.test.tsx`, `reporte-asistencia.test.tsx`, `lib/asistencia.test.ts`, `segmented-control.test.tsx`.
 - **Datos de prueba:** María Fernández (`U20260004`, Docente y Tutor) es tutora de 1.° de secundaria A de 2026, con 3 estudiantes matriculados. Para verla, elige el rol **Tutor** y abre Asistencia.
 
 ## Pendientes
 
 - [x] HU-67: selector de fecha, columna "Justificación" y modal de justificación.
 - [ ] HU-67: una justificación no se edita ni se anula (no lo piden la HU ni el RF).
-- [ ] HU-68: reporte por mes o bimestre con PDF.
+- [x] HU-68: reporte por mes o periodo con PDF.
 - [ ] El rol Tutor no se asigna solo al designar tutor o cotutor ([usuarios.md](usuarios.md)). Un cotutor sin el rol no ve el menú, y la API le responde 403 porque exige el rol TUTOR. Es de Usuarios.
 - [ ] El inicio del tutor de Figma ("00 · Home · Tutor") con el aviso "Aún no registras la asistencia de hoy" no es parte de HU-65.

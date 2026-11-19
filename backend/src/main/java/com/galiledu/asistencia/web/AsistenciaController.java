@@ -25,7 +25,11 @@ import com.galiledu.asistencia.aplicacion.DtosAsistencia.ArchivoJustificacion;
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.AsistenciaDelDia;
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.SeccionAsistencia;
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.SolicitudAsistencia;
+import com.galiledu.asistencia.aplicacion.DtosReporteAsistencia.ArchivoReporte;
+import com.galiledu.asistencia.aplicacion.DtosReporteAsistencia.ReporteAsistencia;
+import com.galiledu.asistencia.aplicacion.RangoReporte.Tipo;
 import com.galiledu.asistencia.aplicacion.ServicioAsistencia;
+import com.galiledu.asistencia.aplicacion.ServicioReporteAsistencia;
 import com.galiledu.asistencia.dominio.MotivoJustificacion;
 import com.galiledu.compartido.seguridad.ServicioJwt;
 
@@ -35,9 +39,32 @@ import com.galiledu.compartido.seguridad.ServicioJwt;
 @PreAuthorize("hasRole('TUTOR')")
 public class AsistenciaController {
 	private final ServicioAsistencia servicio;
+	private final ServicioReporteAsistencia reportes;
 
-	public AsistenciaController(ServicioAsistencia servicio) {
+	public AsistenciaController(ServicioAsistencia servicio, ServicioReporteAsistencia reportes) {
 		this.servicio = servicio;
+		this.reportes = reportes;
+	}
+
+	/**
+	 * GET /api/asistencia/secciones/{id}/reporte?tipo=MES&valor=2026-11 · HU-68 (RF-146): consolidado de faltas y
+	 * tardanzas por mes o por periodo ({@code tipo=PERIODO&valor=4}). Sin parámetros, el mes actual.
+	 */
+	@GetMapping("/secciones/{seccionId}/reporte")
+	public ReporteAsistencia reporte(@PathVariable UUID seccionId, @RequestParam(required = false) Tipo tipo,
+			@RequestParam(required = false) String valor, Authentication autenticacion) {
+		return reportes.reporte(ServicioJwt.usuarioActual(autenticacion), seccionId, tipo, valor);
+	}
+
+	/** GET /api/asistencia/secciones/{id}/reporte/pdf · HU-68: el mismo reporte en PDF. */
+	@GetMapping(value = "/secciones/{seccionId}/reporte/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+	public ResponseEntity<byte[]> reportePdf(@PathVariable UUID seccionId, @RequestParam(required = false) Tipo tipo,
+			@RequestParam(required = false) String valor, Authentication autenticacion) {
+		ArchivoReporte archivo = reportes.pdf(ServicioJwt.usuarioActual(autenticacion), seccionId, tipo, valor);
+		return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
+				.header(HttpHeaders.CONTENT_DISPOSITION,
+						ContentDisposition.attachment().filename(archivo.nombre()).build().toString())
+				.body(archivo.contenido());
 	}
 
 	/** GET /api/asistencia/secciones · secciones de las que el usuario es tutor o cotutor (año activo). */

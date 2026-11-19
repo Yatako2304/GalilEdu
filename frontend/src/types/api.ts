@@ -1958,3 +1958,39 @@ export type MarcaAsistencia = {
   estado: EstadoAsistencia;
   horaLlegada?: string | null;
 };
+
+// Asistencia · HU-68 (reporte de inasistencias y tardanzas)
+export type TipoReporteAsistencia = 'MES' | 'PERIODO';
+
+export type OpcionReporte = { valor: string; etiqueta: string };
+
+export type FilaReporteAsistencia = {
+  matriculaId: string;
+  nombres: string;
+  apellidos: string;
+  documento: string;
+  /** Incluye las justificadas. */
+  faltas: number;
+  faltasJustificadas: number;
+  /** Incluye las justificadas. */
+  tardanzas: number;
+  tardanzasJustificadas: number;
+};
+
+export type ReporteAsistencia = {
+  seccion: SeccionAsistencia;
+  tipo: TipoReporteAsistencia;
+  valor: string;
+  etiqueta: string;
+  desde: string;
+  hasta: string;
+  diasRegistrados: number;
+  opciones: { meses: OpcionReporte[]; periodos: OpcionReporte[] };
+  filas: FilaReporteAsistencia[];
+  totales: {
+    faltas: number;
+    faltasJustificadas: number;
+    tardanzas: number;
+    tardanzasJustificadas: number;
+  };
+};

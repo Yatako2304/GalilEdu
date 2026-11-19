@@ -241,6 +241,10 @@ export const createAppRouter = (
               paths.app.tutor.asistencia.path,
               () => import('./routes/app/tutor/asistencia'),
             ],
+            [
+              paths.app.tutor.asistenciaReporte.path,
+              () => import('./routes/app/tutor/asistencia-reporte'),
+            ],
           ],
         ),
 
