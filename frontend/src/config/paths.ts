@@ -161,6 +161,8 @@ export const paths = {
       horario: route(TUTOR, 'horario'),
       calificaciones: route(TUTOR, 'calificaciones'),
       asistencia: route(TUTOR, 'asistencia'),
+      // HU-68: reporte de inasistencias y tardanzas (botón "Reporte mensual" de AS-01).
+      asistenciaReporte: route(TUTOR, 'asistencia/reporte'),
     },
 
     // Figma: 🌟 Apoderado
