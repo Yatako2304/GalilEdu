@@ -64,6 +64,9 @@ public class SeguridadConfig {
 				.authorizeHttpRequests(a -> a
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers("/auth/login", "/auth/logout", "/actuator/health", "/error").permitAll()
+						// HU-2 y HU-3: la pantalla de inicio de sesión pregunta si muestra Google, y se entra sin sesión.
+						.requestMatchers(HttpMethod.GET, "/auth/metodos").permitAll()
+						.requestMatchers(HttpMethod.POST, "/auth/google").permitAll()
 						// HU-4: quien olvidó su contraseña aún no tiene sesión.
 						.requestMatchers(HttpMethod.POST, "/auth/recuperar-contrasena", "/auth/recuperar-contrasena/**")
 						.permitAll()

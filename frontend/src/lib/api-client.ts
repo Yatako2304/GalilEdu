@@ -11,6 +11,11 @@ declare module 'axios' {
      * el interceptor no lo repite como notificación.
      */
     silenciarNotificacion?: boolean;
+    /**
+     * Endpoint público (p. ej. los métodos de acceso del login): no se envía el token guardado, que podría estar
+     * vencido y haría que Spring rechace la petición.
+     */
+    sinSesion?: boolean;
   }
 }
 
@@ -46,7 +51,7 @@ function authRequestInterceptor(config: InternalAxiosRequestConfig) {
   if (config.headers) {
     config.headers.Accept =
       config.responseType === 'blob' ? '*/*' : 'application/json';
-    const token = tokenStorage.get();
+    const token = config.sinSesion ? null : tokenStorage.get();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
