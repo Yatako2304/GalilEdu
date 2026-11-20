@@ -156,12 +156,18 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 		mvc.perform(conToken(get("/calificaciones/reportes/institucional")
 				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026).param("periodoId", periodo3), admin))
 				.andExpect(status().isOk())
+				// Ana Lucía (A) y Diego José (C) cuentan; Camila Sofía está por completar y no se cuenta.
+				.andExpect(jsonPath("$.total.calificaciones").value(2))
 				.andExpect(jsonPath("$.total.ad").value(0))
 				.andExpect(jsonPath("$.total.a").value(1))
 				.andExpect(jsonPath("$.total.b").value(0))
 				.andExpect(jsonPath("$.total.c").value(1))
 				.andExpect(jsonPath("$.total.porcentajeLogro").value(50))
-				.andExpect(jsonPath("$.total.pendientes").value(1))
+				.andExpect(jsonPath("$.total.porCompletar").value(1))
+				.andExpect(jsonPath("$.total.sinNotas").doesNotExist())
+				.andExpect(jsonPath("$.sinCalcular").isEmpty())
+				// Las secciones sin estudiantes no salen.
+				.andExpect(jsonPath("$.filas[?(@.estudiantes == 0)]").isEmpty())
 				.andExpect(jsonPath("$.filas[?(@.gradoCodigo == 'SEC-1' && @.seccion == 'A')].distribucion.a")
 						.value(contains(1)))
 				.andExpect(jsonPath("$.areas[*].area", hasItem("Matemática")));
@@ -170,6 +176,20 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026), admin))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(MediaType.APPLICATION_PDF));
+	}
+
+	@Test
+	void unaCompetenciaConPesosIncompletosNoEntraEnElReporteInstitucionalYSeInforma() throws Exception {
+		jdbc.sql("UPDATE academico.plan_competencia SET peso_curso = NULL WHERE plan_curso_id = ?::uuid")
+				.param(datos.plan("Geometría")).update();
+		mvc.perform(conToken(get("/calificaciones/reportes/institucional")
+				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026).param("periodoId", periodo3), token(COORDINADOR)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.sinCalcular[*].competencia", hasItem(DatosNotasPrueba.CANTIDAD)))
+				.andExpect(jsonPath("$.total.a").value(0))
+				.andExpect(jsonPath("$.total.c").value(0))
+				// El área sigue en la lista aunque no tenga calificaciones.
+				.andExpect(jsonPath("$.areas[*].area", hasItem("Matemática")));
 	}
 
 	@Test

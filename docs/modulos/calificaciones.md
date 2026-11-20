@@ -2,7 +2,7 @@
 
 - **HU:** HU-57, HU-59, HU-60 y HU-62 (Docente) · HU-63 y HU-64 (reportes del Coordinador y del Administrador) · HU-69 (Apoderado)
 - **Estado:** ✅ HU-57, HU-59 y HU-62 terminadas y verificadas · 🚧 HU-60, HU-63, HU-64 y HU-69 con backend, frontend y pruebas; falta revisión del equipo y confirmar criterios con el PO
-- **Última actualización:** 2026-11-19
+- **Última actualización:** 2026-11-20
 
 ## Alcance
 
@@ -30,7 +30,7 @@ En **Calificar alumnos**, el docente selecciona únicamente el **Ítem de evalua
 | HU-62 | Consolidado de notas de un curso | ✅ | Selecciona una o varias competencias y sus ítems; muestra resultados por competencia y promedio general de la selección con la regla del año; descarga una tabla en PDF. |
 | HU-60 | Modificación de una calificación | 🚧 | El docente cambia una nota ya registrada con un motivo obligatorio (10 a 500 caracteres), también después de la fecha límite mientras el año esté ACTIVO y el periodo haya empezado. Cada cambio queda en un historial (antes, después, motivo, quién, cuándo). El registro en lote sigue cerrado fuera del plazo. |
 | HU-63 | Reporte de notas por curso y grado | 🚧 | Coordinador. Por competencia del grado: una columna por sección y otra del grado completo, con el promedio, su nivel y el % de estudiantes con A o AD. Todos los cursos (nota oficial) o un curso (su aporte); un periodo o la nota final. PDF. **Ver estudiantes** abre el detalle de una sección: la nota oficial de cada competencia por estudiante (del periodo o la final, con «Pendiente» donde falten registros) y su libreta en PDF. Solo lectura y solo el Coordinador. |
-| HU-64 | Reporte institucional de notas | 🚧 | Coordinador y Administrador. Cuántas notas oficiales de competencia hay en cada nivel (AD, A, B, C y pendientes) por sección, grado, área y total del colegio. PDF. |
+| HU-64 | Reporte institucional de notas | 🚧 | Coordinador y Administrador. Como un reporte de logros: el porcentaje (y la cantidad) de calificaciones de competencia en cada nivel (AD, A, B, C) y «A o AD», con una barra de distribución, por grado (con sus secciones debajo), por área y todo el colegio. Lo que no se cuenta va en avisos aparte. PDF. Ver la [decisión del 20/11](../decisiones/2026-11-20-alex-sanchezz-reporte-institucional.md). |
 | HU-69 | Consulta de notas por el apoderado | 🚧 | Solo sus hijos matriculados. Por periodo: cursos con su docente, lo que aportan a cada competencia y sus ítems; la nota oficial de cada competencia por periodo y final; con el año terminado, el resultado final por niveles de logro. Descarga la libreta en PDF. |
 
 ## Pantallas (Figma)
@@ -128,9 +128,9 @@ Usan la misma nota oficial de la competencia (`ServicioNotasCompetencia.resultad
 - **Promedio:** en vigesimal, promedio simple de los estudiantes con nota y su nivel (redondeo al entero, 0,5 sube); en la escala cualitativa no se promedian niveles: el nivel más frecuente (si empatan, el mayor).
 - **«% con A o AD»:** estudiantes con logro esperado o destacado sobre los que tienen nota. No hay «aprobados».
 - **Con un curso (HU-63):** cada celda resume lo que ese curso aporta a la competencia; en la nota final sus periodos se consolidan con la regla del año.
-- **Institucional (HU-64):** cada nota oficial de competencia de cada estudiante cuenta una vez; sin nota cuenta como pendiente. Solo entran los grados con plan de evaluación.
-- Solo cuentan las notas completas. Una nota pendiente por registros faltantes no entra al promedio ni a los niveles: HU-63 dice cuántos estudiantes tienen notas por registrar y HU-64 las cuenta en **Pendientes**, aparte de **Sin notas** (aún no hay ítems que cuenten).
-- Una competencia con pesos de curso incompletos no tiene nota oficial: sale «—» (HU-63 avisa) y en HU-64 cuenta como «Sin notas».
+- **Institucional (HU-64):** cada nota oficial de competencia de cada estudiante es una **calificación** y cuenta una vez. Los porcentajes de cada nivel se calculan sobre las calificaciones completas. Solo entran los grados con plan de evaluación y las secciones con estudiantes.
+- Solo cuentan las notas completas. Una nota pendiente por registros faltantes no entra al promedio ni a los niveles: HU-63 dice cuántos estudiantes tienen notas por registrar y HU-64 las muestra como «+2 por completar» en la fila y en un aviso con las secciones donde faltan. Las áreas que aún no tienen calificaciones no salen en la tabla: se nombran debajo («Aún sin calificaciones en este periodo»).
+- Una competencia con pesos de curso incompletos no tiene nota oficial: sale «—» (HU-63 avisa). En HU-64 no entra en las cifras y sale en el aviso «Competencias que no se pueden calcular».
 - La tabla de conversión es la vigente al inicio del periodo (o del último periodo para la nota final).
 
 ### Consulta del apoderado (HU-69)
@@ -173,7 +173,7 @@ Reportes y apoderado (prefijo `/api/calificaciones`):
 | GET | `/apoderado/estudiantes` | Apoderado | HU-69: hijos matriculados con sus años. |
 | GET | `/apoderado/estudiantes/{id}/notas?anio=` y `/apoderado/estudiantes/{id}/libreta?anio=` | Apoderado | HU-69: notas del año (sin `anio`, el más reciente) y libreta en PDF. |
 
-Cada fila de `GET /items/{itemId}/calificaciones` trae `modificaciones`, `noEvaluado`, `motivoNoEvaluado` y `estado` (`PENDIENTE`, `CALIFICADO` o `NO_EVALUADO`); cada periodo de `GET /cursos` trae `modificacionHabilitada` (HU-60). El historial trae `noEvaluadoAnterior` y `noEvaluadoNuevo`. En HU-63 cada celda trae `pendientes`; en HU-64, `pendientes` y `sinNotas`.
+Cada fila de `GET /items/{itemId}/calificaciones` trae `modificaciones`, `noEvaluado`, `motivoNoEvaluado` y `estado` (`PENDIENTE`, `CALIFICADO` o `NO_EVALUADO`); cada periodo de `GET /cursos` trae `modificacionHabilitada` (HU-60). El historial trae `noEvaluadoAnterior` y `noEvaluadoNuevo`. En HU-63 cada celda trae `pendientes`. En HU-64 cada distribución trae `calificaciones` (las completas, base de los porcentajes) y `porCompletar`; el reporte trae `sinCalcular` (grado y competencia) y todas las áreas, también las que aún no tienen calificaciones.
 
 Las columnas del consolidado múltiple incluyen `competenciaId`, `competencia` y `promedio` para agruparlas en pantalla. Sus claves combinan competencia e ítem y el promedio general usa `resultado_general`; el nivel de logro de cada resultado se devuelve con el sufijo `_estado` (por ejemplo, «A · Logro esperado»). En la nota de la competencia el campo se llama `logro`. En CSV, cada encabezado de ítem o promedio de competencia incluye el nombre de la competencia para distinguir los ítems compartidos. El backend rechaza competencias ajenas al plan e ítems ajenos a la selección. La selección múltiple no requirió tablas ni migraciones adicionales; V15 corresponde al cambio de pesos opcionales.
 

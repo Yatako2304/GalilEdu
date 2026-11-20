@@ -32,14 +32,26 @@ const celda = (
   porcentajeLogro: conNota ? Math.round((logroEsperado * 100) / conNota) : null,
 });
 
-const distribucion = (ad: number, a: number, b: number, c: number) => ({
-  ad,
-  a,
-  b,
-  c,
-  pendientes: 3,
-  porcentajeLogro: Math.round(((ad + a) * 100) / (ad + a + b + c)),
-});
+const distribucion = (
+  ad: number,
+  a: number,
+  b: number,
+  c: number,
+  porCompletar = 0,
+) => {
+  const calificaciones = ad + a + b + c;
+  return {
+    calificaciones,
+    ad,
+    a,
+    b,
+    c,
+    porCompletar,
+    porcentajeLogro: calificaciones
+      ? Math.round(((ad + a) * 100) / calificaciones)
+      : null,
+  };
+};
 
 const preparar = () => {
   const peticiones: URL[] = [];
@@ -153,18 +165,27 @@ const preparar = () => {
             grado: '1.° de secundaria',
             seccion: 'A',
             estudiantes: 3,
-            distribucion: distribucion(1, 2, 1, 0),
+            distribucion: distribucion(1, 2, 1, 0, 2),
           },
           {
             gradoCodigo: 'SEC-1',
             grado: '1.° de secundaria',
             seccion: null,
             estudiantes: 3,
-            distribucion: distribucion(1, 2, 1, 0),
+            distribucion: distribucion(1, 2, 1, 0, 2),
           },
         ],
-        areas: [{ area: 'Matemática', distribucion: distribucion(1, 2, 1, 0) }],
-        total: distribucion(1, 2, 1, 0),
+        areas: [
+          { area: 'Matemática', distribucion: distribucion(1, 2, 1, 0, 2) },
+          { area: 'Comunicación', distribucion: distribucion(0, 0, 0, 0) },
+        ],
+        total: distribucion(1, 2, 1, 0, 2),
+        sinCalcular: [
+          {
+            grado: '2.° de secundaria',
+            competencia: 'Resuelve problemas de forma',
+          },
+        ],
       }),
     ),
   );
@@ -208,20 +229,52 @@ test('al elegir un curso pide su aporte y lo aclara', async () => {
   expect(peticiones.at(-1)?.searchParams.has('periodoId')).toBe(false);
 });
 
-test('el reporte institucional resume los niveles por sección, grado y área', async () => {
+test('el reporte institucional muestra porcentajes por nivel, por grado, sección y área', async () => {
   preparar();
   await renderReportes(['grado', 'institucional']);
   await screen.findByRole('table');
 
   await userEvent.click(screen.getByRole('tab', { name: 'Institucional' }));
 
+  const porGrado = within(
+    await screen.findByRole('table', {
+      name: 'Resultados por grado y sección',
+    }),
+  );
+  const seccion = porGrado.getByText('Sección A').closest('tr')!;
+  // 4 calificaciones: AD 1 (25 %), A 2 (50 %), B 1 (25 %), C 0; A o AD = 75 %.
+  expect(within(seccion).getByText('4')).toBeInTheDocument();
+  expect(within(seccion).getByText('+2 por completar')).toBeInTheDocument();
+  expect(within(seccion).getByText('50 %')).toBeInTheDocument();
+  expect(within(seccion).getByText('75 %')).toBeInTheDocument();
   expect(
-    await screen.findByText('1.° de secundaria · Sección A'),
+    within(seccion).getByRole('img', {
+      name: 'AD: 25 % (1), A: 50 % (2), B: 25 % (1), C: 0 % (0)',
+    }),
   ).toBeInTheDocument();
-  expect(screen.getByText('1.° de secundaria (total)')).toBeInTheDocument();
-  expect(screen.getByText('Todo el colegio')).toBeInTheDocument();
-  expect(screen.getAllByText('75 %').length).toBeGreaterThan(0);
-  expect(screen.getByText('Por área')).toBeInTheDocument();
+  expect(porGrado.getByText('1.° de secundaria')).toBeInTheDocument();
+  expect(porGrado.getByText('Todo el colegio')).toBeInTheDocument();
+
+  // Ya no hay columnas «Pendientes» ni «Sin notas».
+  expect(screen.queryByText('Sin notas')).not.toBeInTheDocument();
+  expect(screen.queryByText('Pendientes')).not.toBeInTheDocument();
+
+  // Lo que no se cuenta se explica aparte.
+  expect(
+    screen.getByText('2 calificaciones por completar no se cuentan todavía'),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(/2\.° de secundaria · Resuelve problemas de forma/),
+  ).toBeInTheDocument();
+
+  const porArea = within(
+    screen.getByRole('table', { name: 'Resultados por área' }),
+  );
+  expect(porArea.getByText('Matemática')).toBeInTheDocument();
+  expect(porArea.queryByText('Comunicación')).not.toBeInTheDocument();
+  expect(
+    screen.getByText('Aún sin calificaciones en este periodo: Comunicación.'),
+  ).toBeInTheDocument();
 });
 
 test('el coordinador abre una sección y ve la nota de cada estudiante, con su libreta', async () => {
