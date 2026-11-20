@@ -23,6 +23,7 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.Impedimento;
 import com.galiledu.matricula.aplicacion.DtosMatricula.MatriculaActual;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PagoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PeriodoMatricula;
+import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.HijoFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.MatriculaFila;
@@ -78,7 +79,9 @@ public class ServicioEstadoMatricula {
 		MatriculaActual matricula = periodoFila.flatMap(p -> consultas.matricula(estudianteId, p.anioEscolarId())
 				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), seccionVisible(m), m.codigo(),
 						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()),
-						m.confirmadoEn(), m.extemporanea())))
+						m.confirmadoEn(), m.extemporanea(),
+						SeccionMatricula.asignada(m.estado(), m.seccionId(), m.seccionNombre(), m.seccion()),
+						SeccionMatricula.seleccionada(m.estado(), m.seccionId(), m.seccionNombre(), m.seccion()))))
 				.orElse(null);
 		boolean extemporanea = matricula != null && matricula.extemporanea();
 		if (periodo == null) {
