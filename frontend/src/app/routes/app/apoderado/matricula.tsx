@@ -67,8 +67,11 @@ const ApoderadoMatriculaRoute = () => {
         isLoading={hijos.isLoading || estado.isLoading}
         onElegir={setElegido}
         pagoMatricula={
-          estado.data?.pagoMatricula ? (
-            <PagoMatriculaApoderado pago={estado.data.pagoMatricula} />
+          estado.data ? (
+            <PagoMatriculaApoderado
+              pago={estado.data.pagoMatricula ?? null}
+              codigoMatricula={estado.data.matricula?.codigo}
+            />
           ) : undefined
         }
       />

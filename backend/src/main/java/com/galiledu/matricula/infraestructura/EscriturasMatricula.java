@@ -55,6 +55,12 @@ public class EscriturasMatricula {
 				.params(matriculaId, documentoRequeridoId, archivo.nombre(), archivo.tipoMime(),
 						archivo.contenido().length, archivo.contenido(), subidoPor)
 				.update();
+		tocar(matriculaId);
+	}
+
+	/** Marca la matrícula como tocada ahora: el listado del periodo se ordena por esta actividad reciente. */
+	private void tocar(UUID matriculaId) {
+		jdbc.sql("UPDATE matricula.matricula SET actualizado_en = now() WHERE id = ?").param(matriculaId).update();
 	}
 
 	/**
@@ -75,13 +81,18 @@ public class EscriturasMatricula {
 				.params(matriculaId, documentoRequeridoId, archivo.nombre(), archivo.tipoMime(),
 						archivo.contenido().length, archivo.contenido(), subidoPor)
 				.update();
+		tocar(matriculaId);
 	}
 
 	/** HU-72: quita el archivo de un documento del expediente. Devuelve false si no había archivo. */
 	public boolean eliminarDocumento(UUID matriculaId, UUID documentoRequeridoId) {
-		return jdbc.sql("""
+		boolean habia = jdbc.sql("""
 				DELETE FROM matricula.documento_matricula WHERE matricula_id = ? AND documento_requerido_id = ?""")
 				.params(matriculaId, documentoRequeridoId).update() > 0;
+		if (habia) {
+			tocar(matriculaId);
+		}
+		return habia;
 	}
 
 	/** Pasa de SECCION_RESERVADA a EN_VALIDACION: los documentos quedan completos y el colegio debe revisarlos. */
@@ -111,6 +122,7 @@ public class EscriturasMatricula {
 				SET estado = 'OBSERVADO', observacion = ?, revisado_por = ?, revisado_en = now()
 				WHERE matricula_id = ? AND documento_requerido_id = ?""")
 				.params(observacion, revisadoPor, matriculaId, documentoRequeridoId).update();
+		tocar(matriculaId);
 	}
 
 	/** Devuelve la matrícula al apoderado (EN_VALIDACION → SECCION_RESERVADA) para que corrija lo observado. */

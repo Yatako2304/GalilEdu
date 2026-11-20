@@ -24,15 +24,18 @@ public final class DtosMatricula {
 			boolean puedeContinuar,
 			List<Impedimento> impedimentos,
 			DeudaFamiliar deuda,
-			PagoMatricula pagoMatricula) {
+			PagoMatricula pagoMatricula,
+			List<CambioSeccionRegistrado> cambiosSeccion) {
 	}
 
 	/**
 	 * HU-31 · Figma "HU-31 Derivación a pagos" > "Pago de matrícula": la cuota de matrícula y si el apoderado puede
-	 * pagarla ahora. {@code motivo} explica por qué no, cuando {@code puedePagar} es false. Null si aún no hay cuota.
+	 * pagarla ahora, con el mismo detalle que ve el colegio (descuento y fecha de pago incluidos). {@code motivo}
+	 * explica por qué no, cuando {@code puedePagar} es false. Null si aún no hay cuota.
 	 */
-	public record PagoMatricula(UUID cuotaId, String concepto, BigDecimal monto, LocalDate fechaVencimiento,
-			String estado, String responsable, boolean puedePagar, String motivo) {
+	public record PagoMatricula(UUID cuotaId, String concepto, BigDecimal monto, BigDecimal montoDescuento,
+			LocalDate fechaVencimiento, String estado, LocalDate fechaPago, String responsable, boolean puedePagar,
+			String motivo) {
 	}
 
 	public record EstudianteMatricula(UUID id, String nombre, String grado) {
@@ -87,9 +90,12 @@ public final class DtosMatricula {
 	public record IndicadoresPeriodo(int estudiantes, int matriculados, int enProceso, int requierenAccion) {
 	}
 
-	/** Fila de la tabla de A3. {@code seccion} es null si aún no se asigna. */
+	/**
+	 * Fila de la tabla de A3. {@code seccion} es null si aún no se asigna; {@code actualizadoEn}: su última actividad.
+	 */
 	public record FilaMatriculaPeriodo(UUID id, UUID estudianteId, String nombre, String documento,
-			String gradoCodigo, String grado, String seccion, String estado, String codigo, String tipo) {
+			String gradoCodigo, String grado, String seccion, String estado, String codigo, String tipo,
+			OffsetDateTime actualizadoEn) {
 	}
 
 	/** Resultado del buscador de "Nueva matrícula": estudiantes inscritos para el año del periodo y sin matrícula. */

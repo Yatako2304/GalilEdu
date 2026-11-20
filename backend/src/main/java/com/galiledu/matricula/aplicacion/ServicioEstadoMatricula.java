@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.configuracion.aplicacion.ServicioPeriodoMatricula;
 import com.galiledu.configuracion.dominio.EstadoVisiblePeriodoMatricula;
+import com.galiledu.matricula.aplicacion.DtosMatricula.CambioSeccionRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.CuotaDeuda;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DeudaFamiliar;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstadoMatriculaApoderado;
@@ -120,7 +121,22 @@ public class ServicioEstadoMatricula {
 						.map(c -> pagoMatricula(c, matricula, periodo, deuda, hijo))
 						.orElse(null);
 		return new EstadoMatriculaApoderado(new EstudianteMatricula(hijo.estudianteId(), hijo.nombre(), hijo.grado()),
-				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago);
+				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago, cambiosDeSeccion(matricula));
+	}
+
+	/**
+	 * Cambios de sección de la matrícula, como los ve el colegio. Solo con la matrícula confirmada: hasta entonces el
+	 * apoderado ve "Por definir" y no debe enterarse de la sección. No se muestra quién hizo el cambio.
+	 */
+	private List<CambioSeccionRegistrado> cambiosDeSeccion(MatriculaActual matricula) {
+		if (matricula == null || !"MATRICULADO".equals(matricula.estado())) {
+			return List.of();
+		}
+		return consultas.cambiosDeSeccion(matricula.id()).stream()
+				.map(c -> new CambioSeccionRegistrado(c.id(), c.origen(), c.destino(),
+						MotivoCambioSeccion.etiquetaDe(c.motivo()), MotivoCambioSeccion.observacionDe(c.motivo()), null,
+						c.realizadoEn()))
+				.toList();
 	}
 
 	/**
@@ -144,8 +160,8 @@ public class ServicioEstadoMatricula {
 		} else if (deuda.cuotas().stream().anyMatch(q -> q.estudianteId().equals(hijo.estudianteId()))) {
 			motivo = "Primero paga las pensiones vencidas de " + hijo.nombre() + ".";
 		}
-		return new PagoMatricula(c.cuotaId(), c.concepto(), c.monto(), c.fechaVencimiento(), c.estado().name(),
-				c.responsable(), motivo == null, motivo);
+		return new PagoMatricula(c.cuotaId(), c.concepto(), c.monto(), c.montoDescuento(), c.fechaVencimiento(),
+				c.estado().name(), c.fechaPago(), c.responsable(), motivo == null, motivo);
 	}
 
 	/** Mismo criterio que "Nueva matrícula" del colegio: el año académico de la inscripción es el del periodo. */

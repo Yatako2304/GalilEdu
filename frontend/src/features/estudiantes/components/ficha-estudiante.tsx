@@ -54,14 +54,20 @@ export const FichaEstudiante = ({
   id,
   aviso,
   onCerrarAviso,
+  seccion,
 }: {
   id: string;
   aviso?: string | null;
   onCerrarAviso?: () => void;
+  /** Tarjeta de la sección y su cambio (matrícula): la arma la ruta, un feature no importa de otro. */
+  seccion?: React.ReactNode;
 }) => {
   const ficha = useFichaEstudiante(id);
-  const [pestana, setPestana] =
-    React.useState<(typeof PESTANAS)[number]>('Familia');
+  // Tras registrar una inscripción (hay aviso) se abre en Familia, como en Figma;
+  // desde "Ver" en la lista se abre en Datos personales.
+  const [pestana, setPestana] = React.useState<(typeof PESTANAS)[number]>(
+    aviso ? 'Familia' : 'Datos personales',
+  );
 
   if (ficha.isLoading) {
     return (
@@ -116,53 +122,56 @@ export const FichaEstudiante = ({
       />
 
       {pestana === 'Datos personales' && (
-        <Card className="p-6">
-          <Datos
-            filas={[
-              [
-                'Apellidos y nombres',
-                `${p.apellidoPaterno} ${p.apellidoMaterno ?? ''}, ${p.nombres}`,
-              ],
-              [
-                'Documento',
-                `${p.tipoDocumento === 'DNI' ? 'DNI' : 'Carné de extranjería'} ${p.numeroDocumento}`,
-              ],
-              [
-                'Fecha de nacimiento',
-                p.fechaNacimiento ? formatDay(p.fechaNacimiento) : null,
-              ],
-              [
-                'Sexo',
-                p.sexo === 'MASCULINO'
-                  ? 'Masculino'
-                  : p.sexo === 'FEMENINO'
-                    ? 'Femenino'
-                    : null,
-              ],
-              ['Nacionalidad', p.nacionalidad],
-              [
-                'Lugar de nacimiento',
+        <>
+          <Card className="p-6">
+            <Datos
+              filas={[
                 [
-                  f.datos.distritoNacimiento,
-                  f.datos.provinciaNacimiento,
-                  f.datos.departamentoNacimiento,
-                  f.datos.paisNacimiento,
-                ]
-                  .filter(Boolean)
-                  .join(', '),
-              ],
-              [
-                'Dirección',
-                [p.direccion, p.distrito].filter(Boolean).join(', '),
-              ],
-              ['Referencia', f.datos.referenciaDomicilio],
-              ['Lengua materna', f.datos.lenguaMaterna],
-              ['Colegio de procedencia', f.datos.colegioProcedencia],
-              ['Grado', `${f.grado} · ${f.anioAcademico}`],
-              ['Forma de ingreso', f.datos.formaIngreso],
-            ]}
-          />
-        </Card>
+                  'Apellidos y nombres',
+                  `${p.apellidoPaterno} ${p.apellidoMaterno ?? ''}, ${p.nombres}`,
+                ],
+                [
+                  'Documento',
+                  `${p.tipoDocumento === 'DNI' ? 'DNI' : 'Carné de extranjería'} ${p.numeroDocumento}`,
+                ],
+                [
+                  'Fecha de nacimiento',
+                  p.fechaNacimiento ? formatDay(p.fechaNacimiento) : null,
+                ],
+                [
+                  'Sexo',
+                  p.sexo === 'MASCULINO'
+                    ? 'Masculino'
+                    : p.sexo === 'FEMENINO'
+                      ? 'Femenino'
+                      : null,
+                ],
+                ['Nacionalidad', p.nacionalidad],
+                [
+                  'Lugar de nacimiento',
+                  [
+                    f.datos.distritoNacimiento,
+                    f.datos.provinciaNacimiento,
+                    f.datos.departamentoNacimiento,
+                    f.datos.paisNacimiento,
+                  ]
+                    .filter(Boolean)
+                    .join(', '),
+                ],
+                [
+                  'Dirección',
+                  [p.direccion, p.distrito].filter(Boolean).join(', '),
+                ],
+                ['Referencia', f.datos.referenciaDomicilio],
+                ['Lengua materna', f.datos.lenguaMaterna],
+                ['Colegio de procedencia', f.datos.colegioProcedencia],
+                ['Grado', `${f.grado} · ${f.anioAcademico}`],
+                ['Forma de ingreso', f.datos.formaIngreso],
+              ]}
+            />
+          </Card>
+          {seccion}
+        </>
       )}
 
       {pestana === 'Ficha médica' && (

@@ -87,7 +87,7 @@ public class ServicioMatriculasPeriodo {
 				vacioANulo(gradoCodigo), vacioANulo(estado), orden, descendente, numero, tam);
 		return Pagina.de(new PageImpl<>(filas.filas(), PageRequest.of(numero - 1, tam), filas.total()),
 				f -> new FilaMatriculaPeriodo(f.id(), f.estudianteId(), f.nombre(), f.documento(), f.gradoCodigo(),
-						f.grado(), f.seccion(), f.estado(), f.codigo(), f.tipo()));
+						f.grado(), f.seccion(), f.estado(), f.codigo(), f.tipo(), f.actualizadoEn()));
 	}
 
 	/** Buscador de "Nueva matrícula": inscritos para el año del periodo que todavía no tienen matrícula. */

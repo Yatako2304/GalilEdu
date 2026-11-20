@@ -386,6 +386,28 @@ test('valida la matrícula tras confirmar "¿Aprobar documentación?"', async ()
   await waitFor(() => expect(llamadas).toBe(1));
 });
 
+test('un doble clic en "Aprobar" envía una sola validación', async () => {
+  let llamadas = 0;
+  server.use(
+    http.post(`${API}/validar`, async () => {
+      llamadas += 1;
+      await new Promise((r) => setTimeout(r, 100));
+      return HttpResponse.json(
+        detalle({ estado: 'PENDIENTE_PAGO', pasoActual: 3 }),
+      );
+    }),
+  );
+  await renderApp(<DetalleMatricula matricula={enValidacion()} />);
+
+  await userEvent.click(screen.getByRole('button', { name: 'Validar' }));
+  await screen.findByText('¿Aprobar documentación?');
+  await userEvent.dblClick(screen.getByRole('button', { name: 'Aprobar' }));
+
+  await waitFor(() => expect(llamadas).toBe(1));
+  await new Promise((r) => setTimeout(r, 200));
+  expect(llamadas).toBe(1);
+});
+
 test('Validar queda deshabilitado mientras haya un documento observado', async () => {
   await renderApp(
     <DetalleMatricula matricula={enValidacion({ puedeValidar: false })} />,

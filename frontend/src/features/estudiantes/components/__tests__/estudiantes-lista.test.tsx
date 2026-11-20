@@ -14,7 +14,7 @@ import { EstudianteResumen, Pagina } from '@/types/api';
 
 import { EstudiantesLista } from '../estudiantes-lista';
 
-// Figma > Estudiantes > listado: los tres puntos de cada fila (Ver, Inactivar o Reactivar, Eliminar).
+// Figma > Estudiantes > listado: los tres puntos de cada fila (Ver, Retirar o Reactivar, Eliminar).
 
 const estudiantes: EstudianteResumen[] = [
   {
@@ -79,7 +79,7 @@ const renderLista = async () =>
     },
   );
 
-test('el menú de un estudiante activo ofrece Ver, Editar, Inactivar y Eliminar', async () => {
+test('el menú de un estudiante activo ofrece Ver, Editar, Retirar y Eliminar', async () => {
   await renderLista();
   await abrirMenu('Mateo Alonso Paredes');
 
@@ -88,7 +88,7 @@ test('el menú de un estudiante activo ofrece Ver, Editar, Inactivar y Eliminar'
   ).toBeInTheDocument();
   expect(screen.getByRole('menuitem', { name: /editar/i })).toBeInTheDocument();
   expect(
-    screen.getByRole('menuitem', { name: /inactivar/i }),
+    screen.getByRole('menuitem', { name: /retirar/i }),
   ).toBeInTheDocument();
   expect(
     screen.getByRole('menuitem', { name: /eliminar/i }),
@@ -98,7 +98,7 @@ test('el menú de un estudiante activo ofrece Ver, Editar, Inactivar y Eliminar'
   ).not.toBeInTheDocument();
 });
 
-test('el menú de un estudiante retirado ofrece Reactivar en vez de Inactivar', async () => {
+test('el menú de un estudiante retirado ofrece Reactivar en vez de Retirar', async () => {
   await renderLista();
   await abrirMenu('Sofía Paredes Rojas');
 
@@ -106,20 +106,20 @@ test('el menú de un estudiante retirado ofrece Reactivar en vez de Inactivar', 
     await screen.findByRole('menuitem', { name: /reactivar/i }),
   ).toBeInTheDocument();
   expect(
-    screen.queryByRole('menuitem', { name: /inactivar/i }),
+    screen.queryByRole('menuitem', { name: /retirar/i }),
   ).not.toBeInTheDocument();
 });
 
-test('Inactivar pide confirmación y llama a retirar', async () => {
+test('Retirar pide confirmación y llama a retirar', async () => {
   await renderLista();
   await abrirMenu('Mateo Alonso Paredes');
   await userEvent.click(
-    await screen.findByRole('menuitem', { name: /inactivar/i }),
+    await screen.findByRole('menuitem', { name: /retirar/i }),
   );
 
   const dialogo = within(await screen.findByRole('dialog'));
   expect(
-    dialogo.getByText('¿Inactivar a Mateo Alonso Paredes?'),
+    dialogo.getByText('¿Retirar a Mateo Alonso Paredes?'),
   ).toBeInTheDocument();
   expect(llamadas).toEqual([]);
 
