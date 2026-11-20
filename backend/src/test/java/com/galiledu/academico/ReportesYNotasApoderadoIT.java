@@ -136,13 +136,30 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 	}
 
 	@Test
+	void elCoordinadorVeLosItemsQueCalificoElDocenteSinPoderModificarlos() throws Exception {
+		String ana = datos.matriculaDe("Ana Lucía");
+		String aritmetica = "$.cursos[?(@.curso == 'Aritmética')].competencias[?(@.competencia == '%s')]"
+				.formatted(DatosNotasPrueba.CANTIDAD);
+		mvc.perform(conToken(get("/calificaciones/reportes/matriculas/" + ana + "/notas"), token(COORDINADOR)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.estudiante").value("Ana Lucía García López"))
+				.andExpect(jsonPath("$.seccion").value("A"))
+				.andExpect(jsonPath(aritmetica + ".periodos[2].items[0].item").value(contains("Examen de cantidad")))
+				.andExpect(jsonPath(aritmetica + ".periodos[2].items[0].nota").value(contains("16")))
+				.andExpect(jsonPath(aritmetica + ".periodos[2].aporte.nota").value(contains("16")));
+		mvc.perform(conToken(get("/calificaciones/reportes/matriculas/" + java.util.UUID.randomUUID() + "/notas"),
+				token(COORDINADOR))).andExpect(status().isNotFound());
+	}
+
+	@Test
 	void soloElCoordinadorVeElDetalleDeUnaSeccion() throws Exception {
 		String seccion = "/calificaciones/reportes/secciones/" + datos.seccionA() + "/notas";
-		String libreta = "/calificaciones/reportes/matriculas/" + datos.matriculaDe("Ana Lucía") + "/libreta";
-		for (String usuario : new String[]{ADMIN, DOCENTE, PERSONAL_ADMINISTRATIVO}) {
+		String matricula = "/calificaciones/reportes/matriculas/" + datos.matriculaDe("Ana Lucía");
+		for (String usuario : new String[]{ADMIN, DOCENTE, PERSONAL_ADMINISTRATIVO, APODERADO}) {
 			String token = token(usuario);
 			mvc.perform(conToken(get(seccion), token)).andExpect(status().isForbidden());
-			mvc.perform(conToken(get(libreta), token)).andExpect(status().isForbidden());
+			mvc.perform(conToken(get(matricula + "/libreta"), token)).andExpect(status().isForbidden());
+			mvc.perform(conToken(get(matricula + "/notas"), token)).andExpect(status().isForbidden());
 		}
 		mvc.perform(conToken(get("/calificaciones/reportes/secciones/" + java.util.UUID.randomUUID() + "/notas"),
 				token(COORDINADOR))).andExpect(status().isNotFound());

@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.galiledu.academico.aplicacion.DtosReportesNotas.AnioReporte;
+import com.galiledu.academico.aplicacion.DtosReportesNotas.NotasApoderado;
 import com.galiledu.academico.aplicacion.DtosReportesNotas.NotasSeccion;
 import com.galiledu.academico.aplicacion.DtosReportesNotas.ReporteGrado;
 import com.galiledu.academico.aplicacion.DtosReportesNotas.ReporteInstitucional;
@@ -63,6 +64,16 @@ public class ReporteNotasController {
 	@PreAuthorize("hasRole('COORDINADOR')")
 	public NotasSeccion notasSeccion(@PathVariable UUID seccionId) {
 		return servicio.notasSeccion(seccionId);
+	}
+
+	/**
+	 * Notas de un estudiante para el Coordinador: lo mismo que ve el apoderado (cursos con sus ítems calificados por
+	 * periodo y la nota de cada competencia). Solo lectura: las notas las registra y modifica el docente.
+	 */
+	@GetMapping("/matriculas/{matriculaId}/notas")
+	@PreAuthorize("hasRole('COORDINADOR')")
+	public NotasApoderado notasEstudiante(@PathVariable UUID matriculaId) {
+		return apoderado.notasMatricula(matriculaId);
 	}
 
 	/** Libreta de un estudiante (la misma del apoderado) para el Coordinador. */
