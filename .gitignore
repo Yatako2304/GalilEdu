@@ -43,3 +43,6 @@ application-secrets.yaml
 Thumbs.db
 Desktop.ini
 
+
+# Resultados de la última ejecución de pruebas (se generan con node docs/generar-pruebas.mjs --resultados)
+docs/pruebas-resultados.md

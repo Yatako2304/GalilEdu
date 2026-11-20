@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
  */
 class SaludIT extends PruebaIntegracion {
 
+	@DisplayName("El chequeo de salud responde up sin autenticación")
 	@Test
 	void elChequeoDeSaludRespondeUpSinAutenticacion() throws Exception {
 		mvc.perform(get("/actuator/health"))

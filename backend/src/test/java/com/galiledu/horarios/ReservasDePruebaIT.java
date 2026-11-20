@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -27,6 +28,7 @@ class ReservasDePruebaIT extends PruebaReservas {
 	/** Las seis del bloque de datos de prueba, por su prefijo de id. */
 	private static final String SEMBRADAS = "id::text LIKE '71000000-%'";
 
+	@DisplayName("Hay tres futuras dos pasadas y una cancelada")
 	@Test
 	void hayTresFuturasDosPasadasYUnaCancelada() {
 		assertThat(contar("SELECT count(*) FROM horarios.reserva_ambiente WHERE " + SEMBRADAS)).isEqualTo(6);
@@ -38,6 +40,7 @@ class ReservasDePruebaIT extends PruebaReservas {
 				+ " AND estado = 'CANCELADA'")).isEqualTo(1);
 	}
 
+	@DisplayName("Una futura cae está semana y otra este mes")
 	@Test
 	void unaFuturaCaeEstaSemanaYOtraEsteMes() {
 		LocalDate lunes = LocalDate.of(2026, 11, 16);
@@ -50,6 +53,7 @@ class ReservasDePruebaIT extends PruebaReservas {
 				.isGreaterThanOrEqualTo(1);
 	}
 
+	@DisplayName("Regla1 el ambiente es un espacio especial activo")
 	@Test
 	void regla1ElAmbienteEsUnEspacioEspecialActivo() {
 		assertThat(contar("""
@@ -59,6 +63,7 @@ class ReservasDePruebaIT extends PruebaReservas {
 				.isZero();
 	}
 
+	@DisplayName("Regla2 las secciones son del2026 y caben en el aforo")
 	@Test
 	void regla2LasSeccionesSonDel2026YCabenEnElAforo() {
 		assertThat(contar("""
@@ -76,6 +81,7 @@ class ReservasDePruebaIT extends PruebaReservas {
 				.isZero();
 	}
 
+	@DisplayName("Regla3 la fecha es lectiva dentro de un período y la jornada de la sección")
 	@Test
 	void regla3LaFechaEsLectivaDentroDeUnPeriodoYLaJornadaDeLaSeccion() {
 		// Fecha: día lectivo de la estructura principal del nivel de la sección y dentro de algún periodo del año.
@@ -112,6 +118,7 @@ class ReservasDePruebaIT extends PruebaReservas {
 				.isZero();
 	}
 
+	@DisplayName("Reglas4_7by8 sin superposiciones entre las activas por ambiente responsable y sección")
 	@Test
 	void reglas4_7by8SinSuperposicionesEntreLasActivasPorAmbienteResponsableYSeccion() {
 		for (String clave : List.of("ambiente_id", "responsable_id", "seccion_id")) {
@@ -123,6 +130,7 @@ class ReservasDePruebaIT extends PruebaReservas {
 		}
 	}
 
+	@DisplayName("El responsable es María y el coordinador quien las registro")
 	@Test
 	void elResponsableEsMariaYElCoordinadorQuienLasRegistro() {
 		UUID maria = usuarioPorNombre(DOCENTE);

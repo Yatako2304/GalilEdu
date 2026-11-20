@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -47,16 +48,19 @@ class MatriculasDeSeccionesSqlIT extends PruebaIntegracion {
 				.update();
 	}
 
+	@DisplayName("Una sección sin matrículas ni cambios no tiene nada")
 	@Test
 	void unaSeccionSinMatriculasNiCambiosNoTieneNada() {
 		assertThat(matriculasDeSecciones.tieneMatriculasOCambios(seccionId("SEC-2", "B"))).isFalse();
 	}
 
+	@DisplayName("Una sección con una matrícula matriculada tiene matrículas")
 	@Test
 	void unaSeccionConUnaMatriculaMatriculadaTieneMatriculas() {
 		assertThat(matriculasDeSecciones.tieneMatriculasOCambios(seccionId("SEC-4", "A"))).isTrue();
 	}
 
+	@DisplayName("Una matrícula retirada o anulada sigue contando para el borrado")
 	@ParameterizedTest
 	@ValueSource(strings = {"RETIRADO", "ANULADA"})
 	void unaMatriculaRetiradaOAnuladaSigueContandoParaElBorrado(String estado) {
@@ -69,6 +73,7 @@ class MatriculasDeSeccionesSqlIT extends PruebaIntegracion {
 		assertThat(matriculasDeSecciones.tieneMatriculasOCambios(seccionId("SEC-4", "A"))).isTrue();
 	}
 
+	@DisplayName("Un cambio de sección cuenta para la sección de origen")
 	@Test
 	void unCambioDeSeccionCuentaParaLaSeccionDeOrigen() {
 		UUID origen = seccionId("SEC-2", "B");
@@ -77,6 +82,7 @@ class MatriculasDeSeccionesSqlIT extends PruebaIntegracion {
 		assertThat(matriculasDeSecciones.tieneMatriculasOCambios(origen)).isTrue();
 	}
 
+	@DisplayName("Un cambio de sección cuenta para la sección de destino")
 	@Test
 	void unCambioDeSeccionCuentaParaLaSeccionDeDestino() {
 		UUID destino = seccionId("SEC-3", "B");
@@ -85,6 +91,7 @@ class MatriculasDeSeccionesSqlIT extends PruebaIntegracion {
 		assertThat(matriculasDeSecciones.tieneMatriculasOCambios(destino)).isTrue();
 	}
 
+	@DisplayName("Una sección que no participa en el cambio no se ve afectada")
 	@Test
 	void unaSeccionQueNoParticipaEnElCambioNoSeVeAfectada() {
 		registrarCambioDeSeccion(seccionId("SEC-2", "B"), seccionId("SEC-3", "B"));

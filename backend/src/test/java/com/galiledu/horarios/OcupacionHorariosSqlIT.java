@@ -6,6 +6,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -21,6 +22,7 @@ class OcupacionHorariosSqlIT extends PruebaHorarios {
 	@Autowired
 	private OcupacionHorarios ocupacion;
 
+	@DisplayName("Devuelve los bloques de las otras secciones con las horas de su estructura")
 	@Test
 	void devuelveLosBloquesDeLasOtrasSeccionesConLasHorasDeSuEstructura() {
 		UUID secundaria = estructura("EH-SEC-27", "SECUNDARIA", true, 6, "08:00");
@@ -81,6 +83,7 @@ class OcupacionHorariosSqlIT extends PruebaHorarios {
 		assertThat(deLaPrimaria.seccion()).isEqualTo("1.° T2");
 	}
 
+	@DisplayName("Excluye la sección indicada y no mira otros años")
 	@Test
 	void excluyeLaSeccionIndicadaYNoMiraOtrosAnios() {
 		UUID secundaria = estructura("EH-SEC-27", "SECUNDARIA", true, 6);

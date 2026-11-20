@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.PruebaIntegracion;
@@ -37,6 +38,7 @@ class EscalaCalificacionIT extends PruebaIntegracion {
 				.formatted(desde, aHasta + 1, bHasta + 1, aHasta, cHasta + 1, bHasta, cHasta);
 	}
 
+	@DisplayName("La vigente trae sus niveles de mayor a menor")
 	@Test
 	void laVigenteTraeSusNivelesDeMayorAMenor() throws Exception {
 		mvc.perform(conToken(get("/tablas-conversion/vigente"), personal))
@@ -50,6 +52,7 @@ class EscalaCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.niveles[3].significado").value("En inicio"));
 	}
 
+	@DisplayName("Una versión futura queda programada y aparece primero en la lista")
 	@Test
 	void unaVersionFuturaQuedaProgramadaYAparecePrimeroEnLaLista() throws Exception {
 		LocalDate futura = HOY.plusYears(5);
@@ -67,6 +70,7 @@ class EscalaCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[?(@.estado == 'VIGENTE')]").isNotEmpty());
 	}
 
+	@DisplayName("Una versión desde hoy pasa a ser la vigente")
 	@Test
 	void unaVersionDesdeHoyPasaASerLaVigente() throws Exception {
 		mvc.perform(conToken(post("/tablas-conversion"), personal, version(HOY, 10, 13, 17)))
@@ -76,6 +80,7 @@ class EscalaCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.vigenteDesde").value(HOY.toString()));
 	}
 
+	@DisplayName("Rechaza fechas pasadas y repetidas")
 	@Test
 	void rechazaFechasPasadasYRepetidas() throws Exception {
 		mvc.perform(conToken(post("/tablas-conversion"), personal, version(HOY.minusDays(1), 10, 13, 17)))
@@ -89,6 +94,7 @@ class EscalaCalificacionIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Rechaza rangos con vacios o cruces")
 	@Test
 	void rechazaRangosConVaciosOCruces() throws Exception {
 		mvc.perform(conToken(post("/tablas-conversion"), personal, """
@@ -101,6 +107,7 @@ class EscalaCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Falta cubrir de 14 a 14 antes de A."));
 	}
 
+	@DisplayName("Válida notas y fecha")
 	@Test
 	void validaNotasYFecha() throws Exception {
 		mvc.perform(conToken(post("/tablas-conversion"), personal, """
@@ -114,6 +121,7 @@ class EscalaCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Elige la fecha desde la que rige la versión."));
 	}
 
+	@DisplayName("Otros roles reciben403")
 	@Test
 	void otrosRolesReciben403() throws Exception {
 		mvc.perform(conToken(get("/tablas-conversion"), token(DOCENTE))).andExpect(status().isForbidden());

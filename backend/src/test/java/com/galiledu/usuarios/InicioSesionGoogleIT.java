@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -67,6 +68,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 				{"googleHabilitado":%s}""".formatted(habilitado)));
 	}
 
+	@DisplayName("Por defecto google está desactivado y el boton no se muestra")
 	@Test
 	void porDefectoGoogleEstaDesactivadoYElBotonNoSeMuestra() throws Exception {
 		mvc.perform(get("/auth/metodos")).andExpect(status().isOk())
@@ -77,6 +79,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.googleConfigurado").value(true));
 	}
 
+	@DisplayName("El administrador activa google y el boton aparece")
 	@Test
 	void elAdministradorActivaGoogleYElBotonAparece() throws Exception {
 		String admin = token(ADMIN);
@@ -94,6 +97,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 		mvc.perform(get("/auth/metodos")).andExpect(jsonPath("$.google").value(false));
 	}
 
+	@DisplayName("Solo el administrador cambia la configuración")
 	@Test
 	void soloElAdministradorCambiaLaConfiguracion() throws Exception {
 		configurar(token(PERSONAL_ADMINISTRATIVO), true).andExpect(status().isForbidden());
@@ -101,6 +105,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 		mvc.perform(get(RUTA_CONFIGURACION)).andExpect(status().isUnauthorized());
 	}
 
+	@DisplayName("Sin llaves de google no se puede activar pero si desactivar")
 	@Test
 	void sinLlavesDeGoogleNoSePuedeActivarPeroSiDesactivar() throws Exception {
 		when(google.configurado()).thenReturn(false);
@@ -116,6 +121,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 		entrarConGoogle("codigo").andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Con el mismo correo registrado entra con los permisos de su rol")
 	@Test
 	void conElMismoCorreoRegistradoEntraConLosPermisosDeSuRol() throws Exception {
 		habilitarGoogle(true);
@@ -130,6 +136,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 		mvc.perform(conToken(get(RUTA_CONFIGURACION), jwt)).andExpect(status().isOk());
 	}
 
+	@DisplayName("Con google desactivado no entra ni consulta a google")
 	@Test
 	void conGoogleDesactivadoNoEntraNiConsultaAGoogle() throws Exception {
 		entrarConGoogle("codigo-ok").andExpect(status().isForbidden())
@@ -138,6 +145,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 		verify(google, never()).cuentaDe(anyString());
 	}
 
+	@DisplayName("Un correo que no es de ningún usuario no entra")
 	@Test
 	void unCorreoQueNoEsDeNingunUsuarioNoEntra() throws Exception {
 		habilitarGoogle(true);
@@ -147,6 +155,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 						.value("No se encontró una cuenta de GalilEdu asociada a este correo de Google."));
 	}
 
+	@DisplayName("Un correo que google no verifico no entra")
 	@Test
 	void unCorreoQueGoogleNoVerificoNoEntra() throws Exception {
 		habilitarGoogle(true);
@@ -155,6 +164,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Google no ha verificado el correo de esta cuenta."));
 	}
 
+	@DisplayName("Una cuenta desactivada no entra con google")
 	@Test
 	void unaCuentaDesactivadaNoEntraConGoogle() throws Exception {
 		habilitarGoogle(true);
@@ -166,6 +176,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 						.value("Tu cuenta está desactivada. Comunícate con el administrador del colegio."));
 	}
 
+	@DisplayName("Una cuenta bloqueada por intentos fallidos tampoco entra con google")
 	@Test
 	void unaCuentaBloqueadaPorIntentosFallidosTampocoEntraConGoogle() throws Exception {
 		habilitarGoogle(true);
@@ -175,6 +186,7 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 		entrarConGoogle("codigo-ok").andExpect(status().isLocked());
 	}
 
+	@DisplayName("Si google rechaza el código no entra")
 	@Test
 	void siGoogleRechazaElCodigoNoEntra() throws Exception {
 		habilitarGoogle(true);
@@ -185,12 +197,14 @@ class InicioSesionGoogleIT extends PruebaIntegracion {
 						jsonPath("$.message").value("No se pudo verificar tu cuenta de Google. Inténtalo de nuevo."));
 	}
 
+	@DisplayName("Sin código responde400")
 	@Test
 	void sinCodigoResponde400() throws Exception {
 		habilitarGoogle(true);
 		entrarConGoogle("").andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Usuario y contraseña siguen funcionando con google activado")
 	@Test
 	void usuarioYContrasenaSiguenFuncionandoConGoogleActivado() throws Exception {
 		habilitarGoogle(true);

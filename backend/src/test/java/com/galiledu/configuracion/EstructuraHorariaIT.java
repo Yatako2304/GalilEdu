@@ -14,6 +14,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -124,6 +125,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- Listar y detalle ----------
 
+	@DisplayName("Lista las estructuras del año con sus indicadores")
 	@Test
 	void listaLasEstructurasDelAnioConSusIndicadores() throws Exception {
 		mvc.perform(conToken(get(rutaDelAnio(ANIO_2026)), personalAdministrativo))
@@ -147,6 +149,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructuras[1].horaSalida").value("14:50"));
 	}
 
+	@DisplayName("Un año planificado sin estructuras se marca modificable")
 	@Test
 	void unAnioPlanificadoSinEstructurasSeMarcaModificable() throws Exception {
 		mvc.perform(conToken(get(rutaDelAnio(ANIO_2027)), personalAdministrativo))
@@ -155,6 +158,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructuras", hasSize(0)));
 	}
 
+	@DisplayName("El detalle trae la jornada calculada fila por fila")
 	@Test
 	void elDetalleTraeLaJornadaCalculadaFilaPorFila() throws Exception {
 		mvc.perform(conToken(get(rutaEstructura(EH_PRI_26)), personalAdministrativo))
@@ -179,6 +183,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- Crear ----------
 
+	@DisplayName("Crea una estructura y la primera del nivel nace como principal")
 	@Test
 	void creaUnaEstructuraYLaPrimeraDelNivelNaceComoPrincipal() throws Exception {
 		mvc.perform(conToken(post(rutaDelAnio(ANIO_2027)), personalAdministrativo,
@@ -198,6 +203,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructuras", hasSize(1)));
 	}
 
+	@DisplayName("Marcar como principal al crear baja la anterior y avisa")
 	@Test
 	void marcarComoPrincipalAlCrearBajaLaAnteriorYAvisa() throws Exception {
 		crear(estructura("EH-A", "PRIMARIA", false));
@@ -215,6 +221,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructuras[?(@.codigo=='EH-PRI-27-2')].esPrincipal", contains(true)));
 	}
 
+	@DisplayName("La jornada puede terminar a las1800 exactas y no un minuto después")
 	@Test
 	void laJornadaPuedeTerminarALas1800ExactasYNoUnMinutoDespues() throws Exception {
 		String recesoDe15TrasElSegundo = "[{\"despuesDeBloque\":2,\"duracionMin\":15}]";
@@ -230,6 +237,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				recesoDe15TrasElSegundo), 400, "La jornada debe terminar como máximo a las 18:00.");
 	}
 
+	@DisplayName("Rechaza con su mensaje cada regla de forma del formulario")
 	@Test
 	void rechazaConSuMensajeCadaReglaDeFormaDelFormulario() throws Exception {
 		String receso = "[{\"despuesDeBloque\":%d,\"duracionMin\":%d}]";
@@ -254,6 +262,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 		exigeQueCrearDe(estructura("EH-A", "INICIAL", false), 400, "Elige el nivel: primaria o secundaria.");
 	}
 
+	@DisplayName("El código lo genera el backend y agrega sufijo si ya existe")
 	@Test
 	void elCodigoLoGeneraElBackendYAgregaSufijoSiYaExiste() throws Exception {
 		String[] esperados = {"EH-PRI-27", "EH-PRI-27-2", "EH-PRI-27-3"};
@@ -270,6 +279,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructura.codigo").value("EH-SEC-27"));
 	}
 
+	@DisplayName("Crear sin el campo código funciona")
 	@Test
 	void crearSinElCampoCodigoFunciona() throws Exception {
 		String cuerpo = estructura("x", "SECUNDARIA", false).replaceFirst("\"codigo\":\"x\",", "");
@@ -279,6 +289,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructura.codigo").value("EH-SEC-27"));
 	}
 
+	@DisplayName("La vista previa calcula la jornada del modal y no guarda nada")
 	@Test
 	void laVistaPreviaCalculaLaJornadaDelModalYNoGuardaNada() throws Exception {
 		String cuerpo = estructura("EH-TAR-26", "Secundaria · talleres de tarde", "SECUNDARIA", false,
@@ -299,6 +310,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructuras", hasSize(0)));
 	}
 
+	@DisplayName("La vista previa lista los errores y muestra la salida real pasada las1800")
 	@Test
 	void laVistaPreviaListaLosErroresYMuestraLaSalidaRealPasadaLas1800() throws Exception {
 		String cuerpo = estructura("EH-TAR-26", "Prueba", "SECUNDARIA", false, "[\"LUN\"]", "14:46", 4, 45,
@@ -312,6 +324,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.jornada.horaSalida").value("18:01"));
 	}
 
+	@DisplayName("La vista previa de un formulario vacio responde200 con los errores")
 	@Test
 	void laVistaPreviaDeUnFormularioVacioResponde200ConLosErrores() throws Exception {
 		mvc.perform(conToken(post(rutaDelAnio(ANIO_2027) + "/vista-previa"), personalAdministrativo, "{}"))
@@ -322,6 +335,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.jornada").doesNotExist());
 	}
 
+	@DisplayName("La vista previa funciona en un año activo porque no guarda")
 	@Test
 	void laVistaPreviaFuncionaEnUnAnioActivoPorqueNoGuarda() throws Exception {
 		mvc.perform(conToken(post(rutaDelAnio(ANIO_2026) + "/vista-previa"), personalAdministrativo,
@@ -332,6 +346,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- Editar ----------
 
+	@DisplayName("Edita los datos y regenera los recesos")
 	@Test
 	void editaLosDatosYRegeneraLosRecesos() throws Exception {
 		String id = crear(estructura("EH-A", "PRIMARIA", false));
@@ -353,6 +368,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.recesos", hasSize(1)));
 	}
 
+	@DisplayName("Editar con datos invalidos da400 y no cambia nada")
 	@Test
 	void editarConDatosInvalidosDa400YNoCambiaNada() throws Exception {
 		String id = crear(estructura("EH-A", "PRIMARIA", false));
@@ -365,6 +381,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.bloquesPorDia").value(6));
 	}
 
+	@DisplayName("Editar con otro código lo ignora y conserva el que tenía")
 	@Test
 	void editarConOtroCodigoLoIgnoraYConservaElQueTenia() throws Exception {
 		String id = crear(estructura("EH-A", "PRIMARIA", false));
@@ -377,6 +394,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.codigo").value("EH-PRI-27"));
 	}
 
+	@DisplayName("No se puede desmarcar la principal y marcar otra la cambia y avisa")
 	@Test
 	void noSePuedeDesmarcarLaPrincipalYMarcarOtraLaCambiaYAvisa() throws Exception {
 		String principal = crear(estructura("EH-A", "PRIMARIA", false));
@@ -398,6 +416,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- Planes de evaluación ----------
 
+	@DisplayName("Reducir la principal por debajo de las horas planificadas da409")
 	@Test
 	void reducirLaPrincipalPorDebajoDeLasHorasPlanificadasDa409() throws Exception {
 		String principal = crear(estructura("EH-SEC", "SECUNDARIA", false));
@@ -413,6 +432,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.bloquesPorSemana").value(30));
 	}
 
+	@DisplayName("Cambiar los bloques de la principal con planes avisa que cambia la planificación")
 	@Test
 	void cambiarLosBloquesDeLaPrincipalConPlanesAvisaQueCambiaLaPlanificacion() throws Exception {
 		String principal = crear(estructura("EH-SEC", "SECUNDARIA", false));
@@ -426,6 +446,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 						+ "semana. Revisa el plan de evaluación: 1.° de secundaria tiene 28 horas planificadas."));
 	}
 
+	@DisplayName("Marcar como principal una con menos bloques que los planes da409")
 	@Test
 	void marcarComoPrincipalUnaConMenosBloquesQueLosPlanesDa409() throws Exception {
 		crear(estructura("EH-SEC", "SECUNDARIA", false));
@@ -440,6 +461,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- Eliminar ----------
 
+	@DisplayName("Elimina una estructura y responde204")
 	@Test
 	void eliminaUnaEstructuraYResponde204() throws Exception {
 		crear(estructura("EH-A", "PRIMARIA", false));
@@ -454,6 +476,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estructuras", hasSize(1)));
 	}
 
+	@DisplayName("La principal con otras del nivel no se elimina hay que marcar otra")
 	@Test
 	void laPrincipalConOtrasDelNivelNoSeEliminaHayQueMarcarOtra() throws Exception {
 		String principal = crear(estructura("EH-A", "PRIMARIA", false));
@@ -465,6 +488,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 						+ "quedan otras estructuras del nivel. Marca otra como principal primero."));
 	}
 
+	@DisplayName("La única del nivel con planes no se puede eliminar pero sin planes si")
 	@Test
 	void laUnicaDelNivelConPlanesNoSePuedeEliminarPeroSinPlanesSi() throws Exception {
 		String secundaria = crear(estructura("EH-SEC", "SECUNDARIA", false));
@@ -482,6 +506,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- Año ACTIVO ----------
 
+	@DisplayName("Un año activo rechaza crear editar y eliminar")
 	@Test
 	void unAnioActivoRechazaCrearEditarYEliminar() throws Exception {
 		mvc.perform(conToken(post(rutaDelAnio(ANIO_2026)), personalAdministrativo,
@@ -501,6 +526,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- 404 ----------
 
+	@DisplayName("Lo que no existe da404 con su mensaje")
 	@Test
 	void loQueNoExisteDa404ConSuMensaje() throws Exception {
 		String anioInexistente = "El año escolar no existe.";
@@ -525,6 +551,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- Permisos ----------
 
+	@DisplayName("Solo el personal administrativo puede usar las estructuras horarias")
 	@Test
 	void soloElPersonalAdministrativoPuedeUsarLasEstructurasHorarias() throws Exception {
 		for (String usuario : new String[]{DOCENTE, ADMIN, COORDINADOR}) {
@@ -543,6 +570,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 
 	// ---------- Entrada inválida ----------
 
+	@DisplayName("Un uuid mal escrito en la ruta devuelve el código que da el manejador compartido")
 	@Test
 	void unUuidMalEscritoEnLaRutaDevuelveElCodigoQueDaElManejadorCompartido() throws Exception {
 		// ManejadorErrores trata MethodArgumentTypeMismatchException: un UUID mal escrito es un error del cliente (400),
@@ -553,6 +581,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Un json ilegible da400")
 	@Test
 	void unJsonIlegibleDa400() throws Exception {
 		// Observado: HttpMessageNotReadableException la trata el manejador compartido con 400.
@@ -561,6 +590,7 @@ class EstructuraHorariaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("La solicitud tiene un formato inválido"));
 	}
 
+	@DisplayName("Una hora mal escrita da400")
 	@Test
 	void unaHoraMalEscritaDa400() throws Exception {
 		// Observado: "25:99" no se puede leer como hora y llega como HttpMessageNotReadableException: 400.

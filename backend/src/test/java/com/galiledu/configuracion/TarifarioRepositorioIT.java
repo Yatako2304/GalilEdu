@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -39,6 +40,7 @@ class TarifarioRepositorioIT extends PruebaIntegracion {
 				new BigDecimal("2"), new BigDecimal("10"));
 	}
 
+	@DisplayName("Lee el tarifario2026 confirmado con su calendario")
 	@Test
 	void leeElTarifario2026ConfirmadoConSuCalendario() {
 		Tarifario t = tarifarios.findByAnioEscolarId(ANIO_2026).orElseThrow();
@@ -58,6 +60,7 @@ class TarifarioRepositorioIT extends PruebaIntegracion {
 		assertThat(t.totalPensiones()).isEqualByComparingTo("6000");
 	}
 
+	@DisplayName("Lee el tarifario2027 en configuración")
 	@Test
 	void leeElTarifario2027EnConfiguracion() {
 		Tarifario t = tarifarios.findByAnioEscolarId(ANIO_2027).orElseThrow();
@@ -67,6 +70,7 @@ class TarifarioRepositorioIT extends PruebaIntegracion {
 		assertThat(t.getCuotas()).hasSize(10);
 	}
 
+	@DisplayName("Busca el tarifario por el número del año")
 	@Test
 	void buscaElTarifarioPorElNumeroDelAnio() {
 		assertThat(tarifarios.findByAnio(2026)).get().extracting(Tarifario::getAnioEscolarId)
@@ -74,6 +78,7 @@ class TarifarioRepositorioIT extends PruebaIntegracion {
 		assertThat(tarifarios.findByAnio(2025)).isEmpty();
 	}
 
+	@DisplayName("Solo el tarifario con compromisos los tiene")
 	@Test
 	void soloElTarifarioConCompromisosLosTiene() {
 		Tarifario t2026 = tarifarios.findByAnioEscolarId(ANIO_2026).orElseThrow();
@@ -84,6 +89,7 @@ class TarifarioRepositorioIT extends PruebaIntegracion {
 		assertThat(consultas.tieneCompromisos(UUID.randomUUID())).isFalse();
 	}
 
+	@DisplayName("Guarda un tarifario nuevo y regenera su calendario sin chocar con los unique")
 	@Test
 	void guardaUnTarifarioNuevoYRegeneraSuCalendarioSinChocarConLosUnique() {
 		UUID anio = UUID.randomUUID();

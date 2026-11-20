@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.IllegalTransactionStateException;
@@ -27,12 +28,14 @@ class BloqueoAnioParaHorariosIT extends PruebaIntegracion {
 	@Autowired
 	private PlatformTransactionManager transacciones;
 
+	@DisplayName("Dentro de una transacción bloquea el año")
 	@Test
 	void dentroDeUnaTransaccionBloqueaElAnio() {
 		// La prueba ya corre en una transacción (PruebaIntegracion).
 		assertThatCode(() -> servicio.bloquearAnioParaHorarios(ANIO_2026)).doesNotThrowAnyException();
 	}
 
+	@DisplayName("Fuera de una transacción falla")
 	@Test
 	void fueraDeUnaTransaccionFalla() {
 		TransactionTemplate sinTransaccion = new TransactionTemplate(transacciones);

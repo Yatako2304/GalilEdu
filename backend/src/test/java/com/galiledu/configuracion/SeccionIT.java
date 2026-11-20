@@ -15,6 +15,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -152,6 +153,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- Listar ----------
 
+	@DisplayName("Lista los once grados del año incluidos los que no tienen secciones")
 	@Test
 	void listaLosOnceGradosDelAnioIncluidosLosQueNoTienenSecciones() throws Exception {
 		mvc.perform(conToken(get(rutaSeccionesDelAnio(ANIO_2026)), personalAdministrativo))
@@ -168,6 +170,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[6].secciones.length()").value(2));
 	}
 
+	@DisplayName("Cada sección trae capacidad alumnos que ocupan vacante tutor y estado")
 	@Test
 	void cadaSeccionTraeCapacidadAlumnosQueOcupanVacanteTutorYEstado() throws Exception {
 		mvc.perform(conToken(get(rutaSeccionesDelAnio(ANIO_2026)), personalAdministrativo))
@@ -189,6 +192,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[10].secciones[0].alumnosOcupanVacante").value(1));
 	}
 
+	@DisplayName("Filtra por nivel sin importar mayúsculas ni minúsculas")
 	@Test
 	void filtraPorNivelSinImportarMayusculasNiMinusculas() throws Exception {
 		mvc.perform(conToken(get(rutaSeccionesDelAnio(ANIO_2026) + "?nivel=PRIMARIA"), personalAdministrativo))
@@ -202,6 +206,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].codigo").value("SEC-1"));
 	}
 
+	@DisplayName("Rechaza un nivel que no existe")
 	@Test
 	void rechazaUnNivelQueNoExiste() throws Exception {
 		mvc.perform(conToken(get(rutaSeccionesDelAnio(ANIO_2026) + "?nivel=INICIAL"), personalAdministrativo))
@@ -209,6 +214,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El nivel debe ser PRIMARIA o SECUNDARIA."));
 	}
 
+	@DisplayName("Listar de un año que no existe da404")
 	@Test
 	void listarDeUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(get(rutaSeccionesDelAnio(UUID_INEXISTENTE)), personalAdministrativo))
@@ -216,6 +222,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
 	}
 
+	@DisplayName("Un año cerrado se puede consultar")
 	@Test
 	void unAnioCerradoSePuedeConsultar() throws Exception {
 		crearAnioCerradoConSeccion();
@@ -229,6 +236,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- Crear ----------
 
+	@DisplayName("Crea una sección activa sin tutores y el nombre se guarda en mayúsculas")
 	@Test
 	void creaUnaSeccionActivaSinTutoresYElNombreSeGuardaEnMayusculas() throws Exception {
 		mvc.perform(conToken(post(rutaSeccionesDelAnio(ANIO_2026)), personalAdministrativo,
@@ -247,6 +255,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[1].secciones[0].nombre").value("C"));
 	}
 
+	@DisplayName("Una sección nueva puede llamarse como la de otro grado o la de otro año")
 	@Test
 	void unaSeccionNuevaPuedeLlamarseComoLaDeOtroGradoOLaDeOtroAnio() throws Exception {
 		mvc.perform(conToken(post(rutaSeccionesDelAnio(ANIO_2026)), personalAdministrativo,
@@ -255,6 +264,7 @@ class SeccionIT extends PruebaIntegracion {
 				solicitudSeccion("PRI-1", "A", 30))).andExpect(status().isCreated());
 	}
 
+	@DisplayName("Rechaza un nombre repetido en el mismo grado y año")
 	@Test
 	void rechazaUnNombreRepetidoEnElMismoGradoYAnio() throws Exception {
 		mvc.perform(conToken(post(rutaSeccionesDelAnio(ANIO_2026)), personalAdministrativo,
@@ -268,6 +278,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Ya existe la sección A en 1.° de secundaria."));
 	}
 
+	@DisplayName("Válida el nombre la capacidad y el grado de la sección nueva")
 	@Test
 	void validaElNombreLaCapacidadYElGradoDeLaSeccionNueva() throws Exception {
 		mvc.perform(conToken(post(rutaSeccionesDelAnio(ANIO_2026)), personalAdministrativo,
@@ -297,6 +308,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El grado no existe."));
 	}
 
+	@DisplayName("Crear en un año que no existe da404")
 	@Test
 	void crearEnUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(post(rutaSeccionesDelAnio(UUID_INEXISTENTE)), personalAdministrativo,
@@ -307,6 +319,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- Cambiar la capacidad ----------
 
+	@DisplayName("Cambia la capacidad de una sección")
 	@Test
 	void cambiaLaCapacidadDeUnaSeccion() throws Exception {
 		UUID seccionId = seccionId(ANIO_2026, "SEC-2", "A");
@@ -318,6 +331,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.capacidadMaxima").value(25));
 	}
 
+	@DisplayName("La capacidad no baja de los alumnos que ocupan vacante")
 	@Test
 	void laCapacidadNoBajaDeLosAlumnosQueOcupanVacante() throws Exception {
 		UUID cuartoA = seccionId(ANIO_2026, "SEC-4", "A");
@@ -334,6 +348,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.alumnosOcupanVacante").value(2));
 	}
 
+	@DisplayName("Una matrícula retirada no impide bajar la capacidad")
 	@Test
 	void unaMatriculaRetiradaNoImpideBajarLaCapacidad() throws Exception {
 		UUID cuartoA = seccionId(ANIO_2026, "SEC-4", "A");
@@ -347,6 +362,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.alumnosOcupanVacante").value(1));
 	}
 
+	@DisplayName("Válida el rango de la capacidad")
 	@Test
 	void validaElRangoDeLaCapacidad() throws Exception {
 		UUID seccionId = seccionId(ANIO_2026, "SEC-2", "A");
@@ -364,6 +380,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- Asignar tutores ----------
 
+	@DisplayName("Asigna tutor y cotutor y el cotutor se puede quitar")
 	@Test
 	void asignaTutorYCotutorYElCotutorSePuedeQuitar() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");
@@ -384,6 +401,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cotutor").doesNotExist());
 	}
 
+	@DisplayName("El tutor es obligatorio y el cotutor debe ser distinto")
 	@Test
 	void elTutorEsObligatorioYElCotutorDebeSerDistinto() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");
@@ -400,6 +418,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El cotutor debe ser distinto del tutor."));
 	}
 
+	@DisplayName("Tutor igual al cotutor da400 aunque el tutor ya tenga otra sección")
 	@Test
 	void tutorIgualAlCotutorDa400AunqueElTutorYaTengaOtraSeccion() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");
@@ -411,6 +430,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El cotutor debe ser distinto del tutor."));
 	}
 
+	@DisplayName("Tutor y cotutor deben ser docentes o tutores activos")
 	@Test
 	void tutorYCotutorDebenSerDocentesOTutoresActivos() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");
@@ -432,6 +452,7 @@ class SeccionIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("Un usuario con rol tutor sin rol docente también puede ser tutor")
 	@Test
 	void unUsuarioConRolTutorSinRolDocenteTambienPuedeSerTutor() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");
@@ -443,6 +464,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tutor").value("Tutora Prueba"));
 	}
 
+	@DisplayName("Un docente es tutor de una sola sección por año")
 	@Test
 	void unDocenteEsTutorDeUnaSolaSeccionPorAnio() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");
@@ -454,6 +476,7 @@ class SeccionIT extends PruebaIntegracion {
 						.value(NOMBRE_DE_MARIA + " ya tiene la tutoría de 1.° A este año. Elige otro tutor."));
 	}
 
+	@DisplayName("El tutor de una sección puede confirmarse en la misma sección y ser tutor en otro año")
 	@Test
 	void elTutorDeUnaSeccionPuedeConfirmarseEnLaMismaSeccionYSerTutorEnOtroAnio() throws Exception {
 		UUID primeroA2026 = seccionId(ANIO_2026, "SEC-1", "A");
@@ -465,6 +488,7 @@ class SeccionIT extends PruebaIntegracion {
 				solicitudTutores(MARIA_FERNANDEZ, null))).andExpect(status().isOk());
 	}
 
+	@DisplayName("La regla del tutor único no aplica al cotutor")
 	@Test
 	void laReglaDelTutorUnicoNoAplicaAlCotutor() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");
@@ -476,6 +500,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cotutor").value(NOMBRE_DE_MARIA));
 	}
 
+	@DisplayName("Reactivar con el tutor ocupado en otra sección se rechaza y se resuelve cambiando el tutor")
 	@Test
 	void reactivarConElTutorOcupadoEnOtraSeccionSeRechazaYSeResuelveCambiandoElTutor() throws Exception {
 		UUID primeroA = seccionId(ANIO_2026, "SEC-1", "A"); // María es su tutora.
@@ -507,6 +532,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tutor").value("Rosa Prueba"));
 	}
 
+	@DisplayName("Una asignación rechazada no deja cambios en la sección")
 	@Test
 	void unaAsignacionRechazadaNoDejaCambiosEnLaSeccion() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");
@@ -522,6 +548,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- Docentes elegibles ----------
 
+	@DisplayName("Lista los docentes y tutores activos marcando quienes ya son tutores del año")
 	@Test
 	void listaLosDocentesYTutoresActivosMarcandoQuienesYaSonTutoresDelAnio() throws Exception {
 		UUID rosa = crearDocente("80000001", "Rosa");
@@ -540,6 +567,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.length()").value(2));
 	}
 
+	@DisplayName("El tutor de una sección inactiva no aparece como tutor del año")
 	@Test
 	void elTutorDeUnaSeccionInactivaNoApareceComoTutorDelAnio() throws Exception {
 		UUID primeroA = seccionId(ANIO_2026, "SEC-1", "A");
@@ -551,6 +579,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[?(@.id=='%s')].esTutorEsteAnio".formatted(MARIA_FERNANDEZ), contains(false)));
 	}
 
+	@DisplayName("Docentes elegibles de un año que no existe da404")
 	@Test
 	void docentesElegiblesDeUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(get("/configuracion/secciones/tutores-disponibles?anioEscolarId=" + UUID_INEXISTENTE),
@@ -559,6 +588,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
 	}
 
+	@DisplayName("Docentes elegibles sin el año escolar da400")
 	@Test
 	void docentesElegiblesSinElAnioEscolarDa400() throws Exception {
 		mvc.perform(conToken(get("/configuracion/secciones/tutores-disponibles"), personalAdministrativo))
@@ -568,6 +598,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- Inactivar y reactivar ----------
 
+	@DisplayName("Inactiva y reactiva una sección sin perder sus alumnos")
 	@Test
 	void inactivaYReactivaUnaSeccionSinPerderSusAlumnos() throws Exception {
 		UUID cuartoA = seccionId(ANIO_2026, "SEC-4", "A"); // Tiene la matrícula de Sofía.
@@ -585,6 +616,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("ACTIVA"));
 	}
 
+	@DisplayName("No se inactiva una sección inactiva ni se reactiva una activa")
 	@Test
 	void noSeInactivaUnaSeccionInactivaNiSeReactivaUnaActiva() throws Exception {
 		UUID segundoB = seccionId(ANIO_2026, "SEC-2", "B");
@@ -601,6 +633,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- Eliminar ----------
 
+	@DisplayName("Elimina una sección sin matrículas en un año activo y sus docentes del plan se borran en cascada")
 	@Test
 	void eliminaUnaSeccionSinMatriculasEnUnAnioActivoYSusDocentesDelPlanSeBorranEnCascada() throws Exception {
 		// La demo ocupa 1.° A. Se prueba la eliminación en 1.° B, que sigue sin matrículas.
@@ -633,6 +666,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[6].secciones.length()").value(1));
 	}
 
+	@DisplayName("Elimina una sección de un año planificado")
 	@Test
 	void eliminaUnaSeccionDeUnAnioPlanificado() throws Exception {
 		UUID segundoA2027 = seccionId(ANIO_2027, "SEC-2", "A");
@@ -641,6 +675,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(status().isNoContent());
 	}
 
+	@DisplayName("No elimina una sección con matrículas")
 	@Test
 	void noEliminaUnaSeccionConMatriculas() throws Exception {
 		UUID cuartoA = seccionId(ANIO_2026, "SEC-4", "A"); // Matrícula MATRICULADO de Sofía.
@@ -650,6 +685,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(MENSAJE_SECCION_CON_HISTORIAL));
 	}
 
+	@DisplayName("Una matrícula retirada ya no ocupa vacante pero impide eliminar la sección")
 	@Test
 	void unaMatriculaRetiradaYaNoOcupaVacantePeroImpideEliminarLaSeccion() throws Exception {
 		UUID cuartoA = seccionId(ANIO_2026, "SEC-4", "A");
@@ -663,6 +699,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(MENSAJE_SECCION_CON_HISTORIAL));
 	}
 
+	@DisplayName("Un cambio de sección impide eliminar la sección de origen y la de destino")
 	@Test
 	void unCambioDeSeccionImpideEliminarLaSeccionDeOrigenYLaDeDestino() throws Exception {
 		UUID segundoB = seccionId(ANIO_2026, "SEC-2", "B"); // Sin matrículas.
@@ -684,6 +721,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- Año cerrado ----------
 
+	@DisplayName("Un año cerrado no admite ningún cambio en sus secciones")
 	@Test
 	void unAnioCerradoNoAdmiteNingunCambioEnSusSecciones() throws Exception {
 		UUID seccionId = crearAnioCerradoConSeccion();
@@ -709,6 +747,7 @@ class SeccionIT extends PruebaIntegracion {
 
 	// ---------- 404 y permisos ----------
 
+	@DisplayName("Una sección que no existe da404 en cada operación")
 	@Test
 	void unaSeccionQueNoExisteDa404EnCadaOperacion() throws Exception {
 		String ruta = rutaSeccion(UUID_INEXISTENTE);
@@ -727,6 +766,7 @@ class SeccionIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound()).andExpect(jsonPath("$.message").value(mensaje));
 	}
 
+	@DisplayName("Solo el personal administrativo puede usar las secciones")
 	@Test
 	void soloElPersonalAdministrativoPuedeUsarLasSecciones() throws Exception {
 		UUID segundoA = seccionId(ANIO_2026, "SEC-2", "A");

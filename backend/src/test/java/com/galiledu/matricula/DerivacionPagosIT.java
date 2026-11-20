@@ -14,6 +14,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -77,6 +78,7 @@ class DerivacionPagosIT extends PruebaIntegracionConfiguracion {
 		return "/matricula/apoderado/estudiantes/" + MATEO + "/estado";
 	}
 
+	@DisplayName("Muestra la cuota de matrícula para pagar aunque un hermano deba")
 	@Test
 	void muestraLaCuotaDeMatriculaParaPagarAunqueUnHermanoDeba() throws Exception {
 		// CAHU31-1 y CAHU31-2: la pensión vencida es de Sofía, no de Mateo.
@@ -95,6 +97,7 @@ class DerivacionPagosIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.cambiosSeccion").isEmpty());
 	}
 
+	@DisplayName("Con la matrícula confirmada el apoderado ve los cambios de sección sin quien los hizo")
 	@Test
 	void conLaMatriculaConfirmadaElApoderadoVeLosCambiosDeSeccionSinQuienLosHizo() throws Exception {
 		jdbc.sql("UPDATE matricula.matricula SET estado = 'MATRICULADO', codigo = 'MAT-2027-0099' WHERE id = ?")
@@ -118,6 +121,7 @@ class DerivacionPagosIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.cambiosSeccion[0].realizadoPor").doesNotExist());
 	}
 
+	@DisplayName("Pagar la matrícula usa el pago en linea y avisa que matrícula pagar")
 	@Test
 	void pagarLaMatriculaUsaElPagoEnLineaYAvisaQueMatriculaPagar() throws Exception {
 		// CAHU31-3: mismo flujo de HU-41, solo con la cuota de matrícula.
@@ -139,6 +143,7 @@ class DerivacionPagosIT extends PruebaIntegracionConfiguracion {
 				.satisfies(e -> assertThat(e.matriculasPagadas()).containsExactly(MATRICULA_MATEO));
 	}
 
+	@DisplayName("Al confirmarse el pago queda matriculado con código y pensiones")
 	@Test
 	void alConfirmarseElPagoQuedaMatriculadoConCodigoYPensiones() throws Exception {
 		// CAHU31-4: lo que hace EscuchaPagoMatricula después de guardar el pago.
@@ -162,6 +167,7 @@ class DerivacionPagosIT extends PruebaIntegracionConfiguracion {
 		assertThat(consultasMatricula.matricularPorPago(MATRICULA_MATEO, OffsetDateTime.now(reloj))).isEmpty();
 	}
 
+	@DisplayName("Con pensiones vencidas propias no puede pagar la matrícula")
 	@Test
 	void conPensionesVencidasPropiasNoPuedePagarLaMatricula() throws Exception {
 		// CAHU31-2: una pensión vencida del propio Mateo sí bloquea.
@@ -181,6 +187,7 @@ class DerivacionPagosIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value(containsString("Primero paga las pensiones vencidas")));
 	}
 
+	@DisplayName("Sin cuota de matrícula no hay bloque de pago")
 	@Test
 	void sinCuotaDeMatriculaNoHayBloqueDePago() throws Exception {
 		jdbc.sql("UPDATE pagos.cuota SET estado = 'ANULADA' WHERE id = ?::uuid").param(cuotaId).update();

@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.academico.aplicacion.DtosCalificaciones.RegistroCalificacion;
@@ -49,6 +50,7 @@ class ServicioCalificacionesTests {
 		when(repositorio.tieneAcceso(DOCENTE, PLAN, SECCION)).thenReturn(true);
 	}
 
+	@DisplayName("No permite modificar un item fuera del plazo de notas")
 	@Test
 	void noPermiteModificarUnItemFueraDelPlazoDeNotas() {
 		when(repositorio.item(ITEM)).thenReturn(Optional.of(item("VIGESIMAL", LocalDate.of(2026, 10, 31))));
@@ -60,6 +62,7 @@ class ServicioCalificacionesTests {
 				.hasMessage("El periodo no está habilitado para registrar calificaciones.");
 	}
 
+	@DisplayName("Guarda una nota vigesimal del estudiante de la sección")
 	@Test
 	void guardaUnaNotaVigesimalDelEstudianteDeLaSeccion() {
 		when(repositorio.item(ITEM)).thenReturn(Optional.of(item("VIGESIMAL", LocalDate.of(2026, 12, 23))));
@@ -73,6 +76,7 @@ class ServicioCalificacionesTests {
 		verify(repositorio).guardarCalificacion(ITEM, MATRICULA, BigDecimal.valueOf(18), null, DOCENTE);
 	}
 
+	@DisplayName("La escala vigesimal rechaza un nivel cualitativo")
 	@Test
 	void laEscalaVigesimalRechazaUnNivelCualitativo() {
 		when(repositorio.item(ITEM)).thenReturn(Optional.of(item("VIGESIMAL", LocalDate.of(2026, 12, 23))));
@@ -84,6 +88,7 @@ class ServicioCalificacionesTests {
 				.hasMessage("La escala vigesimal requiere una calificación numérica de 0 a 20.");
 	}
 
+	@DisplayName("Calcula el resultado ponderado de una competencia")
 	@Test
 	void calculaElResultadoPonderadoDeUnaCompetencia() {
 		when(repositorio.periodo(PLAN, PERIODO)).thenReturn(Optional.of(new PeriodoContexto(PERIODO, UUID.randomUUID(),
@@ -109,6 +114,7 @@ class ServicioCalificacionesTests {
 				.doesNotContainKey(item2.toString());
 	}
 
+	@DisplayName("Oculta cursos que no pertenecen al docente")
 	@Test
 	void ocultaCursosQueNoPertenecenAlDocente() {
 		when(repositorio.tieneAcceso(DOCENTE, PLAN, SECCION)).thenReturn(false);

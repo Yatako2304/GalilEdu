@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.configuracion.dominio.CalendarioCuotas.Cuota;
@@ -14,6 +15,7 @@ class CalendarioCuotasTests {
 		return LocalDate.of(anio, mes, dia);
 	}
 
+	@DisplayName("Reproduce el calendario de2026 de los datos de prueba")
 	@Test
 	void reproduceElCalendarioDe2026DeLosDatosDePrueba() {
 		List<Cuota> cuotas = CalendarioCuotas.generar(fecha(2026, 3, 2), fecha(2026, 12, 18));
@@ -27,6 +29,7 @@ class CalendarioCuotasTests {
 				fecha(2026, 10, 31), fecha(2026, 11, 30), fecha(2026, 12, 15));
 	}
 
+	@DisplayName("Reproduce el calendario de2027 de los datos de prueba")
 	@Test
 	void reproduceElCalendarioDe2027DeLosDatosDePrueba() {
 		List<Cuota> cuotas = CalendarioCuotas.generar(fecha(2027, 3, 1), fecha(2027, 12, 17));
@@ -38,6 +41,7 @@ class CalendarioCuotasTests {
 		assertThat(cuotas.getFirst().nombre()).isEqualTo("Pensión de marzo");
 	}
 
+	@DisplayName("Si el año termina antes del dia15 del último mes la última cuota vence el día de fin")
 	@Test
 	void siElAnioTerminaAntesDelDia15DelUltimoMesLaUltimaCuotaVenceElDiaDeFin() {
 		List<Cuota> cuotas = CalendarioCuotas.generar(fecha(2028, 3, 1), fecha(2028, 12, 10));
@@ -48,6 +52,7 @@ class CalendarioCuotasTests {
 		assertThat(cuotas.get(8).fechaVencimiento()).isEqualTo(fecha(2028, 11, 30));
 	}
 
+	@DisplayName("Un año que termina en otro mes también tiene la última cuota el dia15")
 	@Test
 	void unAnioQueTerminaEnOtroMesTambienTieneLaUltimaCuotaElDia15() {
 		List<Cuota> cuotas = CalendarioCuotas.generar(fecha(2028, 3, 1), fecha(2028, 11, 28));
@@ -57,6 +62,7 @@ class CalendarioCuotasTests {
 		assertThat(cuotas.getLast().fechaVencimiento()).isEqualTo(fecha(2028, 11, 15));
 	}
 
+	@DisplayName("Un año de un solo mes tiene una cuota")
 	@Test
 	void unAnioDeUnSoloMesTieneUnaCuota() {
 		List<Cuota> cuotas = CalendarioCuotas.generar(fecha(2028, 3, 1), fecha(2028, 3, 28));
@@ -64,6 +70,7 @@ class CalendarioCuotasTests {
 		assertThat(cuotas).extracting(Cuota::fechaVencimiento).containsExactly(fecha(2028, 3, 15));
 	}
 
+	@DisplayName("La matrícula vence el último día del mes anterior al inicio de clases")
 	@Test
 	void laMatriculaVenceElUltimoDiaDelMesAnteriorAlInicioDeClases() {
 		assertThat(CalendarioCuotas.vencimientoMatricula(fecha(2026, 3, 2))).isEqualTo(fecha(2026, 2, 28));

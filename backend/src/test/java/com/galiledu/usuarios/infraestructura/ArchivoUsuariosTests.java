@@ -7,6 +7,7 @@ import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
@@ -18,6 +19,7 @@ class ArchivoUsuariosTests {
 		return archivos.leer("usuarios.csv", new ByteArrayInputStream(texto.getBytes(StandardCharsets.UTF_8)));
 	}
 
+	@DisplayName("Reconoce encabezados sin importar tildes ni mayúsculas")
 	@Test
 	void reconoceEncabezadosSinImportarTildesNiMayusculas() {
 		assertThat(ArchivoUsuarios.clave("N.° de documento")).isEqualTo("numeroDocumento");
@@ -26,6 +28,7 @@ class ArchivoUsuariosTests {
 		assertThat(ArchivoUsuarios.clave("Columna inventada")).isNull();
 	}
 
+	@DisplayName("Lee csv con punto y coma y comillas")
 	@Test
 	void leeCsvConPuntoYComaYComillas() {
 		var filas = csv("""
@@ -38,6 +41,7 @@ class ArchivoUsuariosTests {
 		assertThat(filas.get(0).valor("roles")).isEqualTo("Docente");
 	}
 
+	@DisplayName("Ignora filas vacias")
 	@Test
 	void ignoraFilasVacias() {
 		var filas = csv("""
@@ -48,6 +52,7 @@ class ArchivoUsuariosTests {
 		assertThat(filas).singleElement().extracting(ArchivoUsuarios.Fila::numero).isEqualTo(3);
 	}
 
+	@DisplayName("Exige las columnas obligatorias")
 	@Test
 	void exigeLasColumnasObligatorias() {
 		assertThatThrownBy(() -> csv("Nombres,Correo electrónico\nJorge,j@gmail.com\n"))
@@ -55,6 +60,7 @@ class ArchivoUsuariosTests {
 				.hasMessageContaining("Falta la columna");
 	}
 
+	@DisplayName("Rechaza formatos no soportados")
 	@Test
 	void rechazaFormatosNoSoportados() {
 		assertThatThrownBy(() -> archivos.leer("usuarios.txt", new ByteArrayInputStream(new byte[0])))
@@ -62,6 +68,7 @@ class ArchivoUsuariosTests {
 				.hasMessage("El archivo debe ser .xlsx, .xls o .csv");
 	}
 
+	@DisplayName("La plantilla se puede volver a leer")
 	@Test
 	void laPlantillaSePuedeVolverALeer() {
 		var filas = archivos.leer("plantilla.xlsx", new ByteArrayInputStream(archivos.plantilla()));

@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -57,6 +58,7 @@ class DescuentoHermanoMenorIT extends PruebaIntegracion {
 				 "reemplazar":false}""".formatted(descuentoId);
 	}
 
+	@DisplayName("Al hermano mayor no le corresponde el descuento por hermanos")
 	@Test
 	void alHermanoMayorNoLeCorrespondeElDescuentoPorHermanos() throws Exception {
 		mvc.perform(conToken(get("/pagos/compromisos/{id}/descuentos-aplicables", COMPROMISO_SOFIA),
@@ -76,6 +78,7 @@ class DescuentoHermanoMenorIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.descuentos[?(@.nombre == 'Beca institucional')].aplicable").value(true));
 	}
 
+	@DisplayName("Al hermano menor si le corresponde")
 	@Test
 	void alHermanoMenorSiLeCorresponde() throws Exception {
 		mvc.perform(conToken(get("/pagos/compromisos/{id}/descuentos-aplicables", COMPROMISO_MATEO),
@@ -85,6 +88,7 @@ class DescuentoHermanoMenorIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.descuentos[?(@.tipo == 'POR_HERMANOS')].porcentaje").value(10.0));
 	}
 
+	@DisplayName("El backend rechaza aplicarlo al hermano que no corresponde")
 	@Test
 	void elBackendRechazaAplicarloAlHermanoQueNoCorresponde() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -101,6 +105,7 @@ class DescuentoHermanoMenorIT extends PruebaIntegracion {
 				.andExpect(status().isCreated());
 	}
 
+	@DisplayName("Si los menores son gemelos ambos lo reciben")
 	@Test
 	void siLosMenoresSonGemelosAmbosLoReciben() throws Exception {
 		jdbc.sql("""

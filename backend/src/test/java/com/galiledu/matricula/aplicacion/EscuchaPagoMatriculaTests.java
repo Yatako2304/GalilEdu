@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
@@ -26,6 +27,7 @@ class EscuchaPagoMatriculaTests {
 		return new PagoEnLineaAprobado(UUID.randomUUID(), "OP-2026-000001", usuario, List.of(), List.of(matriculas));
 	}
 
+	@DisplayName("Matrícula y genera las pensiones")
 	@Test
 	void matriculaYGeneraLasPensiones() {
 		UUID matricula = UUID.randomUUID();
@@ -34,6 +36,7 @@ class EscuchaPagoMatriculaTests {
 		verify(confirmacion).generarPensiones(matricula, usuario);
 	}
 
+	@DisplayName("Si ya estaba matriculado no genera otra vez las pensiones")
 	@Test
 	void siYaEstabaMatriculadoNoGeneraOtraVezLasPensiones() {
 		UUID matricula = UUID.randomUUID();
@@ -42,6 +45,7 @@ class EscuchaPagoMatriculaTests {
 		verify(confirmacion, never()).generarPensiones(any(), any());
 	}
 
+	@DisplayName("Un error en una matrícula no detiene las demas")
 	@Test
 	void unErrorEnUnaMatriculaNoDetieneLasDemas() {
 		UUID primera = UUID.randomUUID();
@@ -52,6 +56,7 @@ class EscuchaPagoMatriculaTests {
 		verify(confirmacion).generarPensiones(segunda, usuario);
 	}
 
+	@DisplayName("Un pago sin matrículas no hace nada")
 	@Test
 	void unPagoSinMatriculasNoHaceNada() {
 		escucha.alAprobarsePago(pago());

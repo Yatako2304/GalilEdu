@@ -13,7 +13,7 @@ Repositorio con `backend/` (Spring Boot + PostgreSQL + Flyway) y `frontend/` (Re
 - Sigue [`docs/guias/nuevo-modulo.md`](docs/guias/nuevo-modulo.md) y los nombres de [`docs/guias/convenciones.md`](docs/guias/convenciones.md). Copia los patrones de `usuarios` y `estudiantes`.
 - BD: solo migraciones **nuevas** en `backend/src/main/resources/db/migration/`; un esquema por módulo.
 - Frontend: arma las pantallas con `src/components/ui` ([catálogo](docs/guias/componentes-ui.md)) y los tokens de Tailwind; no copies estilos de un componente y, si falta uno de Figma, créalo en `components/ui`. Íconos solo de `lucide-react`, según la [tabla de equivalencias](docs/decisiones/2026-10-22-yatako-iconos-lucide.md). Un feature no importa de otro.
-- Escribe pruebas para lo que agregues ([`docs/guias/pruebas.md`](docs/guias/pruebas.md)).
+- Escribe pruebas para lo que agregues ([`docs/guias/pruebas.md`](docs/guias/pruebas.md)). En el backend, cada `@Test` lleva un `@DisplayName` en español; en el frontend, `test('…')` es una frase legible. [`docs/pruebas.md`](docs/pruebas.md) (catálogo de pruebas por funcionalidad) lo genera el hook de commit con `node docs/generar-pruebas.mjs`: no lo edites a mano.
 
 ## Antes de dar algo por terminado
 

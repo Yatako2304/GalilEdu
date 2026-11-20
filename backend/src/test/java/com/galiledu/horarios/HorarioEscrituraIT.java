@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -70,6 +71,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 
 	// ---------- Reglas ----------
 
+	@DisplayName("Año cerrado responde409")
 	@Test
 	void anioCerradoResponde409() throws Exception {
 		jdbc.sql("UPDATE configuracion.anio_escolar SET estado = 'CERRADO' WHERE id = :id").param("id", ANIO_2027)
@@ -80,6 +82,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 		assertThat(cabeceras()).isZero();
 	}
 
+	@DisplayName("Versión desactualizada responde409")
 	@Test
 	void versionDesactualizadaResponde409() throws Exception {
 		cabecera(seccion, estructura);
@@ -90,6 +93,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 		assertThat(bloquesGuardados()).isZero();
 	}
 
+	@DisplayName("Versión nula con cabecera existente responde409")
 	@Test
 	void versionNulaConCabeceraExistenteResponde409() throws Exception {
 		cabecera(seccion, estructura);
@@ -98,6 +102,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.message").value(OTRA_PERSONA));
 	}
 
+	@DisplayName("Versión con valor sin cabecera responde409")
 	@Test
 	void versionConValorSinCabeceraResponde409() throws Exception {
 		guardar(seccion, COORDINADOR, 0L, celda("LUN", 1, algebra)).andExpect(status().isConflict())
@@ -105,6 +110,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 		assertThat(cabeceras()).isZero();
 	}
 
+	@DisplayName("Celda repetida responde400")
 	@Test
 	void celdaRepetidaResponde400() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, algebra), celda("LUN", 1, aritmetica))
@@ -113,6 +119,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 						jsonPath("$.message").value("El horario tiene dos cursos en el mismo bloque: LUN, bloque 1."));
 	}
 
+	@DisplayName("Día no lectivo responde400")
 	@Test
 	void diaNoLectivoResponde400() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("SAB", 1, algebra)).andExpect(status().isBadRequest())
@@ -120,6 +127,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 						.value("El día SAB no es lectivo en la estructura horaria de la sección."));
 	}
 
+	@DisplayName("Bloque fuera de la jornada responde400")
 	@Test
 	void bloqueFueraDeLaJornadaResponde400() throws Exception {
 		// La jornada tiene los bloques 1 a 6; los recesos no tienen número, así que ningún número los representa.
@@ -127,12 +135,14 @@ class HorarioEscrituraIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.message").value("El bloque 7 no existe en la jornada de la sección."));
 	}
 
+	@DisplayName("Bloque cero responde400")
 	@Test
 	void bloqueCeroResponde400() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 0, algebra)).andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("El número de bloque empieza en 1."));
 	}
 
+	@DisplayName("Curso de otro grado o año responde400")
 	@Test
 	void cursoDeOtroGradoOAnioResponde400() throws Exception {
 		UUID deOtroGrado = plan("SEC-2", "Álgebra", 4);
@@ -150,6 +160,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.message").value(mensaje));
 	}
 
+	@DisplayName("Ambiente inactivo o inexistente responde400")
 	@Test
 	void ambienteInactivoOInexistenteResponde400() throws Exception {
 		UUID inactivo = ambiente("TMP-INA", "INACTIVO");
@@ -161,6 +172,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 				.andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value(mensaje));
 	}
 
+	@DisplayName("Curso sin docente responde409")
 	@Test
 	void cursoSinDocenteResponde409() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, geometria)).andExpect(status().isConflict())
@@ -168,6 +180,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 						"Asigna un docente a Geometría en Plan de evaluación antes de ubicarlo en el horario."));
 	}
 
+	@DisplayName("Horas semanales excedidas responde409")
 	@Test
 	void horasSemanalesExcedidasResponde409() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, aritmetica), celda("MAR", 1, aritmetica),
@@ -176,6 +189,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 		assertThat(cabeceras()).isZero();
 	}
 
+	@DisplayName("Sin estructura principal responde409")
 	@Test
 	void sinEstructuraPrincipalResponde409() throws Exception {
 		jdbc.sql("DELETE FROM configuracion.estructura_horaria WHERE id = :id").param("id", estructura).update();
@@ -185,16 +199,19 @@ class HorarioEscrituraIT extends PruebaHorarios {
 						.value("Configura la estructura horaria principal de secundaria antes de asignar horarios."));
 	}
 
+	@DisplayName("Otro rol recibe403")
 	@Test
 	void otroRolRecibe403() throws Exception {
 		guardar(seccion, PERSONAL_ADMINISTRATIVO, null, celda("LUN", 1, algebra)).andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Sección inexistente responde404")
 	@Test
 	void seccionInexistenteResponde404() throws Exception {
 		guardar(UUID.randomUUID(), COORDINADOR, null, celda("LUN", 1, algebra)).andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Un cuerpo sin celdas o con un día inválido responde400")
 	@Test
 	void unCuerpoSinCeldasOConUnDiaInvalidoResponde400() throws Exception {
 		mvc.perform(conToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -209,6 +226,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 
 	// ---------- Comportamiento ----------
 
+	@DisplayName("Primer guardado crea la cabecera con la estructura principal y versión cero")
 	@Test
 	void primerGuardadoCreaLaCabeceraConLaEstructuraPrincipalYVersionCero() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, algebra), celda("MIE", 4, algebra))
@@ -228,6 +246,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.celdas", hasSize(2)));
 	}
 
+	@DisplayName("Cada guardado con cambios sube la versión exactamente uno")
 	@Test
 	void cadaGuardadoConCambiosSubeLaVersionExactamenteUno() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, algebra)).andExpect(jsonPath("$.version").value(0));
@@ -245,6 +264,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 		assertThat(version(seccion)).isEqualTo(2);
 	}
 
+	@DisplayName("Un guardado identico no sube la versión")
 	@Test
 	void unGuardadoIdenticoNoSubeLaVersion() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, algebra), celda("MAR", 2, aritmetica));
@@ -261,6 +281,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 				.param("s", seccion).query(java.time.Instant.class).single()).isEqualTo(actualizado);
 	}
 
+	@DisplayName("Guardar renueva actualizado en")
 	@Test
 	void guardarRenuevaActualizadoEn() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, algebra));
@@ -274,6 +295,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 				.isAfter(java.time.Instant.parse("2021-01-01T00:00:00Z"));
 	}
 
+	@DisplayName("Los bloques sin cambio conservan su id")
 	@Test
 	void losBloquesSinCambioConservanSuId() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, algebra), celda("MAR", 2, algebra),
@@ -295,6 +317,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 				.query(UUID.class).single()).isEqualTo(aritmetica);
 	}
 
+	@DisplayName("Celdas vacias sin cabecera no crean nada")
 	@Test
 	void celdasVaciasSinCabeceraNoCreanNada() throws Exception {
 		guardar(seccion, COORDINADOR, null).andExpect(status().isOk())
@@ -304,6 +327,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 		assertThat(cabeceras()).isZero();
 	}
 
+	@DisplayName("Una cabecera existente conserva su estructura aunque ya no sea la principal")
 	@Test
 	void unaCabeceraExistenteConservaSuEstructuraAunqueYaNoSeaLaPrincipal() throws Exception {
 		UUID vieja = estructura("EH-VIEJA", "SECUNDARIA", false, 4);
@@ -320,6 +344,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 		guardar(seccion, COORDINADOR, 1L, celda("LUN", 5, algebra)).andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Vaciar el horario elimina todos los bloques y sube la versión")
 	@Test
 	void vaciarElHorarioEliminaTodosLosBloquesYSubeLaVersion() throws Exception {
 		guardar(seccion, COORDINADOR, null, celda("LUN", 1, algebra), celda("MAR", 2, algebra));
@@ -332,6 +357,7 @@ class HorarioEscrituraIT extends PruebaHorarios {
 
 	// ---------- bloquesDeCurso ----------
 
+	@DisplayName("Bloques de curso cuenta los bloques del curso en la sección")
 	@Test
 	void bloquesDeCursoCuentaLosBloquesDelCursoEnLaSeccion() {
 		assertThat(servicio.bloquesDeCurso(algebra, seccion)).isZero();

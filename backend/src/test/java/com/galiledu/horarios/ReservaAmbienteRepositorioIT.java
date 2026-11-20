@@ -7,6 +7,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -50,6 +51,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 		return LocalTime.parse(texto);
 	}
 
+	@DisplayName("Guarda la reserva activa con sus datos y su versión cero")
 	@Test
 	void guardaLaReservaActivaConSusDatosYSuVersionCero() {
 		preparar();
@@ -69,6 +71,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 		assertThat(leida.getCreadoEn()).isNotNull();
 	}
 
+	@DisplayName("Cada cambio sube la versión y cancelar conserva la fila")
 	@Test
 	void cadaCambioSubeLaVersionYCancelarConservaLaFila() {
 		preparar();
@@ -87,6 +90,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 				.query(String.class).single()).isEqualTo("CANCELADA");
 	}
 
+	@DisplayName("Superpuestas por ambiente solo trae las activas de la fecha que se cruzan")
 	@Test
 	void superpuestasPorAmbienteSoloTraeLasActivasDeLaFechaQueSeCruzan() {
 		preparar();
@@ -101,6 +105,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 		assertThat(halladas).extracting(ReservaAmbiente::getId).containsExactly(cruza.getId());
 	}
 
+	@DisplayName("Dos franjas contiguas no se superponen")
 	@Test
 	void dosFranjasContiguasNoSeSuperponen() {
 		preparar();
@@ -111,6 +116,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 				.isEmpty();
 	}
 
+	@DisplayName("Una franja contenida o que contiene a la otra si se superpone")
 	@Test
 	void unaFranjaContenidaOQueContieneALaOtraSiSeSuperpone() {
 		preparar();
@@ -121,6 +127,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 				.extracting(ReservaAmbiente::getId).containsExactlyInAnyOrder(interior.getId(), exterior.getId());
 	}
 
+	@DisplayName("Superpuestas por sección y por responsable filtran por su clave")
 	@Test
 	void superpuestasPorSeccionYPorResponsableFiltranPorSuClave() {
 		preparar();
@@ -133,6 +140,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 				.extracting(ReservaAmbiente::getId).containsExactly(delResponsable.getId());
 	}
 
+	@DisplayName("Las canceladas no cuentan para la sección ni para el responsable")
 	@Test
 	void lasCanceladasNoCuentanParaLaSeccionNiParaElResponsable() {
 		preparar();
@@ -145,6 +153,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 				.isEmpty();
 	}
 
+	@DisplayName("Al editar se excluye la propia reserva en las tres consultas")
 	@Test
 	void alEditarSeExcluyeLaPropiaReservaEnLasTresConsultas() {
 		preparar();
@@ -162,6 +171,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 				.hasSize(2);
 	}
 
+	@DisplayName("La entidad rechaza datos incompletos o horas invertidas")
 	@Test
 	void laEntidadRechazaDatosIncompletosOHorasInvertidas() {
 		preparar();
@@ -181,6 +191,7 @@ class ReservaAmbienteRepositorioIT extends PruebaReservas {
 				.isInstanceOf(IllegalArgumentException.class);
 	}
 
+	@DisplayName("Está finalizada cuando llega la hora de fin y una cancelada no lo está")
 	@Test
 	void estaFinalizadaCuandoLlegaLaHoraDeFinYUnaCanceladaNoLoEsta() {
 		preparar();

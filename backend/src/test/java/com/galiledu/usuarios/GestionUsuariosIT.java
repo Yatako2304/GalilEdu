@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -62,6 +63,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andReturn().getResponse().getContentAsString();
 	}
 
+	@DisplayName("Crea usuario con nombre generado y varios roles")
 	@Test
 	void creaUsuarioConNombreGeneradoYVariosRoles() throws Exception {
 		String r = crear(usuario("45678912", "Ana Paula", "aperez@galiledu.edu.pe", "[\"DOCENTE\",\"COORDINADOR\"]"));
@@ -75,6 +77,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.persona.apellidoPaterno").value("Pérez"));
 	}
 
+	@DisplayName("Rechaza documento duplicado")
 	@Test
 	void rechazaDocumentoDuplicado() throws Exception {
 		mvc.perform(conToken(post("/usuarios"), admin, usuario("70000002", "Otra", "otra@gmail.com", "[\"DOCENTE\"]")))
@@ -82,6 +85,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(containsString("70000002")));
 	}
 
+	@DisplayName("Rechaza correo duplicado sin importar mayúsculas")
 	@Test
 	void rechazaCorreoDuplicadoSinImportarMayusculas() throws Exception {
 		mvc.perform(conToken(post("/usuarios"), admin,
@@ -89,6 +93,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Válida formato de datos")
 	@Test
 	void validaFormatoDeDatos() throws Exception {
 		mvc.perform(conToken(post("/usuarios"), admin, usuario("4567", "Ana", "a@b.pe", "[\"DOCENTE\"]")))
@@ -101,6 +106,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Asigna al menos un rol"));
 	}
 
+	@DisplayName("Detalle del apoderado trae sus estudiantes a cargo")
 	@Test
 	void detalleDelApoderadoTraeSusEstudiantesACargo() throws Exception {
 		mvc.perform(conToken(get("/usuarios/" + ID_LUIS), admin))
@@ -119,6 +125,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estudiantesACargo[1].anioAcademico").value(2026));
 	}
 
+	@DisplayName("Un estudiante eliminado ya no sale a cargo")
 	@Test
 	void unEstudianteEliminadoYaNoSaleACargo() throws Exception {
 		mvc.perform(conToken(delete("/estudiantes/" + ESTUDIANTE_2027), admin)).andExpect(status().isNoContent());
@@ -128,6 +135,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estudiantesACargo.length()").value(1));
 	}
 
+	@DisplayName("Detalle del tutor trae sus secciones del año en curso")
 	@Test
 	void detalleDelTutorTraeSusSeccionesDelAnioEnCurso() throws Exception {
 		mvc.perform(conToken(get("/usuarios/" + ID_MARIA), admin))
@@ -138,6 +146,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tutorDe[0].cargo").value("TUTOR"));
 	}
 
+	@DisplayName("Tutoria incluye cotutoria y excluye secciones inactivas y otros años")
 	@Test
 	void tutoriaIncluyeCotutoriaYExcluyeSeccionesInactivasYOtrosAnios() throws Exception {
 		// 2026 (año ACTIVO): cotutora de 2.° A y tutora de 3.° A, pero esa sección está inactiva.
@@ -166,6 +175,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tutorDe[1].cargo").value("COTUTOR"));
 	}
 
+	@DisplayName("Un estudiante retirado sale a cargo como retirado")
 	@Test
 	void unEstudianteRetiradoSaleACargoComoRetirado() throws Exception {
 		mvc.perform(conToken(post("/estudiantes/" + ESTUDIANTE_2027 + "/retirar"), admin))
@@ -176,6 +186,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estudiantesACargo[0].estado").value("RETIRADO"));
 	}
 
+	@DisplayName("Exige todos los datos del usuario")
 	@Test
 	void exigeTodosLosDatosDelUsuario() throws Exception {
 		mvc.perform(conToken(post("/usuarios"), admin,
@@ -190,6 +201,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Ingresa la fecha de nacimiento"));
 	}
 
+	@DisplayName("Válida teléfono de casa y correo con extensión")
 	@Test
 	void validaTelefonoDeCasaYCorreoConExtension() throws Exception {
 		mvc.perform(conToken(post("/usuarios"), admin,
@@ -202,6 +214,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El teléfono de casa solo puede contener números"));
 	}
 
+	@DisplayName("Edita datos y roles")
 	@Test
 	void editaDatosYRoles() throws Exception {
 		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin,
@@ -211,6 +224,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.roles.length()").value(3));
 	}
 
+	@DisplayName("Apoderado tutor y estudiante no se asignan desde el formulario")
 	@Test
 	void apoderadoTutorYEstudianteNoSeAsignanDesdeElFormulario() throws Exception {
 		mvc.perform(conToken(post("/usuarios"), admin,
@@ -228,6 +242,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Registrar el documento de un eliminado reactiva su cuenta")
 	@Test
 	void registrarElDocumentoDeUnEliminadoReactivaSuCuenta() throws Exception {
 		mvc.perform(conToken(delete("/usuarios/" + ID_MARIA), admin)).andExpect(status().isNoContent());
@@ -239,6 +254,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.roles.length()").value(1));
 	}
 
+	@DisplayName("Editar con correo de otro usuario da409")
 	@Test
 	void editarConCorreoDeOtroUsuarioDa409() throws Exception {
 		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin,
@@ -246,6 +262,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Desactivado no puede entrar y reactivado si")
 	@Test
 	void desactivadoNoPuedeEntrarYReactivadoSi() throws Exception {
 		mvc.perform(conToken(post("/usuarios/" + ID_MARIA + "/desactivar"), admin))
@@ -260,12 +277,14 @@ class GestionUsuariosIT extends PruebaIntegracion {
 		token(DOCENTE);
 	}
 
+	@DisplayName("No puede desactivarse ni eliminarse a si mismo")
 	@Test
 	void noPuedeDesactivarseNiEliminarseASiMismo() throws Exception {
 		mvc.perform(conToken(post("/usuarios/" + ID_ADMIN + "/desactivar"), admin)).andExpect(status().isBadRequest());
 		mvc.perform(conToken(delete("/usuarios/" + ID_ADMIN), admin)).andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Eliminar es logico y desaparece de la lista")
 	@Test
 	void eliminarEsLogicoYDesapareceDeLaLista() throws Exception {
 		mvc.perform(conToken(delete("/usuarios/" + ID_MARIA), admin)).andExpect(status().isNoContent());
@@ -274,6 +293,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.meta.total").value(0));
 	}
 
+	@DisplayName("Lista filtra por rol estado y texto")
 	@Test
 	void listaFiltraPorRolEstadoYTexto() throws Exception {
 		mvc.perform(conToken(get("/usuarios").param("rol", "TUTOR"), admin))
@@ -285,6 +305,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.meta.total").value(1));
 	}
 
+	@DisplayName("Resumen del inicio")
 	@Test
 	void resumenDelInicio() throws Exception {
 		mvc.perform(conToken(get("/usuarios/resumen"), admin))
@@ -293,6 +314,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cuentasInactivas[0].username").value("U20260007"));
 	}
 
+	@DisplayName("Desactivar corta la sesión abierta de inmediato")
 	@Test
 	void desactivarCortaLaSesionAbiertaDeInmediato() throws Exception {
 		String tokenAna = token(PERSONAL_ADMINISTRATIVO);
@@ -306,6 +328,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 	}
 
 	/** HU-10: el cambio de rol vale desde la siguiente petición, aunque el token se haya emitido antes. */
+	@DisplayName("Cambiar el rol cambia los permisos del token ya emitido")
 	@Test
 	void cambiarElRolCambiaLosPermisosDelTokenYaEmitido() throws Exception {
 		String tokenMaria = token(DOCENTE);
@@ -320,6 +343,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 		mvc.perform(conToken(get("/usuarios"), tokenMaria)).andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Quitar el rol administrador corta sus permisos de inmediato")
 	@Test
 	void quitarElRolAdministradorCortaSusPermisosDeInmediato() throws Exception {
 		mvc.perform(conToken(put("/usuarios/" + ID_MARIA), admin, maria("[\"ADMINISTRADOR\"]")))
@@ -332,6 +356,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 		mvc.perform(conToken(get("/usuarios"), tokenMaria)).andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Los roles solo se cambian en usuarios activos")
 	@Test
 	void losRolesSoloSeCambianEnUsuariosActivos() throws Exception {
 		mvc.perform(conToken(post("/usuarios/" + ID_MARIA + "/desactivar"), admin)).andExpect(status().isOk());
@@ -351,6 +376,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 				.andExpect(status().isOk());
 	}
 
+	@DisplayName("Eliminar corta la sesión abierta")
 	@Test
 	void eliminarCortaLaSesionAbierta() throws Exception {
 		String tokenAna = token(PERSONAL_ADMINISTRATIVO);
@@ -358,6 +384,7 @@ class GestionUsuariosIT extends PruebaIntegracion {
 		mvc.perform(conToken(get("/estudiantes"), tokenAna)).andExpect(status().isUnauthorized());
 	}
 
+	@DisplayName("Solo el administrador gestiona usuarios")
 	@Test
 	void soloElAdministradorGestionaUsuarios() throws Exception {
 		mvc.perform(conToken(get("/usuarios"), token(DOCENTE))).andExpect(status().isForbidden());

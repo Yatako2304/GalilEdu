@@ -10,6 +10,7 @@ import java.time.LocalDate;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -60,6 +61,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 		return mvc.perform(conToken(put(RUTA + "/" + periodoId), personal, cuerpo));
 	}
 
+	@DisplayName("Edita un período futuro y devuelve el período con su estado calculado")
 	@Test
 	void editaUnPeriodoFuturoYDevuelveElPeriodoConSuEstadoCalculado() throws Exception {
 		String segundo = periodo(ID_2027, 2);
@@ -76,6 +78,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.registroNotasAbierto").value(false));
 	}
 
+	@DisplayName("El cambio queda guardado en el detalle del año")
 	@Test
 	void elCambioQuedaGuardadoEnElDetalleDelAnio() throws Exception {
 		String segundo = periodo(ID_2027, 2);
@@ -87,6 +90,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos[1].fechaLimiteNotas").value("2027-09-20"));
 	}
 
+	@DisplayName("Un período que ya empezo no cambia su fecha de inicio")
 	@Test
 	void unPeriodoQueYaEmpezoNoCambiaSuFechaDeInicio() throws Exception {
 		String tercero = periodo(ID_2026, 3); // 03/08 al 09/10
@@ -96,6 +100,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El periodo ya empezó: no se puede cambiar."));
 	}
 
+	@DisplayName("Un período que ya empezo si cambia su fin y su fecha limite")
 	@Test
 	void unPeriodoQueYaEmpezoSiCambiaSuFinYSuFechaLimite() throws Exception {
 		String tercero = periodo(ID_2026, 3);
@@ -107,6 +112,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.registroNotasAbierto").value(true));
 	}
 
+	@DisplayName("Un período que ya termino solo cambia la fecha limite de notas")
 	@Test
 	void unPeriodoQueYaTerminoSoloCambiaLaFechaLimiteDeNotas() throws Exception {
 		String primero = periodo(ID_2026, 1); // 02/03 al 08/05
@@ -119,6 +125,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Ampliar la fecha limite de un período terminado reabre el registro de notas")
 	@Test
 	void ampliarLaFechaLimiteDeUnPeriodoTerminadoReabreElRegistroDeNotas() throws Exception {
 		String primero = periodo(ID_2026, 1);
@@ -134,6 +141,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos[0].registroNotasAbierto").value(true));
 	}
 
+	@DisplayName("El plazo ampliado de un período terminado aparece en la card del año actual")
 	@Test
 	void elPlazoAmpliadoDeUnPeriodoTerminadoApareceEnLaCardDelAnioActual() throws Exception {
 		reloj.fijarEn(LocalDate.of(2026, 10, 21)); // el III terminó el 09/10; el IV está en curso
@@ -149,6 +157,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.proximoPeriodo").value(org.hamcrest.Matchers.nullValue()));
 	}
 
+	@DisplayName("Un año cerrado no edita sus períodos")
 	@Test
 	void unAnioCerradoNoEditaSusPeriodos() throws Exception {
 		String primero = periodo(ID_2026, 1);
@@ -163,6 +172,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 						jsonPath("$.message").value("El año escolar está cerrado: no se puede editar sus periodos."));
 	}
 
+	@DisplayName("El nombre es obligatorio")
 	@Test
 	void elNombreEsObligatorio() throws Exception {
 		String segundo = periodo(ID_2027, 2);
@@ -176,6 +186,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Ingresa el nombre del periodo."));
 	}
 
+	@DisplayName("El nombre no puede pasar de30 caracteres")
 	@Test
 	void elNombreNoPuedePasarDe30Caracteres() throws Exception {
 		editar(periodo(ID_2027, 2), cuerpo("x".repeat(31), "2027-06-08", "2027-09-07", "2027-09-12"))
@@ -183,12 +194,14 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El nombre del periodo no puede pasar de 30 caracteres."));
 	}
 
+	@DisplayName("Las fechas son obligatorias")
 	@Test
 	void lasFechasSonObligatorias() throws Exception {
 		editar(periodo(ID_2027, 2), "{\"nombre\":\"II Trimestre\",\"fechaInicio\":\"2027-06-08\"}")
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Las fechas del período deben estar dentro del año")
 	@Test
 	void lasFechasDelPeriodoDebenEstarDentroDelAnio() throws Exception {
 		String mensaje = "Las fechas del periodo deben estar dentro del año escolar (01/03/2027 al 17/12/2027).";
@@ -201,6 +214,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value(mensaje));
 	}
 
+	@DisplayName("Un período no puede cruzarse con otro")
 	@Test
 	void unPeriodoNoPuedeCruzarseConOtro() throws Exception {
 		// Figma: "Se cruza con el IV Bimestre, que empieza el 19/10/2026."
@@ -212,6 +226,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Se cruza con el III Bimestre, que empieza el 03/08/2026."));
 	}
 
+	@DisplayName("La fecha de fin debe ser posterior a la de inicio")
 	@Test
 	void laFechaDeFinDebeSerPosteriorALaDeInicio() throws Exception {
 		editar(periodo(ID_2027, 2), cuerpo("II Trimestre", "2027-07-01", "2027-07-01", "2027-07-10"))
@@ -219,6 +234,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("La fecha de fin debe ser posterior a la fecha de inicio."));
 	}
 
+	@DisplayName("La fecha limite no puede ser anterior al fin del período")
 	@Test
 	void laFechaLimiteNoPuedeSerAnteriorAlFinDelPeriodo() throws Exception {
 		editar(periodo(ID_2027, 2), cuerpo("II Trimestre", "2027-06-08", "2027-09-07", "2027-09-06"))
@@ -227,6 +243,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 						.value("La fecha límite de notas no puede ser anterior al fin del periodo."));
 	}
 
+	@DisplayName("La fecha limite si puede caer dentro del período siguiente")
 	@Test
 	void laFechaLimiteSiPuedeCaerDentroDelPeriodoSiguiente() throws Exception {
 		// El II Trimestre empieza el 08/06/2027: el límite del I el 10/06 cae dentro de él.
@@ -235,6 +252,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.fechaLimiteNotas").value("2027-06-10"));
 	}
 
+	@DisplayName("Editar un período que no existe da404")
 	@Test
 	void editarUnPeriodoQueNoExisteDa404() throws Exception {
 		editar(INEXISTENTE, cuerpo("I Trimestre", "2027-03-01", "2027-05-31", "2027-06-05"))
@@ -242,6 +260,7 @@ class PeriodoAcademicoIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El periodo académico no existe."));
 	}
 
+	@DisplayName("Solo el personal administrativo edita períodos")
 	@Test
 	void soloElPersonalAdministrativoEditaPeriodos() throws Exception {
 		String periodo = periodo(ID_2027, 2);

@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -20,6 +21,7 @@ class AnioEscolarTests {
 				ReglaNota.PROMEDIO_PONDERADO, ConsolidacionPeriodos.PROMEDIO_PERIODOS);
 	}
 
+	@DisplayName("Los parametros de evaluación solo cambian antes de iniciar el año")
 	@Test
 	void losParametrosDeEvaluacionSoloCambianAntesDeIniciarElAnio() {
 		AnioEscolar anio = anio(INICIO, FIN, Regimen.BIMESTRAL);
@@ -79,6 +81,7 @@ class AnioEscolarTests {
 		assertThatThrownBy(operacion).isExactlyInstanceOf(IllegalArgumentException.class).hasMessage(mensaje);
 	}
 
+	@DisplayName("Un año bimestral genera cuatro bimestres numerados desde uno")
 	@Test
 	void unAnioBimestralGeneraCuatroBimestresNumeradosDesdeUno() {
 		var periodos = anio(INICIO, FIN, Regimen.BIMESTRAL).getPeriodos();
@@ -88,6 +91,7 @@ class AnioEscolarTests {
 				.containsExactly("I Bimestre", "II Bimestre", "III Bimestre", "IV Bimestre");
 	}
 
+	@DisplayName("Un año trimestral genera tres trimestres numerados desde uno")
 	@Test
 	void unAnioTrimestralGeneraTresTrimestresNumeradosDesdeUno() {
 		var periodos = anio(INICIO, FIN, Regimen.TRIMESTRAL).getPeriodos();
@@ -97,6 +101,7 @@ class AnioEscolarTests {
 				.containsExactly("I Trimestre", "II Trimestre", "III Trimestre");
 	}
 
+	@DisplayName("El año nace planificado y sus períodos aún no empiezan")
 	@Test
 	void elAnioNacePlanificadoYSusPeriodosAunNoEmpiezan() {
 		var anio = anio(INICIO, FIN, Regimen.BIMESTRAL);
@@ -107,6 +112,7 @@ class AnioEscolarTests {
 				.containsOnly(EstadoPeriodo.PLANIFICADO);
 	}
 
+	@DisplayName("Los períodos cubren el año sin cruzarse ni dejar huecos")
 	@Test
 	void losPeriodosCubrenElAnioSinCruzarseNiDejarHuecos() {
 		for (Regimen regimen : Regimen.values()) {
@@ -121,6 +127,7 @@ class AnioEscolarTests {
 		}
 	}
 
+	@DisplayName("Cada período queda dentro del año y termina después de empezar")
 	@Test
 	void cadaPeriodoQuedaDentroDelAnioYTerminaDespuesDeEmpezar() {
 		for (Regimen regimen : Regimen.values()) {
@@ -131,6 +138,7 @@ class AnioEscolarTests {
 		}
 	}
 
+	@DisplayName("La fecha limite de notas es cinco días después del fin del período")
 	@Test
 	void laFechaLimiteDeNotasEsCincoDiasDespuesDelFinDelPeriodo() {
 		for (PeriodoAcademico p : anio(INICIO, FIN, Regimen.BIMESTRAL).getPeriodos()) {
@@ -138,6 +146,7 @@ class AnioEscolarTests {
 		}
 	}
 
+	@DisplayName("Los días que sobran se reparten entre los primeros períodos")
 	@Test
 	void losDiasQueSobranSeRepartenEntreLosPrimerosPeriodos() {
 		// 10 días en 4 bimestres: 3 + 3 + 2 + 2.
@@ -147,6 +156,7 @@ class AnioEscolarTests {
 				.containsExactly(3, 3, 2, 2);
 	}
 
+	@DisplayName("Editar las fechas regenera los períodos dentro del nuevo rango")
 	@Test
 	void editarLasFechasRegeneraLosPeriodosDentroDelNuevoRango() {
 		var anio = anio(INICIO, FIN, Regimen.BIMESTRAL);
@@ -162,6 +172,7 @@ class AnioEscolarTests {
 		assertThat(anio.getPeriodos().getLast().getFechaFin()).isEqualTo(nuevoFin);
 	}
 
+	@DisplayName("Cambiar el regimen regenera los períodos con la nueva cantidad y nombres")
 	@Test
 	void cambiarElRegimenRegeneraLosPeriodosConLaNuevaCantidadYNombres() {
 		var anio = anio(INICIO, FIN, Regimen.BIMESTRAL);
@@ -175,6 +186,7 @@ class AnioEscolarTests {
 		assertThat(anio.getPeriodos().getLast().getFechaFin()).isEqualTo(FIN);
 	}
 
+	@DisplayName("Quitar los períodos vacia la lista")
 	@Test
 	void quitarLosPeriodosVaciaLaLista() {
 		var anio = anio(INICIO, FIN, Regimen.BIMESTRAL);
@@ -184,6 +196,7 @@ class AnioEscolarTests {
 		assertThat(anio.getPeriodos()).isEmpty();
 	}
 
+	@DisplayName("Regenerar después de quitar no duplica los períodos")
 	@Test
 	void regenerarDespuesDeQuitarNoDuplicaLosPeriodos() {
 		var anio = anio(INICIO, FIN, Regimen.BIMESTRAL);
@@ -194,6 +207,7 @@ class AnioEscolarTests {
 		assertThat(anio.getPeriodos()).hasSize(3);
 	}
 
+	@DisplayName("Solo un año planificado se puede modificar")
 	@Test
 	void soloUnAnioPlanificadoSePuedeModificar() {
 		for (AnioEscolar anio : List.of(anioActivo(), anioCerrado())) {
@@ -206,6 +220,7 @@ class AnioEscolarTests {
 		}
 	}
 
+	@DisplayName("Con los días minimos cada período sigue terminando después de empezar")
 	@Test
 	void conLosDiasMinimosCadaPeriodoSigueTerminandoDespuesDeEmpezar() {
 		for (Regimen regimen : Regimen.values()) {
@@ -219,6 +234,7 @@ class AnioEscolarTests {
 
 	// --- Estado calculado del periodo ---
 
+	@DisplayName("El período está planificado antes de empezar en curso entre sus fechas y cerrado después")
 	@Test
 	void elPeriodoEstaPlanificadoAntesDeEmpezarEnCursoEntreSusFechasYCerradoDespues() {
 		var anio = anioCorto();
@@ -230,6 +246,7 @@ class AnioEscolarTests {
 		assertThat(segundo.estadoEn(fecha(4, 10), EstadoAnioEscolar.ACTIVO)).isEqualTo(EstadoPeriodo.CERRADO);
 	}
 
+	@DisplayName("Un año cerrado cierra todos sus períodos aunque la fecha este dentro")
 	@Test
 	void unAnioCerradoCierraTodosSusPeriodosAunqueLaFechaEsteDentro() {
 		var anio = anioCerrado();
@@ -238,6 +255,7 @@ class AnioEscolarTests {
 				.containsOnly(EstadoPeriodo.CERRADO);
 	}
 
+	@DisplayName("El registro de notas está abierto hasta la fecha limite inclusive")
 	@Test
 	void elRegistroDeNotasEstaAbiertoHastaLaFechaLimiteInclusive() {
 		var primero = periodo(anioCorto(), 1);
@@ -247,6 +265,7 @@ class AnioEscolarTests {
 		assertThat(primero.registroNotasAbierto(fecha(3, 26), EstadoAnioEscolar.ACTIVO)).isFalse();
 	}
 
+	@DisplayName("Un año cerrado no admite registro de notas")
 	@Test
 	void unAnioCerradoNoAdmiteRegistroDeNotas() {
 		var primero = periodo(anioCorto(), 1);
@@ -254,6 +273,7 @@ class AnioEscolarTests {
 		assertThat(primero.registroNotasAbierto(fecha(3, 10), EstadoAnioEscolar.CERRADO)).isFalse();
 	}
 
+	@DisplayName("Un año planificado no tiene períodos en curso ni registro de notas aunque las fechas incluyan hoy")
 	@Test
 	void unAnioPlanificadoNoTienePeriodosEnCursoNiRegistroDeNotasAunqueLasFechasIncluyanHoy() {
 		var anio = anioCorto();
@@ -267,6 +287,7 @@ class AnioEscolarTests {
 		assertThat(anio.periodoEnCurso(hoy)).isEmpty();
 	}
 
+	@DisplayName("Un período futuro de un año activo está planificado y sin registro de notas")
 	@Test
 	void unPeriodoFuturoDeUnAnioActivoEstaPlanificadoYSinRegistroDeNotas() {
 		var anio = anioActivo();
@@ -279,6 +300,7 @@ class AnioEscolarTests {
 		assertThat(tercero.registroNotasAbierto(fecha(4, 10), anio.getEstado())).isTrue();
 	}
 
+	@DisplayName("Un período terminado con la fecha limite vigente está cerrado pero aún admite notas")
 	@Test
 	void unPeriodoTerminadoConLaFechaLimiteVigenteEstaCerradoPeroAunAdmiteNotas() {
 		var anio = anioActivo();
@@ -290,6 +312,7 @@ class AnioEscolarTests {
 		assertThat(primero.registroNotasAbierto(fecha(3, 26), anio.getEstado())).isFalse();
 	}
 
+	@DisplayName("La duración en semanas se redondea como en figma")
 	@Test
 	void laDuracionEnSemanasSeRedondeaComoEnFigma() {
 		// 292 días en 4 bimestres de 73 días = 10,4 semanas = "10 sem."; 20 días = 2,9 semanas = "3 sem.".
@@ -300,12 +323,14 @@ class AnioEscolarTests {
 		assertThat(periodo(anioCorto(), 1).duracionSemanas()).isEqualTo(3);
 	}
 
+	@DisplayName("El regimen dice su unidad en plural")
 	@Test
 	void elRegimenDiceSuUnidadEnPlural() {
 		assertThat(Regimen.BIMESTRAL.unidadPlural()).isEqualTo("bimestres");
 		assertThat(Regimen.TRIMESTRAL.unidadPlural()).isEqualTo("trimestres");
 	}
 
+	@DisplayName("El período en curso es el que incluye hoy")
 	@Test
 	void elPeriodoEnCursoEsElQueIncluyeHoy() {
 		var anio = anioActivo();
@@ -315,6 +340,7 @@ class AnioEscolarTests {
 		assertThat(anio.periodoEnCurso(fecha(3, 20))).get().extracting(PeriodoAcademico::getNumero).isEqualTo(1);
 	}
 
+	@DisplayName("El período con notas abiertas es uno ya terminado nunca el período en curso")
 	@Test
 	void elPeriodoConNotasAbiertasEsUnoYaTerminadoNuncaElPeriodoEnCurso() {
 		var anio = anioActivo();
@@ -328,6 +354,7 @@ class AnioEscolarTests {
 		assertThat(anio.periodoNotasAbiertas(fecha(3, 10))).isEmpty();
 	}
 
+	@DisplayName("Con varios períodos terminados con notas abiertas se elije el más antiguo")
 	@Test
 	void conVariosPeriodosTerminadosConNotasAbiertasSeElijeElMasAntiguo() {
 		var anio = anioActivo();
@@ -341,6 +368,7 @@ class AnioEscolarTests {
 		assertThat(anio.periodoNotasAbiertas(fecha(4, 21))).isEmpty();
 	}
 
+	@DisplayName("Entre dos períodos las notas siguen abiertas en el que termino y el próximo es el que empieza")
 	@Test
 	void entreDosPeriodosLasNotasSiguenAbiertasEnElQueTerminoYElProximoEsElQueEmpieza() {
 		var anio = anioActivo();
@@ -354,6 +382,7 @@ class AnioEscolarTests {
 		assertThat(anio.proximoPeriodo(hoy)).get().extracting(PeriodoAcademico::getNombre).isEqualTo("II Bimestre");
 	}
 
+	@DisplayName("Sin períodos por empezar ni plazos vigentes no hay nada que mostrar")
 	@Test
 	void sinPeriodosPorEmpezarNiPlazosVigentesNoHayNadaQueMostrar() {
 		var anio = anioActivo();
@@ -364,6 +393,7 @@ class AnioEscolarTests {
 		assertThat(anio.proximoPeriodo(fecha(5, 10))).isEmpty(); // el IV ya empezó el 30/04
 	}
 
+	@DisplayName("Un año planificado o cerrado no tiene período con notas abiertas ni próximo")
 	@Test
 	void unAnioPlanificadoOCerradoNoTienePeriodoConNotasAbiertasNiProximo() {
 		for (AnioEscolar anio : List.of(anioCorto(), anioCerrado())) {
@@ -372,6 +402,7 @@ class AnioEscolarTests {
 		}
 	}
 
+	@DisplayName("Fuera del año o con el año cerrado no hay período en curso")
 	@Test
 	void fueraDelAnioOConElAnioCerradoNoHayPeriodoEnCurso() {
 		assertThat(anioActivo().periodoEnCurso(fecha(2, 1))).isEmpty();
@@ -379,6 +410,7 @@ class AnioEscolarTests {
 		assertThat(anioCerrado().periodoEnCurso(fecha(4, 12))).isEmpty();
 	}
 
+	@DisplayName("El avance es el porcentaje entero de días transcurridos entre0 y100")
 	@Test
 	void elAvanceEsElPorcentajeEnteroDeDiasTranscurridosEntre0Y100() {
 		var anio = anioCorto();
@@ -392,6 +424,7 @@ class AnioEscolarTests {
 
 	// --- Editar periodo ---
 
+	@DisplayName("Un período futuro cambia nombre fechas y limite")
 	@Test
 	void unPeriodoFuturoCambiaNombreFechasYLimite() {
 		var anio = anioCorto();
@@ -405,6 +438,7 @@ class AnioEscolarTests {
 		assertThat(segundo.getFechaLimiteNotas()).isEqualTo(fecha(4, 20));
 	}
 
+	@DisplayName("Un año activo también permite editar un período futuro")
 	@Test
 	void unAnioActivoTambienPermiteEditarUnPeriodoFuturo() {
 		var anio = anioActivo();
@@ -414,6 +448,7 @@ class AnioEscolarTests {
 		assertThat(periodo(anio, 4).getFechaInicio()).isEqualTo(fecha(5, 1));
 	}
 
+	@DisplayName("Un año cerrado no edita sus períodos")
 	@Test
 	void unAnioCerradoNoEditaSusPeriodos() {
 		var anio = anioCerrado();
@@ -422,6 +457,7 @@ class AnioEscolarTests {
 				"El año escolar está cerrado: no se puede editar sus periodos.");
 	}
 
+	@DisplayName("Un período que ya empezo no cambia su fecha de inicio")
 	@Test
 	void unPeriodoQueYaEmpezoNoCambiaSuFechaDeInicio() {
 		var anio = anioCorto();
@@ -433,6 +469,7 @@ class AnioEscolarTests {
 				"El periodo ya empezó: no se puede cambiar.");
 	}
 
+	@DisplayName("Un período que ya empezo si cambia nombre fin y limite")
 	@Test
 	void unPeriodoQueYaEmpezoSiCambiaNombreFinYLimite() {
 		var anio = anioCorto();
@@ -445,6 +482,7 @@ class AnioEscolarTests {
 		assertThat(primero.getFechaLimiteNotas()).isEqualTo(fecha(3, 23));
 	}
 
+	@DisplayName("Un período que ya termino solo amplia la fecha limite de notas")
 	@Test
 	void unPeriodoQueYaTerminoSoloAmpliaLaFechaLimiteDeNotas() {
 		var anio = anioCorto();
@@ -460,6 +498,7 @@ class AnioEscolarTests {
 				"El periodo ya terminó: solo se puede cambiar la fecha límite de notas.");
 	}
 
+	@DisplayName("El nombre es obligatorio")
 	@Test
 	void elNombreEsObligatorio() {
 		var anio = anioCorto();
@@ -470,6 +509,7 @@ class AnioEscolarTests {
 				"Ingresa el nombre del periodo.");
 	}
 
+	@DisplayName("Las fechas del período deben estar dentro del año")
 	@Test
 	void lasFechasDelPeriodoDebenEstarDentroDelAnio() {
 		var anio = anioCorto();
@@ -481,6 +521,7 @@ class AnioEscolarTests {
 				mensaje);
 	}
 
+	@DisplayName("El período no puede cruzarse con otro")
 	@Test
 	void elPeriodoNoPuedeCruzarseConOtro() {
 		var anio = anioCorto();
@@ -491,6 +532,7 @@ class AnioEscolarTests {
 				"Se cruza con el III Bimestre, que empieza el 10/04/2028.");
 	}
 
+	@DisplayName("Un período puede terminar el día anterior al inicio del siguiente")
 	@Test
 	void unPeriodoPuedeTerminarElDiaAnteriorAlInicioDelSiguiente() {
 		var anio = anioCorto();
@@ -500,6 +542,7 @@ class AnioEscolarTests {
 		assertThat(periodo(anio, 2).getFechaFin()).isEqualTo(fecha(4, 9));
 	}
 
+	@DisplayName("La fecha de fin debe ser posterior a la de inicio")
 	@Test
 	void laFechaDeFinDebeSerPosteriorALaDeInicio() {
 		var anio = anioCorto();
@@ -508,6 +551,7 @@ class AnioEscolarTests {
 				"La fecha de fin debe ser posterior a la fecha de inicio.");
 	}
 
+	@DisplayName("La fecha limite no puede ser anterior al fin pero puede igualarlo")
 	@Test
 	void laFechaLimiteNoPuedeSerAnteriorAlFinPeroPuedeIgualarlo() {
 		var anio = anioCorto();
@@ -518,6 +562,7 @@ class AnioEscolarTests {
 		assertThat(periodo(anio, 2).getFechaLimiteNotas()).isEqualTo(fecha(4, 9));
 	}
 
+	@DisplayName("La fecha limite si puede caer dentro del período siguiente")
 	@Test
 	void laFechaLimiteSiPuedeCaerDentroDelPeriodoSiguiente() {
 		var anio = anioCorto();
@@ -527,6 +572,7 @@ class AnioEscolarTests {
 		assertThat(periodo(anio, 1).getFechaLimiteNotas()).isEqualTo(fecha(4, 5));
 	}
 
+	@DisplayName("Todas las fechas son obligatorias")
 	@Test
 	void todasLasFechasSonObligatorias() {
 		var anio = anioCorto();
@@ -537,6 +583,7 @@ class AnioEscolarTests {
 				"Ingresa las fechas del periodo y la fecha límite de notas.");
 	}
 
+	@DisplayName("Un período que no es del año se rechaza")
 	@Test
 	void unPeriodoQueNoEsDelAnioSeRechaza() {
 		var anio = anioCorto();
@@ -545,6 +592,7 @@ class AnioEscolarTests {
 				fecha(4, 14), fecha(2, 1)), "El periodo no pertenece a este año escolar.");
 	}
 
+	@DisplayName("Una edición rechazada no cambia el período")
 	@Test
 	void unaEdicionRechazadaNoCambiaElPeriodo() {
 		var anio = anioCorto();
@@ -559,6 +607,7 @@ class AnioEscolarTests {
 
 	// --- Activar y cerrar el año ---
 
+	@DisplayName("Activar pasa el año planificado a activo sin tocar los períodos")
 	@Test
 	void activarPasaElAnioPlanificadoAActivoSinTocarLosPeriodos() {
 		var anio = anioCorto();
@@ -571,18 +620,21 @@ class AnioEscolarTests {
 		assertThat(anio.getPeriodos()).hasSize(4);
 	}
 
+	@DisplayName("Solo se puede activar un año planificado")
 	@Test
 	void soloSePuedeActivarUnAnioPlanificado() {
 		rechazaPorEstado(anioActivo()::activar, "Solo se puede activar un año planificado.");
 		rechazaPorEstado(anioCerrado()::activar, "Solo se puede activar un año planificado.");
 	}
 
+	@DisplayName("Solo se puede cerrar un año activo")
 	@Test
 	void soloSePuedeCerrarUnAnioActivo() {
 		rechazaPorEstado(() -> anioCorto().cerrar(fecha(6, 1)), "Solo se puede cerrar un año activo.");
 		rechazaPorEstado(() -> anioCerrado().cerrar(fecha(6, 1)), "Solo se puede cerrar un año activo.");
 	}
 
+	@DisplayName("No se cierra el año hasta pasar la fecha limite de notas del último período")
 	@Test
 	void noSeCierraElAnioHastaPasarLaFechaLimiteDeNotasDelUltimoPeriodo() {
 		var anio = anioActivo();
@@ -592,6 +644,7 @@ class AnioEscolarTests {
 		assertThat(anio.getEstado()).isEqualTo(EstadoAnioEscolar.ACTIVO);
 	}
 
+	@DisplayName("El día después de la fecha limite del último período se cierra el año")
 	@Test
 	void elDiaDespuesDeLaFechaLimiteDelUltimoPeriodoSeCierraElAnio() {
 		var anio = anioActivo();
@@ -601,6 +654,7 @@ class AnioEscolarTests {
 		assertThat(anio.getEstado()).isEqualTo(EstadoAnioEscolar.CERRADO);
 	}
 
+	@DisplayName("Un año cerrado no se reabre")
 	@Test
 	void unAnioCerradoNoSeReabre() {
 		rechazaPorEstado(anioCerrado()::activar, "Solo se puede activar un año planificado.");

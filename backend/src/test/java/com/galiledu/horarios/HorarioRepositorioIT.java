@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -68,6 +69,7 @@ class HorarioRepositorioIT extends PruebaIntegracion {
 				.single();
 	}
 
+	@DisplayName("Guarda y lee un horario con un bloque")
 	@Test
 	void guardaYLeeUnHorarioConUnBloque() {
 		Datos d = datosDe1A();
@@ -95,6 +97,7 @@ class HorarioRepositorioIT extends PruebaIntegracion {
 				.param("id", leido.getId()).query(String.class).single()).isEqualTo("MIE");
 	}
 
+	@DisplayName("Las entidades son las de la sección y no otras")
 	@Test
 	void lasEntidadesSonLasDeLaSeccionYNoOtras() {
 		Datos d = datosDe1A();
@@ -105,6 +108,7 @@ class HorarioRepositorioIT extends PruebaIntegracion {
 		assertThat(horarios.findBySeccionId(d.seccionId())).isPresent();
 	}
 
+	@DisplayName("Los stubs del contrato se inyectan y no hacen nada")
 	@Test
 	void losStubsDelContratoSeInyectanYNoHacenNada() {
 		UUID id = UUID.randomUUID();

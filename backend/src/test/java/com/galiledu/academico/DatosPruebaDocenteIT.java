@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
@@ -21,6 +22,7 @@ class DatosPruebaDocenteIT extends PruebaIntegracion {
 	@Autowired
 	private JdbcClient jdbc;
 
+	@DisplayName("María puede calificar a tres alumnos en tres cursos")
 	@Test
 	void mariaPuedeCalificarATresAlumnosEnTresCursos() throws Exception {
 		String docente = token(DOCENTE);
@@ -41,6 +43,7 @@ class DatosPruebaDocenteIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("Volver a cargar la demo no duplica datos ni sobrescribe notas o items")
 	@Test
 	void volverACargarLaDemoNoDuplicaDatosNiSobrescribeNotasOItems() throws Exception {
 		var curso = cursosDemo().get(0);

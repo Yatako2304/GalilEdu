@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -34,6 +35,7 @@ class SeccionAsignadaMatriculaIT extends PruebaIntegracion {
 				.param(anio).query(UUID.class).single();
 	}
 
+	@DisplayName("En proceso la sección es solo seleccionada en el detalle")
 	@Test
 	void enProcesoLaSeccionEsSoloSeleccionadaEnElDetalle() throws Exception {
 		mvc.perform(conToken(get("/matricula/matriculas/{id}", MATRICULA_MATEO), token(PERSONAL_ADMINISTRATIVO)))
@@ -45,6 +47,7 @@ class SeccionAsignadaMatriculaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.seccionSeleccionada.id").isNotEmpty());
 	}
 
+	@DisplayName("Con la matrícula formalizada la sección queda asignada")
 	@Test
 	void conLaMatriculaFormalizadaLaSeccionQuedaAsignada() throws Exception {
 		mvc.perform(conToken(get("/matricula/matriculas/{id}", MATRICULA_SOFIA_2026),
@@ -56,6 +59,7 @@ class SeccionAsignadaMatriculaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.seccionSeleccionada").doesNotExist());
 	}
 
+	@DisplayName("Una matrícula anulada no queda relacionada con la sección")
 	@Test
 	void unaMatriculaAnuladaNoQuedaRelacionadaConLaSeccion() throws Exception {
 		jdbc.sql("UPDATE matricula.matricula SET estado = 'ANULADA' WHERE id = ?::uuid").param(MATRICULA_MATEO)
@@ -66,6 +70,7 @@ class SeccionAsignadaMatriculaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.seccionSeleccionada").doesNotExist());
 	}
 
+	@DisplayName("La tabla del período separa asignada y seleccionada")
 	@Test
 	void laTablaDelPeriodoSeparaAsignadaYSeleccionada() throws Exception {
 		mvc.perform(conToken(get("/matricula/periodos/{id}/matriculas", periodoDe(2027)),
@@ -76,6 +81,7 @@ class SeccionAsignadaMatriculaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.data[0].seccionSeleccionada.etiqueta").value("1.° A"));
 	}
 
+	@DisplayName("El apoderado ve la sección por asignar hasta que se formalice")
 	@Test
 	void elApoderadoVeLaSeccionPorAsignarHastaQueSeFormalice() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", MATEO), token(APODERADO)))

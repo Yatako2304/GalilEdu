@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.ResultActions;
@@ -41,6 +42,7 @@ class CargaMasivaIT extends PruebaIntegracion {
 						admin));
 	}
 
+	@DisplayName("Descarga la plantilla")
 	@Test
 	void descargaLaPlantilla() throws Exception {
 		mvc.perform(conToken(get("/usuarios/carga-masiva/plantilla"), admin))
@@ -48,6 +50,7 @@ class CargaMasivaIT extends PruebaIntegracion {
 				.andExpect(header().string("Content-Disposition", containsString("usuarios_galiledu.xlsx")));
 	}
 
+	@DisplayName("Validar informa errores por fila sin crear nada")
 	@Test
 	void validarInformaErroresPorFilaSinCrearNada() throws Exception {
 		enviar("/usuarios/carga-masiva/validacion", "usuarios.csv", CSV.getBytes(StandardCharsets.UTF_8))
@@ -65,6 +68,7 @@ class CargaMasivaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.meta.total").value(0));
 	}
 
+	@DisplayName("Cargar crea solo las filas validas")
 	@Test
 	void cargarCreaSoloLasFilasValidas() throws Exception {
 		enviar("/usuarios/carga-masiva", "usuarios.csv", CSV.getBytes(StandardCharsets.UTF_8))
@@ -77,6 +81,7 @@ class CargaMasivaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.data[0].roles.length()").value(2));
 	}
 
+	@DisplayName("Lee la plantilla de excel")
 	@Test
 	void leeLaPlantillaDeExcel() throws Exception {
 		byte[] plantilla = mvc.perform(conToken(get("/usuarios/carga-masiva/plantilla"), admin))
@@ -86,6 +91,7 @@ class CargaMasivaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.validos").value(1));
 	}
 
+	@DisplayName("Rechaza archivos sin las columnas")
 	@Test
 	void rechazaArchivosSinLasColumnas() throws Exception {
 		enviar("/usuarios/carga-masiva/validacion", "x.csv", "Nombres\nAna\n".getBytes(StandardCharsets.UTF_8))
@@ -93,6 +99,7 @@ class CargaMasivaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(containsString("Falta la columna")));
 	}
 
+	@DisplayName("Solo el administrador puede cargar")
 	@Test
 	void soloElAdministradorPuedeCargar() throws Exception {
 		mvc.perform(conToken(multipart("/usuarios/carga-masiva")

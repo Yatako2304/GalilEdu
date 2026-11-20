@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.time.OffsetDateTime;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -72,6 +73,7 @@ class RecuperacionContrasenaIT extends PruebaIntegracion {
 				.param("u", USUARIO_ID).query(Integer.class).single();
 	}
 
+	@DisplayName("Con un correo registrado envia un código que vence en diez minutos")
 	@Test
 	void conUnCorreoRegistradoEnviaUnCodigoQueVenceEnDiezMinutos() throws Exception {
 		solicitar(CORREO).andExpect(status().isOk())
@@ -82,22 +84,26 @@ class RecuperacionContrasenaIT extends PruebaIntegracion {
 		assertThat(minutos).isEqualTo(10.0);
 	}
 
+	@DisplayName("El correo no distingue mayúsculas")
 	@Test
 	void elCorreoNoDistingueMayusculas() throws Exception {
 		solicitar("Selene.Curo@GALILEDU.edu.pe").andExpect(status().isOk());
 	}
 
+	@DisplayName("Un correo sin cuenta da el mensaje de figma")
 	@Test
 	void unCorreoSinCuentaDaElMensajeDeFigma() throws Exception {
 		solicitar("nadie@galiledu.edu.pe").andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.message").value("El correo no está asociado a ninguna cuenta."));
 	}
 
+	@DisplayName("Una cuenta desactivada no puede recuperarla")
 	@Test
 	void unaCuentaDesactivadaNoPuedeRecuperarla() throws Exception {
 		solicitar("leo.montoya@galiledu.edu.pe").andExpect(status().isConflict());
 	}
 
+	@DisplayName("Solo se puede pedir otro código cada sesenta segundos y anula el anterior")
 	@Test
 	void soloSePuedePedirOtroCodigoCadaSesentaSegundosYAnulaElAnterior() throws Exception {
 		solicitar(CORREO).andExpect(status().isOk());
@@ -109,6 +115,7 @@ class RecuperacionContrasenaIT extends PruebaIntegracion {
 		assertThat(codigosVigentes()).isEqualTo(1);
 	}
 
+	@DisplayName("Con el código correcto restablece la contraseña y el código no se reutiliza")
 	@Test
 	void conElCodigoCorrectoRestableceLaContrasenaYElCodigoNoSeReutiliza() throws Exception {
 		conCodigoConocido();
@@ -121,6 +128,7 @@ class RecuperacionContrasenaIT extends PruebaIntegracion {
 		restablecer(CODIGO, "Otra#2026x").andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Un código incorrecto da el mensaje de figma y al quinto intento se anula")
 	@Test
 	void unCodigoIncorrectoDaElMensajeDeFigmaYAlQuintoIntentoSeAnula() throws Exception {
 		conCodigoConocido();
@@ -134,6 +142,7 @@ class RecuperacionContrasenaIT extends PruebaIntegracion {
 		verificar(CODIGO).andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Un código vencido no sirve")
 	@Test
 	void unCodigoVencidoNoSirve() throws Exception {
 		conCodigoConocido();
@@ -143,11 +152,13 @@ class RecuperacionContrasenaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("El código venció")));
 	}
 
+	@DisplayName("Sin haber pedido un código no se verifica nada")
 	@Test
 	void sinHaberPedidoUnCodigoNoSeVerificaNada() throws Exception {
 		verificar(CODIGO).andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Una contraseña que no cumple la regla se rechaza sin gastar el código")
 	@Test
 	void unaContrasenaQueNoCumpleLaReglaSeRechazaSinGastarElCodigo() throws Exception {
 		conCodigoConocido();
@@ -156,6 +167,7 @@ class RecuperacionContrasenaIT extends PruebaIntegracion {
 		restablecer(CODIGO, NUEVA).andExpect(status().isOk());
 	}
 
+	@DisplayName("Restablecer quita el bloqueo por intentos fallidos")
 	@Test
 	void restablecerQuitaElBloqueoPorIntentosFallidos() throws Exception {
 		for (int i = 0; i < 5; i++) {
@@ -167,6 +179,7 @@ class RecuperacionContrasenaIT extends PruebaIntegracion {
 		login(NUEVA).andExpect(status().isOk());
 	}
 
+	@DisplayName("Un correo mal escrito se rechaza antes de buscar")
 	@Test
 	void unCorreoMalEscritoSeRechazaAntesDeBuscar() throws Exception {
 		solicitar("no-es-correo").andExpect(status().isBadRequest());

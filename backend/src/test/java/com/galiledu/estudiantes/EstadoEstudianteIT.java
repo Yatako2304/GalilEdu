@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.web.servlet.ResultActions;
@@ -82,11 +83,13 @@ class EstadoEstudianteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.permitido").value(permitido));
 	}
 
+	@DisplayName("Un documento sin registrar está libre")
 	@Test
 	void unDocumentoSinRegistrarEstaLibre() throws Exception {
 		verificar("11112222", "LIBRE", true);
 	}
 
+	@DisplayName("Un estudiante activo no se puede inscribir de nuevo")
 	@Test
 	void unEstudianteActivoNoSePuedeInscribirDeNuevo() throws Exception {
 		inscribir(DOCUMENTO, "Lucía", "PRI-6");
@@ -100,6 +103,7 @@ class EstadoEstudianteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El documento ya está registrado dentro del sistema"));
 	}
 
+	@DisplayName("Un estudiante retirado no se puede inscribir como nuevo hasta reactivarlo")
 	@Test
 	void unEstudianteRetiradoNoSePuedeInscribirComoNuevoHastaReactivarlo() throws Exception {
 		String id = inscribir(DOCUMENTO, "Lucía", "PRI-6");
@@ -125,6 +129,7 @@ class EstadoEstudianteIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Un estudiante eliminado se reinscribe y sus datos se actualizan")
 	@Test
 	void unEstudianteEliminadoSeReinscribeYSusDatosSeActualizan() throws Exception {
 		String id = inscribir(DOCUMENTO, "Lucía", "PRI-6");
@@ -152,6 +157,7 @@ class EstadoEstudianteIT extends PruebaIntegracion {
 		verificar(DOCUMENTO, "ESTUDIANTE_ACTIVO", false);
 	}
 
+	@DisplayName("Un estudiante eliminado y retirado también se reinscribe")
 	@Test
 	void unEstudianteEliminadoYRetiradoTambienSeReinscribe() throws Exception {
 		String id = inscribir(DOCUMENTO, "Lucía", "PRI-6");
@@ -165,6 +171,7 @@ class EstadoEstudianteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("INSCRITO"));
 	}
 
+	@DisplayName("El documento de una persona que no es estudiante se rechaza")
 	@Test
 	void elDocumentoDeUnaPersonaQueNoEsEstudianteSeRechaza() throws Exception {
 		verificar(DOCUMENTO_DE_UN_PADRE, "OTRA_PERSONA", false);
@@ -173,6 +180,7 @@ class EstadoEstudianteIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Solo administración puede cambiar el estado")
 	@Test
 	void soloAdministracionPuedeCambiarElEstado() throws Exception {
 		String id = inscribir(DOCUMENTO, "Lucía", "PRI-6");

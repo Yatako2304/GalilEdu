@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
@@ -33,6 +34,7 @@ class MisDatosIT extends PruebaIntegracion {
 				""".formatted(dni, nombres, correo);
 	}
 
+	@DisplayName("Cualquier rol ve sus propios datos")
 	@Test
 	void cualquierRolVeSusPropiosDatos() throws Exception {
 		String docente = token(DOCENTE);
@@ -41,6 +43,7 @@ class MisDatosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.numeroDocumento").exists());
 	}
 
+	@DisplayName("Cualquier rol actualiza sus propios datos sin tocar roles")
 	@Test
 	void cualquierRolActualizaSusPropiosDatosSinTocarRoles() throws Exception {
 		String docente = token(DOCENTE);
@@ -56,6 +59,7 @@ class MisDatosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.correo").value("docente.actualizado@galiledu.edu.pe"));
 	}
 
+	@DisplayName("Funciona para otro rol distinto de administrador")
 	@Test
 	void funcionaParaOtroRolDistintoDeAdministrador() throws Exception {
 		String coordinador = token(COORDINADOR);
@@ -65,6 +69,7 @@ class MisDatosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.firstName").value("Carlos Actualizado"));
 	}
 
+	@DisplayName("Exige los datos completos como en hu9")
 	@Test
 	void exigeLosDatosCompletosComoEnHU9() throws Exception {
 		String docente = token(DOCENTE);
@@ -75,6 +80,7 @@ class MisDatosIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Rechaza documento ya registrado a otra persona")
 	@Test
 	void rechazaDocumentoYaRegistradoAOtraPersona() throws Exception {
 		String docente = token(DOCENTE);
@@ -89,6 +95,7 @@ class MisDatosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(containsString(documentoAdmin)));
 	}
 
+	@DisplayName("Rechaza correo ya registrado a otra persona")
 	@Test
 	void rechazaCorreoYaRegistradoAOtraPersona() throws Exception {
 		String docente = token(DOCENTE);
@@ -99,6 +106,7 @@ class MisDatosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(containsString("ya está registrado")));
 	}
 
+	@DisplayName("Sin sesión no puede ver ni editar")
 	@Test
 	void sinSesionNoPuedeVerNiEditar() throws Exception {
 		mvc.perform(get("/auth/mis-datos")).andExpect(status().isUnauthorized());

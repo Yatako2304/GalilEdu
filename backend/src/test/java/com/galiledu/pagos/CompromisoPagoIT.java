@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.PruebaIntegracion;
@@ -24,6 +25,7 @@ class CompromisoPagoIT extends PruebaIntegracion {
 	/** Mateo Paredes: solo tiene la sección reservada para 2027. */
 	private static final String MATRICULA_MATEO = "50000000-0000-0000-0000-000000000002";
 
+	@DisplayName("Lista los compromisos del estudiante")
 	@Test
 	void listaLosCompromisosDelEstudiante() throws Exception {
 		mvc.perform(conToken(get("/pagos/estudiantes/{id}/compromisos", SOFIA), token(PERSONAL_ADMINISTRATIVO)))
@@ -33,6 +35,7 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].estado").value("VIGENTE"));
 	}
 
+	@DisplayName("Muestra el cronograma con resumen y cuota vencida")
 	@Test
 	void muestraElCronogramaConResumenYCuotaVencida() throws Exception {
 		mvc.perform(conToken(get("/pagos/compromisos/{id}", COMPROMISO_SOFIA), token(PERSONAL_ADMINISTRATIVO)))
@@ -52,6 +55,7 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cuotas[?(@.numero == 7)].vencida").value(true));
 	}
 
+	@DisplayName("Compromiso inexistente devuelve404")
 	@Test
 	void compromisoInexistenteDevuelve404() throws Exception {
 		mvc.perform(conToken(get("/pagos/compromisos/{id}", "00000000-0000-0000-0000-000000000000"),
@@ -59,12 +63,14 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Otro rol no puede ver el compromiso")
 	@Test
 	void otroRolNoPuedeVerElCompromiso() throws Exception {
 		mvc.perform(conToken(get("/pagos/compromisos/{id}", COMPROMISO_SOFIA), token(APODERADO)))
 				.andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Genera las diez pensiones al matricular y no las duplica")
 	@Test
 	void generaLasDiezPensionesAlMatricularYNoLasDuplica() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -82,6 +88,7 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("No genera cronograma si la matrícula no está formalizada")
 	@Test
 	void noGeneraCronogramaSiLaMatriculaNoEstaFormalizada() throws Exception {
 		mvc.perform(conToken(post("/pagos/matriculas/{id}/cronograma", MATRICULA_MATEO),
@@ -89,6 +96,7 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("El retiro anula solo las pensiones que vencen después")
 	@Test
 	void elRetiroAnulaSoloLasPensionesQueVencenDespues() throws Exception {
 		// Retiro el 15/10/2026: se anulan octubre, noviembre y diciembre; septiembre (vencida) se mantiene.
@@ -99,12 +107,14 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cuotasAnuladas").value(3));
 	}
 
+	@DisplayName("Otro rol no puede generar el cronograma")
 	@Test
 	void otroRolNoPuedeGenerarElCronograma() throws Exception {
 		mvc.perform(conToken(post("/pagos/matriculas/{id}/cronograma", MATRICULA_VALERIA), token(APODERADO)))
 				.andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Estado de cuenta del año lista los compromisos con su deuda")
 	@Test
 	void estadoDeCuentaDelAnioListaLosCompromisosConSuDeuda() throws Exception {
 		mvc.perform(conToken(get("/pagos/estado-cuenta").param("anio", "2026"), token(PERSONAL_ADMINISTRATIVO)))
@@ -117,6 +127,7 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.alumnosConDeuda").value(greaterThanOrEqualTo(1)));
 	}
 
+	@DisplayName("La morosidad muestra la pensión vencida con su recargo separado")
 	@Test
 	void laMorosidadMuestraLaPensionVencidaConSuRecargoSeparado() throws Exception {
 		mvc.perform(
@@ -138,6 +149,7 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.recargo").value(greaterThan(0.0)));
 	}
 
+	@DisplayName("Morosidad de un compromiso inexistente devuelve404")
 	@Test
 	void morosidadDeUnCompromisoInexistenteDevuelve404() throws Exception {
 		mvc.perform(conToken(get("/pagos/compromisos/{id}/morosidad", "99999999-0000-0000-0000-000000000000"),

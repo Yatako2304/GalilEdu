@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
@@ -33,17 +34,20 @@ class CambioContrasenaIT extends PruebaIntegracion {
 				{"username":"%s","password":"%s"}""".formatted(DOCENTE, contrasena)));
 	}
 
+	@DisplayName("Con la contraseña actual correcta se puede continuar")
 	@Test
 	void conLaContrasenaActualCorrectaSePuedeContinuar() throws Exception {
 		verificar(token(DOCENTE), CONTRASENA).andExpect(status().isOk());
 	}
 
+	@DisplayName("Una contraseña actual incorrecta da el mensaje de figma")
 	@Test
 	void unaContrasenaActualIncorrectaDaElMensajeDeFigma() throws Exception {
 		verificar(token(DOCENTE), "Incorrecta#1").andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("Contraseña incorrecta."));
 	}
 
+	@DisplayName("Al cambiarla entra con la nueva y se cierran las sesiones abiertas")
 	@Test
 	void alCambiarlaEntraConLaNuevaYSeCierranLasSesionesAbiertas() throws Exception {
 		String anterior = token(DOCENTE);
@@ -57,6 +61,7 @@ class CambioContrasenaIT extends PruebaIntegracion {
 		login(NUEVA).andExpect(status().isOk());
 	}
 
+	@DisplayName("La nueva debe cumplir la regla y ser distinta de la actual")
 	@Test
 	void laNuevaDebeCumplirLaReglaYSerDistintaDeLaActual() throws Exception {
 		String token = token(DOCENTE);
@@ -67,12 +72,14 @@ class CambioContrasenaIT extends PruebaIntegracion {
 		login(CONTRASENA).andExpect(status().isOk());
 	}
 
+	@DisplayName("Cambiar vuelve a comprobar la contraseña actual")
 	@Test
 	void cambiarVuelveAComprobarLaContrasenaActual() throws Exception {
 		cambiar(token(DOCENTE), "Incorrecta#1", NUEVA).andExpect(status().isBadRequest());
 		login(NUEVA).andExpect(status().isUnauthorized());
 	}
 
+	@DisplayName("Al quinto intento fallido se bloquea como en el inicio de sesión")
 	@Test
 	void alQuintoIntentoFallidoSeBloqueaComoEnElInicioDeSesion() throws Exception {
 		String token = token(DOCENTE);
@@ -83,6 +90,7 @@ class CambioContrasenaIT extends PruebaIntegracion {
 		login(CONTRASENA).andExpect(status().isLocked());
 	}
 
+	@DisplayName("Sin sesión no se puede")
 	@Test
 	void sinSesionNoSePuede() throws Exception {
 		mvc.perform(post("/auth/cambiar-contrasena/verificar").contentType(MediaType.APPLICATION_JSON)

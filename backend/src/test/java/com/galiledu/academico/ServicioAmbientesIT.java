@@ -11,6 +11,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -122,6 +123,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Resumen (tarjetas) ----------
 
+	@DisplayName("El resumen cuenta solo los activos y el total incluye los inactivos")
 	@Test
 	void elResumenCuentaSoloLosActivosYElTotalIncluyeLosInactivos() {
 		var esperado = jdbc.sql("""
@@ -142,6 +144,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(resumen.total()).isGreaterThan(resumen.activos());
 	}
 
+	@DisplayName("Un ambiente nuevo suma a su tarjeta y uno inactivo solo al total")
 	@Test
 	void unAmbienteNuevoSumaASuTarjetaYUnoInactivoSoloAlTotal() {
 		var antes = servicio.resumen();
@@ -158,6 +161,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(despues.aforoTotal()).isEqualTo(antes.aforoTotal() + 20 + 50); // los 70 del inactivo no suman
 	}
 
+	@DisplayName("El resumen no depende de los filtros de la lista")
 	@Test
 	void elResumenNoDependeDeLosFiltrosDeLaLista() {
 		var antes = servicio.resumen();
@@ -170,6 +174,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Listar ----------
 
+	@DisplayName("Sin filtros lista todos por nombre con su código de solo lectura")
 	@Test
 	void sinFiltrosListaTodosPorNombreConSuCodigoDeSoloLectura() {
 		var lista = servicio.listar(null, null, null);
@@ -184,6 +189,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(a101.estado()).isEqualTo(EstadoAmbiente.ACTIVO);
 	}
 
+	@DisplayName("Filtra por tipo y por estado")
 	@Test
 	void filtraPorTipoYPorEstado() {
 		assertThat(servicio.listar(TipoAmbiente.AULA_REGULAR, null, null)).extracting(AmbienteResumen::tipo)
@@ -198,6 +204,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 				.extracting(AmbienteResumen::nombre).contains("Aula 205").doesNotContain("Aula 101", "Auditorio");
 	}
 
+	@DisplayName("La búsqueda es por nombre sin distinguir mayúsculas ni espacios sobrantes")
 	@Test
 	void laBusquedaEsPorNombreSinDistinguirMayusculasNiEspaciosSobrantes() {
 		assertThat(servicio.listar(null, null, "AULA 10")).extracting(AmbienteResumen::nombre)
@@ -208,12 +215,14 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 				.contains("Laboratorio de ciencias", "Laboratorio de cómputo").doesNotContain("Aula 101");
 	}
 
+	@DisplayName("La búsqueda no mira el código ni los recursos")
 	@Test
 	void laBusquedaNoMiraElCodigoNiLosRecursos() {
 		assertThat(servicio.listar(null, null, "A-101")).isEmpty();
 		assertThat(servicio.listar(null, null, "proyector")).isEmpty(); // recurso de A-101, no parte de un nombre
 	}
 
+	@DisplayName("La búsqueda no iguala tildes distintas")
 	@Test
 	void laBusquedaNoIgualaTildesDistintas() {
 		assertThat(servicio.listar(null, null, "CÓMPUTO")).extracting(AmbienteResumen::nombre)
@@ -221,11 +230,13 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(servicio.listar(null, null, "computo")).isEmpty();
 	}
 
+	@DisplayName("Una búsqueda en blanco no filtra")
 	@Test
 	void unaBusquedaEnBlancoNoFiltra() {
 		assertThat(servicio.listar(null, null, "   ")).hasSameSizeAs(servicio.listar(null, null, null));
 	}
 
+	@DisplayName("Los filtros se combinan")
 	@Test
 	void losFiltrosSeCombinan() {
 		assertThat(servicio.listar(TipoAmbiente.AULA_REGULAR, EstadoAmbiente.ACTIVO, "aula 10"))
@@ -235,6 +246,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Actualizar ----------
 
+	@DisplayName("Actualiza nombre aforo y recursos y no toca código tipo ni estado")
 	@Test
 	void actualizaNombreAforoYRecursosYNoTocaCodigoTipoNiEstado() {
 		UUID id = idDe("A-101");
@@ -259,6 +271,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 				.containsEntry("tipo", "AULA_REGULAR").containsEntry("estado", "ACTIVO");
 	}
 
+	@DisplayName("Puede conservar su propio nombre aunque cambie la capitalización")
 	@Test
 	void puedeConservarSuPropioNombreAunqueCambieLaCapitalizacion() {
 		var respuesta = servicio.actualizar(idDe("A-101"), edicion("AULA 101", 30));
@@ -267,6 +280,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(respuesta.recursos()).isEmpty(); // sin recursos en la solicitud: quedan ninguno
 	}
 
+	@DisplayName("Un espacio especial puede superar45")
 	@Test
 	void unEspacioEspecialPuedeSuperar45() {
 		var respuesta = servicio.actualizar(idDe("AUD-01"), edicion("Auditorio", 300, "Sonido"));
@@ -275,6 +289,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(respuesta.tipo()).isEqualTo(TipoAmbiente.ESPACIO_ESPECIAL);
 	}
 
+	@DisplayName("Rechaza el nombre de otro ambiente sin distinguir mayúsculas ni espacios")
 	@Test
 	void rechazaElNombreDeOtroAmbienteSinDistinguirMayusculasNiEspacios() {
 		UUID id = idDe("A-101");
@@ -287,6 +302,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 				() -> servicio.actualizar(id, edicion("AULA 205", 30)));
 	}
 
+	@DisplayName("Los datos invalidos dan400 con el mensaje del dominio")
 	@Test
 	void losDatosInvalidosDan400ConElMensajeDelDominio() {
 		UUID id = idDe("A-101");
@@ -307,6 +323,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 				() -> servicio.actualizar(id, edicion("Aula", null)));
 	}
 
+	@DisplayName("Un dato inválido no deja nada modificado ni siquiera lo que si era válido")
 	@Test
 	void unDatoInvalidoNoDejaNadaModificadoNiSiquieraLoQueSiEraValido() {
 		UUID id = idDe("A-101");
@@ -326,6 +343,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 				.containsEntry("recursos", "Pizarra acrílica|Proyector");
 	}
 
+	@DisplayName("Un ambiente que no existe es404")
 	@Test
 	void unAmbienteQueNoExisteEs404() {
 		rechazaCon(HttpStatus.NOT_FOUND, "El ambiente no existe.",
@@ -336,6 +354,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Actualizar: RF-111 (aforo contra la matrícula) ----------
 
+	@DisplayName("No baja el aforo por debajo de la matrícula de una sección que usa el aula")
 	@Test
 	void noBajaElAforoPorDebajoDeLaMatriculaDeUnaSeccionQueUsaElAula() {
 		UUID id = idDe("A-101");
@@ -351,6 +370,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(fila("A-101")).containsEntry("aforo_maximo", 30); // el rechazo no modificó nada
 	}
 
+	@DisplayName("Permite bajar el aforo hasta exactamente la matrícula")
 	@Test
 	void permiteBajarElAforoHastaExactamenteLaMatricula() {
 		UUID id = idDe("A-101");
@@ -359,11 +379,13 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(servicio.actualizar(id, edicion("Aula 101", matriculados)).aforoMaximo()).isEqualTo(matriculados);
 	}
 
+	@DisplayName("Subir el aforo no consulta la matrícula")
 	@Test
 	void subirElAforoNoConsultaLaMatricula() {
 		assertThat(servicio.actualizar(idDe("A-101"), edicion("Aula 101", 45)).aforoMaximo()).isEqualTo(45);
 	}
 
+	@DisplayName("Retirados y anulados no impiden bajar el aforo")
 	@Test
 	void retiradosYAnuladosNoImpidenBajarElAforo() {
 		insertarAmbiente("A-901", "Aula con retiros", "AULA_REGULAR", 40, "ACTIVO");
@@ -378,6 +400,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(servicio.actualizar(id, edicion("Aula con retiros", 3)).aforoMaximo()).isEqualTo(3);
 	}
 
+	@DisplayName("Una sección inactiva no impide bajar el aforo")
 	@Test
 	void unaSeccionInactivaNoImpideBajarElAforo() {
 		insertarAmbiente("A-901", "Aula sin secciones activas", "AULA_REGULAR", 40, "ACTIVO");
@@ -387,6 +410,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(servicio.actualizar(id, edicion("Aula sin secciones activas", 1)).aforoMaximo()).isEqualTo(1);
 	}
 
+	@DisplayName("Un aula sin secciones baja el aforo libremente")
 	@Test
 	void unAulaSinSeccionesBajaElAforoLibremente() {
 		assertThat(servicio.actualizar(idDe("A-205"), edicion("Aula 205", 1)).aforoMaximo()).isEqualTo(1);
@@ -394,6 +418,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Desactivar y reactivar ----------
 
+	@DisplayName("Desactivar se permite aunque el ambiente este en uso y reactivar lo devuelve")
 	@Test
 	void desactivarSePermiteAunqueElAmbienteEsteEnUsoYReactivarLoDevuelve() {
 		UUID id = idDe("A-101"); // lo usa 1.° A, con alumnos
@@ -407,6 +432,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(fila("A-101")).containsEntry("estado", "ACTIVO");
 	}
 
+	@DisplayName("Desactivar y reactivar son idempotentes")
 	@Test
 	void desactivarYReactivarSonIdempotentes() {
 		UUID activo = idDe("A-101");
@@ -418,6 +444,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(servicio.desactivar(inactivo).estado()).isEqualTo(EstadoAmbiente.INACTIVO);
 	}
 
+	@DisplayName("Desactivar no cambia los demas datos")
 	@Test
 	void desactivarNoCambiaLosDemasDatos() {
 		var respuesta = servicio.desactivar(idDe("A-101"));
@@ -427,6 +454,7 @@ class ServicioAmbientesIT extends PruebaIntegracion {
 		assertThat(respuesta.recursos()).containsExactly("Pizarra acrílica", "Proyector");
 	}
 
+	@DisplayName("Un ambiente desactivado sigue en la lista y sal de las tarjetas activas")
 	@Test
 	void unAmbienteDesactivadoSigueEnLaListaYSalDeLasTarjetasActivas() {
 		var antes = servicio.resumen();

@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -21,6 +22,7 @@ class DatosMatriculaApoderadoIT extends PruebaIntegracion {
 	@Autowired
 	private JdbcClient jdbc;
 
+	@DisplayName("Muestra los datos del estudiante y del apoderado")
 	@Test
 	void muestraLosDatosDelEstudianteYDelApoderado() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", MATEO), token(APODERADO)))
@@ -34,6 +36,7 @@ class DatosMatriculaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.datos.tutor").doesNotExist());
 	}
 
+	@DisplayName("Con la matrícula confirmada muestra la sección")
 	@Test
 	void conLaMatriculaConfirmadaMuestraLaSeccion() throws Exception {
 		jdbc.sql("""

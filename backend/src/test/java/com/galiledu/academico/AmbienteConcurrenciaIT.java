@@ -19,6 +19,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -145,6 +146,7 @@ class AmbienteConcurrenciaIT extends PruebaIntegracion {
 
 	// ---------- Mismo tipo: sin fallos ni códigos repetidos ----------
 
+	@DisplayName("Dos aulas al mismo tiempo dan201 con codigos distintos y consecutivos")
 	@Test
 	void dosAulasAlMismoTiempoDan201ConCodigosDistintosYConsecutivos() throws Exception {
 		Set<String> codigos = new TreeSet<>();
@@ -172,6 +174,7 @@ class AmbienteConcurrenciaIT extends PruebaIntegracion {
 				choquesDeCodigoObservados());
 	}
 
+	@DisplayName("Dos espacios especiales al mismo tiempo dan201 con codigos distintos y consecutivos")
 	@Test
 	void dosEspaciosEspecialesAlMismoTiempoDan201ConCodigosDistintosYConsecutivos() throws Exception {
 		Set<String> codigos = new TreeSet<>();
@@ -193,6 +196,7 @@ class AmbienteConcurrenciaIT extends PruebaIntegracion {
 				choquesDeCodigoObservados());
 	}
 
+	@DisplayName("Un aula y un espacio al mismo tiempo no se estorban")
 	@Test
 	void unAulaYUnEspacioAlMismoTiempoNoSeEstorban() throws Exception {
 		for (int ronda = 1; ronda <= RONDAS; ronda++) {
@@ -207,6 +211,7 @@ class AmbienteConcurrenciaIT extends PruebaIntegracion {
 
 	// ---------- Mismo nombre: una 201 y una 409 ----------
 
+	@DisplayName("Dos con el mismo nombre y tipo dan una201 y una409")
 	@Test
 	void dosConElMismoNombreYTipoDanUna201YUna409() throws Exception {
 		for (int ronda = 1; ronda <= RONDAS; ronda++) {
@@ -223,6 +228,7 @@ class AmbienteConcurrenciaIT extends PruebaIntegracion {
 				choquesDeCodigoObservados());
 	}
 
+	@DisplayName("Dos con el mismo nombre y distinto tipo también dan una201 y una409")
 	@Test
 	void dosConElMismoNombreYDistintoTipoTambienDanUna201YUna409() throws Exception {
 		// Con tipos distintos los códigos no chocan (A-… y E-…): nada de la base obliga a que una espere a la otra.
@@ -237,6 +243,7 @@ class AmbienteConcurrenciaIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("Dos con el mismo nombre aunque cambien mayúsculas y espacios dan una201 y una409")
 	@Test
 	void dosConElMismoNombreAunqueCambienMayusculasYEspaciosDanUna201YUna409() throws Exception {
 		for (int ronda = 1; ronda <= RONDAS; ronda++) {
@@ -251,6 +258,7 @@ class AmbienteConcurrenciaIT extends PruebaIntegracion {
 
 	// ---------- Renombrar al mismo nombre ----------
 
+	@DisplayName("Dos renombres al mismo nombre al mismo tiempo dan una200 y una409")
 	@Test
 	void dosRenombresAlMismoNombreAlMismoTiempoDanUna200YUna409() throws Exception {
 		for (int ronda = 1; ronda <= RONDAS; ronda++) {
@@ -275,6 +283,7 @@ class AmbienteConcurrenciaIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("Una alta y un renombre al mismo nombre al mismo tiempo dan un ganador y un perdedor")
 	@Test
 	void unaAltaYUnRenombreAlMismoNombreAlMismoTiempoDanUnGanadorYUnPerdedor() throws Exception {
 		for (int ronda = 1; ronda <= RONDAS; ronda++) {

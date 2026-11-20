@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -70,6 +71,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 		bloque(cabecera(seccion, UUID.fromString("31000000-0000-0000-0000-000000000002")), "MIE", 2, plan, ambiente);
 	}
 
+	@DisplayName("Docente con clases en dos secciones de secundaria recibe un horario secundaria")
 	@Test
 	void docenteConClasesEnDosSeccionesDeSecundariaRecibeUnHorarioSecundaria() throws Exception {
 		secundaria2027();
@@ -104,6 +106,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.horarios[0].jornada.recesos[0].fin").value("10:35"));
 	}
 
+	@DisplayName("Docente con primaria y secundaria de distinta hora recibe dos horarios con primaria primero")
 	@Test
 	void docenteConPrimariaYSecundariaDeDistintaHoraRecibeDosHorariosConPrimariaPrimero() throws Exception {
 		secundaria2027();
@@ -132,6 +135,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.horarios[1].clases[0].seccion").value("1.° T1"));
 	}
 
+	@DisplayName("No ve las clases de otro docente")
 	@Test
 	void noVeLasClasesDeOtroDocente() throws Exception {
 		secundaria2027();
@@ -145,6 +149,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.horarios[0].clases[0].seccion").value("1.° T1"));
 	}
 
+	@DisplayName("Sin año id devuelve el año activo si tiene clases y con año id devuelve ese año")
 	@Test
 	void sinAnioIdDevuelveElAnioActivoSiTieneClasesYConAnioIdDevuelveEseAnio() throws Exception {
 		secundaria2027();
@@ -167,6 +172,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.horarios[0].clases[0].seccion").value("1.° T1"));
 	}
 
+	@DisplayName("Con año id sin clases devuelve los datos del año y horarios vacio")
 	@Test
 	void conAnioIdSinClasesDevuelveLosDatosDelAnioYHorariosVacio() throws Exception {
 		secundaria2027();
@@ -180,6 +186,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.horarios", empty()));
 	}
 
+	@DisplayName("Docente sin clases en ningún año recibe año null y horarios vacio")
 	@Test
 	void docenteSinClasesEnNingunAnioRecibeAnioNullYHorariosVacio() throws Exception {
 		pedir("/horarios/docente/horario", DOCENTE).andExpect(status().isOk())
@@ -187,6 +194,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.horarios", empty()));
 	}
 
+	@DisplayName("Años lista solo los años con clases del más reciente al más antiguo")
 	@Test
 	void aniosListaSoloLosAniosConClasesDelMasRecienteAlMasAntiguo() throws Exception {
 		secundaria2027();
@@ -209,6 +217,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 				.andExpect(jsonPath("$[1].estado").value("ACTIVO"));
 	}
 
+	@DisplayName("Un usuario solo tutor que es titular puede consultar y ve sus clases")
 	@Test
 	void unUsuarioSoloTutorQueEsTitularPuedeConsultarYVeSusClases() throws Exception {
 		secundaria2027();
@@ -223,6 +232,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 		pedir("/horarios/docente/anios", tutor).andExpect(status().isOk()).andExpect(jsonPath("$", hasSize(1)));
 	}
 
+	@DisplayName("Un tutor que no dicta ve el estado vacio")
 	@Test
 	void unTutorQueNoDictaVeElEstadoVacio() throws Exception {
 		String tutor = soloTutor();
@@ -233,6 +243,7 @@ class HorarioDocenteIT extends PruebaHorarios {
 		pedir("/horarios/docente/anios", tutor).andExpect(status().isOk()).andExpect(jsonPath("$", empty()));
 	}
 
+	@DisplayName("Coordinador y apoderado reciben acceso403 en los dos endpoints")
 	@Test
 	void coordinadorYApoderadoRecibenAcceso403EnLosDosEndpoints() throws Exception {
 		for (String usuario : new String[]{COORDINADOR, APODERADO}) {
@@ -241,18 +252,21 @@ class HorarioDocenteIT extends PruebaHorarios {
 		}
 	}
 
+	@DisplayName("Sin sesión responde401")
 	@Test
 	void sinSesionResponde401() throws Exception {
 		mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 				.get("/horarios/docente/horario")).andExpect(status().isUnauthorized());
 	}
 
+	@DisplayName("Con un año que no existe responde404")
 	@Test
 	void conUnAnioQueNoExisteResponde404() throws Exception {
 		pedir("/horarios/docente/horario?anioId=" + UUID.randomUUID(), DOCENTE).andExpect(status().isNotFound())
 				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
 	}
 
+	@DisplayName("Con un año id que no es uuid responde400")
 	@Test
 	void conUnAnioIdQueNoEsUuidResponde400() throws Exception {
 		pedir("/horarios/docente/horario?anioId=no-es-un-uuid", DOCENTE).andExpect(status().isBadRequest())

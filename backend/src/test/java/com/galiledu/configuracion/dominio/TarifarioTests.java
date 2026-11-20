@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.configuracion.dominio.CalendarioCuotas.Cuota;
@@ -40,6 +41,7 @@ class TarifarioTests {
 		rechaza(mensaje, () -> Tarifario.nuevo(UUID.randomUUID()).confirmar(datos, INICIO, FIN));
 	}
 
+	@DisplayName("Un tarifario nuevo no está confirmado")
 	@Test
 	void unTarifarioNuevoNoEstaConfirmado() {
 		Tarifario t = Tarifario.nuevo(UUID.randomUUID());
@@ -48,6 +50,7 @@ class TarifarioTests {
 		assertThat(t.estaConfirmado()).isFalse();
 	}
 
+	@DisplayName("Confirmar guarda los datos genera el calendario y deja el tarifario confirmado")
 	@Test
 	void confirmarGuardaLosDatosGeneraElCalendarioYDejaElTarifarioConfirmado() {
 		Tarifario t = confirmado();
@@ -66,6 +69,7 @@ class TarifarioTests {
 		assertThat(t.totalPensiones()).isEqualByComparingTo("6200");
 	}
 
+	@DisplayName("La cuota de ingreso es opcional")
 	@Test
 	void laCuotaDeIngresoEsOpcional() {
 		Tarifario t = Tarifario.nuevo(UUID.randomUUID());
@@ -75,6 +79,7 @@ class TarifarioTests {
 		assertThat(t.estaConfirmado()).isTrue();
 	}
 
+	@DisplayName("Un tarifario confirmado se puede confirmar otra vez con otros datos")
 	@Test
 	void unTarifarioConfirmadoSePuedeConfirmarOtraVezConOtrosDatos() {
 		Tarifario t = confirmado();
@@ -91,6 +96,7 @@ class TarifarioTests {
 		assertThat(t.getCuotas().getLast().getFechaVencimiento()).isEqualTo(LocalDate.of(2027, 11, 15));
 	}
 
+	@DisplayName("Un dato inválido no cambia el tarifario")
 	@Test
 	void unDatoInvalidoNoCambiaElTarifario() {
 		Tarifario t = confirmado();
@@ -102,6 +108,7 @@ class TarifarioTests {
 		assertThat(t.getCuotas()).hasSize(10);
 	}
 
+	@DisplayName("Regenerar el calendario conserva montos morosidad y estado")
 	@Test
 	void regenerarElCalendarioConservaMontosMorosidadYEstado() {
 		Tarifario t = confirmado();
@@ -120,6 +127,7 @@ class TarifarioTests {
 
 	// --- Montos ---
 
+	@DisplayName("La matrícula es obligatoria y no puede ser negativa")
 	@Test
 	void laMatriculaEsObligatoriaYNoPuedeSerNegativa() {
 		rechazaDatos("Ingresa el monto de la matrícula.",
@@ -128,6 +136,7 @@ class TarifarioTests {
 				new DatosTarifario(d("500"), d("-1"), d("620"), 5, d("2"), d("10")));
 	}
 
+	@DisplayName("La matrícula puede ser cero")
 	@Test
 	void laMatriculaPuedeSerCero() {
 		Tarifario t = Tarifario.nuevo(UUID.randomUUID());
@@ -136,6 +145,7 @@ class TarifarioTests {
 		assertThat(t.getMontoMatricula()).isEqualByComparingTo("0");
 	}
 
+	@DisplayName("La pensión es obligatoria y mayor que cero")
 	@Test
 	void laPensionEsObligatoriaYMayorQueCero() {
 		rechazaDatos("Ingresa el monto de la pensión.",
@@ -146,12 +156,14 @@ class TarifarioTests {
 				new DatosTarifario(d("500"), d("450"), d("-5"), 5, d("2"), d("10")));
 	}
 
+	@DisplayName("La cuota de ingreso no puede ser negativa")
 	@Test
 	void laCuotaDeIngresoNoPuedeSerNegativa() {
 		rechazaDatos("El monto de la cuota de ingreso no puede ser negativo.",
 				new DatosTarifario(d("-1"), d("450"), d("620"), 5, d("2"), d("10")));
 	}
 
+	@DisplayName("Los montos admiten como maximo2 decimales y el limite de la columna")
 	@Test
 	void losMontosAdmitenComoMaximo2DecimalesYElLimiteDeLaColumna() {
 		rechazaDatos("El monto de la pensión admite hasta 2 decimales.",
@@ -165,6 +177,7 @@ class TarifarioTests {
 
 	// --- Morosidad (RF-72) ---
 
+	@DisplayName("Los días de gracia van de0 a60")
 	@Test
 	void losDiasDeGraciaVanDe0A60() {
 		rechazaDatos("Ingresa los días de gracia.",
@@ -178,6 +191,7 @@ class TarifarioTests {
 		assertThat(t.getDiasGracia()).isEqualTo(60);
 	}
 
+	@DisplayName("El recargo va de0 a100")
 	@Test
 	void elRecargoVaDe0A100() {
 		rechazaDatos("Ingresa el recargo por cada 30 días.",
@@ -190,6 +204,7 @@ class TarifarioTests {
 				new DatosTarifario(d("500"), d("450"), d("620"), 5, d("2.555"), d("10")));
 	}
 
+	@DisplayName("El tope de recargo es obligatorio y va de0 a100")
 	@Test
 	void elTopeDeRecargoEsObligatorioYVaDe0A100() {
 		rechazaDatos("Ingresa el tope de recargo.", new DatosTarifario(d("500"), d("450"), d("620"), 5, d("2"), null));
@@ -199,6 +214,7 @@ class TarifarioTests {
 				new DatosTarifario(d("500"), d("450"), d("620"), 5, d("0"), d("-1")));
 	}
 
+	@DisplayName("El recargo no puede ser mayor que el tope")
 	@Test
 	void elRecargoNoPuedeSerMayorQueElTope() {
 		rechazaDatos("El recargo no puede ser mayor que el tope de recargo.",
@@ -210,6 +226,7 @@ class TarifarioTests {
 
 	// --- Calendario (RF-71) ---
 
+	@DisplayName("El calendario no puede tener más de12 cuotas")
 	@Test
 	void elCalendarioNoPuedeTenerMasDe12Cuotas() {
 		rechaza("El calendario debe tener entre 1 y 12 cuotas, pero el año escolar abarca 13 meses.",
@@ -217,6 +234,7 @@ class TarifarioTests {
 						LocalDate.of(2028, 3, 20)));
 	}
 
+	@DisplayName("Un año con una cuota fuera del año se rechaza")
 	@Test
 	void unAnioConUnaCuotaFueraDelAnioSeRechaza() {
 		// 20/03 al 25/03: la única cuota vence el 15/03, antes del inicio.
@@ -225,6 +243,7 @@ class TarifarioTests {
 						LocalDate.of(2027, 3, 25)));
 	}
 
+	@DisplayName("No permite dos cuotas con la misma fecha de vencimiento")
 	@Test
 	void noPermiteDosCuotasConLaMismaFechaDeVencimiento() {
 		List<Cuota> repetidas = List.of(new Cuota(1, "Pensión de marzo", LocalDate.of(2027, 3, 31)),
@@ -234,6 +253,7 @@ class TarifarioTests {
 				() -> Tarifario.validarCalendario(repetidas, INICIO, FIN));
 	}
 
+	@DisplayName("Un calendario vacio se rechaza")
 	@Test
 	void unCalendarioVacioSeRechaza() {
 		rechaza("El calendario debe tener entre 1 y 12 cuotas, pero el año escolar abarca 0 meses.",

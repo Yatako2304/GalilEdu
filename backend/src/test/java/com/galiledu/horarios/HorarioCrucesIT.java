@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
@@ -54,6 +55,7 @@ class HorarioCrucesIT extends PruebaHorarios {
 		}
 	}
 
+	@DisplayName("Un cruce hace que el put responda409 y no escriba nada")
 	@Test
 	void unCruceHaceQueElPutResponda409YNoEscribaNada() throws Exception {
 		estructura("EH-T-27", "SECUNDARIA", true, 6);
@@ -70,6 +72,7 @@ class HorarioCrucesIT extends PruebaHorarios {
 		assertThat(bloquesGuardados()).isZero();
 	}
 
+	@DisplayName("El get repart en cada celda su cruce")
 	@Test
 	void elGetRepartEnCadaCeldaSuCruce() throws Exception {
 		UUID estructura = estructura("EH-T-27", "SECUNDARIA", true, 6);

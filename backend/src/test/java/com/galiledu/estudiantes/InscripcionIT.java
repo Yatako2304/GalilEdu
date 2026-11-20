@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
@@ -68,6 +69,7 @@ class InscripcionIT extends PruebaIntegracion {
 			.formatted(InscripcionPrueba.persona("42345678", "Rojas", "Carla", "987333444", "carla.rojas@gmail.com"));
 	private static final String NO_REGISTRA = "{\"noRegistra\":true,\"motivo\":\"Fallecido(a)\"}";
 
+	@DisplayName("Inscribe con padre existente y crea cuenta a la madre responsable")
 	@Test
 	void inscribeConPadreExistenteYCreaCuentaALaMadreResponsable() throws Exception {
 		String r = mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -89,6 +91,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.hermanos[*].nombreCompleto", hasItem("Mateo Alonso Paredes Rojas")));
 	}
 
+	@DisplayName("Si el responsable ya tiene cuenta solo se vincula")
 	@Test
 	void siElResponsableYaTieneCuentaSoloSeVincula() throws Exception {
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -98,6 +101,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.usuarioResponsable").value("U20260003"));
 	}
 
+	@DisplayName("Sin padres exige apoderado")
 	@Test
 	void sinPadresExigeApoderado() throws Exception {
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -115,6 +119,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(mensaje));
 	}
 
+	@DisplayName("Exige los datos obligatorios del paso1")
 	@Test
 	void exigeLosDatosObligatoriosDelPaso1() throws Exception {
 		rechaza("\"sexo\":\"FEMENINO\"", "\"sexo\":null", "Selecciona el sexo");
@@ -132,6 +137,7 @@ class InscripcionIT extends PruebaIntegracion {
 		rechaza("\"tieneDiscapacidad\":false", "\"tieneDiscapacidad\":true", "Indica cuál es la discapacidad");
 	}
 
+	@DisplayName("Válida lugar de nacimiento nacionalidad y nombres")
 	@Test
 	void validaLugarDeNacimientoNacionalidadYNombres() throws Exception {
 		rechaza("\"departamentoNacimiento\":\"Lima\"", "\"departamentoNacimiento\":null",
@@ -158,6 +164,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(status().isCreated());
 	}
 
+	@DisplayName("Un familiar nuevo necesita los mismos datos que un usuario")
 	@Test
 	void unFamiliarNuevoNecesitaLosMismosDatosQueUnUsuario() throws Exception {
 		// La madre es nueva: cada dato obligatorio de CAHU6 dice de quién es.
@@ -171,6 +178,7 @@ class InscripcionIT extends PruebaIntegracion {
 		rechaza("\"nombres\":\"Carla\"", "\"nombres\":\"Carla2\"", "Los nombres solo pueden contener letras");
 	}
 
+	@DisplayName("Válida contactos y personas autorizadas del paso4")
 	@Test
 	void validaContactosYPersonasAutorizadasDelPaso4() throws Exception {
 		rechaza("\"celular\":\"987654321\"}", "\"celular\":\"\"}", "Ingresa el celular del contacto");
@@ -184,6 +192,7 @@ class InscripcionIT extends PruebaIntegracion {
 				"Ingresa el nombre de la persona autorizada");
 	}
 
+	@DisplayName("Exige el correo y el celular del responsable en el paso5")
 	@Test
 	void exigeElCorreoYElCelularDelResponsableEnElPaso5() throws Exception {
 		rechaza("\"correoResponsable\":\"luis.paredes@galiledu.edu.pe\"", "\"correoResponsable\":\"\"",
@@ -196,6 +205,7 @@ class InscripcionIT extends PruebaIntegracion {
 				"El celular debe tener 9 dígitos");
 	}
 
+	@DisplayName("Consulta si un correo ya está asignado sin importar mayúsculas")
 	@Test
 	void consultaSiUnCorreoYaEstaAsignadoSinImportarMayusculas() throws Exception {
 		mvc.perform(conToken(get("/estudiantes/correos").param("correo", "LUIS.PAREDES@galiledu.edu.pe"), personal))
@@ -205,6 +215,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.disponible").value(true));
 	}
 
+	@DisplayName("El apoderado necesita su relación con el estudiante")
 	@Test
 	void elApoderadoNecesitaSuRelacionConElEstudiante() throws Exception {
 		String json = inscripcion(NO_REGISTRA, NO_REGISTRA,
@@ -214,6 +225,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Apoderado: Selecciona la relación"));
 	}
 
+	@DisplayName("Exige los datos obligatorios del paso2")
 	@Test
 	void exigeLosDatosObligatoriosDelPaso2() throws Exception {
 		rechaza("\"fichaMedica\":{", "\"fichaMedicaX\":{", "Completa la ficha médica");
@@ -228,6 +240,7 @@ class InscripcionIT extends PruebaIntegracion {
 		rechaza("\"tomaMedicamento\":false", "\"tomaMedicamento\":true", "Indica cuál es el medicamento");
 	}
 
+	@DisplayName("Válida rangos y formatos del paso2")
 	@Test
 	void validaRangosYFormatosDelPaso2() throws Exception {
 		rechaza("\"pesoKg\":22", "\"pesoKg\":4.9", "El peso debe estar entre 5 y 200 kg");
@@ -239,6 +252,7 @@ class InscripcionIT extends PruebaIntegracion {
 		rechaza("\"fiebreMaxima\":\"39\"", "\"fiebreMaxima\":\"mucha\"", "Ingresa un número (ej. 39 o 39.5)");
 	}
 
+	@DisplayName("Los detalles de una respuesta no no se guardan")
 	@Test
 	void losDetallesDeUnaRespuestaNoNoSeGuardan() throws Exception {
 		String json = inscripcion(PADRE_EXISTENTE, MADRE_NUEVA, "null", "PADRE")
@@ -257,6 +271,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.fichaMedica.medicamentoDetalle").isEmpty());
 	}
 
+	@DisplayName("Sin discapacidad no guarda el detalle")
 	@Test
 	void sinDiscapacidadNoGuardaElDetalle() throws Exception {
 		String json = inscripcion(PADRE_EXISTENTE, MADRE_NUEVA, "null", "PADRE")
@@ -270,6 +285,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.datos.discapacidadDetalle").isEmpty());
 	}
 
+	@DisplayName("Un texto más largo que su columna da400")
 	@Test
 	void unTextoMasLargoQueSuColumnaDa400() throws Exception {
 		String json = inscripcion(PADRE_EXISTENTE, MADRE_NUEVA, "null", "PADRE")
@@ -279,6 +295,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Exige dos contactos de emergencia")
 	@Test
 	void exigeDosContactosDeEmergencia() throws Exception {
 		String json = inscripcion(PADRE_EXISTENTE, MADRE_NUEVA, "null", "PADRE")
@@ -288,6 +305,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Busca persona por documento")
 	@Test
 	void buscaPersonaPorDocumento() throws Exception {
 		mvc.perform(conToken(get("/estudiantes/personas").param("documento", "70000003"), personal))
@@ -298,6 +316,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("El listado filtra por la situación que sale de la matrícula")
 	@Test
 	void elListadoFiltraPorLaSituacionQueSaleDeLaMatricula() throws Exception {
 		// Sofía y Valeria están matriculadas en 2026; Mateo solo tiene sección reservada para 2027.
@@ -310,6 +329,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.data[*].nombreCompleto", hasItem("Mateo Alonso Paredes Rojas")));
 	}
 
+	@DisplayName("El docente no puede inscribir")
 	@Test
 	void elDocenteNoPuedeInscribir() throws Exception {
 		mvc.perform(conToken(get("/estudiantes"), token(DOCENTE))).andExpect(status().isForbidden());
@@ -336,6 +356,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.param("tipo", "Carta poder notarial"), personal));
 	}
 
+	@DisplayName("Sube y descarga el documento del apoderado")
 	@Test
 	void subeYDescargaElDocumentoDelApoderado() throws Exception {
 		String id = inscribirConApoderado();
@@ -356,6 +377,7 @@ class InscripcionIT extends PruebaIntegracion {
 	}
 
 	/** El detalle del usuario (módulo usuarios) lee el vínculo y la acreditación que guardó la inscripción. */
+	@DisplayName("El usuario del apoderado muestra al estudiante y su acreditación")
 	@Test
 	void elUsuarioDelApoderadoMuestraAlEstudianteYSuAcreditacion() throws Exception {
 		String id = inscribirConApoderado();
@@ -378,6 +400,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estudiantesACargo[0].acreditacion.subidoEn").isNotEmpty());
 	}
 
+	@DisplayName("Rechaza archivos que no son pdf ni imagen")
 	@Test
 	void rechazaArchivosQueNoSonPdfNiImagen() throws Exception {
 		String id = inscribirConApoderado();
@@ -386,6 +409,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El documento debe ser PDF, JPG o PNG"));
 	}
 
+	@DisplayName("Sin apoderado no se puede subir documento")
 	@Test
 	void sinApoderadoNoSePuedeSubirDocumento() throws Exception {
 		String r = mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -403,6 +427,7 @@ class InscripcionIT extends PruebaIntegracion {
 			  "nombres":"Jorge","fechaNacimiento":"1980-01-15","nacionalidad":"Peruana","lugarNacimiento":"Perú",
 			  "sexo":"MASCULINO","estadoCivil":"Casado(a)","gradoInstruccion":"Secundaria"}}""";
 
+	@DisplayName("Cada familiar presente tiene cuenta aunque no sea el responsable")
 	@Test
 	void cadaFamiliarPresenteTieneCuentaAunqueNoSeaElResponsable() throws Exception {
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -416,6 +441,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cuentas[?(@.parentesco == 'MADRE')].correo").value("carla.rojas@gmail.com"));
 	}
 
+	@DisplayName("El padre fallecido se registra con sus datos pero sin cuenta")
 	@Test
 	void elPadreFallecidoSeRegistraConSusDatosPeroSinCuenta() throws Exception {
 		String r = mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -436,6 +462,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tieneCuenta").value(false));
 	}
 
+	@DisplayName("Un fallecido no puede ser responsable de matrícula")
 	@Test
 	void unFallecidoNoPuedeSerResponsableDeMatricula() throws Exception {
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -445,6 +472,7 @@ class InscripcionIT extends PruebaIntegracion {
 						jsonPath("$.message").value("El responsable de matrícula no puede ser una persona fallecida"));
 	}
 
+	@DisplayName("Si ningún padre está presente exige apoderado")
 	@Test
 	void siNingunPadreEstaPresenteExigeApoderado() throws Exception {
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -453,12 +481,14 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("apoderado")));
 	}
 
+	@DisplayName("El familiar debe ser mayor de edad")
 	@Test
 	void elFamiliarDebeSerMayorDeEdad() throws Exception {
 		rechaza("\"fechaNacimiento\":\"1988-03-08\"", "\"fechaNacimiento\":\"2012-03-08\"",
 				"Madre: Debe ser mayor de edad");
 	}
 
+	@DisplayName("El fallecido también debe ser mayor de edad")
 	@Test
 	void elFallecidoTambienDebeSerMayorDeEdad() throws Exception {
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,
@@ -467,6 +497,7 @@ class InscripcionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Padre: Debe ser mayor de edad"));
 	}
 
+	@DisplayName("Con motivo otro la observación es obligatoria")
 	@Test
 	void conMotivoOtroLaObservacionEsObligatoria() throws Exception {
 		mvc.perform(conToken(post("/estudiantes/inscripciones"), personal,

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -37,6 +38,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 		coordinador = coordinador();
 	}
 
+	@DisplayName("Una reserva válida se guarda activa y con versión cero")
 	@Test
 	void unaReservaValidaSeGuardaActivaYConVersionCero() {
 		preparar();
@@ -57,6 +59,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				() -> insertar(ambiente, seccionId, responsableId, creador, actividad, inicio, fin, estado));
 	}
 
+	@DisplayName("La hora de fin no puede ser igual a la de inicio")
 	@Test
 	void laHoraDeFinNoPuedeSerIgualALaDeInicio() {
 		preparar();
@@ -65,6 +68,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"09:00", "09:00", "ACTIVA");
 	}
 
+	@DisplayName("La hora de fin no puede ser anterior a la de inicio")
 	@Test
 	void laHoraDeFinNoPuedeSerAnteriorALaDeInicio() {
 		preparar();
@@ -73,6 +77,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"09:30", "09:00", "ACTIVA");
 	}
 
+	@DisplayName("El estado no puede ser finalizada")
 	@Test
 	void elEstadoNoPuedeSerFinalizada() {
 		preparar();
@@ -81,6 +86,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"08:00", "09:30", "FINALIZADA");
 	}
 
+	@DisplayName("Una reserva cancelada se guarda")
 	@Test
 	void unaReservaCanceladaSeGuarda() {
 		preparar();
@@ -89,6 +95,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"CANCELADA")).isEqualTo(1);
 	}
 
+	@DisplayName("La actividad no admite más de120 caracteres")
 	@Test
 	void laActividadNoAdmiteMasDe120Caracteres() {
 		preparar();
@@ -97,6 +104,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"08:00", "09:30", "ACTIVA");
 	}
 
+	@DisplayName("La actividad admite exactamente120 caracteres")
 	@Test
 	void laActividadAdmiteExactamente120Caracteres() {
 		preparar();
@@ -105,6 +113,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"ACTIVA")).isEqualTo(1);
 	}
 
+	@DisplayName("El ambiente debe existir")
 	@Test
 	void elAmbienteDebeExistir() {
 		preparar();
@@ -113,6 +122,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"Experimento", "08:00", "09:30", "ACTIVA");
 	}
 
+	@DisplayName("La sección debe existir")
 	@Test
 	void laSeccionDebeExistir() {
 		preparar();
@@ -121,6 +131,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"Experimento", "08:00", "09:30", "ACTIVA");
 	}
 
+	@DisplayName("El responsable debe existir")
 	@Test
 	void elResponsableDebeExistir() {
 		preparar();
@@ -129,6 +140,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"Experimento", "08:00", "09:30", "ACTIVA");
 	}
 
+	@DisplayName("Quien registra la reserva debe existir")
 	@Test
 	void quienRegistraLaReservaDebeExistir() {
 		preparar();
@@ -137,6 +149,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				"Experimento", "08:00", "09:30", "ACTIVA");
 	}
 
+	@DisplayName("Un ambiente con reservas no se elimina")
 	@Test
 	void unAmbienteConReservasNoSeElimina() {
 		preparar();
@@ -146,6 +159,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				() -> jdbc.sql("DELETE FROM configuracion.ambiente WHERE id = :id").param("id", laboratorio).update());
 	}
 
+	@DisplayName("Un ambiente sin reservas si se elimina")
 	@Test
 	void unAmbienteSinReservasSiSeElimina() {
 		preparar();
@@ -154,6 +168,7 @@ class ReservaAmbienteEsquemaIT extends PruebaReservas {
 				.isEqualTo(1);
 	}
 
+	@DisplayName("Al eliminar la sección se borran sus reservas")
 	@Test
 	void alEliminarLaSeccionSeBorranSusReservas() {
 		preparar();

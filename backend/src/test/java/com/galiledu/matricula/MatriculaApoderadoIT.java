@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
@@ -28,6 +29,7 @@ class MatriculaApoderadoIT extends PruebaIntegracion {
 	/** Valeria Sánchez: no es hija de Luis Paredes. */
 	private static final String VALERIA = "20000000-0000-0000-0000-000000000003";
 
+	@DisplayName("Lista los hijos del apoderado")
 	@Test
 	void listaLosHijosDelApoderado() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes"), token(APODERADO)))
@@ -37,6 +39,7 @@ class MatriculaApoderadoIT extends PruebaIntegracion {
 						containsInAnyOrder("Mateo Alonso Paredes Rojas", "Sofía Paredes Rojas")));
 	}
 
+	@DisplayName("La deuda de la hermana no bloquea la matrícula de mateo")
 	@Test
 	void laDeudaDeLaHermanaNoBloqueaLaMatriculaDeMateo() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", MATEO), token(APODERADO)))
@@ -53,6 +56,7 @@ class MatriculaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.impedimentos[*].tipo", not(hasItem("DEUDA"))));
 	}
 
+	@DisplayName("La sección solo se muestra con la matrícula confirmada")
 	@Test
 	void laSeccionSoloSeMuestraConLaMatriculaConfirmada() throws Exception {
 		jdbc.sql("""
@@ -64,6 +68,7 @@ class MatriculaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.matricula.confirmadoEn").isNotEmpty());
 	}
 
+	@DisplayName("La deuda de Sofía bloquea su propia matrícula")
 	@Test
 	void laDeudaDeSofiaBloqueaSuPropiaMatricula() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", SOFIA), token(APODERADO)))
@@ -75,12 +80,14 @@ class MatriculaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.puedeContinuar").value(false));
 	}
 
+	@DisplayName("No puede ver un estudiante que no está a su cargo")
 	@Test
 	void noPuedeVerUnEstudianteQueNoEstaASuCargo() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", VALERIA), token(APODERADO)))
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Otro rol no puede usar la vista del apoderado")
 	@Test
 	void otroRolNoPuedeUsarLaVistaDelApoderado() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes"), token(PERSONAL_ADMINISTRATIVO)))

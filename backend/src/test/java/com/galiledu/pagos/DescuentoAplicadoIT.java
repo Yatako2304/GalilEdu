@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.math.BigDecimal;
 import java.util.List;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -45,6 +46,7 @@ class DescuentoAplicadoIT extends PruebaIntegracion {
 				 "reemplazar":%s}""".formatted(descuentoId, reemplazar);
 	}
 
+	@DisplayName("Lista los descuentos aplicables segun los hermanos matriculados")
 	@Test
 	void listaLosDescuentosAplicablesSegunLosHermanosMatriculados() throws Exception {
 		mvc.perform(conToken(get("/pagos/compromisos/{id}/descuentos-aplicables", COMPROMISO_SOFIA),
@@ -60,6 +62,7 @@ class DescuentoAplicadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.descuentos[2].aplicable").value(false));
 	}
 
+	@DisplayName("Aplica el descuento solo a las cuotas pendientes")
 	@Test
 	void aplicaElDescuentoSoloALasCuotasPendientes() throws Exception {
 		mvc.perform(conToken(post("/pagos/compromisos/{id}/descuentos", COMPROMISO_SOFIA),
@@ -75,6 +78,7 @@ class DescuentoAplicadoIT extends PruebaIntegracion {
 				.containsExactly(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 120.0, 120.0, 120.0, 120.0);
 	}
 
+	@DisplayName("Reemplazar el descuento vigente exige confirmación")
 	@Test
 	void reemplazarElDescuentoVigenteExigeConfirmacion() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -99,6 +103,7 @@ class DescuentoAplicadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.historial[?(@.nombre == 'Acuerdo particular')].estado").value("REEMPLAZADO"));
 	}
 
+	@DisplayName("Revocar restituye el monto original")
 	@Test
 	void revocarRestituyeElMontoOriginal() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -122,6 +127,7 @@ class DescuentoAplicadoIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("No aplica un descuento inactivo ni uno sin tramo")
 	@Test
 	void noAplicaUnDescuentoInactivoNiUnoSinTramo() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -133,6 +139,7 @@ class DescuentoAplicadoIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("El motivo es obligatorio")
 	@Test
 	void elMotivoEsObligatorio() throws Exception {
 		mvc.perform(conToken(post("/pagos/compromisos/{id}/descuentos", COMPROMISO_SOFIA),
@@ -141,6 +148,7 @@ class DescuentoAplicadoIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("El apoderado no puede aplicar descuentos")
 	@Test
 	void elApoderadoNoPuedeAplicarDescuentos() throws Exception {
 		mvc.perform(conToken(post("/pagos/compromisos/{id}/descuentos", COMPROMISO_SOFIA), token("U20260003"),

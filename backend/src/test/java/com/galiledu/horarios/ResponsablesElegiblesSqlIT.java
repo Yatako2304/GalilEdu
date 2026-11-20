@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -23,6 +24,7 @@ class ResponsablesElegiblesSqlIT extends PruebaReservas {
 		return responsables.elegibles().stream().map(Referencia::id).toList();
 	}
 
+	@DisplayName("Un docente con dos roles aparece una sola vez con su nombre completo")
 	@Test
 	void unDocenteConDosRolesApareceUnaSolaVezConSuNombreCompleto() {
 		UUID maria = docente();
@@ -31,6 +33,7 @@ class ResponsablesElegiblesSqlIT extends PruebaReservas {
 				.extracting(Referencia::nombre).isEqualTo("María Fernández Ríos");
 	}
 
+	@DisplayName("Quien solo es tutor también es elegible")
 	@Test
 	void quienSoloEsTutorTambienEsElegible() {
 		UUID tutor = usuario("79999931", "U20269931", "ACTIVO", false, "TUTOR");
@@ -39,6 +42,7 @@ class ResponsablesElegiblesSqlIT extends PruebaReservas {
 		assertThat(responsables.existe(tutor)).isTrue();
 	}
 
+	@DisplayName("Un docente inactivo o eliminado no es elegible")
 	@Test
 	void unDocenteInactivoOEliminadoNoEsElegible() {
 		UUID inactivo = usuario("79999932", "U20269932", "INACTIVO", false, "DOCENTE");
@@ -49,6 +53,7 @@ class ResponsablesElegiblesSqlIT extends PruebaReservas {
 		assertThat(responsables.existe(eliminado)).isFalse();
 	}
 
+	@DisplayName("Quien no es docente ni tutor no es elegible")
 	@Test
 	void quienNoEsDocenteNiTutorNoEsElegible() {
 		UUID coordinador = coordinador();
@@ -59,11 +64,13 @@ class ResponsablesElegiblesSqlIT extends PruebaReservas {
 		assertThat(responsables.existe(apoderado)).isFalse();
 	}
 
+	@DisplayName("Un usuario inexistente no es elegible")
 	@Test
 	void unUsuarioInexistenteNoEsElegible() {
 		assertThat(responsables.existe(UUID.randomUUID())).isFalse();
 	}
 
+	@DisplayName("Los elegibles salen ordenados por nombre")
 	@Test
 	void losElegiblesSalenOrdenadosPorNombre() {
 		usuario("79999935", "U20269935", "ACTIVO", false, "DOCENTE");

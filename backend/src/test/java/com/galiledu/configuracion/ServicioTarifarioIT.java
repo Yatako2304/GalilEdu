@@ -10,6 +10,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -99,6 +100,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 
 	// --- GET ---
 
+	@DisplayName("Sin tarifario propone los valores del año anterior y el calendario del año")
 	@Test
 	void sinTarifarioProponeLosValoresDelAnioAnteriorYElCalendarioDelAnio() {
 		UUID id2028 = anioPorSql(2028, "PLANIFICADO"); // el año anterior es 2027, con tarifario
@@ -125,6 +127,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 				.query(Integer.class).single()).isZero(); // la propuesta no se guarda
 	}
 
+	@DisplayName("Sin tarifario ni año anterior la propuesta viene vacia con el calendario generado")
 	@Test
 	void sinTarifarioNiAnioAnteriorLaPropuestaVieneVaciaConElCalendarioGenerado() {
 		UUID id2030 = anioPorSql(2030, "PLANIFICADO"); // no existe 2029
@@ -142,6 +145,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(vista.calendario().totalPensiones()).isNull();
 	}
 
+	@DisplayName("El tarifario2026 es de solo lectura por tener compromisos")
 	@Test
 	void elTarifario2026EsDeSoloLecturaPorTenerCompromisos() {
 		TarifarioVista vista = servicio.ver(ID_2026);
@@ -159,6 +163,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(vista.calendario().totalPensiones()).isEqualByComparingTo("6000");
 	}
 
+	@DisplayName("El tarifario2027 está en configuración y se puede editar")
 	@Test
 	void elTarifario2027EstaEnConfiguracionYSePuedeEditar() {
 		TarifarioVista vista = servicio.ver(ID_2027);
@@ -172,6 +177,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(vista.calendario().cuotas().getFirst().nombre()).isEqualTo("Pensión de marzo");
 	}
 
+	@DisplayName("Ver un año que no existe da404")
 	@Test
 	void verUnAnioQueNoExisteDa404() {
 		rechaza(HttpStatus.NOT_FOUND, "El año escolar no existe.", () -> servicio.ver(UUID.randomUUID()));
@@ -181,6 +187,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 
 	// --- Confirmar ---
 
+	@DisplayName("Confirma el tarifario2027 guardando los datos y dejandolo confirmado")
 	@Test
 	void confirmaElTarifario2027GuardandoLosDatosYDejandoloConfirmado() {
 		TarifarioVista vista = servicio.confirmar(ID_2027, solicitudValida());
@@ -201,6 +208,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(cuotasGuardadas(TARIFARIO_2027)).isEqualTo(10);
 	}
 
+	@DisplayName("Confirmar crea el tarifario de un año que no lo tenía")
 	@Test
 	void confirmarCreaElTarifarioDeUnAnioQueNoLoTenia() {
 		UUID id2028 = anioPorSql(2028, "PLANIFICADO");
@@ -216,6 +224,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 				WHERE t.anio_escolar_id = ?""").param(id2028).query(Integer.class).single()).isEqualTo(10);
 	}
 
+	@DisplayName("Confirmar otra vez un tarifario guardado regenera el calendario sin chocar con los unique")
 	@Test
 	void confirmarOtraVezUnTarifarioGuardadoRegeneraElCalendarioSinChocarConLosUnique() {
 		servicio.confirmar(ID_2027, solicitudValida()); // el 2027 ya tenía sus 10 cuotas: se quitan y se vuelven a crear
@@ -228,6 +237,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(servicio.vigente(ID_2027)).get().extracting(v -> v.montoPension()).isEqualTo(d("620.00"));
 	}
 
+	@DisplayName("Confirmar rechaza los datos invalidos con su mensaje")
 	@Test
 	void confirmarRechazaLosDatosInvalidosConSuMensaje() {
 		rechaza(HttpStatus.BAD_REQUEST, "Ingresa el tope de recargo.",
@@ -240,6 +250,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 				() -> servicio.confirmar(ID_2027, solicitud("500", "450", "0", 5, "2", "10")));
 	}
 
+	@DisplayName("Un dato inválido no borra ni cambia nada del tarifario guardado")
 	@Test
 	void unDatoInvalidoNoBorraNiCambiaNadaDelTarifarioGuardado() {
 		rechaza(HttpStatus.BAD_REQUEST, "Ingresa el tope de recargo.",
@@ -252,6 +263,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 
 	// --- Solo lectura ---
 
+	@DisplayName("Un tarifario confirmado con compromisos no se puede volver a confirmar")
 	@Test
 	void unTarifarioConfirmadoConCompromisosNoSePuedeVolverAConfirmar() {
 		rechaza(HttpStatus.CONFLICT,
@@ -259,6 +271,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 				() -> servicio.confirmar(ID_2026, solicitudValida()));
 	}
 
+	@DisplayName("Un tarifario en configuración con un compromiso si se puede confirmar")
 	@Test
 	void unTarifarioEnConfiguracionConUnCompromisoSiSePuedeConfirmar() {
 		compromisoDelTarifario2027PorSql();
@@ -277,6 +290,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 				() -> servicio.confirmar(ID_2027, solicitudValida()));
 	}
 
+	@DisplayName("Un año cerrado conserva su tarifario como registro historico")
 	@Test
 	void unAnioCerradoConservaSuTarifarioComoRegistroHistorico() {
 		jdbc.sql("UPDATE configuracion.anio_escolar SET estado = 'CERRADO' WHERE id = ?").param(ID_2027).update();
@@ -291,6 +305,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 				() -> servicio.confirmar(ID_2027, solicitudValida()));
 	}
 
+	@DisplayName("Un año cerrado sin tarifario tampoco permite crearlo")
 	@Test
 	void unAnioCerradoSinTarifarioTampocoPermiteCrearlo() {
 		UUID id2025 = anioPorSql(2025, "CERRADO");
@@ -302,6 +317,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 
 	// --- Para otros módulos ---
 
+	@DisplayName("Vigente y calendario solo existen para un tarifario confirmado")
 	@Test
 	void vigenteYCalendarioSoloExistenParaUnTarifarioConfirmado() {
 		var vigente = servicio.vigente(ID_2026).orElseThrow();
@@ -333,6 +349,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 
 	// --- Editar las fechas del año (HU-74) ---
 
+	@DisplayName("Editar las fechas del año regenera el calendario del tarifario confirmado sin tocar montos ni estado")
 	@Test
 	void editarLasFechasDelAnioRegeneraElCalendarioDelTarifarioConfirmadoSinTocarMontosNiEstado() {
 		servicio.confirmar(ID_2027, solicitudValida());
@@ -353,6 +370,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 				.query(Integer.class).single()).isEqualTo(8);
 	}
 
+	@DisplayName("Editar las fechas también regenera el calendario de un tarifario en configuración")
 	@Test
 	void editarLasFechasTambienRegeneraElCalendarioDeUnTarifarioEnConfiguracion() {
 		anios.editar(ID_2027, new SolicitudEdicionAnio(fecha(2027, 3, 1), fecha(2027, 11, 26)));
@@ -363,6 +381,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(vista.calendario().cuotas().getLast().fechaVencimiento()).isEqualTo(fecha(2027, 11, 15));
 	}
 
+	@DisplayName("Con compromisos no se regenera el calendario y el tarifario avisa que quedo desactualizado")
 	@Test
 	void conCompromisosNoSeRegeneraElCalendarioYElTarifarioAvisaQueQuedoDesactualizado() {
 		compromisoDelTarifario2027PorSql();
@@ -376,6 +395,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(vista.calendarioDesactualizado()).isTrue();
 	}
 
+	@DisplayName("Editar las fechas rechaza un calendario que no seria válido explicando la relación con el tarifario")
 	@Test
 	void editarLasFechasRechazaUnCalendarioQueNoSeriaValidoExplicandoLaRelacionConElTarifario() {
 		rechaza(HttpStatus.BAD_REQUEST,
@@ -392,6 +412,7 @@ class ServicioTarifarioIT extends PruebaIntegracion {
 		assertThat(anio.periodos().getLast().fechaFin()).isEqualTo(fecha(2027, 12, 17));
 	}
 
+	@DisplayName("Editar las fechas de un año sin tarifario no crea ninguno ni falla")
 	@Test
 	void editarLasFechasDeUnAnioSinTarifarioNoCreaNingunoNiFalla() {
 		UUID id2028 = anioPorSql(2028, "PLANIFICADO");

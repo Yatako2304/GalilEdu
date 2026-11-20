@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.test.web.servlet.MvcResult;
@@ -113,6 +114,7 @@ class CrucesConcurrenciaIT extends PruebaHorarios {
 		assertThat(cuerpoDe(perdedor)).contains(fragmentosDelMensaje);
 	}
 
+	@DisplayName("Dos secciones con el mismo docente al mismo bloque una gana y la otra recibe cruce de docente")
 	@Test
 	void dosSeccionesConElMismoDocenteAlMismoBloqueUnaGanaYLaOtraRecibeCruceDeDocente() throws Exception {
 		seccionUno = seccion("SEC-1", "C1", aulaUno, null);
@@ -134,6 +136,7 @@ class CrucesConcurrenciaIT extends PruebaHorarios {
 				.param("docente", docente()).query(Long.class).single()).isEqualTo(1L);
 	}
 
+	@DisplayName("Dos secciones con el mismo ambiente al mismo bloque una gana y la otra recibe cruce de ambiente")
 	@Test
 	void dosSeccionesConElMismoAmbienteAlMismoBloqueUnaGanaYLaOtraRecibeCruceDeAmbiente() throws Exception {
 		seccionUno = seccion("SEC-1", "C1", aulaUno, null);

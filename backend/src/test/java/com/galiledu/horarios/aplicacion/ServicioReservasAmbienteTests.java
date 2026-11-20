@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
@@ -141,6 +142,7 @@ class ServicioReservasAmbienteTests {
 
 	// ---------- Crear: orden de operaciones ----------
 
+	@DisplayName("Crea con el creador y devuelve la reserva leida")
 	@Test
 	void creaConElCreadorYDevuelveLaReservaLeida() {
 		ReservaDeAmbiente creada = servicio.crear(solicitud(LAB), USUARIO);
@@ -155,6 +157,7 @@ class ServicioReservasAmbienteTests {
 		assertThat(creada.editable()).isTrue();
 	}
 
+	@DisplayName("Toma el bloqueo del año antes de cargar reservas y bloques y guarda después")
 	@Test
 	void tomaElBloqueoDelAnioAntesDeCargarReservasYBloquesYGuardaDespues() {
 		servicio.crear(solicitud(LAB), USUARIO);
@@ -166,6 +169,7 @@ class ServicioReservasAmbienteTests {
 		orden.verify(repositorio).saveAndFlush(any());
 	}
 
+	@DisplayName("Las reglas de forma fallan antes de tomar el bloqueo y no guardan nada")
 	@Test
 	void lasReglasDeFormaFallanAntesDeTomarElBloqueoYNoGuardanNada() {
 		assertEstado(() -> servicio.crear(solicitud(AULA), USUARIO), HttpStatus.BAD_REQUEST,
@@ -175,6 +179,7 @@ class ServicioReservasAmbienteTests {
 		verify(repositorio, never()).saveAndFlush(any());
 	}
 
+	@DisplayName("Un responsable no elegible se rechaza con un400 antes del bloqueo")
 	@Test
 	void unResponsableNoElegibleSeRechazaConUn400AntesDelBloqueo() {
 		when(responsables.existe(RESPONSABLE)).thenReturn(false);
@@ -184,6 +189,7 @@ class ServicioReservasAmbienteTests {
 		verifyNoInteractions(estructuras);
 	}
 
+	@DisplayName("Una sección inexistente responde404")
 	@Test
 	void unaSeccionInexistenteResponde404() {
 		var otra = new SolicitudReserva(LAB, OTRA_SECCION, RESPONSABLE, "Experimento", LUNES, LocalTime.of(8, 0),
@@ -193,6 +199,7 @@ class ServicioReservasAmbienteTests {
 		assertEstado(() -> servicio.crear(otra, USUARIO), HttpStatus.NOT_FOUND, "La sección no existe.");
 	}
 
+	@DisplayName("Un año cerrado responde409 sin bloquear")
 	@Test
 	void unAnioCerradoResponde409SinBloquear() {
 		when(calendario.deAnio(ANIO)).thenReturn(Optional.of(new AnioConPeriodos(ANIO, 2026, "CERRADO",
@@ -203,6 +210,7 @@ class ServicioReservasAmbienteTests {
 		verifyNoInteractions(estructuras);
 	}
 
+	@DisplayName("Un cruce responde409 con título y no guarda")
 	@Test
 	void unCruceResponde409ConTituloYNoGuarda() {
 		var otraSeccionConElLab = new BloqueOcupado(OTRA_SECCION, DiaSemana.LUN, LocalTime.of(8, 0),
@@ -219,6 +227,7 @@ class ServicioReservasAmbienteTests {
 		verify(repositorio, never()).saveAndFlush(any());
 	}
 
+	@DisplayName("El cruce de la misma sección con el mismo ambiente se rechaza con un400")
 	@Test
 	void elCruceDeLaMismaSeccionConElMismoAmbienteSeRechazaConUn400() {
 		var propia = new BloqueOcupado(SECCION, DiaSemana.LUN, LocalTime.of(8, 0), LocalTime.of(8, 45), null, LAB,
@@ -229,6 +238,7 @@ class ServicioReservasAmbienteTests {
 				"4.° B ya tiene LAB-01 en su horario el lunes de 8:00 a 8:45; no necesita reserva.");
 	}
 
+	@DisplayName("Ahora se toma del reloj inyectado para la regla3")
 	@Test
 	void ahoraSeTomaDelRelojInyectadoParaLaRegla3() {
 		var pasada = Clock.fixed(Instant.parse("2026-11-23T14:00:00Z"), RelojConfig.LIMA); // lunes 09:00 en Lima
@@ -240,6 +250,7 @@ class ServicioReservasAmbienteTests {
 
 	// ---------- Reprogramar ----------
 
+	@DisplayName("Reprogramar con una versión vieja409 y no bloquea el año")
 	@Test
 	void reprogramarConUnaVersionVieja409YNoBloqueaElAnio() {
 		when(repositorio.findById(ID)).thenReturn(Optional.of(guardada(LUNES, 3)));
@@ -249,6 +260,7 @@ class ServicioReservasAmbienteTests {
 		verifyNoInteractions(estructuras);
 	}
 
+	@DisplayName("Reprogramar excluye la propia reserva en las tres busquedas")
 	@Test
 	void reprogramarExcluyeLaPropiaReservaEnLasTresBusquedas() {
 		when(repositorio.findById(ID)).thenReturn(Optional.of(guardada(LUNES, 0)));
@@ -260,6 +272,7 @@ class ServicioReservasAmbienteTests {
 		verify(repositorio).superpuestasPorResponsable(eq(RESPONSABLE), eq(LUNES), any(), any(), eq(ID));
 	}
 
+	@DisplayName("Reprogramar una reserva finalizada o cancelada responde409 sin bloquear")
 	@Test
 	void reprogramarUnaReservaFinalizadaOCanceladaResponde409SinBloquear() {
 		var finalizada = guardada(LocalDate.of(2026, 2, 16), 0);
@@ -275,6 +288,7 @@ class ServicioReservasAmbienteTests {
 		verifyNoInteractions(estructuras);
 	}
 
+	@DisplayName("Un conflicto de versión al guardar se convierte en409")
 	@Test
 	void unConflictoDeVersionAlGuardarSeConvierteEn409() {
 		when(repositorio.findById(ID)).thenReturn(Optional.of(guardada(LUNES, 0)));
@@ -285,6 +299,7 @@ class ServicioReservasAmbienteTests {
 				"La reserva cambió mientras la editabas. Vuelve a cargarla.");
 	}
 
+	@DisplayName("Reprogramar una reserva inexistente responde404")
 	@Test
 	void reprogramarUnaReservaInexistenteResponde404() {
 		when(repositorio.findById(ID)).thenReturn(Optional.empty());
@@ -294,6 +309,7 @@ class ServicioReservasAmbienteTests {
 
 	// ---------- Cancelar ----------
 
+	@DisplayName("Cancelar deja la reserva cancelada sin tomar el bloqueo")
 	@Test
 	void cancelarDejaLaReservaCanceladaSinTomarElBloqueo() {
 		var reserva = guardada(LUNES, 0);
@@ -306,6 +322,7 @@ class ServicioReservasAmbienteTests {
 		verifyNoInteractions(estructuras);
 	}
 
+	@DisplayName("Cancelar con una versión vieja409")
 	@Test
 	void cancelarConUnaVersionVieja409() {
 		when(repositorio.findById(ID)).thenReturn(Optional.of(guardada(LUNES, 2)));
@@ -315,6 +332,7 @@ class ServicioReservasAmbienteTests {
 		verify(repositorio, never()).saveAndFlush(any());
 	}
 
+	@DisplayName("Cancelar con la versión actual se permite")
 	@Test
 	void cancelarConLaVersionActualSePermite() {
 		when(repositorio.findById(ID)).thenReturn(Optional.of(guardada(LUNES, 2)));
@@ -324,6 +342,7 @@ class ServicioReservasAmbienteTests {
 		verify(repositorio).saveAndFlush(any());
 	}
 
+	@DisplayName("Cancelar una finalizada o ya cancelada responde409")
 	@Test
 	void cancelarUnaFinalizadaOYaCanceladaResponde409() {
 		when(repositorio.findById(ID)).thenReturn(Optional.of(guardada(LocalDate.of(2026, 2, 16), 0)));
@@ -338,6 +357,7 @@ class ServicioReservasAmbienteTests {
 		verify(repositorio, never()).saveAndFlush(any());
 	}
 
+	@DisplayName("Cancelar una reserva inexistente responde404")
 	@Test
 	void cancelarUnaReservaInexistenteResponde404() {
 		when(repositorio.findById(ID)).thenReturn(Optional.empty());
@@ -352,6 +372,7 @@ class ServicioReservasAmbienteTests {
 		return armar(Clock.fixed(Instant.parse("2026-11-18T15:00:00Z"), RelojConfig.LIMA));
 	}
 
+	@DisplayName("Sin filtro lista la semana de hoy de lunes a domingo")
 	@Test
 	void sinFiltroListaLaSemanaDeHoyDeLunesADomingo() {
 		servicio = conHoyMiercoles();
@@ -362,6 +383,7 @@ class ServicioReservasAmbienteTests {
 		verify(consulta).activasEntre(LocalDate.of(2026, 11, 16), LocalDate.of(2026, 11, 22), 10, 0);
 	}
 
+	@DisplayName("El filtro mes cubre el mes calendario de hoy")
 	@Test
 	void elFiltroMesCubreElMesCalendarioDeHoy() {
 		servicio = conHoyMiercoles();
@@ -371,6 +393,7 @@ class ServicioReservasAmbienteTests {
 		verify(consulta).activasEntre(LocalDate.of(2026, 11, 1), LocalDate.of(2026, 11, 30), 10, 0);
 	}
 
+	@DisplayName("El filtro año cubre el año calendario de hoy")
 	@Test
 	void elFiltroAnioCubreElAnioCalendarioDeHoy() {
 		servicio = conHoyMiercoles();
@@ -380,6 +403,7 @@ class ServicioReservasAmbienteTests {
 		verify(consulta).activasEntre(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 12, 31), 10, 0);
 	}
 
+	@DisplayName("La semana en domingo y en lunes queda completa")
 	@Test
 	void laSemanaEnDomingoYEnLunesQuedaCompleta() {
 		var domingo = LocalDate.of(2026, 11, 22);
@@ -391,6 +415,7 @@ class ServicioReservasAmbienteTests {
 		assertThat(FiltroDeReservas.SEMANA.hasta(lunes)).isEqualTo(domingo);
 	}
 
+	@DisplayName("La página se convierte en desplazamiento y el tamano se acota")
 	@Test
 	void laPaginaSeConvierteEnDesplazamientoYElTamanoSeAcota() {
 		servicio = conHoyMiercoles();
@@ -404,6 +429,7 @@ class ServicioReservasAmbienteTests {
 		verify(consulta).activasEntre(any(), any(), eq(1), eq(0L));
 	}
 
+	@DisplayName("El estado y el editable se calculan con el reloj")
 	@Test
 	void elEstadoYElEditableSeCalculanConElReloj() {
 		servicio = conHoyMiercoles();
@@ -422,6 +448,7 @@ class ServicioReservasAmbienteTests {
 		assertThat(pagina.data().get(1).version()).isEqualTo(4);
 	}
 
+	@DisplayName("Una reserva que termina justo ahora ya está finalizada")
 	@Test
 	void unaReservaQueTerminaJustoAhoraYaEstaFinalizada() {
 		// Hoy 18/11 a las 10:00; termina a las 09:00 el mismo día y otra a las 10:00 exactas.
@@ -435,6 +462,7 @@ class ServicioReservasAmbienteTests {
 
 	// ---------- Obtener y opciones ----------
 
+	@DisplayName("Obtener una reserva cancelada o inexistente responde404")
 	@Test
 	void obtenerUnaReservaCanceladaOInexistenteResponde404() {
 		when(consulta.porId(ID)).thenReturn(Optional.of(leida(ID, "CANCELADA", LUNES, 1)));
@@ -444,6 +472,7 @@ class ServicioReservasAmbienteTests {
 		assertEstado(() -> servicio.obtener(ID), HttpStatus.NOT_FOUND, "La reserva no existe.");
 	}
 
+	@DisplayName("Las opciones solo traen espacios especiales por código y los responsables")
 	@Test
 	void lasOpcionesSoloTraenEspaciosEspecialesPorCodigoYLosResponsables() {
 		var labDos = new AmbienteDisponible(UUID.randomUUID(), "Auditorio", "AUD-01", "ESPACIO_ESPECIAL", 180);

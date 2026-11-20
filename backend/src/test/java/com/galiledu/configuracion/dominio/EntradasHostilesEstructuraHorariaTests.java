@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -62,6 +63,7 @@ class EntradasHostilesEstructuraHorariaTests {
 				Arguments.of("NUL solo", "\u0000"));
 	}
 
+	@DisplayName("Un código sin contenido útil se rechaza como vacio")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("codigosSinContenidoQueTrimRecorta")
 	void unCodigoSinContenidoUtilSeRechazaComoVacio(String nombre, String codigo) {
@@ -82,12 +84,14 @@ class EntradasHostilesEstructuraHorariaTests {
 	 * Corregido: String.trim() no recorta estos caracteres, pero ya no importa: tras normalizar, el código solo admite
 	 * letras A-Z, números y guion, así que un código invisible se rechaza.
 	 */
+	@DisplayName("Un código de solo caracteres invisibles se rechaza por no ser letras numeros ni guion")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("codigosDeSoloCaracteresInvisibles")
 	void unCodigoDeSoloCaracteresInvisiblesSeRechazaPorNoSerLetrasNumerosNiGuion(String nombre, String codigo) {
 		assertThat(EstructuraHoraria.detectarErrores(conCodigo(codigo))).containsExactly(CODIGO_INVALIDO);
 	}
 
+	@DisplayName("El código en el limite de20 se acepta y con uno más se rechaza")
 	@Test
 	void elCodigoEnElLimiteDe20SeAceptaYConUnoMasSeRechaza() {
 		assertThat(EstructuraHoraria.detectarErrores(conCodigo("A".repeat(20)))).isEmpty();
@@ -97,6 +101,7 @@ class EntradasHostilesEstructuraHorariaTests {
 				.containsExactly("El código admite hasta 20 caracteres.");
 	}
 
+	@DisplayName("La descripción en el limite de100 se acepta y con una más se rechaza")
 	@Test
 	void laDescripcionEnElLimiteDe100SeAceptaYConUnaMasSeRechaza() {
 		assertThat(EstructuraHoraria.detectarErrores(conDescripcion("D".repeat(100)))).isEmpty();
@@ -106,6 +111,7 @@ class EntradasHostilesEstructuraHorariaTests {
 				.containsExactly("La descripción admite hasta 100 caracteres.");
 	}
 
+	@DisplayName("Una descripción solo de blancos se guarda como sin descripción")
 	@Test
 	void unaDescripcionSoloDeBlancosSeGuardaComoSinDescripcion() {
 		assertThat(conDescripcion("   \t\n").normalizada().descripcion()).isNull();
@@ -113,6 +119,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(conDescripcion(null).normalizada().descripcion()).isNull();
 	}
 
+	@DisplayName("Los codigos de la hu y los del modal de figma son validos")
 	@Test
 	void losCodigosDeLaHuYLosDelModalDeFigmaSonValidos() {
 		for (String codigo : List.of("EH-PRI-26", "EH-SEC-26", "EH-TAR-26", "eh-tar-26", " EH-TAR-26 ", "A", "0-9")) {
@@ -132,6 +139,7 @@ class EntradasHostilesEstructuraHorariaTests {
 				Arguments.of("ancho completo", "\uFF25\uFF28-\uFF11", "\uFF25\uFF28-\uFF11", false));
 	}
 
+	@DisplayName("Los codigos especiales se normalizan y solo pasan si quedan en aa z numeros y guion")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("codigosEspecialesYSuNormalizacion")
 	void losCodigosEspecialesSeNormalizanYSoloPasanSiQuedanEnAaZNumerosYGuion(String nombre, String entrada,
@@ -143,6 +151,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(EstructuraHoraria.detectarErrores(conCodigo(entrada)).isEmpty()).isEqualTo(esValido);
 	}
 
+	@DisplayName("La eszett que se alarga ass hace que el largo se cuente ya normalizado")
 	@Test
 	void laEszettQueSeAlargaASSHaceQueElLargoSeCuenteYaNormalizado() {
 		// HUECO: 11 "ß" son 11 caracteres escritos pero 22 al guardarse ("SS" × 11): se rechaza por largo.
@@ -154,6 +163,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(EstructuraHoraria.detectarErrores(conCodigo("ß".repeat(10)))).isEmpty();
 	}
 
+	@DisplayName("Los emojis y las letras de otros alfabetos ya no se aceptan como código")
 	@Test
 	void losEmojisYLasLetrasDeOtrosAlfabetosYaNoSeAceptanComoCodigo() {
 		// Antes: 10 emojis cabían (20 unidades UTF-16) y las letras cirílicas se aceptaban como "otro" código.
@@ -165,6 +175,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(EstructuraHoraria.detectarErrores(conCodigo("\u0415\u041D-1"))).containsExactly(CODIGO_INVALIDO);
 	}
 
+	@DisplayName("El mismo código con y sin espacios y en otra capitalización es el mismo código")
 	@Test
 	void elMismoCodigoConYSinEspaciosYEnOtraCapitalizacionEsElMismoCodigo() {
 		String normalizado = conCodigo("EH-1").normalizada().codigo();
@@ -174,6 +185,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		}
 	}
 
+	@DisplayName("Normalizada es idempotente")
 	@Test
 	void normalizadaEsIdempotente() {
 		DefinicionEstructura una = new DefinicionEstructura("  eh-1 ", "  d  ", List.of("vie", "lun"),
@@ -188,6 +200,7 @@ class EntradasHostilesEstructuraHorariaTests {
 	 * barras
 	 * y espacios internos por la regla de letras A-Z, números y guion.
 	 */
+	@DisplayName("El código y la descripción rechazan los caracteres de control en medio")
 	@Test
 	void elCodigoYLaDescripcionRechazanLosCaracteresDeControlEnMedio() {
 		for (String texto : List.of("A\u0001B", "A\u001BB", "A\r\nB", "A\tB", "A\u0000B", "A\u0085B")) {
@@ -198,6 +211,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		}
 	}
 
+	@DisplayName("El mensaje de control no se repite si el código y la descripción lo tienen")
 	@Test
 	void elMensajeDeControlNoSeRepiteSiElCodigoYLaDescripcionLoTienen() {
 		DefinicionEstructura ambos = new DefinicionEstructura("A\u0000B", "x\u0000y", LUN_A_VIE, LocalTime.of(8, 0), 6,
@@ -206,12 +220,14 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(EstructuraHoraria.detectarErrores(ambos)).containsExactly(TEXTO_CON_CONTROLES);
 	}
 
+	@DisplayName("Los controles al borde de la descripción se recortan y no se rechazan")
 	@Test
 	void losControlesAlBordeDeLaDescripcionSeRecortanYNoSeRechazan() {
 		assertThat(EstructuraHoraria.detectarErrores(conDescripcion("\r\nhola\t"))).isEmpty();
 		assertThat(conDescripcion("\r\nhola\t").normalizada().descripcion()).isEqualTo("hola");
 	}
 
+	@DisplayName("El código rechaza rutas barras y espacios internos")
 	@Test
 	void elCodigoRechazaRutasBarrasYEspaciosInternos() {
 		for (String codigo : List.of("../x", "EH 1", "a/b\\c", "EH_1", "EH.1", "EH-1!")) {
@@ -225,6 +241,7 @@ class EntradasHostilesEstructuraHorariaTests {
 				"${jndi:ldap://x}", "%s%n%x", "{{7*7}}");
 	}
 
+	@DisplayName("Las cadenas de inyección son datos en la descripción y se rechazan como código")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("textosDeInyeccion")
 	void lasCadenasDeInyeccionSonDatosEnLaDescripcionYSeRechazanComoCodigo(String texto) {
@@ -237,6 +254,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(errores.get(0)).isIn("El código admite hasta 20 caracteres.", CODIGO_INVALIDO);
 	}
 
+	@DisplayName("Un código que válida nunca supera la columna de20 ni tiene caracteres fuera de la regla")
 	@Test
 	void unCodigoQueValidaNuncaSuperaLaColumnaDe20NiTieneCaracteresFueraDeLaRegla() {
 		// Mayúsculas que cambian de largo: ŉ → ʼN, ǰ → J̌, ΐ → Ϊ́. El largo se mide ya normalizado.
@@ -251,6 +269,7 @@ class EntradasHostilesEstructuraHorariaTests {
 
 	// ---------- 2. Días lectivos ----------
 
+	@DisplayName("Los días vacios nulos o nulos dentro del arreglo se rechazan")
 	@Test
 	void losDiasVaciosNulosONulosDentroDelArregloSeRechazan() {
 		assertThat(EstructuraHoraria.detectarErrores(conDias(List.of())))
@@ -266,6 +285,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(EstructuraHoraria.detectarErrores(conDias(Arrays.asList(null, null)))).containsExactly(enBlanco);
 	}
 
+	@DisplayName("Los días en minúsculas se aceptan y los nombres completos o no existentes se rechazan")
 	@Test
 	void losDiasEnMinusculasSeAceptanYLosNombresCompletosONoExistentesSeRechazan() {
 		assertThat(EstructuraHoraria.detectarErrores(conDias(List.of("lun", " mar ")))).isEmpty();
@@ -277,6 +297,7 @@ class EntradasHostilesEstructuraHorariaTests {
 				.containsExactly("Día lectivo no válido: XYZ.");
 	}
 
+	@DisplayName("Los días repetidos se rechazan y los seis días se aceptan en orden de semana")
 	@Test
 	void losDiasRepetidosSeRechazanYLosSeisDiasSeAceptanEnOrdenDeSemana() {
 		assertThat(EstructuraHoraria.detectarErrores(conDias(List.of("LUN", "LUN"))))
@@ -292,6 +313,7 @@ class EntradasHostilesEstructuraHorariaTests {
 	 * HUECO (sin corregir): mil días inválidos dan un error por cada uno (mil mensajes). Crear usa solo el primero; la
 	 * vista previa los devolvería todos. Se documenta el comportamiento actual.
 	 */
+	@DisplayName("Mil días repetidos o mil invalidos se rechazan sin fallar")
 	@Test
 	void milDiasRepetidosOMilInvalidosSeRechazanSinFallar() {
 		List<String> milLunes = new ArrayList<>();
@@ -308,6 +330,7 @@ class EntradasHostilesEstructuraHorariaTests {
 
 	// ---------- 3. Números y recesos ----------
 
+	@DisplayName("Los bloques y la duración en los bordes y fuera de ellos")
 	@Test
 	void losBloquesYLaDuracionEnLosBordesYFueraDeEllos() {
 		for (int bloques : new int[]{0, -1, 13, 20, 120, 121, Integer.MAX_VALUE, Integer.MIN_VALUE}) {
@@ -325,6 +348,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		}
 	}
 
+	@DisplayName("Los recesos en los bordes y fuera de ellos")
 	@Test
 	void losRecesosEnLosBordesYFueraDeEllos() {
 		for (int despues : new int[]{0, -1, 6, 7, Integer.MAX_VALUE, Integer.MIN_VALUE}) {
@@ -343,6 +367,7 @@ class EntradasHostilesEstructuraHorariaTests {
 
 	// ---------- 4. Hora de entrada y jornada máxima ----------
 
+	@DisplayName("La jornada maxima posible no desborda ni da horas negativas")
 	@Test
 	void laJornadaMaximaPosibleNoDesbordaNiDaHorasNegativas() {
 		// 12 bloques de 120 min con 11 recesos de 60 min: 1 440 + 660 = 2 100 min, desde las 23:59.
@@ -367,6 +392,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(CalculadoraJornada.formatoHora(jornada.salidaMinutos())).isEqualTo("58:59");
 	}
 
+	@DisplayName("Las horas limite con la regla de las1800")
 	@Test
 	void lasHorasLimiteConLaReglaDeLas1800() {
 		assertThat(EstructuraHoraria.detectarErrores(new DefinicionEstructura("EH-1", null, LUN_A_VIE,
@@ -385,6 +411,7 @@ class EntradasHostilesEstructuraHorariaTests {
 	 * Corregido: la hora con segundos se trunca a minutos al normalizar, así lo guardado (07:45) y lo calculado
 	 * (07:45) coinciden.
 	 */
+	@DisplayName("La hora con segundos se trunca a minutos al normalizar")
 	@Test
 	void laHoraConSegundosSeTruncaAMinutosAlNormalizar() {
 		DefinicionEstructura conSegundos = new DefinicionEstructura("EH-1", null, LUN_A_VIE, LocalTime.of(7, 45, 59), 2,
@@ -399,6 +426,7 @@ class EntradasHostilesEstructuraHorariaTests {
 
 	// ---------- 5. Recesos con forma rara ----------
 
+	@DisplayName("Los recesos nulos vacios o duplicados no fallan en la normalización")
 	@Test
 	void losRecesosNulosVaciosODuplicadosNoFallanEnLaNormalizacion() {
 		assertThatCode(() -> conRecesos(null).normalizada()).doesNotThrowAnyException();
@@ -417,6 +445,7 @@ class EntradasHostilesEstructuraHorariaTests {
 	 * daría un 500. La prueba exige el comportamiento correcto (no lanzar) y por eso hoy FALLA. Corrección mínima:
 	 * ignorar los null en normalizada() (filter(Objects::nonNull)).
 	 */
+	@DisplayName("Un null dentro de los recesos no debe revertar el dominio")
 	@Test
 	void unNullDentroDeLosRecesosNoDebeRevertarElDominio() {
 		DefinicionEstructura soloNull = conRecesos(Arrays.asList((DatosReceso) null));
@@ -427,6 +456,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThatCode(nullYUnReceso::normalizada).doesNotThrowAnyException();
 	}
 
+	@DisplayName("Cinco mil recesos se rechazan sin fallar")
 	@Test
 	void cincoMilRecesosSeRechazanSinFallar() {
 		List<DatosReceso> cincoMil = new ArrayList<>();
@@ -438,6 +468,7 @@ class EntradasHostilesEstructuraHorariaTests {
 				.containsExactly("No puede haber dos recesos después del mismo bloque.");
 	}
 
+	@DisplayName("Los recesos desordenados se guardan en orden de bloque")
 	@Test
 	void losRecesosDesordenadosSeGuardanEnOrdenDeBloque() {
 		EstructuraHoraria estructura = EstructuraHoraria.crear(ANIO, "PRIMARIA", true,
@@ -446,6 +477,7 @@ class EntradasHostilesEstructuraHorariaTests {
 		assertThat(estructura.getRecesos()).extracting(Receso::getDespuesDeBloque).containsExactly(2, 3, 4);
 	}
 
+	@DisplayName("Crear con datos que no validan no deja la estructura a cedias")
 	@Test
 	void crearConDatosQueNoValidanNoDejaLaEstructuraACedias() {
 		assertThatThrownBy(() -> EstructuraHoraria.crear(ANIO, "PRIMARIA", true,

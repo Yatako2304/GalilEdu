@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -25,6 +26,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 
 	// ---------- GET /horarios/secciones/{id} ----------
 
+	@DisplayName("Con cabecera devuelve la matriz con docente ambiente y curso")
 	@Test
 	void conCabeceraDevuelveLaMatrizConDocenteAmbienteYCurso() throws Exception {
 		UUID eh = estructura("EH-T-27", "SECUNDARIA", true, 6);
@@ -79,6 +81,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.celdas[1].cruces", empty()));
 	}
 
+	@DisplayName("Sin cabecera con principal devuelve la jornada sin guardar nada")
 	@Test
 	void sinCabeceraConPrincipalDevuelveLaJornadaSinGuardarNada() throws Exception {
 		UUID eh = estructura("EH-T-27", "SECUNDARIA", true, 6);
@@ -98,6 +101,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 		assertThat(cabeceras()).isEqualTo(antes);
 	}
 
+	@DisplayName("Sin cabecera y sin principal responde409 con el nivel de la sección")
 	@Test
 	void sinCabeceraYSinPrincipalResponde409ConElNivelDeLaSeccion() throws Exception {
 		UUID secundaria = seccion("SEC-1", "T1", null, null);
@@ -110,6 +114,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 						.value("Configura la estructura horaria principal de primaria antes de asignar horarios."));
 	}
 
+	@DisplayName("Con cabecera usa la estructura guardada aunque ya no sea la principal")
 	@Test
 	void conCabeceraUsaLaEstructuraGuardadaAunqueYaNoSeaLaPrincipal() throws Exception {
 		estructura("EH-NUEVA", "SECUNDARIA", true, 6);
@@ -124,6 +129,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.jornada.bloques", hasSize(4)));
 	}
 
+	@DisplayName("Con el año cerrado responde200 con editable falso")
 	@Test
 	void conElAnioCerradoResponde200ConEditableFalso() throws Exception {
 		estructura("EH-T-27", "SECUNDARIA", true, 6);
@@ -135,12 +141,14 @@ class HorarioLecturaIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.editable").value(false));
 	}
 
+	@DisplayName("Sección inexistente responde404")
 	@Test
 	void seccionInexistenteResponde404() throws Exception {
 		pedir("/horarios/secciones/" + UUID.randomUUID(), COORDINADOR).andExpect(status().isNotFound());
 		pedir("/horarios/secciones/" + UUID.randomUUID() + "/opciones", COORDINADOR).andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Una celda sin docente llega con docente nulo")
 	@Test
 	void unaCeldaSinDocenteLlegaConDocenteNulo() throws Exception {
 		UUID eh = estructura("EH-T-27", "SECUNDARIA", true, 6);
@@ -157,6 +165,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.celdas[0].cruces", empty()));
 	}
 
+	@DisplayName("Otro rol recibe403 en los dos endpoints")
 	@Test
 	void otroRolRecibe403EnLosDosEndpoints() throws Exception {
 		UUID seccion = seccion("SEC-1", "T1", null, null);
@@ -168,6 +177,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 
 	// ---------- GET /horarios/secciones/{id}/opciones ----------
 
+	@DisplayName("Opciones trae los cursos con sus horas asignadas y docente")
 	@Test
 	void opcionesTraeLosCursosConSusHorasAsignadasYDocente() throws Exception {
 		UUID eh = estructura("EH-T-27", "SECUNDARIA", true, 6);
@@ -194,6 +204,7 @@ class HorarioLecturaIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.cursos[?(@.nombre=='Geometría')].docente", contains(nullValue())));
 	}
 
+	@DisplayName("Opciones solo ofrece ambientes activos y sin aula no hay por defecto")
 	@Test
 	void opcionesSoloOfreceAmbientesActivosYSinAulaNoHayPorDefecto() throws Exception {
 		UUID activo = ambiente("TMP-ACT", "ACTIVO");

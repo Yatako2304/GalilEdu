@@ -27,6 +27,7 @@ import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -183,6 +184,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("100 000 caracteres", "D".repeat(100_000), false));
 	}
 
+	@DisplayName("La descripción en el limite se acepta y una más se rechaza")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("largosDeLaDescripcion")
 	void laDescripcionEnElLimiteSeAceptaYUnaMasSeRechaza(String nombre, String descripcion, boolean seAcepta)
@@ -197,6 +199,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("Una descripción vacia o nula o solo de blancos se guarda como sin descripción")
 	@Test
 	void unaDescripcionVaciaONulaOSoloDeBlancosSeGuardaComoSinDescripcion() throws Exception {
 		int numero = 0;
@@ -231,6 +234,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * aunque
 	 * sea hostil, no recibe error ni consigue fijar el código: se ignora y las tablas siguen intactas.
 	 */
+	@DisplayName("El código que llega al crear se ignora y el backend genera el suyo")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("codigosEnviadosPorUnClienteAntiguo")
 	void elCodigoQueLlegaAlCrearSeIgnoraYElBackendGeneraElSuyo(String nombre, String codigo) throws Exception {
@@ -240,6 +244,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(existeLaTabla(jdbc, "configuracion.receso")).isTrue();
 	}
 
+	@DisplayName("Una clave duplicada de código también se ignora")
 	@Test
 	void unaClaveDuplicadaDeCodigoTambienSeIgnora() throws Exception {
 		String conDuplicadas = "{\"codigo\":\"EH-PRIMERO\",\"codigo\":\"EH-SEGUNDO\"," + cuerpoDeCrear().substring(1);
@@ -253,6 +258,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * HUECO: las claves duplicadas se aceptan y gana la última aparición. Propuesta: activar
 	 * STRICT_DUPLICATE_DETECTION en Jackson (configuración compartida).
 	 */
+	@DisplayName("Las claves duplicadas se aceptan y gana la última")
 	@Test
 	void lasClavesDuplicadasSeAceptanYGanaLaUltima() throws Exception {
 		String conDuplicadas = "{\"descripcion\":\"Primera\",\"descripcion\":\"Ultima\","
@@ -267,6 +273,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * HUECO: no hay límite de tamaño del cuerpo JSON. Una descripción de 10 MB llega hasta el dominio y se rechaza por
 	 * largo (400), pero antes se leyó entera en memoria. Propuesta: limitar el tamaño de la petición en el servidor.
 	 */
+	@DisplayName("Un cuerpo de10 mb se rechaza por el largo de la descripción sin escribir nada")
 	@Test
 	void unCuerpoDe10MbSeRechazaPorElLargoDeLaDescripcionSinEscribirNada() throws Exception {
 		MvcResult resultado = exigeCrearRechazadoSinEscribir(
@@ -276,6 +283,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				.isEqualTo("La descripción admite hasta 100 caracteres.");
 	}
 
+	@DisplayName("Editar con otro código lo ignora y conserva el que tenía")
 	@Test
 	void editarConOtroCodigoLoIgnoraYConservaElQueTenia() throws Exception {
 		String id = crearValida();
@@ -297,6 +305,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	/**
 	 * cambiar…"). Respuesta real: 400 "El texto contiene caracteres no válidos." en ambos.
 	 */
+	@DisplayName("Un nul dentro del texto se rechaza con su mensaje sin escribir nada")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("textosConNul")
 	void unNulDentroDelTextoSeRechazaConSuMensajeSinEscribirNada(String nombre, String campo, String valor)
@@ -308,6 +317,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	}
 
 	/** Corregido: la vista previa con NUL responde 200 con el error en la lista, ya no 500. */
+	@DisplayName("Un nul dentro del texto en la vista previa lista el error")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("textosConNul")
 	void unNulDentroDelTextoEnLaVistaPreviaListaElError(String nombre, String campo, String valor) throws Exception {
@@ -331,6 +341,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	}
 
 	/** Corregido: los caracteres de control en medio del código o la descripción se rechazan (400). */
+	@DisplayName("Los caracteres de control en medio se rechazan sin escribir nada")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("controlesQueNoSonNul")
 	void losCaracteresDeControlEnMedioSeRechazanSinEscribirNada(String nombre, String campo, String valor)
@@ -346,6 +357,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				"${jndi:ldap://x}", "%s%n%x", "{{7*7}}");
 	}
 
+	@DisplayName("Las cadenas de inyección en la descripción se guardan literales y las tablas siguen")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("textosDeInyeccion")
 	void lasCadenasDeInyeccionEnLaDescripcionSeGuardanLiteralesYLasTablasSiguen(String texto) throws Exception {
@@ -377,6 +389,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("objetos", "[{}]", null));
 	}
 
+	@DisplayName("Los días invalidos se rechazan sin escribir nada")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("diasInvalidos")
 	void losDiasInvalidosSeRechazanSinEscribirNada(String nombre, String literal, String mensaje) throws Exception {
@@ -396,6 +409,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 						List.of("LUN", "MAR", "MIE", "JUE", "VIE", "SAB")));
 	}
 
+	@DisplayName("Los días validos se guardan en orden de semana")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("diasValidos")
 	void losDiasValidosSeGuardanEnOrdenDeSemana(String nombre, String literal, List<String> esperados)
@@ -409,6 +423,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * HUECO (sin corregir): mil días inválidos se rechazan con 400 y el primero de los mil mensajes ("D0"); la vista
 	 * previa devolvería los mil. Se documenta el comportamiento actual.
 	 */
+	@DisplayName("Mil días invalidos se rechazan sin fallar ni filtrar nada")
 	@Test
 	void milDiasInvalidosSeRechazanSinFallarNiFiltrarNada() throws Exception {
 		StringBuilder dias = new StringBuilder("[");
@@ -443,6 +458,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("objeto", "{}", MENSAJE_FORMATO));
 	}
 
+	@DisplayName("Los bloques por día fuera de rango o mal escritos se rechazan")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("bloquesPorDiaRechazados")
 	void losBloquesPorDiaFueraDeRangoOMalEscritosSeRechazan(String nombre, String literal, String mensaje)
@@ -461,6 +477,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("\"6\" como texto se convierte a 6", "\"6\"", 6));
 	}
 
+	@DisplayName("Los bloques por día validos o convertibles se guardan")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("bloquesPorDiaAceptados")
 	void losBloquesPorDiaValidosOConvertiblesSeGuardan(String nombre, String literal, int esperado) throws Exception {
@@ -469,6 +486,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(JsonPath.<Integer>read(cuerpoDe(detalle(id)), "$.bloquesPorDia")).isEqualTo(esperado);
 	}
 
+	@DisplayName("Un boolean como bloques por día se rechaza sin fallar")
 	@Test
 	void unBooleanComoBloquesPorDiaSeRechazaSinFallar() throws Exception {
 		// Observado al correr: ver el informe. El criterio es 4xx limpio.
@@ -490,6 +508,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("clave ausente", null, "La duración del bloque va de 20 a 120 minutos."));
 	}
 
+	@DisplayName("La duración del bloque fuera de rango o mal escrita se rechaza")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("duracionRechazada")
 	void laDuracionDelBloqueFueraDeRangoOMalEscritaSeRechaza(String nombre, String literal, String mensaje)
@@ -509,6 +528,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("1e2 se convierte a 100", "1e2", 100));
 	}
 
+	@DisplayName("La duración válida o convertible se guarda")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("duracionAceptada")
 	void laDuracionValidaOConvertibleSeGuarda(String nombre, String literal, int esperado) throws Exception {
@@ -518,6 +538,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(JsonPath.<Integer>read(cuerpoDe(detalle(id)), "$.duracionBloqueMin")).isEqualTo(esperado);
 	}
 
+	@DisplayName("Un boolean como duración se rechaza sin fallar")
 	@Test
 	void unBooleanComoDuracionSeRechazaSinFallar() throws Exception {
 		exigeCrearRechazadoSinEscribir(cuerpoDeCrear("duracionBloqueMin", "true"));
@@ -544,6 +565,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("duración fuera de int", "2", "99999999999", MENSAJE_FORMATO));
 	}
 
+	@DisplayName("Los recesos fuera de rango se rechazan")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("recesosNumericosRechazados")
 	void losRecesosFueraDeRangoSeRechazan(String nombre, String despues, String duracion, String mensaje)
@@ -560,6 +582,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("duración 60", "2", "60"));
 	}
 
+	@DisplayName("Los recesos en el borde se aceptan")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("recesosNumericosAceptados")
 	void losRecesosEnElBordeSeAceptan(String nombre, String despues, String duracion) throws Exception {
@@ -583,6 +606,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("un booleano", "true"));
 	}
 
+	@DisplayName("Una hora de entrada mal escrita se rechaza sin escribir nada")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("horasMalEscritas")
 	void unaHoraDeEntradaMalEscritaSeRechazaSinEscribirNada(String nombre, String literal) throws Exception {
@@ -592,6 +616,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.message")).isEqualTo(MENSAJE_FORMATO);
 	}
 
+	@DisplayName("La hora de entrada vacia o nula o ausente se rechaza con su mensaje")
 	@Test
 	void laHoraDeEntradaVaciaONulaOAusenteSeRechazaConSuMensaje() throws Exception {
 		for (String literal : new String[]{"\"\"", "null", null}) {
@@ -606,6 +631,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * Corregido: la hora con segundos se trunca a minutos al normalizar, así lo guardado, lo mostrado y lo calculado
 	 * coinciden (07:45). Respuesta real: 201, la BD guarda 07:45:00.
 	 */
+	@DisplayName("La hora con segundos se trunca a minutos y se guarda igual que se muestra")
 	@Test
 	void laHoraConSegundosSeTruncaAMinutosYSeGuardaIgualQueSeMuestra() throws Exception {
 		String id = crearValida("horaEntrada", "\"07:45:30\"", "bloquesPorDia", "2");
@@ -617,6 +643,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(guardada).isEqualTo("07:45:00");
 	}
 
+	@DisplayName("Las horas limite con la regla de las1800")
 	@Test
 	void lasHorasLimiteConLaReglaDeLas1800() throws Exception {
 		// 00:00 con 6 bloques de 45 min termina a las 04:30: válida.
@@ -628,6 +655,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				.isEqualTo("La jornada debe terminar como máximo a las 18:00.");
 	}
 
+	@DisplayName("La jornada maxima desde las2359 no desborda ni da horas negativas")
 	@Test
 	void laJornadaMaximaDesdeLas2359NoDesbordaNiDaHorasNegativas() throws Exception {
 		String once = "[" + String.join(",", java.util.stream.IntStream.rangeClosed(1, 11)
@@ -663,6 +691,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 						+ UUID_NULO + "\",\"foo\":\"bar\"}]", 1));
 	}
 
+	@DisplayName("Los recesos nulos vacios desordenados o con campos de más se aceptan")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("recesosAceptadosConFormaRara")
 	void losRecesosNulosVaciosDesordenadosOConCamposDeMasSeAceptan(String nombre, String literal, int cantidad)
@@ -688,6 +717,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("un texto en vez de arreglo", "\"x\"", MENSAJE_FORMATO));
 	}
 
+	@DisplayName("Los recesos mal formados se rechazan sin escribir nada")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("recesosRechazados")
 	void losRecesosMalFormadosSeRechazanSinEscribirNada(String nombre, String literal, String mensaje)
@@ -750,6 +780,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * MethodArgumentTypeMismatchException. Debe ser 400.
 	 */
 	@Disabled(PENDIENTE_COMPARTIDO)
+	@DisplayName("Un uuid mal formado en la ruta debe dar4xx limpio en los tres endpoints")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("segmentosConUuidMalFormado")
 	void unUuidMalFormadoEnLaRutaDebeDar4xxLimpioEnLosTresEndpoints(String nombre, String segmento) throws Exception {
@@ -760,6 +791,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * HUECO (sin corregir): ".." y los códigos codificados los rechaza el firewall de Spring Security antes de llegar a
 	 * la API. Respuesta real: 400 con el cuerpo vacío (no {message, errores}); no es un 5xx ni filtra nada.
 	 */
+	@DisplayName("Una ruta que rechaza el firewall da400 con cuerpo vacio")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("segmentosQueRechazaElFirewall")
 	void unaRutaQueRechazaElFirewallDa400ConCuerpoVacio(String nombre, String segmento) throws Exception {
@@ -768,6 +800,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 
 	/** Pendiente compartido (BUG 4): la ruta con barra final no coincide con nada y da 500; debe ser 404. */
 	@Disabled(PENDIENTE_COMPARTIDO)
+	@DisplayName("Un identificador vacio en la ruta da4xx")
 	@Test
 	void unIdentificadorVacioEnLaRutaDa4xx() throws Exception {
 		// "/estructuras-horarias/" no coincide con ninguna ruta. Si el manejador compartido lo trata como error
@@ -778,6 +811,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		exigeRechazoLimpio(resultado, true);
 	}
 
+	@DisplayName("El uuid nulo y uno aleatorio dan404 con su mensaje")
 	@Test
 	void elUuidNuloYUnoAleatorioDan404ConSuMensaje() throws Exception {
 		for (String id : new String[]{UUID_NULO, UUID.randomUUID().toString()}) {
@@ -788,6 +822,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("Un uuid en mayúsculas es válido y encuentra la estructura")
 	@Test
 	void unUuidEnMayusculasEsValidoYEncuentraLaEstructura() throws Exception {
 		MvcResult resultado = detalle(EH_PRI_26.toUpperCase(Locale.ROOT));
@@ -796,6 +831,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat((String) JsonPath.read(cuerpoDe(resultado), "$.codigo")).isEqualTo("EH-PRI-26");
 	}
 
+	@DisplayName("El id de un año como id de estructura y viceversa dan404")
 	@Test
 	void elIdDeUnAnioComoIdDeEstructuraYViceversaDan404() throws Exception {
 		exigeRechazoConMensaje(detalle(ANIO_2026), 404, "La estructura horaria no existe.");
@@ -817,6 +853,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		return estructuraId.toString();
 	}
 
+	@DisplayName("Una estructura de un año activo o cerrado rechaza editar y eliminar sin cambiar nada")
 	@Test
 	void unaEstructuraDeUnAnioActivoOCerradoRechazaEditarYEliminarSinCambiarNada() throws Exception {
 		String cerrada = crearAnioCerradoConEstructura();
@@ -831,6 +868,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(foto()).isEqualTo(antes);
 	}
 
+	@DisplayName("Un año inexistente da404 en listar crear y vista previa")
 	@Test
 	void unAnioInexistenteDa404EnListarCrearYVistaPrevia() throws Exception {
 		String cuerpo = cuerpoDeCrear();
@@ -851,6 +889,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * (400, lo resuelve Spring antes de llegar a la API); luego gana el año o la estructura inexistente (404), luego el
 	 * año que no admite cambios (409) y al final las reglas del cuerpo (400).
 	 */
+	@DisplayName("Cuando la ruta y el cuerpo son invalidos gana primero lo que se evalua antes")
 	@Test
 	void cuandoLaRutaYElCuerpoSonInvalidosGanaPrimeroLoQueSeEvaluaAntes() throws Exception {
 		String cuerpoInvalido = cuerpoDeCrear("bloquesPorDia", "13");
@@ -881,6 +920,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("anidado muy profundo", "{\"a\":".repeat(5000) + "1" + "}".repeat(5000)));
 	}
 
+	@DisplayName("Un cuerpo ilegible se rechaza sin escribir nada")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("cuerposIlegibles")
 	void unCuerpoIlegibleSeRechazaSinEscribirNada(String nombre, String cuerpo) throws Exception {
@@ -893,6 +933,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * OK: Jackson rechaza el texto que sobra después del JSON. Respuesta real: 400 "La solicitud tiene un formato
 	 * inválido".
 	 */
+	@DisplayName("La basura al final del json se rechaza sin escribir nada")
 	@Test
 	void laBasuraAlFinalDelJsonSeRechazaSinEscribirNada() throws Exception {
 		MvcResult resultado = exigeCrearRechazadoSinEscribir(
@@ -916,6 +957,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * compartido.
 	 */
 	@Disabled(PENDIENTE_COMPARTIDO)
+	@DisplayName("Un tipo de contenido que no es json debe dar4xx")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("tiposDeContenidoIncorrectos")
 	void unTipoDeContenidoQueNoEsJsonDebeDar4xx(String nombre, MediaType tipo) throws Exception {
@@ -947,6 +989,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * HttpRequestMethodNotSupportedException: si falla, es BUG de archivo compartido.
 	 */
 	@Disabled(PENDIENTE_COMPARTIDO)
+	@DisplayName("Un método no permitido debe dar4xx sin tocar la base")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("metodosNoPermitidos")
 	void unMetodoNoPermitidoDebeDar4xxSinTocarLaBase(String nombre, String metodo, String ruta) throws Exception {
@@ -965,6 +1008,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(foto()).isEqualTo(antes);
 	}
 
+	@DisplayName("Un cuerpo en un get se ignora")
 	@Test
 	void unCuerpoEnUnGetSeIgnora() throws Exception {
 		MvcResult resultado = mvc.perform(conToken(get(rutaDelAnio(ANIO_2026)), personalAdministrativo,
@@ -978,6 +1022,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * un receso se ignoran. La BD conserva los valores originales (salvo la fecha de actualización, que sí cambia por
 	 * ser una edición real).
 	 */
+	@DisplayName("Los campos de más en editar no se aplican")
 	@Test
 	void losCamposDeMasEnEditarNoSeAplican() throws Exception {
 		String id = crearValida("nivel", texto("SECUNDARIA"), "recesos", receso("2", "15"));
@@ -1001,6 +1046,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * un
 	 * false explícito (409, probado en EstructuraHorariaIT).
 	 */
+	@DisplayName("Editar sin enviar es principal conserva la marca que ya tiene")
 	@Test
 	void editarSinEnviarEsPrincipalConservaLaMarcaQueYaTiene() throws Exception {
 		String principal = crearValida("codigo", texto("EH-A"));
@@ -1016,6 +1062,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat((List<?>) JsonPath.read(cuerpoDe(sobrePrincipal), "$.advertencias")).isEmpty();
 	}
 
+	@DisplayName("Un false explicito sobre la principal sigue dando409 y no cambia nada")
 	@Test
 	void unFalseExplicitoSobreLaPrincipalSigueDando409YNoCambiaNada() throws Exception {
 		String principal = crearValida();
@@ -1028,6 +1075,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(foto()).isEqualTo(antes);
 	}
 
+	@DisplayName("Un true explicito marca como principal y baja la anterior")
 	@Test
 	void unTrueExplicitoMarcaComoPrincipalYBajaLaAnterior() throws Exception {
 		crearValida("codigo", texto("EH-A"));
@@ -1062,6 +1110,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 				Arguments.of("JWT con tres partes falsas", "Bearer aaa.bbb.ccc"));
 	}
 
+	@DisplayName("Sin token o con token inválido ningún endpoint responde algo que no sea4xx limpio")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("credencialesInvalidas")
 	void sinTokenOConTokenInvalidoNingunEndpointRespondeAlgoQueNoSea4xxLimpio(String nombre, String autorizacion)
@@ -1081,6 +1130,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(foto()).isEqualTo(antes);
 	}
 
+	@DisplayName("Un token con la firma alterada se rechaza")
 	@Test
 	void unTokenConLaFirmaAlteradaSeRechaza() throws Exception {
 		String alterado = personalAdministrativo.substring(0, personalAdministrativo.length() - 2) + "xx";
@@ -1091,6 +1141,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(resultado.getResponse().getStatus()).isIn(401, 403);
 	}
 
+	@DisplayName("Los roles sin permiso reciben siempre403 sin importar si la estructura existe")
 	@ParameterizedTest(name = "{0}")
 	@MethodSource("rolesSinPermiso")
 	void losRolesSinPermisoRecibenSiempre403SinImportarSiLaEstructuraExiste(String nombre, String usuario)
@@ -1119,6 +1170,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	}
 
 	/** El 403 de un rol sin permiso es idéntico exista o no la estructura: no revela si existe. */
+	@DisplayName("El rechazo por rol es igual para una estructura que existe y una que no")
 	@Test
 	void elRechazoPorRolEsIgualParaUnaEstructuraQueExisteYUnaQueNo() throws Exception {
 		String token = token(DOCENTE);
@@ -1138,6 +1190,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	 * inválido" de "sin permiso". Se espera 403.
 	 */
 	@Disabled(PENDIENTE_COMPARTIDO)
+	@DisplayName("Un rol sin permiso no debe ver un error distinto por un uuid mal escrito")
 	@Test
 	void unRolSinPermisoNoDebeVerUnErrorDistintoPorUnUuidMalEscrito() throws Exception {
 		String token = token(DOCENTE);
@@ -1151,6 +1204,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 
 	// ---------- 9. Estado y reglas de negocio con entradas extrañas ----------
 
+	@DisplayName("Eliminar dos veces la misma estructura da404 en la segunda")
 	@Test
 	void eliminarDosVecesLaMismaEstructuraDa404EnLaSegunda() throws Exception {
 		crearValida("codigo", texto("EH-A"));
@@ -1165,6 +1219,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(foto()).isEqualTo(antes);
 	}
 
+	@DisplayName("Editar una estructura eliminada da404")
 	@Test
 	void editarUnaEstructuraEliminadaDa404() throws Exception {
 		crearValida("codigo", texto("EH-A"));
@@ -1177,6 +1232,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(foto()).isEqualTo(antes);
 	}
 
+	@DisplayName("Marcar como principal la que ya lo es no cambia nada ni avisa")
 	@Test
 	void marcarComoPrincipalLaQueYaLoEsNoCambiaNadaNiAvisa() throws Exception {
 		String principal = crearValida();
@@ -1187,6 +1243,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat((List<?>) JsonPath.read(cuerpoDe(resultado), "$.advertencias")).isEmpty();
 	}
 
+	@DisplayName("Cambiar el nivel por un campo extra no tiene efecto")
 	@Test
 	void cambiarElNivelPorUnCampoExtraNoTieneEfecto() throws Exception {
 		String id = crearValida("nivel", texto("PRIMARIA"));
@@ -1197,6 +1254,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		assertThat(leerDelDetalle(id, "$.nivel")).isEqualTo("PRIMARIA");
 	}
 
+	@DisplayName("Crear eliminar y volver a crear el mismo código en el mismo año funciona")
 	@Test
 	void crearEliminarYVolverACrearElMismoCodigoEnElMismoAnioFunciona() throws Exception {
 		crearValida("codigo", texto("EH-A"));
@@ -1224,6 +1282,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 		entityManager.clear();
 	}
 
+	@DisplayName("Con planes al limite los bloques iguales a las horas se aceptan y uno menos se rechaza")
 	@Test
 	void conPlanesAlLimiteLosBloquesIgualesALasHorasSeAceptanYUnoMenosSeRechaza() throws Exception {
 		String principal = crearValida("codigo", texto("EH-SEC"), "nivel", texto("SECUNDARIA"));
@@ -1253,6 +1312,7 @@ class EstructuraHorariaEntradasHostilesIT extends PruebaIntegracion {
 	/**
 	 * Recorre una batería de peticiones que fallan de formas distintas y revisa que ninguna filtre detalles internos.
 	 */
+	@DisplayName("Ninguna respuesta de error filtra detalles internos")
 	@Test
 	void ningunaRespuestaDeErrorFiltraDetallesInternos() throws Exception {
 		String cerrada = crearAnioCerradoConEstructura();

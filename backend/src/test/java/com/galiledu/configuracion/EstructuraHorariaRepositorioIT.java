@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -69,6 +70,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 
 	// ---------- Mapeo con la base real ----------
 
+	@DisplayName("Guarda los días lectivos como arreglo de postgre sql")
 	@Test
 	void guardaLosDiasLectivosComoArregloDePostgreSQL() {
 		EstructuraHoraria guardada = repositorio.saveAndFlush(EstructuraHoraria.crear(ANIO_2027, "PRIMARIA", true,
@@ -81,6 +83,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(enLaBase).isEqualTo("{LUN,MIE,VIE}");
 	}
 
+	@DisplayName("Lee los días lectivos de una fila insertada por sql")
 	@Test
 	void leeLosDiasLectivosDeUnaFilaInsertadaPorSql() {
 		UUID id = jdbc.sql("""
@@ -100,6 +103,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(leida.bloquesPorSemana()).isEqualTo(8);
 	}
 
+	@DisplayName("Lee la estructura de figma con sus recesos en orden")
 	@Test
 	void leeLaEstructuraDeFigmaConSusRecesosEnOrden() {
 		EstructuraHoraria primaria = repositorio.findById(EH_PRI_26).orElseThrow();
@@ -112,6 +116,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 
 	// ---------- Recesos hijos ----------
 
+	@DisplayName("Guarda los recesos junto con la estructura")
 	@Test
 	void guardaLosRecesosJuntoConLaEstructura() {
 		EstructuraHoraria guardada = guardar("EH-TMP", "PRIMARIA", true,
@@ -120,6 +125,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(bloquesConRecesoEnLaBase(guardada.getId())).containsExactly(2, 4);
 	}
 
+	@DisplayName("Un receso que sigue en el mismo bloque solo cambia de duración")
 	@Test
 	void unRecesoQueSigueEnElMismoBloqueSoloCambiaDeDuracion() {
 		EstructuraHoraria guardada = guardar("EH-TMP", "PRIMARIA", true,
@@ -138,6 +144,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(despues.getRecesos().get(0).getId()).isEqualTo(recesoDelBloque3);
 	}
 
+	@DisplayName("Se puede quitar un receso y volver a ponerlo en el mismo bloque")
 	@Test
 	void sePuedeQuitarUnRecesoYVolverAPonerloEnElMismoBloque() {
 		EstructuraHoraria guardada = guardar("EH-TMP", "PRIMARIA", true,
@@ -160,6 +167,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 				.extracting(Receso::getDuracionMin).containsExactly(20, 25);
 	}
 
+	@DisplayName("Una edición puede quitar todos los recesos y pedir otro en un bloque que tenía")
 	@Test
 	void unaEdicionPuedeQuitarTodosLosRecesosYPedirOtroEnUnBloqueQueTenia() {
 		EstructuraHoraria guardada = guardar("EH-TMP", "PRIMARIA", true,
@@ -175,6 +183,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 				.extracting(Receso::getDuracionMin).containsExactly(10, 30);
 	}
 
+	@DisplayName("Editar solo los recesos mueve la fecha de actualización en la base")
 	@Test
 	void editarSoloLosRecesosMueveLaFechaDeActualizacionEnLaBase() {
 		EstructuraHoraria guardada = guardar("EH-TMP", "PRIMARIA", true, List.of(new DatosReceso(3, 20)));
@@ -199,6 +208,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 
 	// ---------- La principal del nivel ----------
 
+	@DisplayName("Cambiar la principal de un nivel con flush entre degradar y promover")
 	@Test
 	void cambiarLaPrincipalDeUnNivelConFlushEntreDegradarYPromover() {
 		EstructuraHoraria actual = guardar("EH-A", "PRIMARIA", true, List.of());
@@ -213,6 +223,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(codigosPrincipalesDe2027("PRIMARIA")).containsExactly("EH-B");
 	}
 
+	@DisplayName("La base rechaza dos principales del mismo nivel y año")
 	@Test
 	void laBaseRechazaDosPrincipalesDelMismoNivelYAnio() {
 		guardar("EH-A", "PRIMARIA", true, List.of());
@@ -220,6 +231,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		rechazaPor("ux_estructura_horaria_principal", () -> guardar("EH-B", "PRIMARIA", true, List.of()));
 	}
 
+	@DisplayName("La base admite una principal por cada nivel")
 	@Test
 	void laBaseAdmiteUnaPrincipalPorCadaNivel() {
 		guardar("EH-PRI", "PRIMARIA", true, List.of());
@@ -231,6 +243,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 
 	// ---------- Consultas del repositorio ----------
 
+	@DisplayName("Lista las estructuras del año por código")
 	@Test
 	void listaLasEstructurasDelAnioPorCodigo() {
 		assertThat(repositorio.findByAnioEscolarIdOrderByCodigo(ANIO_2026)).extracting(EstructuraHoraria::getCodigo)
@@ -238,6 +251,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(repositorio.findByAnioEscolarIdOrderByCodigo(ANIO_2027)).isEmpty();
 	}
 
+	@DisplayName("Sabe si un código ya existe en el año")
 	@Test
 	void sabeSiUnCodigoYaExisteEnElAnio() {
 		assertThat(repositorio.existsByAnioEscolarIdAndCodigo(ANIO_2026, "EH-PRI-26")).isTrue();
@@ -248,6 +262,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(repositorio.existsByAnioEscolarIdAndCodigo(ANIO_2026, "eh-pri-26")).isFalse();
 	}
 
+	@DisplayName("Al editar el código no choca con la propia estructura")
 	@Test
 	void alEditarElCodigoNoChocaConLaPropiaEstructura() {
 		assertThat(repositorio.existsByAnioEscolarIdAndCodigoAndIdNot(ANIO_2026, "EH-PRI-26", EH_PRI_26)).isFalse();
@@ -255,6 +270,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(repositorio.existsByAnioEscolarIdAndCodigoAndIdNot(ANIO_2026, "EH-NUEVA", EH_PRI_26)).isFalse();
 	}
 
+	@DisplayName("Encuentra la principal de cada nivel y año")
 	@Test
 	void encuentraLaPrincipalDeCadaNivelYAnio() {
 		assertThat(repositorio.findByAnioEscolarIdAndNivelAndEsPrincipalTrue(ANIO_2026, "PRIMARIA"))
@@ -264,6 +280,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(repositorio.findByAnioEscolarIdAndNivelAndEsPrincipalTrue(ANIO_2027, "PRIMARIA")).isEmpty();
 	}
 
+	@DisplayName("Una estructura que no es principal no cuenta como principal del nivel")
 	@Test
 	void unaEstructuraQueNoEsPrincipalNoCuentaComoPrincipalDelNivel() {
 		guardar("EH-TAR", "SECUNDARIA", false, List.of());
@@ -271,6 +288,7 @@ class EstructuraHorariaRepositorioIT extends PruebaIntegracion {
 		assertThat(repositorio.findByAnioEscolarIdAndNivelAndEsPrincipalTrue(ANIO_2027, "SECUNDARIA")).isEmpty();
 	}
 
+	@DisplayName("Cuenta las estructuras de un nivel en el año")
 	@Test
 	void cuentaLasEstructurasDeUnNivelEnElAnio() {
 		assertThat(repositorio.countByAnioEscolarIdAndNivel(ANIO_2026, "PRIMARIA")).isEqualTo(1);

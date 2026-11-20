@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalTime;
 import java.util.List;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.configuracion.dominio.CalculadoraJornada.FilaJornada;
@@ -17,6 +18,7 @@ class CalculadoraJornadaTests {
 		return hora * 60 + minuto;
 	}
 
+	@DisplayName("Primaria de figma entra a las0745y sale a las1420")
 	@Test
 	void primariaDeFigmaEntraALas0745ySaleALas1420() {
 		// CI-12, EH-PRI-26: 8 bloques de 45 min, recesos de 20 min tras el 3 y de 15 min tras el 6.
@@ -39,6 +41,7 @@ class CalculadoraJornadaTests {
 				.isEqualTo(new FilaJornada(TipoFila.BLOQUE, 8, minutos(13, 35), minutos(14, 20)));
 	}
 
+	@DisplayName("El orden en que llega la lista de recesos no cambia el resultado")
 	@Test
 	void elOrdenEnQueLlegaLaListaDeRecesosNoCambiaElResultado() {
 		Jornada enOrden = CalculadoraJornada.calcular(LocalTime.of(7, 45), 8, 45,
@@ -49,6 +52,7 @@ class CalculadoraJornadaTests {
 		assertThat(alReves).isEqualTo(enOrden);
 	}
 
+	@DisplayName("Secundaria de figma sale a las1450")
 	@Test
 	void secundariaDeFigmaSaleALas1450() {
 		// CI-12, EH-SEC-26: entrada 07:30, 9 bloques de 45 min y los mismos recesos.
@@ -58,6 +62,7 @@ class CalculadoraJornadaTests {
 		assertThat(jornada.salidaMinutos()).isEqualTo(minutos(14, 50));
 	}
 
+	@DisplayName("El modal de figma termina exactamente a las1800")
 	@Test
 	void elModalDeFigmaTerminaExactamenteALas1800() {
 		// Modal: entrada 14:45, 4 bloques de 45 min, receso de 15 min tras el 2.
@@ -72,6 +77,7 @@ class CalculadoraJornadaTests {
 				.isEqualTo(new FilaJornada(TipoFila.BLOQUE, 4, minutos(17, 15), minutos(18, 0)));
 	}
 
+	@DisplayName("Sin recesos los bloques van seguidos")
 	@Test
 	void sinRecesosLosBloquesVanSeguidos() {
 		Jornada jornada = CalculadoraJornada.calcular(LocalTime.of(8, 0), 3, 40, List.of());
@@ -81,6 +87,7 @@ class CalculadoraJornadaTests {
 		assertThat(jornada.salidaMinutos()).isEqualTo(minutos(10, 0));
 	}
 
+	@DisplayName("Pasada la medianoche la salida no da la vuelta")
 	@Test
 	void pasadaLaMedianocheLaSalidaNoDaLaVuelta() {
 		// Con LocalTime, 23:00 + 4 × 60 min serían las 03:00 y parecería una jornada válida.
@@ -90,6 +97,7 @@ class CalculadoraJornadaTests {
 		assertThat(CalculadoraJornada.formatoHora(jornada.salidaMinutos())).isEqualTo("27:00");
 	}
 
+	@DisplayName("Formatea las horas con dos digitos")
 	@Test
 	void formateaLasHorasConDosDigitos() {
 		assertThat(CalculadoraJornada.formatoHora(minutos(7, 5))).isEqualTo("07:05");

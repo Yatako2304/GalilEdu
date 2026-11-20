@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -26,6 +27,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 	@Autowired
 	private JdbcClient jdbc;
 
+	@DisplayName("El listado trae las secciones activas y las estructuras de cada año")
 	@Test
 	void elListadoTraeLasSeccionesActivasYLasEstructurasDeCadaAnio() {
 		var listado = consultas.anios();
@@ -38,6 +40,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		assertThat(listado.get(1).cantidadPeriodos()).isEqualTo(4);
 	}
 
+	@DisplayName("Los conteos del año activo salen de los datos de prueba")
 	@Test
 	void losConteosDelAnioActivoSalenDeLosDatosDePrueba() {
 		ConteosAnio c = consultas.conteos(ANIO_2026);
@@ -50,6 +53,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		assertThat(c.gradosConSeccionesConPlan()).isEqualTo(1); // el plan de evaluación solo existe para SEC-1
 	}
 
+	@DisplayName("Los conteos del año planificado no tienen estructuras ni plan")
 	@Test
 	void losConteosDelAnioPlanificadoNoTienenEstructurasNiPlan() {
 		ConteosAnio c = consultas.conteos(ANIO_2027);
@@ -62,6 +66,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		assertThat(c.gradosConSeccionesConPlan()).isZero();
 	}
 
+	@DisplayName("Un año que no existe tiene todos los conteos en cero")
 	@Test
 	void unAnioQueNoExisteTieneTodosLosConteosEnCero() {
 		ConteosAnio c = consultas.conteos(UUID.randomUUID());
@@ -69,6 +74,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		assertThat(c).isEqualTo(new ConteosAnio(0, 0, 0, 0, 0, 0));
 	}
 
+	@DisplayName("Las secciones inactivas no cuentan ni como sección ni como grado")
 	@Test
 	void lasSeccionesInactivasNoCuentanNiComoSeccionNiComoGrado() {
 		jdbc.sql(
@@ -82,6 +88,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		assertThat(c.seccionesSinTutor()).isEqualTo(7);
 	}
 
+	@DisplayName("Asignar un tutor descuenta las secciones sin tutor")
 	@Test
 	void asignarUnTutorDescuentaLasSeccionesSinTutor() {
 		jdbc.sql("""
@@ -92,12 +99,14 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		assertThat(consultas.conteos(ANIO_2026).seccionesSinTutor()).isEqualTo(8);
 	}
 
+	@DisplayName("Los codigos de las estructuras van en orden")
 	@Test
 	void losCodigosDeLasEstructurasVanEnOrden() {
 		assertThat(consultas.codigosEstructuras(ANIO_2026)).containsExactly("EH-PRI-26", "EH-SEC-26");
 		assertThat(consultas.codigosEstructuras(ANIO_2027)).isEmpty();
 	}
 
+	@DisplayName("Los alumnos matriculados salen de la matrícula del año")
 	@Test
 	void losAlumnosMatriculadosSalenDeLaMatriculaDelAnio() {
 		assertThat(consultas.alumnosMatriculados(ANIO_2026)).isEqualTo(5);
@@ -105,6 +114,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		assertThat(consultas.alumnosMatriculados(UUID.randomUUID())).isZero();
 	}
 
+	@DisplayName("Los alumnos retirados o anulados no cuentan como matriculados")
 	@Test
 	void losAlumnosRetiradosOAnuladosNoCuentanComoMatriculados() {
 		jdbc.sql("""
@@ -117,6 +127,7 @@ class ConsultasConfiguracionIT extends PruebaIntegracion {
 		assertThat(consultas.alumnosMatriculados(ANIO_2026)).isEqualTo(3); // Permanecen los tres alumnos de María.
 	}
 
+	@DisplayName("El repositorio encuentra año por estado")
 	@Test
 	void elRepositorioEncuentraAnioPorEstado() {
 		assertThat(anios.existsByEstado(EstadoAnioEscolar.ACTIVO)).isTrue();

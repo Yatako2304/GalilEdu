@@ -6,6 +6,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.academico.dominio.CalculoNotas.Nota;
@@ -23,6 +24,7 @@ class ResumenNotasTests {
 	private static final ResumenNotas.Valor SIN_NOTA = ResumenNotas.Valor.SIN_NOTA;
 	private static final ResumenNotas.Valor PENDIENTE = new ResumenNotas.Valor(Optional.empty(), true);
 
+	@DisplayName("Promedia las notas vigesimales y cuenta quienes tienen ao ad")
 	@Test
 	void promediaLasNotasVigesimalesYCuentaQuienesTienenAoAD() {
 		// 18 → AD, 15 → A, 12 → B, 9 → C; promedio 13,5 → redondea a 14 → A.
@@ -39,6 +41,7 @@ class ResumenNotasTests {
 		assertThat(celda.pendientes()).isEqualTo(1);
 	}
 
+	@DisplayName("En la escala cualitativa no promedia niveles sino que toma el más frecuente")
 	@Test
 	void enLaEscalaCualitativaNoPromediaNivelesSinoQueTomaElMasFrecuente() {
 		var celda = ResumenNotas.celda(List.of(nivel("B"), nivel("A"), nivel("B"), nivel("AD")),
@@ -49,6 +52,7 @@ class ResumenNotasTests {
 		assertThat(celda.porcentajeLogro()).isEqualTo(50);
 	}
 
+	@DisplayName("Sin notas queda pendiente sin porcentaje")
 	@Test
 	void sinNotasQuedaPendienteSinPorcentaje() {
 		var celda = ResumenNotas.celda(List.of(SIN_NOTA, SIN_NOTA), CalculoNotas.RANGOS_POR_DEFECTO);
@@ -59,6 +63,7 @@ class ResumenNotasTests {
 		assertThat(celda.porcentajeLogro()).isNull();
 	}
 
+	@DisplayName("La distribución cuenta cada nivel las pendientes y las que aún no tienen notas")
 	@Test
 	void laDistribucionCuentaCadaNivelLasPendientesYLasQueAunNoTienenNotas() {
 		var distribucion = ResumenNotas.distribucion(

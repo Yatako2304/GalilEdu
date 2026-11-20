@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -32,6 +33,7 @@ class SelectoresHorariosIT extends PruebaIntegracion {
 		return mvc.perform(conToken(get(ruta), token(usuario), null));
 	}
 
+	@DisplayName("El coordinador ve los años con su estado")
 	@Test
 	void elCoordinadorVeLosAniosConSuEstado() throws Exception {
 		pedir("/horarios/anios-escolares", COORDINADOR).andExpect(status().isOk())
@@ -42,6 +44,7 @@ class SelectoresHorariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[?(@.anio==2026)].estado", contains("ACTIVO")));
 	}
 
+	@DisplayName("El coordinador ve los grados con sus secciones del año")
 	@Test
 	void elCoordinadorVeLosGradosConSusSeccionesDelAnio() throws Exception {
 		pedir("/horarios/anios-escolares/" + ANIO_2026 + "/secciones", COORDINADOR).andExpect(status().isOk())
@@ -63,6 +66,7 @@ class SelectoresHorariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[?(@.codigo=='SEC-5')].secciones[0].id").isNotEmpty());
 	}
 
+	@DisplayName("Un año sin secciones devuelve los grados vacios")
 	@Test
 	void unAnioSinSeccionesDevuelveLosGradosVacios() throws Exception {
 		UUID anioNuevo = jdbc.sql("""
@@ -74,6 +78,7 @@ class SelectoresHorariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$", hasSize(11))).andExpect(jsonPath("$[*].secciones[*]", empty()));
 	}
 
+	@DisplayName("Un año que no existe responde404")
 	@Test
 	void unAnioQueNoExisteResponde404() throws Exception {
 		pedir("/horarios/anios-escolares/" + UUID.randomUUID() + "/secciones", COORDINADOR)
@@ -81,6 +86,7 @@ class SelectoresHorariosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
 	}
 
+	@DisplayName("Otros roles recibe403 en las dos rutas")
 	@Test
 	void otrosRolesRecibe403EnLasDosRutas() throws Exception {
 		for (String usuario : new String[]{DOCENTE, PERSONAL_ADMINISTRATIVO}) {

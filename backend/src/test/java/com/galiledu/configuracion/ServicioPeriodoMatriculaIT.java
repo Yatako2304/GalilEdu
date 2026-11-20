@@ -13,6 +13,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -162,6 +163,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// ---------- Estado, vigente y listado ----------
 
+	@DisplayName("Vigente es el abierto ahora o el próximo programado o vacio")
 	@Test
 	void vigenteEsElAbiertoAhoraOElProximoProgramadoOVacio() {
 		// reloj por defecto: 15/09/2026 10:00, el periodo 2027 acaba de abrir
@@ -184,6 +186,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.vigente()).isEmpty();
 	}
 
+	@DisplayName("Estado en calcula el estado de un período en cualquier instante")
 	@Test
 	void estadoEnCalculaElEstadoDeUnPeriodoEnCualquierInstante() {
 		UUID p2027 = periodo2027();
@@ -201,6 +204,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				() -> servicio.estadoEn(UUID.randomUUID(), Instant.now()));
 	}
 
+	@DisplayName("El listado trae el estado calculado las matrículas y el vigente")
 	@Test
 	void elListadoTraeElEstadoCalculadoLasMatriculasYElVigente() {
 		Pagina<FilaPeriodoMatricula> pagina = servicio.listar(null, null, 1, 10);
@@ -216,6 +220,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(pagina.data().get(1).vigente()).isFalse();
 	}
 
+	@DisplayName("El listado se filtra por año y por estado y se página")
 	@Test
 	void elListadoSeFiltraPorAnioYPorEstadoYSePagina() {
 		assertThat(servicio.listar(2026, null, 1, 10).data()).extracting(FilaPeriodoMatricula::anio)
@@ -233,6 +238,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(segunda.meta().totalPages()).isEqualTo(2);
 	}
 
+	@DisplayName("Los años disponibles son los planificados o activos sin período")
 	@Test
 	void losAniosDisponiblesSonLosPlanificadosOActivosSinPeriodo() {
 		assertThat(servicio.aniosDisponibles()).isEmpty();
@@ -246,6 +252,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// ---------- Formularios ----------
 
+	@DisplayName("El período abierto se ve en solo lectura con el resumen del modal")
 	@Test
 	void elPeriodoAbiertoSeVeEnSoloLecturaConElResumenDelModal() {
 		FormularioPeriodoMatricula f = servicio.ver(periodo2027());
@@ -273,6 +280,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(f.documentos()).noneMatch(DocumentoVista::tienePlantilla);
 	}
 
+	@DisplayName("El monto del formulario sale del tarifario confirmado")
 	@Test
 	void elMontoDelFormularioSaleDelTarifarioConfirmado() {
 		FormularioPeriodoMatricula sin = servicio.ver(periodo2027()); // el tarifario 2027 está EN_CONFIGURACION
@@ -286,6 +294,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(con.montoMatricula()).isEqualByComparingTo("450");
 	}
 
+	@DisplayName("El formulario nuevo trae las secciones del año con su capacidad")
 	@Test
 	void elFormularioNuevoTraeLasSeccionesDelAnioConSuCapacidad() {
 		UUID id2028 = anioConSecciones(2028);
@@ -305,6 +314,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(f.documentos()).isEmpty();
 	}
 
+	@DisplayName("El formulario nuevo rechaza un año que ya tiene período o está cerrado")
 	@Test
 	void elFormularioNuevoRechazaUnAnioQueYaTienePeriodoOEstaCerrado() {
 		rechaza(HttpStatus.CONFLICT, "Ya existe un periodo de matrícula para el año 2027.",
@@ -318,6 +328,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// ---------- Crear ----------
 
+	@DisplayName("Crea el período de un año nuevo con vacantes y documentos y cierra los vencidos")
 	@Test
 	void creaElPeriodoDeUnAnioNuevoConVacantesYDocumentosYCierraLosVencidos() {
 		reloj.fijarEn(fecha(2026, 11, 15)); // el 2027 ya cerró (31/10), aunque sigue guardado como HABILITADO
@@ -352,6 +363,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.vigente().orElseThrow().anio()).isEqualTo(2028);
 	}
 
+	@DisplayName("Sin tarifario confirmado no se habilita la matrícula")
 	@Test
 	void sinTarifarioConfirmadoNoSeHabilitaLaMatricula() {
 		reloj.fijarEn(fecha(2026, 11, 15));
@@ -362,6 +374,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(periodosDelAnio(id2028)).isZero();
 	}
 
+	@DisplayName("Un año que ya tiene período no se habilita otra vez")
 	@Test
 	void unAnioQueYaTienePeriodoNoSeHabilitaOtraVez() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -369,6 +382,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.crear(solicitud(ANIO_2027, fecha(2026, 12, 1), fecha(2027, 2, 15), List.of(), List.of())));
 	}
 
+	@DisplayName("Sin secciones activas no se habilita la matrícula")
 	@Test
 	void sinSeccionesActivasNoSeHabilitaLaMatricula() {
 		reloj.fijarEn(fecha(2026, 11, 15));
@@ -380,6 +394,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(periodosDelAnio(id2029)).isZero();
 	}
 
+	@DisplayName("No se crea un período mientras otro sigue sin cerrar")
 	@Test
 	void noSeCreaUnPeriodoMientrasOtroSigueSinCerrar() {
 		UUID id2028 = anioConSecciones(2028);
@@ -394,6 +409,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(periodosDelAnio(id2028)).isZero();
 	}
 
+	@DisplayName("Solo se habilita la matrícula de un año planificado o activo")
 	@Test
 	void soloSeHabilitaLaMatriculaDeUnAnioPlanificadoOActivo() {
 		UUID id2025 = anioSinSecciones(2025, "CERRADO");
@@ -405,6 +421,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				solicitud(UUID.randomUUID(), fecha(2026, 12, 1), fecha(2027, 2, 15), List.of(), List.of())));
 	}
 
+	@DisplayName("Las fechas y los documentos invalidos se rechazan sin guardar nada")
 	@Test
 	void lasFechasYLosDocumentosInvalidosSeRechazanSinGuardarNada() {
 		reloj.fijarEn(fecha(2026, 11, 15));
@@ -426,6 +443,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// ---------- Vacantes ----------
 
+	@DisplayName("Una vacante inválida no cambia nada ni guarda el período")
 	@Test
 	void unaVacanteInvalidaNoCambiaNadaNiGuardaElPeriodo() {
 		reloj.fijarEn(fecha(2026, 11, 15));
@@ -473,6 +491,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.ver(periodo2027()).documentos()).hasSize(4);
 	}
 
+	@DisplayName("Una vacante igual al tope o al número de ocupantes es válida")
 	@Test
 	void unaVacanteIgualAlTopeOAlNumeroDeOcupantesEsValida() {
 		reloj.fijarEn(fecha(2026, 11, 15));
@@ -491,6 +510,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// ---------- Editar ----------
 
+	@DisplayName("Edita un período programado sus fechas vacantes y documentos")
 	@Test
 	void editaUnPeriodoProgramadoSusFechasVacantesYDocumentos() {
 		reloj.fijarEn(fecha(2026, 9, 1)); // el 2027 está PROGRAMADO
@@ -524,6 +544,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.param(periodo2027()).query(Integer.class).single()).isEqualTo(3);
 	}
 
+	@DisplayName("Editar puede retirar un documento y agregar otro con el mismo nombre")
 	@Test
 	void editarPuedeRetirarUnDocumentoYAgregarOtroConElMismoNombre() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -538,6 +559,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(f.documentos().get(1).id()).isNotEqualTo(actuales.get(1).id());
 	}
 
+	@DisplayName("Un período abierto no se edita y uno cerrado tampoco")
 	@Test
 	void unPeriodoAbiertoNoSeEditaYUnoCerradoTampoco() {
 		confirmarTarifario(ANIO_2027);
@@ -551,6 +573,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				() -> servicio.editar(UUID.randomUUID(), solicitud));
 	}
 
+	@DisplayName("Editar con datos invalidos no cambia nada")
 	@Test
 	void editarConDatosInvalidosNoCambiaNada() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -578,6 +601,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(capacidad(s.get(1).seccionId())).isEqualTo(30);
 	}
 
+	@DisplayName("No se quita un documento que ya tiene entregas")
 	@Test
 	void noSeQuitaUnDocumentoQueYaTieneEntregas() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -603,6 +627,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// ---------- Eliminar ----------
 
+	@DisplayName("Elimina un período programado sin matrículas")
 	@Test
 	void eliminaUnPeriodoProgramadoSinMatriculas() {
 		reloj.fijarEn(fecha(2026, 11, 15));
@@ -619,6 +644,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.aniosDisponibles()).extracting(a -> a.anio()).containsExactly(2028);
 	}
 
+	@DisplayName("No se elimina un período programado si el año ya tiene matrículas")
 	@Test
 	void noSeEliminaUnPeriodoProgramadoSiElAnioYaTieneMatriculas() {
 		reloj.fijarEn(fecha(2026, 9, 1)); // el 2027 está PROGRAMADO y tiene una matrícula reservada
@@ -629,6 +655,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(periodosDelAnio(ANIO_2027)).isEqualTo(1);
 	}
 
+	@DisplayName("Una matrícula anulada también impide eliminar")
 	@Test
 	void unaMatriculaAnuladaTambienImpideEliminar() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -639,6 +666,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				() -> servicio.eliminar(periodo2027()));
 	}
 
+	@DisplayName("Un período abierto o cerrado no se elimina")
 	@Test
 	void unPeriodoAbiertoOCerradoNoSeElimina() {
 		rechaza(HttpStatus.CONFLICT, "Solo se puede eliminar un periodo de matrícula programado.",
@@ -652,6 +680,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	private static final byte[] PDF = "%PDF-1.4\n%fin\n".getBytes();
 
+	@DisplayName("Sube reemplaza y quita la plantilla de un documento de un período programado")
 	@Test
 	void subeReemplazaYQuitaLaPlantillaDeUnDocumentoDeUnPeriodoProgramado() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -677,6 +706,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				() -> servicio.quitarPlantilla(periodo2027(), documento));
 	}
 
+	@DisplayName("La plantilla solo admite pdf docx jpg o png de hasta10 mb")
 	@Test
 	void laPlantillaSoloAdmitePdfDocxJpgOPngDeHasta10Mb() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -695,6 +725,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.ver(periodo2027()).documentos().getFirst().tienePlantilla()).isFalse();
 	}
 
+	@DisplayName("La plantilla solo se cambia con el período programado pero se descarga siempre")
 	@Test
 	void laPlantillaSoloSeCambiaConElPeriodoProgramadoPeroSeDescargaSiempre() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -712,6 +743,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.descargarPlantilla(periodo2027(), documento).nombreArchivo()).isEqualTo("ficha.pdf");
 	}
 
+	@DisplayName("La plantilla de un documento ajeno o inexistente da404")
 	@Test
 	void laPlantillaDeUnDocumentoAjenoOInexistenteDa404() {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -725,6 +757,7 @@ class ServicioPeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				() -> servicio.subirPlantilla(UUID.randomUUID(), documento2026, "ficha.pdf", PDF));
 	}
 
+	@DisplayName("Editar el período conserva la plantilla de los documentos que se mantienen")
 	@Test
 	void editarElPeriodoConservaLaPlantillaDeLosDocumentosQueSeMantienen() {
 		reloj.fijarEn(fecha(2026, 9, 1));

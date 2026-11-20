@@ -48,6 +48,18 @@ jobs:
           cache: maven
       - name: Pruebas unitarias y de integración (mvnw verify)
         run: sh mvnw -B verify
+      # Guarda los reportes para armar el resultado de las pruebas (job "Resultados"). Nunca afecta al job.
+      - name: Guardar reportes de pruebas
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-backend
+          path: |
+            backend/target/surefire-reports
+            backend/target/failsafe-reports
+          if-no-files-found: ignore
+          retention-days: 7
 
   frontend:
     name: Frontend
@@ -71,6 +83,53 @@ jobs:
       - name: Tipos
         run: npm run check-types
       - name: Pruebas (Vitest)
-        run: npx vitest run
+        run: npx vitest run --reporter=default --reporter=json --outputFile.json=test-results/vitest.json
+      - name: Guardar reporte de pruebas
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-frontend
+          path: frontend/test-results/vitest.json
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Build
         run: npm run build
+
+  # Arma "pruebas-resultados.md" (cada prueba con ✅ o ❌) a partir de lo que dejaron Backend y Frontend.
+  # Es informativo: si falla, el CI no se pone en rojo ni bloquea el PR (los que se exigen son Backend y Frontend).
+  resultados:
+    name: Resultados
+    needs: [backend, frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/download-artifact@v4
+        with:
+          name: reportes-backend
+          path: backend/target
+      - uses: actions/download-artifact@v4
+        with:
+          name: reportes-frontend
+          path: frontend/test-results
+      - name: Generar resultados
+        run: node docs/generar-pruebas.mjs --resultados
+      - name: Resumen en la ejecución
+        run: |
+          head -n 12 docs/pruebas-resultados.md >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### Pruebas que fallan"
+            grep '^- ❌' docs/pruebas-resultados.md || echo "Ninguna."
+            echo
+            echo "El detalle de todas las pruebas está en el archivo `pruebas-resultados` de esta ejecución (sección Artifacts)."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pruebas-resultados
+          path: docs/pruebas-resultados.md
+          retention-days: 30

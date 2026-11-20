@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -59,6 +60,7 @@ class MatriculaDocumentosAdministrativoIT extends PruebaIntegracion {
 				.update();
 	}
 
+	@DisplayName("Elimina el documento subido")
 	@Test
 	void eliminaElDocumentoSubido() throws Exception {
 		subir();
@@ -68,11 +70,13 @@ class MatriculaDocumentosAdministrativoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[0].archivo").doesNotExist());
 	}
 
+	@DisplayName("Un documento que no se subio es404")
 	@Test
 	void unDocumentoQueNoSeSubioEs404() throws Exception {
 		eliminar().andExpect(status().isNotFound());
 	}
 
+	@DisplayName("En validación la matrícula vuelve a esperar documentos")
 	@Test
 	void enValidacionLaMatriculaVuelveAEsperarDocumentos() throws Exception {
 		subir();
@@ -82,6 +86,7 @@ class MatriculaDocumentosAdministrativoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("SECCION_RESERVADA"));
 	}
 
+	@DisplayName("Un documento aprobado no se elimina")
 	@Test
 	void unDocumentoAprobadoNoSeElimina() throws Exception {
 		subir();
@@ -92,6 +97,7 @@ class MatriculaDocumentosAdministrativoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Ese documento ya fue aprobado y no se puede eliminar."));
 	}
 
+	@DisplayName("Con la matrícula pendiente de pago no se elimina")
 	@Test
 	void conLaMatriculaPendienteDePagoNoSeElimina() throws Exception {
 		subir();
@@ -99,6 +105,7 @@ class MatriculaDocumentosAdministrativoIT extends PruebaIntegracion {
 		eliminar().andExpect(status().isConflict());
 	}
 
+	@DisplayName("El apoderado no usa este endpoint")
 	@Test
 	void elApoderadoNoUsaEsteEndpoint() throws Exception {
 		mvc.perform(conToken(delete("/matricula/matriculas/{id}/documentos/{d}", matriculaDeMateo(),

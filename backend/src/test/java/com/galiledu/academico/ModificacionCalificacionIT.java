@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -42,6 +43,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 		return BASE + "/items/" + item + "/calificaciones/" + matricula;
 	}
 
+	@DisplayName("Modifica fuera del plazo con motivo y deja historial")
 	@Test
 	void modificaFueraDelPlazoConMotivoYDejaHistorial() throws Exception {
 		String item = datos.item("Aritmética", 3, cantidad, "Examen HU-60");
@@ -66,6 +68,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[?(@.matriculaId == '%s')].modificaciones".formatted(ana)).value(1));
 	}
 
+	@DisplayName("El período cerrado permite modificar pero no registrar en lote")
 	@Test
 	void elPeriodoCerradoPermiteModificarPeroNoRegistrarEnLote() throws Exception {
 		String item = datos.item("Aritmética", 3, cantidad, "Examen HU-60");
@@ -80,6 +83,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].periodos[2].modificacionHabilitada").value(true));
 	}
 
+	@DisplayName("Exige motivo suficiente y un valor distinto")
 	@Test
 	void exigeMotivoSuficienteYUnValorDistinto() throws Exception {
 		String item = datos.item("Aritmética", 3, cantidad, "Examen HU-60");
@@ -97,6 +101,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Fuera de plazo registra con motivo una nota que faltaba")
 	@Test
 	void fueraDePlazoRegistraConMotivoUnaNotaQueFaltaba() throws Exception {
 		String item = datos.item("Aritmética", 3, cantidad, "Examen HU-60");
@@ -119,6 +124,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].notaNueva").value(14.0));
 	}
 
+	@DisplayName("No evaluado exige motivo y saca el item del cálculo del estudiante")
 	@Test
 	void noEvaluadoExigeMotivoYSacaElItemDelCalculoDelEstudiante() throws Exception {
 		String item = datos.item("Aritmética", 3, cantidad, "Examen HU-60");
@@ -153,6 +159,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].noEvaluadoNuevo").value(true));
 	}
 
+	@DisplayName("El registro en lote no borra un no evaluado")
 	@Test
 	void elRegistroEnLoteNoBorraUnNoEvaluado() throws Exception {
 		String item = datos.item("Aritmética", 4, cantidad, "Examen HU-60");
@@ -167,6 +174,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 						.value(contains("NO_EVALUADO")));
 	}
 
+	@DisplayName("Dentro del plazo el lote solo registra y una nota guardada se cambia con modificar")
 	@Test
 	void dentroDelPlazoElLoteSoloRegistraYUnaNotaGuardadaSeCambiaConModificar() throws Exception {
 		String item = datos.item("Aritmética", 4, cantidad, "Examen HU-60");
@@ -198,6 +206,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].motivo").value("Error al sumar los puntos del examen"));
 	}
 
+	@DisplayName("El promedio del período cuenta como cero lo que falta sin letra y con el peso calificado")
 	@Test
 	void elPromedioDelPeriodoCuentaComoCeroLoQueFaltaSinLetraYConElPesoCalificado() throws Exception {
 		// Dos ítems de 100 % cada uno en la competencia: Ana solo tiene uno, la mitad del peso. Un ítem que nadie
@@ -221,6 +230,7 @@ class ModificacionCalificacionIT extends PruebaIntegracion {
 						.value(contains("Faltan registros (cuentan como 0) · 50 % del peso calificado")));
 	}
 
+	@DisplayName("Solo el docente modifica")
 	@Test
 	void soloElDocenteModifica() throws Exception {
 		String item = datos.item("Aritmética", 3, cantidad, "Examen HU-60");

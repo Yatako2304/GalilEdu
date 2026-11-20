@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
  */
 class ManejadorErroresIT extends PruebaIntegracion {
 
+	@DisplayName("Una ruta que no existe responde404")
 	@Test
 	void unaRutaQueNoExisteResponde404() throws Exception {
 		mvc.perform(conToken(get("/horarios/mi-seccion"), token(ADMIN)))
@@ -20,6 +22,7 @@ class ManejadorErroresIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("No encontramos lo que buscas."));
 	}
 
+	@DisplayName("Un id con formato inválido responde400")
 	@Test
 	void unIdConFormatoInvalidoResponde400() throws Exception {
 		mvc.perform(conToken(get("/usuarios/no-es-un-uuid"), token(ADMIN)))
@@ -27,6 +30,7 @@ class ManejadorErroresIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("La solicitud tiene un formato inválido"));
 	}
 
+	@DisplayName("Un método no permitido responde405")
 	@Test
 	void unMetodoNoPermitidoResponde405() throws Exception {
 		mvc.perform(conToken(put("/auth/login"), token(ADMIN)))

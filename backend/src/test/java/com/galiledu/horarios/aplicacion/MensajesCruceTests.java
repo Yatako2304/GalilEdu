@@ -2,18 +2,21 @@ package com.galiledu.horarios.aplicacion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.configuracion.dominio.DiaSemana;
 
 /** HU-46: el título de la alerta y el texto con título del 409 del PUT. */
 class MensajesCruceTests {
+	@DisplayName("Cada tipo tiene su título")
 	@Test
 	void cadaTipoTieneSuTitulo() {
 		assertThat(MensajesCruce.titulo(TipoCruce.DOCENTE)).isEqualTo("Docente no disponible");
 		assertThat(MensajesCruce.titulo(TipoCruce.AMBIENTE)).isEqualTo("Ambiente no disponible");
 	}
 
+	@DisplayName("Con título antepone el título del tipo al mensaje de un cruce de docente")
 	@Test
 	void conTituloAnteponeElTituloDelTipoAlMensajeDeUnCruceDeDocente() {
 		var cruce = new CruceDetectado(TipoCruce.DOCENTE, DiaSemana.LUN, 1,
@@ -23,6 +26,7 @@ class MensajesCruceTests {
 				"Docente no disponible: María Fernández Ríos ya dicta Álgebra con 1.° C el lunes de 8:00 a 8:45.");
 	}
 
+	@DisplayName("Con título antepone el título del tipo al mensaje de un cruce de ambiente")
 	@Test
 	void conTituloAnteponeElTituloDelTipoAlMensajeDeUnCruceDeAmbiente() {
 		var cruce = new CruceDetectado(TipoCruce.AMBIENTE, DiaSemana.MIE, 3,

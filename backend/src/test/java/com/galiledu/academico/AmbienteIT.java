@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -63,6 +64,7 @@ class AmbienteIT extends PruebaIntegracion {
 
 	// ---------- Permisos ----------
 
+	@DisplayName("Sin sesión da401")
 	@Test
 	void sinSesionDa401() throws Exception {
 		UUID id = idDe("A-101");
@@ -74,6 +76,7 @@ class AmbienteIT extends PruebaIntegracion {
 		mvc.perform(post("/ambientes/" + id + "/reactivar")).andExpect(status().isUnauthorized());
 	}
 
+	@DisplayName("Otros roles reciben403")
 	@Test
 	void otrosRolesReciben403() throws Exception {
 		UUID id = idDe("A-101");
@@ -90,6 +93,7 @@ class AmbienteIT extends PruebaIntegracion {
 
 	// ---------- Resumen (tarjetas) ----------
 
+	@DisplayName("El resumen trae4 tarjetas con solo los activos y el total de registrados")
 	@Test
 	void elResumenTrae4TarjetasConSoloLosActivosYElTotalDeRegistrados() throws Exception {
 		var esperado = jdbc.sql("""
@@ -108,6 +112,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.aforoTotal").value(((Number) esperado.get("aforo")).longValue()));
 	}
 
+	@DisplayName("El resumen no cambia con los filtros de la lista")
 	@Test
 	void elResumenNoCambiaConLosFiltrosDeLaLista() throws Exception {
 		String sinFiltros = mvc.perform(conToken(get("/ambientes/resumen"), personal)).andReturn().getResponse()
@@ -124,6 +129,7 @@ class AmbienteIT extends PruebaIntegracion {
 
 	// ---------- Listado y filtros ----------
 
+	@DisplayName("Sin filtros lista todos con su código generado de solo lectura")
 	@Test
 	void sinFiltrosListaTodosConSuCodigoGeneradoDeSoloLectura() throws Exception {
 		mvc.perform(conToken(get("/ambientes"), personal))
@@ -139,6 +145,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[?(@.codigo=='A-101')].id").isNotEmpty());
 	}
 
+	@DisplayName("Filtra por tipo")
 	@Test
 	void filtraPorTipo() throws Exception {
 		mvc.perform(conToken(get("/ambientes").param("tipo", "AULA_REGULAR"), personal))
@@ -151,6 +158,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[*].nombre", hasItem("Auditorio")));
 	}
 
+	@DisplayName("Filtra por estado")
 	@Test
 	void filtraPorEstado() throws Exception {
 		mvc.perform(conToken(get("/ambientes").param("estado", "INACTIVO"), personal))
@@ -162,6 +170,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[*].nombre", not(hasItem("Aula 205"))));
 	}
 
+	@DisplayName("La búsqueda es por nombre sin distinguir mayúsculas y se combina con los otros filtros")
 	@Test
 	void laBusquedaEsPorNombreSinDistinguirMayusculasYSeCombinaConLosOtrosFiltros() throws Exception {
 		mvc.perform(conToken(get("/ambientes").param("q", "  AULA   10 "), personal))
@@ -179,6 +188,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.length()").value(0));
 	}
 
+	@DisplayName("Un tipo o un estado desconocido da400")
 	@Test
 	void unTipoOUnEstadoDesconocidoDa400() throws Exception {
 		mvc.perform(conToken(get("/ambientes").param("tipo", "AULA"), personal))
@@ -190,6 +200,7 @@ class AmbienteIT extends PruebaIntegracion {
 
 	// ---------- Editar ----------
 
+	@DisplayName("Edita nombre aforo y recursos y no cambia el código ni el tipo")
 	@Test
 	void editaNombreAforoYRecursosYNoCambiaElCodigoNiElTipo() throws Exception {
 		UUID id = idDe("A-101");
@@ -214,6 +225,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].aforoMaximo").value(40));
 	}
 
+	@DisplayName("Un espacio especial puede superar45")
 	@Test
 	void unEspacioEspecialPuedeSuperar45() throws Exception {
 		mvc.perform(conToken(put("/ambientes/" + idDe("AUD-01")), personal, edicion("Auditorio", 300, "[\"Sonido\"]")))
@@ -221,6 +233,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.aforoMaximo").value(300));
 	}
 
+	@DisplayName("Editar con nombre de otro ambiente da409 sin distinguir mayúsculas ni espacios")
 	@Test
 	void editarConNombreDeOtroAmbienteDa409SinDistinguirMayusculasNiEspacios() throws Exception {
 		UUID id = idDe("A-101");
@@ -236,6 +249,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(status().isOk());
 	}
 
+	@DisplayName("Un aula de46 da400 con el texto de figma")
 	@Test
 	void unAulaDe46Da400ConElTextoDeFigma() throws Exception {
 		mvc.perform(conToken(put("/ambientes/" + idDe("A-101")), personal, edicion("Aula 101", 46, "[]")))
@@ -243,6 +257,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Un aula regular admite como máximo 45."));
 	}
 
+	@DisplayName("Los datos invalidos dan400 con su mensaje")
 	@Test
 	void losDatosInvalidosDan400ConSuMensaje() throws Exception {
 		String url = "/ambientes/" + idDe("A-101");
@@ -272,6 +287,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("La solicitud tiene un formato inválido"));
 	}
 
+	@DisplayName("Un dato inválido no deja nada cambiado")
 	@Test
 	void unDatoInvalidoNoDejaNadaCambiado() throws Exception {
 		UUID id = idDe("A-101");
@@ -285,6 +301,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].recursos", contains("Pizarra acrílica", "Proyector")));
 	}
 
+	@DisplayName("Bajar el aforo por debajo de la matrícula da409 y hasta la matrícula se permite")
 	@Test
 	void bajarElAforoPorDebajoDeLaMatriculaDa409YHastaLaMatriculaSePermite() throws Exception {
 		UUID id = idDe("A-101");
@@ -303,6 +320,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.aforoMaximo").value(matriculados));
 	}
 
+	@DisplayName("Editar un ambiente que no existe da404")
 	@Test
 	void editarUnAmbienteQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(put("/ambientes/" + UUID.randomUUID()), personal, edicion("Aula", 30, "[]")))
@@ -312,6 +330,7 @@ class AmbienteIT extends PruebaIntegracion {
 
 	// ---------- Desactivar y reactivar ----------
 
+	@DisplayName("Desactivar y reactivar son idempotentes y se permiten con el ambiente en uso")
 	@Test
 	void desactivarYReactivarSonIdempotentesYSePermitenConElAmbienteEnUso() throws Exception {
 		UUID id = idDe("A-101"); // lo usa 1.° A, con alumnos
@@ -331,6 +350,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("ACTIVO"));
 	}
 
+	@DisplayName("Un ambiente desactivado sigue en la lista y sale de las tarjetas activas")
 	@Test
 	void unAmbienteDesactivadoSigueEnLaListaYSaleDeLasTarjetasActivas() throws Exception {
 		UUID id = idDe("A-101");
@@ -342,6 +362,7 @@ class AmbienteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.length()").value(0));
 	}
 
+	@DisplayName("Desactivar o reactivar un ambiente que no existe da404")
 	@Test
 	void desactivarOReactivarUnAmbienteQueNoExisteDa404() throws Exception {
 		UUID inexistente = UUID.randomUUID();
@@ -356,6 +377,7 @@ class AmbienteIT extends PruebaIntegracion {
 	// ---------- La base de datos como segunda barrera ----------
 	// Cada una es la última sentencia de su prueba: PostgreSQL deja abortada la transacción tras un error.
 
+	@DisplayName("La base rechaza un aula de46 aunque no pase la api")
 	@Test
 	void laBaseRechazaUnAulaDe46AunqueNoPaseLaApi() {
 		rechazaPor("ck_ambiente_aforo", () -> jdbc.sql("""
@@ -363,6 +385,7 @@ class AmbienteIT extends PruebaIntegracion {
 				VALUES ('A-946', 'Aula de 46', 'AULA_REGULAR', 46)""").update());
 	}
 
+	@DisplayName("La base rechaza un aforo de cero aunque no pase la api")
 	@Test
 	void laBaseRechazaUnAforoDeCeroAunqueNoPaseLaApi() {
 		rechazaPor("ck_ambiente_aforo", () -> jdbc.sql("""

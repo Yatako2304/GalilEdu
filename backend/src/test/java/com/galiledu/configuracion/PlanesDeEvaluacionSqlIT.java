@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -51,6 +52,7 @@ class PlanesDeEvaluacionSqlIT extends PruebaIntegracion {
 				.param("cursoId", cursoId(curso)).param("gradoCodigo", gradoCodigo).update();
 	}
 
+	@DisplayName("Devuelve el grado que se pasa con su nombre y sus horas")
 	@Test
 	void devuelveElGradoQueSePasaConSuNombreYSusHoras() {
 		planificar(ANIO_2027, "SEC-1", "Álgebra", 10);
@@ -61,6 +63,7 @@ class PlanesDeEvaluacionSqlIT extends PruebaIntegracion {
 				.contains(new GradoExcedido("1.° de secundaria", 28));
 	}
 
+	@DisplayName("Un grado con tantas horas como bloques no se pasa")
 	@Test
 	void unGradoConTantasHorasComoBloquesNoSePasa() {
 		planificar(ANIO_2027, "SEC-1", "Álgebra", 10);
@@ -71,6 +74,7 @@ class PlanesDeEvaluacionSqlIT extends PruebaIntegracion {
 		assertThat(planes.gradoQueExcede(ANIO_2027, "SECUNDARIA", 40)).isEmpty();
 	}
 
+	@DisplayName("Con varios grados pasados elige el de más horas")
 	@Test
 	void conVariosGradosPasadosEligeElDeMasHoras() {
 		planificar(ANIO_2027, "SEC-1", "Álgebra", 10);
@@ -88,6 +92,7 @@ class PlanesDeEvaluacionSqlIT extends PruebaIntegracion {
 				.contains(new GradoExcedido("3.° de secundaria", 35));
 	}
 
+	@DisplayName("Con las mismas horas elige el grado de menor orden")
 	@Test
 	void conLasMismasHorasEligeElGradoDeMenorOrden() {
 		planificar(ANIO_2027, "SEC-4", "Álgebra", 12);
@@ -97,6 +102,7 @@ class PlanesDeEvaluacionSqlIT extends PruebaIntegracion {
 				.contains(new GradoExcedido("2.° de secundaria", 12));
 	}
 
+	@DisplayName("Suma las horas de todos los cursos del grado antes de compararlas")
 	@Test
 	void sumaLasHorasDeTodosLosCursosDelGradoAntesDeCompararlas() {
 		// Ningún curso pasa de los bloques por sí solo; el total del grado sí.
@@ -107,6 +113,7 @@ class PlanesDeEvaluacionSqlIT extends PruebaIntegracion {
 				.contains(new GradoExcedido("1.° de secundaria", 12));
 	}
 
+	@DisplayName("Un nivel sin planes no tiene grado que exceda ni hay planes")
 	@Test
 	void unNivelSinPlanesNoTieneGradoQueExcedaNiHayPlanes() {
 		assertThat(planes.gradoQueExcede(ANIO_2027, "SECUNDARIA", 1)).isEmpty();
@@ -114,6 +121,7 @@ class PlanesDeEvaluacionSqlIT extends PruebaIntegracion {
 		assertThat(planes.hayPlanes(ANIO_2027, "PRIMARIA")).isFalse();
 	}
 
+	@DisplayName("Los planes de un año no cuentan para otro")
 	@Test
 	void losPlanesDeUnAnioNoCuentanParaOtro() {
 		// 2026 ya trae el plan de 1.° de secundaria con 35 horas (datos de prueba): 2027 no lo ve.
@@ -132,6 +140,7 @@ class PlanesDeEvaluacionSqlIT extends PruebaIntegracion {
 				.contains(new GradoExcedido("1.° de secundaria", 35));
 	}
 
+	@DisplayName("Los planes de un nivel no cuentan para el otro")
 	@Test
 	void losPlanesDeUnNivelNoCuentanParaElOtro() {
 		dictarEnGrado("Álgebra", "PRI-1");

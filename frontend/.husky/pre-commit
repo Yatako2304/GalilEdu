@@ -17,3 +17,9 @@ if [ -n "$java_staged" ]; then
   (cd backend && sh mvnw -q spotless:apply) || exit 1
   echo "$java_staged" | xargs git add
 fi
+
+# Catálogo de pruebas: se regenera siempre (tarda menos de un segundo) para que docs/pruebas.md
+# quede al día en el mismo commit. No ejecuta los tests: solo lista los que existen.
+echo "▶ Catálogo de pruebas (docs/pruebas.md)…"
+node docs/generar-pruebas.mjs || exit 1
+git add docs/pruebas.md

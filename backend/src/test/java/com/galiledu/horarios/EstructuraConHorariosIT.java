@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -61,12 +62,14 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 
 	// ---------- Eliminar ----------
 
+	@DisplayName("Eliminar una estructura con horarios responde409")
 	@Test
 	void eliminarUnaEstructuraConHorariosResponde409() throws Exception {
 		eliminar(principal).andExpect(status().isConflict())
 				.andExpect(jsonPath("$.message").value(SIN_HORARIOS_ELIMINAR));
 	}
 
+	@DisplayName("Eliminar una estructura con cabecera sin bloques responde409 con el mismo mensaje")
 	@Test
 	void eliminarUnaEstructuraConCabeceraSinBloquesResponde409ConElMismoMensaje() throws Exception {
 		jdbc.sql("DELETE FROM horarios.horario_bloque").update();
@@ -77,11 +80,13 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 		assertThat(cabeceras()).isEqualTo(1);
 	}
 
+	@DisplayName("Eliminar una estructura sin horarios sigue funcionando")
 	@Test
 	void eliminarUnaEstructuraSinHorariosSigueFuncionando() throws Exception {
 		eliminar(otra).andExpect(status().isNoContent());
 	}
 
+	@DisplayName("Eliminar la principal cuando ya no tiene horarios sigue sujeta a sus reglas de siempre")
 	@Test
 	void eliminarLaPrincipalCuandoYaNoTieneHorariosSigueSujetaASusReglasDeSiempre() throws Exception {
 		jdbc.sql("DELETE FROM horarios.horario_seccion").update();
@@ -93,6 +98,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 
 	// ---------- Quitar días ----------
 
+	@DisplayName("Quitar un día que usan los horarios responde409")
 	@Test
 	void quitarUnDiaQueUsanLosHorariosResponde409() throws Exception {
 		editar(principal, edicion("EH-T-27", "\"MAR\",\"MIE\",\"JUE\",\"VIE\"", 6, null))
@@ -105,6 +111,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 						.value("No se puede quitar el miércoles de la estructura: hay horarios que lo usan."));
 	}
 
+	@DisplayName("Quitar días que nada usa funciona")
 	@Test
 	void quitarDiasQueNadaUsaFunciona() throws Exception {
 		editar(principal, edicion("EH-T-27", "\"LUN\",\"MIE\"", 6, null)).andExpect(status().isOk())
@@ -113,6 +120,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 
 	// ---------- Reducir bloques ----------
 
+	@DisplayName("Reducir los bloques por debajo del mayor usado responde409 con el día y el bloque")
 	@Test
 	void reducirLosBloquesPorDebajoDelMayorUsadoResponde409ConElDiaYElBloque() throws Exception {
 		editar(principal, edicion("EH-T-27", LUN_A_VIE, 4, null)).andExpect(status().isConflict())
@@ -120,12 +128,14 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 						"No se puede reducir a 4 bloques por día: hay horarios que usan hasta el bloque 5 el lunes."));
 	}
 
+	@DisplayName("Reducir justo hasta el mayor usado funciona")
 	@Test
 	void reducirJustoHastaElMayorUsadoFunciona() throws Exception {
 		editar(principal, edicion("EH-T-27", LUN_A_VIE, 5, null)).andExpect(status().isOk())
 				.andExpect(jsonPath("$.estructura.bloquesPorDia").value(5));
 	}
 
+	@DisplayName("Agregar días o bloques nunca se rechaza")
 	@Test
 	void agregarDiasOBloquesNuncaSeRechaza() throws Exception {
 		editar(principal, edicion("EH-T-27", LUN_A_VIE + ",\"SAB\"", 8, null)).andExpect(status().isOk())
@@ -135,6 +145,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 
 	// ---------- Cambiar la principal ----------
 
+	@DisplayName("Marcar otra como principal mientras la actual tiene horarios responde409")
 	@Test
 	void marcarOtraComoPrincipalMientrasLaActualTieneHorariosResponde409() throws Exception {
 		editar(otra, edicion("EH-OTRA", LUN_A_VIE, 6, true)).andExpect(status().isConflict())
@@ -143,6 +154,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 				.param("id", principal).query(Boolean.class).single()).isTrue();
 	}
 
+	@DisplayName("Crear una nueva principal mientras la actual tiene horarios también responde409")
 	@Test
 	void crearUnaNuevaPrincipalMientrasLaActualTieneHorariosTambienResponde409() throws Exception {
 		mvc.perform(conToken(post("/configuracion/anios-escolares/" + ANIO_2027 + "/estructuras-horarias"),
@@ -154,6 +166,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 				.andExpect(status().isConflict()).andExpect(jsonPath("$.message").value(SIN_CAMBIAR_PRINCIPAL));
 	}
 
+	@DisplayName("Marcar otra como principal sin horarios en la actual funciona")
 	@Test
 	void marcarOtraComoPrincipalSinHorariosEnLaActualFunciona() throws Exception {
 		jdbc.sql("DELETE FROM horarios.horario_seccion").update();
@@ -162,6 +175,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.estructura.esPrincipal").value(true));
 	}
 
+	@DisplayName("Editar la principal sin cambiar su marca con horarios funciona")
 	@Test
 	void editarLaPrincipalSinCambiarSuMarcaConHorariosFunciona() throws Exception {
 		editar(principal, edicion("EH-T-27-B", LUN_A_VIE, 6, true)).andExpect(status().isOk())
@@ -170,6 +184,7 @@ class EstructuraConHorariosIT extends PruebaHorarios {
 
 	// ---------- Otros años y otras estructuras ----------
 
+	@DisplayName("Los horarios de otro año ni de otra estructura afectan")
 	@Test
 	void losHorariosDeOtroAnioNiDeOtraEstructuraAfectan() throws Exception {
 		UUID anio2028 = jdbc.sql("""

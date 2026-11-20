@@ -22,6 +22,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -150,6 +151,7 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 
 	// ---------- 10. Concurrencia ----------
 
+	@DisplayName("Varias creaciones simultaneas del mismo nivel generan codigos distintos")
 	@Test
 	void variasCreacionesSimultaneasDelMismoNivelGeneranCodigosDistintos() throws Exception {
 		List<Callable<MvcResult>> tareas = new ArrayList<>();
@@ -170,6 +172,7 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 		assertThat(cantidadDePrincipalesDe("PRIMARIA")).isEqualTo(1);
 	}
 
+	@DisplayName("Varias peticiones que marcan como principal estructuras distintas dejan una sola principal")
 	@Test
 	void variasPeticionesQueMarcanComoPrincipalEstructurasDistintasDejanUnaSolaPrincipal() throws Exception {
 		crearValida("codigo", texto("EH-A"));
@@ -191,6 +194,7 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 		assertThat(cantidadDePrincipalesDe("PRIMARIA")).as("principales al final").isEqualTo(1);
 	}
 
+	@DisplayName("Crear dos estructuras principales a la vez deja una sola principal")
 	@Test
 	void crearDosEstructurasPrincipalesALaVezDejaUnaSolaPrincipal() throws Exception {
 		crearValida("codigo", texto("EH-A"));
@@ -207,6 +211,7 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 				.filter(estado -> estado == 201).count());
 	}
 
+	@DisplayName("Eliminar y editar a la vez la misma estructura no deja nada a cedias")
 	@Test
 	void eliminarYEditarALaVezLaMismaEstructuraNoDejaNadaACedias() throws Exception {
 		crearValida("codigo", texto("EH-A"));
@@ -234,6 +239,7 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 
 	// ---------- Con transacción real: una escritura rechazada no deja nada a medias ----------
 
+	@DisplayName("Una creación principal rechazada no deja desmarcada a la anterior")
 	@Test
 	void unaCreacionPrincipalRechazadaNoDejaDesmarcadaALaAnterior() throws Exception {
 		String principal = crearValida("codigo", texto("EH-A"));
@@ -251,6 +257,7 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 	 * Corregido: un NUL en la descripción ya no da el 409 "Otra persona acaba de cambiar…" (culpaba a otra persona sin
 	 * motivo): da 400 con el mensaje del texto.
 	 */
+	@DisplayName("Un nul en la descripción da400 y no culpa a otra persona")
 	@Test
 	void unNulEnLaDescripcionDa400YNoCulpaAOtraPersona() throws Exception {
 		MvcResult resultado = crear(cuerpoDeCrear("descripcion", texto("x\u0000y")));
@@ -259,6 +266,7 @@ class EstructuraHorariaConcurrenciaIT extends PruebaIntegracion {
 		assertThat(cuerpoDe(resultado)).doesNotContain("Otra persona");
 	}
 
+	@DisplayName("Editar con un nul en la descripción no cambia nada en la base")
 	@Test
 	void editarConUnNulEnLaDescripcionNoCambiaNadaEnLaBase() throws Exception {
 		String id = crearValida("codigo", texto("EH-A"));

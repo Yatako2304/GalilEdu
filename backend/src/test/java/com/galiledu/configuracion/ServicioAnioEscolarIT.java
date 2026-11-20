@@ -10,6 +10,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -78,6 +79,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 				VALUES (:id, 'EH-SEC-27', ARRAY['LUN'], '07:30', 8, 45, 'SECUNDARIA')""").param("id", ID_2027).update();
 	}
 
+	@DisplayName("El detalle trae las cantidades y los períodos con estado duración y registro de notas")
 	@Test
 	void elDetalleTraeLasCantidadesYLosPeriodosConEstadoDuracionYRegistroDeNotas() {
 		AnioEscolarDetalle detalle = servicio.detalle(ID_2026);
@@ -93,6 +95,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.containsExactly(13, 13, 13);
 	}
 
+	@DisplayName("El año actual trae el período en curso los conteos y el avance")
 	@Test
 	void elAnioActualTraeElPeriodoEnCursoLosConteosYElAvance() {
 		var actual = servicio.actual();
@@ -111,6 +114,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(actual.proximoPeriodo().fechaInicio()).isEqualTo(fecha(2026, 10, 19));
 	}
 
+	@DisplayName("Ampliar el plazo de notas de un período terminado lo muestra aparte del período en curso")
 	@Test
 	void ampliarElPlazoDeNotasDeUnPeriodoTerminadoLoMuestraAparteDelPeriodoEnCurso() {
 		reloj.fijarEn(fecha(2026, 10, 21)); // el III terminó el 09/10; el IV está en curso desde el 19/10
@@ -127,6 +131,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(actual.proximoPeriodo()).isNull();
 	}
 
+	@DisplayName("Entre dos períodos la card muestra el plazo de notas abierto y el próximo período")
 	@Test
 	void entreDosPeriodosLaCardMuestraElPlazoDeNotasAbiertoYElProximoPeriodo() {
 		reloj.fijarEn(fecha(2026, 10, 12)); // el III terminó el 09/10; sus notas siguen abiertas hasta el 16/10
@@ -142,6 +147,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(actual.proximoPeriodo().fechaInicio()).isEqualTo(fecha(2026, 10, 19));
 	}
 
+	@DisplayName("Después del último período solo queda el plazo de notas y luego nada")
 	@Test
 	void despuesDelUltimoPeriodoSoloQuedaElPlazoDeNotasYLuegoNada() {
 		reloj.fijarEn(fecha(2026, 12, 20)); // el IV terminó el 18/12; sus notas siguen abiertas hasta el 23/12
@@ -160,6 +166,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(despues.avance()).isEqualTo(100);
 	}
 
+	@DisplayName("Sin año activo no hay año actual")
 	@Test
 	void sinAnioActivoNoHayAnioActual() {
 		cerrarElAnio2026PorSql();
@@ -167,6 +174,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		rechaza(HttpStatus.NOT_FOUND, "No hay un año escolar activo.", servicio::actual);
 	}
 
+	@DisplayName("Editar las fechas de un año planificado regenera sus períodos")
 	@Test
 	void editarLasFechasDeUnAnioPlanificadoRegeneraSusPeriodos() {
 		var editado = servicio.editar(ID_2027, new SolicitudEdicionAnio(fecha(2027, 3, 8), fecha(2027, 12, 10)));
@@ -180,6 +188,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.param("id", ID_2027).query(Integer.class).single()).isEqualTo(3);
 	}
 
+	@DisplayName("Editar las fechas válida el rango y el estado del año")
 	@Test
 	void editarLasFechasValidaElRangoYElEstadoDelAnio() {
 		rechaza(HttpStatus.BAD_REQUEST, "La fecha de fin debe ser posterior a la fecha de inicio.",
@@ -193,6 +202,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 						new SolicitudEdicionAnio(fecha(2027, 3, 1), fecha(2027, 12, 1))));
 	}
 
+	@DisplayName("Cambiar el regimen de un año planificado regenera los períodos sin chocar con la restricción de número")
 	@Test
 	void cambiarElRegimenDeUnAnioPlanificadoRegeneraLosPeriodosSinChocarConLaRestriccionDeNumero() {
 		var cambiado = servicio.cambiarRegimen(ID_2027, new SolicitudRegimen(Regimen.BIMESTRAL));
@@ -206,6 +216,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.param("id", ID_2027).query(Integer.class).single()).isEqualTo(4);
 	}
 
+	@DisplayName("Cambiar el regimen solo se puede en un año planificado")
 	@Test
 	void cambiarElRegimenSoloSePuedeEnUnAnioPlanificado() {
 		rechaza(HttpStatus.CONFLICT, "Solo se puede modificar un año planificado.",
@@ -215,6 +226,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.detalle(ID_2026).periodos()).hasSize(4);
 	}
 
+	@DisplayName("Los requisitos del año planificado muestran lo que falta")
 	@Test
 	void losRequisitosDelAnioPlanificadoMuestranLoQueFalta() {
 		RequisitosAnio r = servicio.requisitos(ID_2027);
@@ -235,6 +247,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 								"0 de 5 grados con cursos asignados"));
 	}
 
+	@DisplayName("Los requisitos del año activo se cumplen los obligatorios")
 	@Test
 	void losRequisitosDelAnioActivoSeCumplenLosObligatorios() {
 		RequisitosAnio r = servicio.requisitos(ID_2026);
@@ -246,11 +259,13 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(r.recomendados().get(1).detalle()).isEqualTo("1 de 5 grados con cursos asignados");
 	}
 
+	@DisplayName("Los requisitos de un año que no existe dan404")
 	@Test
 	void losRequisitosDeUnAnioQueNoExisteDan404() {
 		rechaza(HttpStatus.NOT_FOUND, "El año escolar no existe.", () -> servicio.requisitos(UUID.randomUUID()));
 	}
 
+	@DisplayName("Editar un período futuro cambia sus fechas y devuelve el período calculado")
 	@Test
 	void editarUnPeriodoFuturoCambiaSusFechasYDevuelveElPeriodoCalculado() {
 		PeriodoDetalle segundo = servicio.detalle(ID_2027).periodos().get(1);
@@ -265,6 +280,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(editado.registroNotasAbierto()).isFalse();
 	}
 
+	@DisplayName("Un período que ya empezo no cambia su fecha de inicio")
 	@Test
 	void unPeriodoQueYaEmpezoNoCambiaSuFechaDeInicio() {
 		PeriodoDetalle tercero = servicio.detalle(ID_2026).periodos().get(2);
@@ -275,6 +291,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 								tercero.fechaLimiteNotas())));
 	}
 
+	@DisplayName("Un período no puede cruzarse con otro")
 	@Test
 	void unPeriodoNoPuedeCruzarseConOtro() {
 		PeriodoDetalle cuarto = servicio.detalle(ID_2026).periodos().get(3);
@@ -285,6 +302,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 								cuarto.fechaLimiteNotas())));
 	}
 
+	@DisplayName("Ampliar la fecha limite de un período terminado reabre el registro de notas")
 	@Test
 	void ampliarLaFechaLimiteDeUnPeriodoTerminadoReabreElRegistroDeNotas() {
 		PeriodoDetalle primero = servicio.detalle(ID_2026).periodos().getFirst();
@@ -300,6 +318,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.registroNotasAbierto(periodoId)).isTrue();
 	}
 
+	@DisplayName("Un período terminado no cambia nombre ni fechas")
 	@Test
 	void unPeriodoTerminadoNoCambiaNombreNiFechas() {
 		PeriodoDetalle primero = servicio.detalle(ID_2026).periodos().getFirst();
@@ -310,6 +329,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 								primero.fechaLimiteNotas())));
 	}
 
+	@DisplayName("Editar un período que no existe da404")
 	@Test
 	void editarUnPeriodoQueNoExisteDa404() {
 		rechaza(HttpStatus.NOT_FOUND, "El periodo académico no existe.",
@@ -319,6 +339,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 				() -> servicio.registroNotasAbierto(UUID.randomUUID()));
 	}
 
+	@DisplayName("El período en curso solo existe en el año activo")
 	@Test
 	void elPeriodoEnCursoSoloExisteEnElAnioActivo() {
 		assertThat(servicio.periodoEnCurso(ID_2026)).get().extracting(PeriodoDetalle::nombre)
@@ -327,6 +348,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		rechaza(HttpStatus.NOT_FOUND, "El año escolar no existe.", () -> servicio.periodoEnCurso(UUID.randomUUID()));
 	}
 
+	@DisplayName("El registro de notas está abierto solo en el período en curso del año activo")
 	@Test
 	void elRegistroDeNotasEstaAbiertoSoloEnElPeriodoEnCursoDelAnioActivo() {
 		var periodos = servicio.detalle(ID_2026).periodos();
@@ -337,12 +359,14 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.registroNotasAbierto(periodo(ID_2027, 1))).isFalse(); // año planificado
 	}
 
+	@DisplayName("No se activa un año mientras otro sigue activo")
 	@Test
 	void noSeActivaUnAnioMientrasOtroSigueActivo() {
 		rechaza(HttpStatus.CONFLICT, "El año 2026 sigue activo. Ciérralo antes de activar este.",
 				() -> servicio.activar(ID_2027));
 	}
 
+	@DisplayName("No se activa un año sin sus requisitos obligatorios")
 	@Test
 	void noSeActivaUnAnioSinSusRequisitosObligatorios() {
 		cerrarElAnio2026PorSql();
@@ -351,6 +375,7 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 				() -> servicio.activar(ID_2027));
 	}
 
+	@DisplayName("Se activa un año planificado con sus requisitos")
 	@Test
 	void seActivaUnAnioPlanificadoConSusRequisitos() {
 		cerrarElAnio2026PorSql();
@@ -363,18 +388,21 @@ class ServicioAnioEscolarIT extends PruebaIntegracionConfiguracion {
 		assertThat(servicio.actual().anio()).isEqualTo(2027);
 	}
 
+	@DisplayName("Solo se puede activar un año planificado")
 	@Test
 	void soloSePuedeActivarUnAnioPlanificado() {
 		rechaza(HttpStatus.CONFLICT, "Solo se puede activar un año planificado.", () -> servicio.activar(ID_2026));
 		rechaza(HttpStatus.NOT_FOUND, "El año escolar no existe.", () -> servicio.activar(UUID.randomUUID()));
 	}
 
+	@DisplayName("No se cierra el año antes de que venza el plazo de notas del último período")
 	@Test
 	void noSeCierraElAnioAntesDeQueVenzaElPlazoDeNotasDelUltimoPeriodo() {
 		rechaza(HttpStatus.CONFLICT, "Los docentes pueden registrar notas hasta el 23/12/2026.",
 				() -> servicio.cerrar(ID_2026));
 	}
 
+	@DisplayName("Solo se puede cerrar un año activo")
 	@Test
 	void soloSePuedeCerrarUnAnioActivo() {
 		rechaza(HttpStatus.CONFLICT, "Solo se puede cerrar un año activo.", () -> servicio.cerrar(ID_2027));

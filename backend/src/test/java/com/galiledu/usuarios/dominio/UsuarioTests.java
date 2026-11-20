@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.util.Set;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.personas.dominio.Persona;
@@ -16,6 +17,7 @@ class UsuarioTests {
 		return new Usuario(new Persona(), "U20260001", "hash", Set.of(Rol.DOCENTE));
 	}
 
+	@DisplayName("Se bloquea quince minutos al quinto intento fallido")
 	@Test
 	void seBloqueaQuinceMinutosAlQuintoIntentoFallido() {
 		Usuario u = nuevo();
@@ -27,6 +29,7 @@ class UsuarioTests {
 		assertThat(u.bloqueadoEn(ahora.plusSeconds(15 * 60))).isFalse();
 	}
 
+	@DisplayName("Un acceso exitoso reinicia los intentos")
 	@Test
 	void unAccesoExitosoReiniciaLosIntentos() {
 		Usuario u = nuevo();
@@ -38,6 +41,7 @@ class UsuarioTests {
 		}
 	}
 
+	@DisplayName("Desactivado o eliminado no puede iniciar sesión")
 	@Test
 	void desactivadoOEliminadoNoPuedeIniciarSesion() {
 		Usuario u = nuevo();

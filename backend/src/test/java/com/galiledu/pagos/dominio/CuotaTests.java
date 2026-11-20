@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** HU-39: días de atraso y recargo por mora de una pensión (RF-91, RF-92). Tasa 2 %, tope 10 %, gracia 5 días. */
@@ -19,12 +20,14 @@ class CuotaTests {
 				new BigDecimal(descuento), null, null);
 	}
 
+	@DisplayName("Dentro de la gracia no hay recargo")
 	@Test
 	void dentroDeLaGraciaNoHayRecargo() {
 		Cuota q = pension("600.00", "0");
 		assertThat(q.recargo(VENCE.plusDays(GRACIA), GRACIA, TASA, TOPE)).isEqualByComparingTo("0");
 	}
 
+	@DisplayName("Cobra la tasa por cada treinta días completos como en figma")
 	@Test
 	void cobraLaTasaPorCadaTreintaDiasCompletosComoEnFigma() {
 		Cuota q = pension("600.00", "0");
@@ -36,6 +39,7 @@ class CuotaTests {
 		assertThat(q.recargo(VENCE.plusDays(63), GRACIA, TASA, TOPE)).isEqualByComparingTo("24.00");
 	}
 
+	@DisplayName("Nunca pasa del tope")
 	@Test
 	void nuncaPasaDelTope() {
 		Cuota q = pension("600.00", "0");
@@ -43,6 +47,7 @@ class CuotaTests {
 		assertThat(q.recargo(VENCE.plusDays(200), GRACIA, TASA, TOPE)).isEqualByComparingTo("60.00");
 	}
 
+	@DisplayName("Se calcula sobre el capital con descuento")
 	@Test
 	void seCalculaSobreElCapitalConDescuento() {
 		Cuota q = pension("600.00", "90.00");
@@ -50,6 +55,7 @@ class CuotaTests {
 		assertThat(q.recargo(VENCE.plusDays(40), GRACIA, TASA, TOPE)).isEqualByComparingTo("10.20");
 	}
 
+	@DisplayName("Una cuota que no es pensión no genera mora")
 	@Test
 	void unaCuotaQueNoEsPensionNoGeneraMora() {
 		Cuota q = Cuota.matricula(null, "Matrícula 2026", new BigDecimal("420.00"), VENCE, BigDecimal.ZERO, null,

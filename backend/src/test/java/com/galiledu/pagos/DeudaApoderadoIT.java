@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.PruebaIntegracion;
@@ -21,6 +22,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 	/** Valeria Sánchez: no es hija de Luis Paredes. */
 	private static final String VALERIA = "20000000-0000-0000-0000-000000000003";
 
+	@DisplayName("Lista los hijos con su saldo ordenados por apellido")
 	@Test
 	void listaLosHijosConSuSaldoOrdenadosPorApellido() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/estudiantes"), token(APODERADO)))
@@ -37,6 +39,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[1].cuotasVencidas").value(greaterThanOrEqualTo(1)));
 	}
 
+	@DisplayName("Muestra el cronograma con el recargo de la cuota vencida")
 	@Test
 	void muestraElCronogramaConElRecargoDeLaCuotaVencida() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/compromisos/{id}", COMPROMISO_SOFIA), token(APODERADO)))
@@ -46,6 +49,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cuotas[?(@.nombre == 'Pensión de marzo')].recargo").value(0));
 	}
 
+	@DisplayName("Muestra el historial de pagos del más reciente al más antiguo")
 	@Test
 	void muestraElHistorialDePagosDelMasRecienteAlMasAntiguo() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/compromisos/{id}/pagos", COMPROMISO_SOFIA), token(APODERADO)))
@@ -57,6 +61,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[6].monto").value(420.0));
 	}
 
+	@DisplayName("Lista los compromisos de su hija")
 	@Test
 	void listaLosCompromisosDeSuHija() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/estudiantes/{id}/compromisos", SOFIA), token(APODERADO)))
@@ -64,6 +69,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].anio").value(2026));
 	}
 
+	@DisplayName("No ve la deuda de un estudiante ajeno")
 	@Test
 	void noVeLaDeudaDeUnEstudianteAjeno() throws Exception {
 		String apoderado = token(APODERADO);
@@ -71,12 +77,14 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Un compromiso inexistente devuelve404")
 	@Test
 	void unCompromisoInexistenteDevuelve404() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/compromisos/{id}", VALERIA), token(APODERADO)))
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("El personal usa su propia vista")
 	@Test
 	void elPersonalUsaSuPropiaVista() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);

@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.ResultActions;
@@ -21,6 +22,7 @@ class AutenticacionIT extends PruebaIntegracion {
 						{"username":"%s","password":"%s"}""".formatted(usuario, contrasena)));
 	}
 
+	@DisplayName("Login correcto devuelve token y roles")
 	@Test
 	void loginCorrectoDevuelveTokenYRoles() throws Exception {
 		login(ADMIN, CONTRASENA)
@@ -30,11 +32,13 @@ class AutenticacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.user.roles[0]").value("ADMINISTRADOR"));
 	}
 
+	@DisplayName("El usuario no distingue mayúsculas")
 	@Test
 	void elUsuarioNoDistingueMayusculas() throws Exception {
 		login("u20260001", CONTRASENA).andExpect(status().isOk());
 	}
 
+	@DisplayName("Contraseña incorrecta da401 con mensaje de figma")
 	@Test
 	void contrasenaIncorrectaDa401ConMensajeDeFigma() throws Exception {
 		login(ADMIN, "incorrecta")
@@ -42,6 +46,7 @@ class AutenticacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El usuario o contraseña son incorrectos."));
 	}
 
+	@DisplayName("Usuario inexistente da el mismo mensaje")
 	@Test
 	void usuarioInexistenteDaElMismoMensaje() throws Exception {
 		login("U20999999", CONTRASENA)
@@ -49,6 +54,7 @@ class AutenticacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El usuario o contraseña son incorrectos."));
 	}
 
+	@DisplayName("Cuenta inactiva no puede entrar")
 	@Test
 	void cuentaInactivaNoPuedeEntrar() throws Exception {
 		login("U20260007", CONTRASENA)
@@ -56,6 +62,7 @@ class AutenticacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("desactivada")));
 	}
 
+	@DisplayName("Se bloquea al quinto intento fallido")
 	@Test
 	void seBloqueaAlQuintoIntentoFallido() throws Exception {
 		for (int i = 0; i < 4; i++) {
@@ -68,16 +75,19 @@ class AutenticacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("15 minutos")));
 	}
 
+	@DisplayName("Campos vacios dan400")
 	@Test
 	void camposVaciosDan400() throws Exception {
 		login("", "").andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Me sin token da401")
 	@Test
 	void meSinTokenDa401() throws Exception {
 		mvc.perform(get("/auth/me")).andExpect(status().isUnauthorized());
 	}
 
+	@DisplayName("Me con token devuelve el usuario")
 	@Test
 	void meConTokenDevuelveElUsuario() throws Exception {
 		mvc.perform(conToken(get("/auth/me"), token(DOCENTE)))

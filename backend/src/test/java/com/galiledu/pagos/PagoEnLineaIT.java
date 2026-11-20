@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -90,6 +91,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 		return jdbc.sql("SELECT estado FROM pagos.cuota WHERE id = ?::uuid").param(id).query(String.class).single();
 	}
 
+	@DisplayName("Muestra las cuotas por pagar con capital y recargo separados")
 	@Test
 	void muestraLasCuotasPorPagarConCapitalYRecargoSeparados() throws Exception {
 		mvc.perform(conToken(get("/pagos/pago-en-linea/cuotas"), token))
@@ -106,6 +108,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 						.value(SEPTIEMBRE));
 	}
 
+	@DisplayName("Crea la orden con el recargo y deja la cuota en proceso")
 	@Test
 	void creaLaOrdenConElRecargoYDejaLaCuotaEnProceso() throws Exception {
 		mvc.perform(conToken(post("/pagos/pago-en-linea/ordenes"), token,
@@ -123,6 +126,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$..cuotas[?(@.cuotaId == '%s')].vencida".formatted(SEPTIEMBRE)).value(false));
 	}
 
+	@DisplayName("Exige pagar las pensiones en orden")
 	@Test
 	void exigePagarLasPensionesEnOrden() throws Exception {
 		mvc.perform(conToken(post("/pagos/pago-en-linea/ordenes"), token,
@@ -131,6 +135,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value(containsString("Primero paga la «Pensión de septiembre»")));
 	}
 
+	@DisplayName("Una cuota en proceso no entra a otra orden")
 	@Test
 	void unaCuotaEnProcesoNoEntraAOtraOrden() throws Exception {
 		crearOrden(SEPTIEMBRE);
@@ -140,6 +145,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value(containsString("ya tiene un pago en proceso")));
 	}
 
+	@DisplayName("Pago aprobado registra el pago con constancia y recargo")
 	@Test
 	void pagoAprobadoRegistraElPagoConConstanciaYRecargo() throws Exception {
 		String codigo = crearOrden(SEPTIEMBRE, OCTUBRE);
@@ -164,6 +170,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.satisfies(e -> assertThat(e.cuotaIds()).hasSize(2));
 	}
 
+	@DisplayName("Una notificación repetida no duplica el pago")
 	@Test
 	void unaNotificacionRepetidaNoDuplicaElPago() throws Exception {
 		String codigo = crearOrden(SEPTIEMBRE);
@@ -178,6 +185,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.cuotas[0].matricula").value(false));
 	}
 
+	@DisplayName("Pago rechazado devuelve las cuotas a su estado")
 	@Test
 	void pagoRechazadoDevuelveLasCuotasASuEstado() throws Exception {
 		String codigo = crearOrden(SEPTIEMBRE);
@@ -188,6 +196,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 		assertThat(estadoCuota(SEPTIEMBRE)).isEqualTo("PENDIENTE");
 	}
 
+	@DisplayName("Cancelar libera las cuotas")
 	@Test
 	void cancelarLiberaLasCuotas() throws Exception {
 		String codigo = crearOrden(SEPTIEMBRE);
@@ -197,6 +206,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 		assertThat(estadoCuota(SEPTIEMBRE)).isEqualTo("PENDIENTE");
 	}
 
+	@DisplayName("Si cierra la pasarela puede retomar o cancelar el pago desde pensiones")
 	@Test
 	void siCierraLaPasarelaPuedeRetomarOCancelarElPagoDesdePensiones() throws Exception {
 		mvc.perform(conToken(get("/pagos/pago-en-linea/cuotas"), token))
@@ -214,6 +224,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.ordenEnProceso").doesNotExist());
 	}
 
+	@DisplayName("Una orden vencida ya no se ofrece para retomar")
 	@Test
 	void unaOrdenVencidaYaNoSeOfreceParaRetomar() throws Exception {
 		crearOrden(SEPTIEMBRE);
@@ -222,6 +233,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.ordenEnProceso").doesNotExist());
 	}
 
+	@DisplayName("La orden sin pagar expira a los treinta minutos")
 	@Test
 	void laOrdenSinPagarExpiraALosTreintaMinutos() throws Exception {
 		String codigo = crearOrden(SEPTIEMBRE);
@@ -236,6 +248,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 		assertThat(estadoCuota(SEPTIEMBRE)).isEqualTo("PENDIENTE");
 	}
 
+	@DisplayName("Si la pasarela confirma otro monto el pago queda observado")
 	@Test
 	void siLaPasarelaConfirmaOtroMontoElPagoQuedaObservado() throws Exception {
 		String codigo = crearOrden(SEPTIEMBRE);
@@ -253,6 +266,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 		assertThat(observacion).contains("S/ 600.00").contains("S/ 612.00");
 	}
 
+	@DisplayName("No se pueden pagar cuotas ajenas ni inexistentes")
 	@Test
 	void noSePuedenPagarCuotasAjenasNiInexistentes() throws Exception {
 		mvc.perform(conToken(post("/pagos/pago-en-linea/ordenes"), token,
@@ -263,6 +277,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isForbidden());
 	}
 
+	@DisplayName("La orden de otro usuario no se ve")
 	@Test
 	void laOrdenDeOtroUsuarioNoSeVe() throws Exception {
 		String codigo = crearOrden(SEPTIEMBRE);

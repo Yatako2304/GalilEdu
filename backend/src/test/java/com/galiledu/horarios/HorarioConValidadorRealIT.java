@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -35,6 +36,7 @@ class HorarioConValidadorRealIT extends PruebaHorarios {
 		bloque(cabecera(t1, estructura), "LUN", 1, algebra, aulaUno);
 	}
 
+	@DisplayName("Guardar un bloque que choca con otra sección responde409 y no guarda nada")
 	@Test
 	void guardarUnBloqueQueChocaConOtraSeccionResponde409YNoGuardaNada() throws Exception {
 		preparar();
@@ -48,6 +50,7 @@ class HorarioConValidadorRealIT extends PruebaHorarios {
 		assertThat(bloquesGuardados()).isEqualTo(1);
 	}
 
+	@DisplayName("Guardar sin choques sigue funcionando")
 	@Test
 	void guardarSinChoquesSigueFuncionando() throws Exception {
 		preparar();
@@ -57,6 +60,7 @@ class HorarioConValidadorRealIT extends PruebaHorarios {
 		assertThat(bloquesGuardados()).isEqualTo(2);
 	}
 
+	@DisplayName("El get trae el cruce en la celda que choca")
 	@Test
 	void elGetTraeElCruceEnLaCeldaQueChoca() throws Exception {
 		preparar();

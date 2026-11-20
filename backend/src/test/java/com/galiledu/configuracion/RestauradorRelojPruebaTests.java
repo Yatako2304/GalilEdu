@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.LocalDate;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.support.GenericApplicationContext;
 import org.springframework.test.context.TestContext;
@@ -20,6 +21,7 @@ class RestauradorRelojPruebaTests {
 		return contexto;
 	}
 
+	@DisplayName("Después de una prueba el reloj vuelve a su fecha inicial")
 	@Test
 	void despuesDeUnaPruebaElRelojVuelveASuFechaInicial() {
 		var reloj = new RelojPrueba();
@@ -35,6 +37,7 @@ class RestauradorRelojPruebaTests {
 		assertThat(reloj.instant()).isEqualTo(inicial);
 	}
 
+	@DisplayName("Sin reloj de prueba en el contexto no hace nada")
 	@Test
 	void sinRelojDePruebaEnElContextoNoHaceNada() {
 		var aplicacion = new GenericApplicationContext();
@@ -43,6 +46,7 @@ class RestauradorRelojPruebaTests {
 		restaurador.afterTestMethod(contextoCon(aplicacion));
 	}
 
+	@DisplayName("Sin contexto cargado no lo carga")
 	@Test
 	void sinContextoCargadoNoLoCarga() {
 		TestContext contexto = mock(TestContext.class);

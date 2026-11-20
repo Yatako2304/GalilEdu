@@ -12,6 +12,7 @@ import javax.sql.DataSource;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -49,6 +50,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 
 	// ---------- findAllByOrderByNombreAsc ----------
 
+	@DisplayName("Lista todos los ambientes activos e inactivos por nombre")
 	@Test
 	void listaTodosLosAmbientesActivosEInactivosPorNombre() {
 		var nombres = repositorio.findAllByOrderByNombreAsc().stream().map(Ambiente::getNombre).toList();
@@ -59,6 +61,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 
 	// ---------- Nombre repetido ----------
 
+	@DisplayName("El nombre se compara sin distinguir mayúsculas")
 	@Test
 	void elNombreSeComparaSinDistinguirMayusculas() {
 		assertThat(repositorio.existsByNombreIgnoreCase("Aula 101")).isTrue();
@@ -67,12 +70,14 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 		assertThat(repositorio.existsByNombreIgnoreCase("Aula 103")).isFalse();
 	}
 
+	@DisplayName("El nombre repetido incluye los ambientes inactivos")
 	@Test
 	void elNombreRepetidoIncluyeLosAmbientesInactivos() {
 		// A-205 ("Aula 205") está INACTIVO y se puede reactivar: su nombre sigue ocupado.
 		assertThat(repositorio.existsByNombreIgnoreCase("aula 205")).isTrue();
 	}
 
+	@DisplayName("Con tildes solo se igualan las mayúsculas que la base sabe convertir")
 	@Test
 	void conTildesSoloSeIgualanLasMayusculasQueLaBaseSabeConvertir() {
 		// La tilde en sí debe coincidir: "Computo" y "Cómputo" son nombres distintos (decisión: sin normalizar tildes).
@@ -80,6 +85,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 		assertThat(repositorio.existsByNombreIgnoreCase("Laboratorio de computo")).isFalse();
 	}
 
+	@DisplayName("Ignorar al propio ambiente deja editar sin cambiar el nombre")
 	@Test
 	void ignorarAlPropioAmbienteDejaEditarSinCambiarElNombre() {
 		Ambiente a101 = repositorio.findAllByOrderByNombreAsc().stream().filter(a -> a.getCodigo().equals("A-101"))
@@ -92,6 +98,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 		assertThat(repositorio.existsByNombreIgnoreCaseAndIdNot("Aula 103", a102.getId())).isFalse();
 	}
 
+	@DisplayName("La base no impide dos ambientes con el mismo nombre")
 	@Test
 	void laBaseNoImpideDosAmbientesConElMismoNombre() {
 		// Documenta la decisión 2: la unicidad del nombre es del servicio. Si se agrega el UNIQUE INDEX
@@ -103,6 +110,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 
 	// ---------- codigosConPrefijo ----------
 
+	@DisplayName("Los codigos del prefijo a no incluyen los que empiezan con otras letras")
 	@Test
 	void losCodigosDelPrefijoANoIncluyenLosQueEmpiezanConOtrasLetras() {
 		var codigos = repositorio.codigosConPrefijo("A");
@@ -110,6 +118,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 		assertThat(codigos).contains("A-101", "A-102", "A-201", "A-205").doesNotContain("AUD-01", "LAB-01", "BIB-01");
 	}
 
+	@DisplayName("Con los codigos de la semilla el siguiente de aula es a206 y el de espacio especial e001")
 	@Test
 	void conLosCodigosDeLaSemillaElSiguienteDeAulaEsA206YElDeEspacioEspecialE001() {
 		// Solo se miran los códigos de la semilla: esta prueba no depende de que A-206 o E-001 estén libres en la
@@ -122,6 +131,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 		assertThat(CodigoAmbiente.siguiente(TipoAmbiente.ESPACIO_ESPECIAL, delEspacio).valor()).isEqualTo("E-001");
 	}
 
+	@DisplayName("Un código nuevo entra en la siguiente consulta de la misma transacción")
 	@Test
 	void unCodigoNuevoEntraEnLaSiguienteConsultaDeLaMismaTransaccion() {
 		repositorio.saveAndFlush(aula("A-300", "Aula 300"));
@@ -133,6 +143,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 
 	// ---------- Código repetido ----------
 
+	@DisplayName("La base rechaza un código repetido con la restricción del código")
 	@Test
 	void laBaseRechazaUnCodigoRepetidoConLaRestriccionDelCodigo() {
 		repositorio.saveAndFlush(aula("A-901", "Aula nueva"));
@@ -141,6 +152,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 		rechazaPor("ambiente_codigo_key", () -> repositorio.saveAndFlush(aula("A-901", "Otra aula")));
 	}
 
+	@DisplayName("Guardar no escribe en la base hasta el flush")
 	@Test
 	void guardarNoEscribeEnLaBaseHastaElFlush() {
 		// persist solo deja la entidad en memoria: el choque de código aparece en el flush, no en persist. Por eso
@@ -152,6 +164,7 @@ class AmbienteRepositorioIT extends PruebaIntegracion {
 
 	// ---------- Memoria, transacción y confirmado ----------
 
+	@DisplayName("Memoria transacción y confirmado")
 	@Test
 	void memoriaTransaccionYConfirmado() throws SQLException {
 		// 1) En memoria: persist deja la entidad en el contexto de Hibernate. Todavía no hay INSERT.

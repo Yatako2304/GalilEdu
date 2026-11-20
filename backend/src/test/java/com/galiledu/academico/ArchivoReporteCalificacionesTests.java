@@ -15,6 +15,7 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ColumnaReporte;
@@ -26,6 +27,7 @@ class ArchivoReporteCalificacionesTests {
 	private static final String CONTEXTO = "Álgebra · 1.° de secundaria · Sección A · Año escolar 2026 · IV Bimestre";
 	private static final String PARAMETROS = "Escala: 0 a 20 · Regla del año escolar: Promedio ponderado";
 
+	@DisplayName("Genera una tabla legible con competencias promedios y tildes")
 	@Test
 	void generaUnaTablaLegibleConCompetenciasPromediosYTildes() throws Exception {
 		byte[] archivo = ArchivoReporteCalificaciones.pdf(reporte(3, 2), CONTEXTO, PARAMETROS, "VIGESIMAL");
@@ -45,6 +47,7 @@ class ArchivoReporteCalificacionesTests {
 		}
 	}
 
+	@DisplayName("Un promedio con registros faltantes muestra el aviso completo sin encimarse")
 	@Test
 	void unPromedioConRegistrosFaltantesMuestraElAvisoCompletoSinEncimarse() throws Exception {
 		UUID competencia = UUID.randomUUID();
@@ -74,6 +77,7 @@ class ArchivoReporteCalificacionesTests {
 		}
 	}
 
+	@DisplayName("Página estudiantes y columnas sin omitir notas ni reducir la letra")
 	@Test
 	void paginaEstudiantesYColumnasSinOmitirNotasNiReducirLaLetra() throws Exception {
 		byte[] archivo = ArchivoReporteCalificaciones.pdf(reporte(45, 4), CONTEXTO, PARAMETROS, "VIGESIMAL");
@@ -91,6 +95,7 @@ class ArchivoReporteCalificacionesTests {
 		}
 	}
 
+	@DisplayName("Conserva niveles cualitativos y notas pendientes")
 	@Test
 	void conservaNivelesCualitativosYNotasPendientes() throws Exception {
 		ReporteCalificaciones base = reporte(1, 1);
@@ -103,6 +108,7 @@ class ArchivoReporteCalificacionesTests {
 		}
 	}
 
+	@DisplayName("Exporta sin promedios y conserva el estado vacio")
 	@Test
 	void exportaSinPromediosYConservaElEstadoVacio() throws Exception {
 		ReporteCalificaciones base = reporte(1, 2);

@@ -15,6 +15,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -84,6 +85,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				matriculaDeMateo(), primerDocumento()).file(archivo), token(PERSONAL_ADMINISTRATIVO)));
 	}
 
+	@DisplayName("El detalle trae alumno sección paso y documentos")
 	@Test
 	void elDetalleTraeAlumnoSeccionPasoYDocumentos() throws Exception {
 		mvc.perform(conToken(get("/matricula/matriculas/{id}", matriculaDeMateo()), token(PERSONAL_ADMINISTRATIVO)))
@@ -101,12 +103,14 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.puedeValidar").value(false));
 	}
 
+	@DisplayName("Una matrícula que no existe es404")
 	@Test
 	void unaMatriculaQueNoExisteEs404() throws Exception {
 		mvc.perform(conToken(get("/matricula/matriculas/{id}", UUID.randomUUID()), token(PERSONAL_ADMINISTRATIVO)))
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Lista las secciones del grado con su ocupación")
 	@Test
 	void listaLasSeccionesDelGradoConSuOcupacion() throws Exception {
 		abrirPeriodo2027();
@@ -119,6 +123,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.secciones[0].ocupadas").value(1));
 	}
 
+	@DisplayName("Cambia de sección libera la vacante y deja el historial")
 	@Test
 	void cambiaDeSeccionLiberaLaVacanteYDejaElHistorial() throws Exception {
 		abrirPeriodo2027();
@@ -135,6 +140,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 	}
 
 	/** HU-26 (RF-56): el motivo es obligatorio y debe ser uno de los dos conocidos. */
+	@DisplayName("El cambio de sección exige un motivo válido")
 	@Test
 	void elCambioDeSeccionExigeUnMotivoValido() throws Exception {
 		abrirPeriodo2027();
@@ -151,6 +157,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 	}
 
 	/** HU-26: el historial muestra origen, destino, motivo, observación y quién lo hizo, el más reciente primero. */
+	@DisplayName("El historial lista los cambios del más reciente al más antiguo")
 	@Test
 	void elHistorialListaLosCambiosDelMasRecienteAlMasAntiguo() throws Exception {
 		abrirPeriodo2027();
@@ -178,6 +185,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[1].realizadoPor").isNotEmpty());
 	}
 
+	@DisplayName("El historial solo lo ve el personal administrativo y da no encontrado si no existe")
 	@Test
 	void elHistorialSoloLoVeElPersonalAdministrativoYDaNoEncontradoSiNoExiste() throws Exception {
 		mvc.perform(conToken(get("/matricula/matriculas/{id}/cambios-seccion", matriculaDeMateo()), token(DOCENTE)))
@@ -186,6 +194,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				token(PERSONAL_ADMINISTRATIVO))).andExpect(status().isNotFound());
 	}
 
+	@DisplayName("No cambia a una sección llena ni a la misma ni con el período cerrado")
 	@Test
 	void noCambiaAUnaSeccionLlenaNiALaMismaNiConElPeriodoCerrado() throws Exception {
 		cambiar(seccion("B")).andExpect(status().isConflict());
@@ -207,6 +216,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 		cambiar(seccion("B")).andExpect(status().isConflict());
 	}
 
+	@DisplayName("Sube y luego ve el documento y al reemplazarlo vuelve a revisión")
 	@Test
 	void subeYLuegoVeElDocumentoYAlReemplazarloVuelveARevision() throws Exception {
 		subir(new MockMultipartFile("archivo", "ficha.pdf", "application/pdf", new byte[]{1, 2, 3}))
@@ -224,6 +234,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[0].archivo.observacion").doesNotExist());
 	}
 
+	@DisplayName("Si el colegio completa todos los documentos la matrícula pasa a validación")
 	@Test
 	void siElColegioCompletaTodosLosDocumentosLaMatriculaPasaAValidacion() throws Exception {
 		UUID matricula = matriculaDeMateo();
@@ -281,6 +292,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.post("/matricula/matriculas/{id}/validar", matriculaDeMateo()), token(PERSONAL_ADMINISTRATIVO)));
 	}
 
+	@DisplayName("Observar un documento devuelve la matrícula al apoderado y solo ese documento queda observado")
 	@Test
 	void observarUnDocumentoDevuelveLaMatriculaAlApoderadoYSoloEseDocumentoQuedaObservado() throws Exception {
 		dejarEnValidacion();
@@ -296,6 +308,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[1].archivo.estado").value("EN_REVISION"));
 	}
 
+	@DisplayName("Al reemplazar el documento observado la matrícula vuelve a validación")
 	@Test
 	void alReemplazarElDocumentoObservadoLaMatriculaVuelveAValidacion() throws Exception {
 		dejarEnValidacion();
@@ -306,6 +319,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.puedeValidar").value(true));
 	}
 
+	@DisplayName("No se observa sin motivo ni fuera de validación")
 	@Test
 	void noSeObservaSinMotivoNiFueraDeValidacion() throws Exception {
 		observar(primerDocumento(), "Algo").andExpect(status().isConflict());
@@ -313,6 +327,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 		observar(primerDocumento(), "  ").andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Validar aprueba los documentos y deja la matrícula pendiente de pago")
 	@Test
 	void validarApruebaLosDocumentosYDejaLaMatriculaPendienteDePago() throws Exception {
 		confirmarTarifario2027();
@@ -329,6 +344,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 		validar().andExpect(status().isConflict());
 	}
 
+	@DisplayName("No se válida una matrícula con documentos observados o no en validación")
 	@Test
 	void noSeValidaUnaMatriculaConDocumentosObservadosONoEnValidacion() throws Exception {
 		validar().andExpect(status().isConflict());
@@ -338,6 +354,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 		validar().andExpect(status().isConflict());
 	}
 
+	@DisplayName("Sin tarifario confirmado no se válida y se explica el motivo")
 	@Test
 	void sinTarifarioConfirmadoNoSeValidaYSeExplicaElMotivo() throws Exception {
 		dejarEnValidacion();
@@ -348,6 +365,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("EN_VALIDACION"));
 	}
 
+	@DisplayName("Un documento aprobado no se reemplaza")
 	@Test
 	void unDocumentoAprobadoNoSeReemplaza() throws Exception {
 		confirmarTarifario2027();
@@ -357,6 +375,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Ver un documento no subido es404 y un archivo inválido es400")
 	@Test
 	void verUnDocumentoNoSubidoEs404YUnArchivoInvalidoEs400() throws Exception {
 		mvc.perform(conToken(get("/matricula/matriculas/{id}/documentos/{d}/archivo", matriculaDeMateo(),
@@ -366,6 +385,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("La ficha del estudiante ubica su matrícula vigente")
 	@Test
 	void laFichaDelEstudianteUbicaSuMatriculaVigente() throws Exception {
 		UUID estudiante = jdbc.sql("SELECT estudiante_id FROM matricula.matricula WHERE id = ?")
@@ -376,6 +396,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.matriculaId").value(matriculaDeMateo().toString()));
 	}
 
+	@DisplayName("Un estudiante sin matrícula devuelve matrícula id nulo")
 	@Test
 	void unEstudianteSinMatriculaDevuelveMatriculaIdNulo() throws Exception {
 		mvc.perform(conToken(get("/matricula/matriculas/de-estudiante/{id}", UUID.randomUUID()),
@@ -386,6 +407,7 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Solo el personal administrativo lo ve")
 	@Test
 	void soloElPersonalAdministrativoLoVe() throws Exception {
 		mvc.perform(conToken(get("/matricula/matriculas/{id}", matriculaDeMateo()), token("U20260003")))

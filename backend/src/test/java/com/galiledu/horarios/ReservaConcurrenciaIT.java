@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.context.annotation.Import;
@@ -119,6 +120,7 @@ class ReservaConcurrenciaIT extends PruebaReservas {
 				.param("dos", seccionDos).query(Long.class).single()).isEqualTo(1L);
 	}
 
+	@DisplayName("Dos secciones piden el mismo laboratorio a la misma hora una gana y la otra recibe cruce de ambiente")
 	@Test
 	void dosSeccionesPidenElMismoLaboratorioALaMismaHoraUnaGanaYLaOtraRecibeCruceDeAmbiente() throws Exception {
 		List<MvcResult> resultados = enParalelo(
@@ -127,6 +129,7 @@ class ReservaConcurrenciaIT extends PruebaReservas {
 		verUnoGanaYElOtroPierde(resultados, "Ambiente no disponible: Espacio TMP-LAB ya está reservado por 1.° C");
 	}
 
+	@DisplayName("El mismo responsable en dos ambientes a la misma hora una gana y la otra recibe cruce de responsable")
 	@Test
 	void elMismoResponsableEnDosAmbientesALaMismaHoraUnaGanaYLaOtraRecibeCruceDeResponsable() throws Exception {
 		List<MvcResult> resultados = enParalelo(
