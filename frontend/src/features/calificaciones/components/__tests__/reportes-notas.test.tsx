@@ -116,13 +116,18 @@ const preparar = () => {
         estudiante: string,
         valor: string,
         nivel: 'A' | 'B' | null,
+        porPeriodo: ['A' | 'B' | null, 'A' | 'B' | null],
       ) => ({
         matriculaId,
         estudiante,
         competencias: [
           {
             competenciaId: 'cantidad',
-            periodos: [],
+            periodos: porPeriodo.map((n, i) => ({
+              ...nota(n ? '14' : '—', n),
+              periodoId: `p${i + 1}`,
+              aportes: [],
+            })),
             notaFinal: nota(valor, nivel),
           },
         ],
@@ -136,7 +141,10 @@ const preparar = () => {
           escala: 'VIGESIMAL',
           reglaNota: 'PROMEDIO_PONDERADO',
           consolidacion: 'PROMEDIO_PERIODOS',
-          periodos: [],
+          periodos: [
+            { id: 'p1', numero: 1, nombre: 'I Bimestre' },
+            { id: 'p2', numero: 2, nombre: 'II Bimestre' },
+          ],
           competencias: [
             {
               competenciaId: 'cantidad',
@@ -147,10 +155,113 @@ const preparar = () => {
             },
           ],
           filas: [
-            fila('m-ana', 'Ana Lucía García López', '14.2', 'A'),
-            fila('m-camila', 'Camila Sofía Torres Vargas', '—', null),
+            fila('m-ana', 'Ana Lucía García López', '14.2', 'A', ['A', 'B']),
+            fila('m-camila', 'Camila Sofía Torres Vargas', '—', null, [
+              'A',
+              null,
+            ]),
           ],
         },
+      });
+    }),
+    http.get(`${API}/calificaciones/reportes/matriculas/:id/notas`, () => {
+      const resultado = (nota: string, nivel: 'A' | 'B') => ({
+        nota,
+        nivel,
+        logro: nivel === 'A' ? 'Logro esperado' : 'En proceso',
+        pendiente: false,
+        calificadas: 1,
+        total: 1,
+      });
+      return HttpResponse.json({
+        estudianteId: 'e-ana',
+        estudiante: 'Ana Lucía García López',
+        anio: 2026,
+        estadoAnio: 'ACTIVO',
+        finalizado: false,
+        grado: '1.° de secundaria',
+        seccion: 'A',
+        escala: 'VIGESIMAL',
+        reglaNota: 'PROMEDIO_PONDERADO',
+        consolidacion: 'PROMEDIO_PERIODOS',
+        periodos: [
+          {
+            id: 'p1',
+            numero: 1,
+            nombre: 'I Bimestre',
+            fechaInicio: '2026-03-01',
+            fechaFin: '2026-05-10',
+            estado: 'CERRADO',
+          },
+          {
+            id: 'p2',
+            numero: 2,
+            nombre: 'II Bimestre',
+            fechaInicio: '2026-05-18',
+            fechaFin: '2026-07-20',
+            estado: 'EN_CURSO',
+          },
+        ],
+        cursos: [
+          {
+            planCursoId: 'aritmetica',
+            curso: 'Aritmética',
+            area: 'Matemática',
+            docente: 'María Fernández Ríos',
+            periodos: [
+              { periodoId: 'p1', resultado: resultado('16', 'A') },
+              { periodoId: 'p2', resultado: resultado('12', 'B') },
+            ],
+            competencias: [
+              {
+                competenciaId: 'cantidad',
+                competencia: 'Resuelve problemas de cantidad',
+                periodos: [
+                  {
+                    periodoId: 'p1',
+                    aporte: resultado('16', 'A'),
+                    items: [
+                      {
+                        itemId: 'i1',
+                        item: 'Examen de cantidad',
+                        tipo: 'EXAMEN',
+                        nota: '16',
+                        nivel: 'A',
+                      },
+                    ],
+                  },
+                  {
+                    periodoId: 'p2',
+                    aporte: resultado('12', 'B'),
+                    items: [
+                      {
+                        itemId: 'i2',
+                        item: 'Práctica de fracciones',
+                        tipo: 'PRACTICA',
+                        nota: '12',
+                        nivel: 'B',
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+        competencias: [
+          {
+            competenciaId: 'cantidad',
+            competencia: 'Resuelve problemas de cantidad',
+            area: 'Matemática',
+            cursos: ['Aritmética'],
+            calculable: true,
+            periodos: [
+              { ...resultado('16', 'A'), periodoId: 'p1', aportes: [] },
+              { ...resultado('12', 'B'), periodoId: 'p2', aportes: [] },
+            ],
+            notaFinal: resultado('14', 'A'),
+          },
+        ],
       });
     }),
     http.get(`${API}/calificaciones/reportes/institucional`, () =>
@@ -304,4 +415,75 @@ test('el coordinador abre una sección y ve la nota de cada estudiante, con su l
       name: 'Descargar la libreta de Camila Sofía Torres Vargas',
     }),
   ).toBeEnabled();
+});
+
+test('«Todo el año» muestra el nivel de cada periodo y la nota final de cada estudiante', async () => {
+  preparar();
+  await renderReportes(['grado']);
+  await screen.findByRole('table');
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Ver estudiantes de la sección A' }),
+  );
+  await screen.findByRole('table', { name: 'Notas por estudiante' });
+
+  await userEvent.click(screen.getByRole('tab', { name: 'Todo el año' }));
+
+  const tabla = within(
+    screen.getByRole('table', { name: 'Notas de todo el año por estudiante' }),
+  );
+  expect(tabla.getByText('Resuelve problemas de cantidad')).toBeVisible();
+  expect(tabla.getByTitle('I Bimestre')).toHaveTextContent('I');
+  expect(tabla.getByTitle('II Bimestre')).toHaveTextContent('II');
+  expect(tabla.getByText('Final')).toBeVisible();
+
+  // Ana: A (I) · B (II) → A final.
+  const ana = within(tabla.getByText('Ana Lucía García López').closest('tr')!);
+  expect(ana.getAllByRole('img', { name: 'A · Logro esperado' })).toHaveLength(
+    2,
+  );
+  expect(ana.getByRole('img', { name: 'B · En proceso' })).toBeVisible();
+  // Camila: A (I) y pendiente en el II y en la final.
+  const camila = within(
+    tabla.getByText('Camila Sofía Torres Vargas').closest('tr')!,
+  );
+  expect(camila.getAllByText('Pend.')).toHaveLength(2);
+});
+
+test('el coordinador ve los ítems que calificó el docente, sin poder cambiarlos', async () => {
+  preparar();
+  await renderReportes(['grado']);
+  await screen.findByRole('table');
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Ver estudiantes de la sección A' }),
+  );
+  await screen.findByRole('table', { name: 'Notas por estudiante' });
+
+  await userEvent.click(
+    screen.getByRole('button', {
+      name: 'Ver los ítems de Ana Lucía García López',
+    }),
+  );
+
+  expect(
+    await screen.findByText(
+      'Ana Lucía García López · 1.° de secundaria · Sección A',
+    ),
+  ).toBeVisible();
+  // Empieza en el periodo en curso.
+  expect(screen.getByRole('tab', { name: 'II Bimestre' })).toHaveAttribute(
+    'aria-selected',
+    'true',
+  );
+  expect(screen.getByText('Prof. María Fernández Ríos')).toBeVisible();
+  await userEvent.click(screen.getByRole('button', { name: /Aritmética/ }));
+  expect(await screen.findByText('Práctica de fracciones')).toBeVisible();
+
+  await userEvent.click(screen.getByRole('tab', { name: 'I Bimestre' }));
+  expect(await screen.findByText('Examen de cantidad')).toBeVisible();
+
+  // Solo lectura: no hay cómo registrar ni modificar notas.
+  expect(
+    screen.queryByRole('button', { name: /modificar|registrar|guardar/i }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
 });
