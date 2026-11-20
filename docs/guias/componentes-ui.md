@@ -46,6 +46,7 @@ Todos los componentes de la página **Componentes** de Figma (*🗂️ DESIGN SY
 | cell-table, cell-table-header | `Table` (`table`) | Tablas con columnas declarativas. |
 | Pagination, Count | `PaginationBar` (`table`) | "Mostrando 1-10 de 200" con flechas y números. |
 | Informative Tag | `Tag` (`tag`) | Etiqueta de solo lectura: `primary`, `info`, `success`, `warning`, `error`, `neutral`. Usa `appearance="outline"` para los estados delineados de Figma. |
+| Nota (calificación) | `NotaNivel` (`tag`) | Pastilla redonda con la letra del nivel de logro (AD verde intenso, A verde, B ámbar, C rojo; `null` = «—» gris). Su nombre accesible es «A · Logro esperado». `SIGNIFICADO_NIVEL` da el significado de cada nivel. Tamaños `md` y `sm`. |
 | Status | `Status` (`tag`) | Punto + "Activo" / "Inactivo". |
 | Selectable Tag(s) | `SelectableTag` (`tag`) | Etiqueta que se marca (filtros). Con `onRemove` muestra la X para quitarla. Con `readOnly` (y `shape="circle"`, `size="md"`) es la pastilla de estado de una tabla ("Programado", "Abierto", "Cerrado"): un `<span>`, no un botón. |
 | Stat Card | `StatCard` (`stat-card`) | Indicador (KPI) con ícono, valor y etiqueta. |

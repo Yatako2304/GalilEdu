@@ -17,6 +17,8 @@ const { filasVacias, escenario } = vi.hoisted(() => ({
 
 vi.mock('../../api/calificaciones', () => ({
   useNotasCompetencia: () => ({ isLoading: true, data: undefined }),
+  useResumenAnual: () => ({ isLoading: false, data: undefined }),
+  exportarResumenAnual: vi.fn(),
   useCursosDocente: () => ({
     isLoading: false,
     data: [
@@ -45,6 +47,7 @@ vi.mock('../../api/calificaciones', () => ({
             fechaLimiteNotas: '2026-12-23',
             estado: 'EN_CURSO',
             registroNotasAbierto: true,
+            modificacionHabilitada: true,
             competencias: 1,
             items: 0,
           },
@@ -127,7 +130,7 @@ vi.mock('../../api/calificaciones', () => ({
           detalle: 'Consolidado de notas',
           columnas: [
             { clave: 'item-1', titulo: 'Práctica 1' },
-            { clave: 'resultado', titulo: 'Promedio final' },
+            { clave: 'resultado', titulo: 'Promedio del periodo' },
           ],
           filas: [
             {
@@ -373,7 +376,7 @@ describe('Calificaciones del docente', () => {
     });
     expect(screen.getByText('Ana García')).toBeVisible();
     expect(
-      within(tabla).getByRole('columnheader', { name: 'Promedio final' }),
+      within(tabla).getByRole('columnheader', { name: 'Promedio del periodo' }),
     ).toBeVisible();
     expect(within(tabla).getByText('A · Logro esperado')).toBeVisible();
     expect(within(tabla).getAllByText('17/20')).toHaveLength(2);

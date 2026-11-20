@@ -93,10 +93,10 @@ class ServicioCalificacionesTests {
 		when(repositorio.detallesReporte(PLAN, SECCION, PERIODO)).thenReturn(List.of(
 				new DetalleReporteFila(MATRICULA, UUID.randomUUID(), "Ana Pérez", ITEM, "Práctica", COMPETENCIA,
 						"Resuelve problemas", BigDecimal.valueOf(40), BigDecimal.valueOf(10), null, null,
-						Instant.parse("2026-11-01T10:00:00Z")),
+						Instant.parse("2026-11-01T10:00:00Z"), false, true),
 				new DetalleReporteFila(MATRICULA, UUID.randomUUID(), "Ana Pérez", item2, "Examen", COMPETENCIA,
 						"Resuelve problemas", BigDecimal.valueOf(60), BigDecimal.valueOf(20), null, null,
-						Instant.parse("2026-11-02T10:00:00Z"))));
+						Instant.parse("2026-11-02T10:00:00Z"), false, true)));
 
 		var reporte = servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, COMPETENCIA);
 
@@ -104,7 +104,7 @@ class ServicioCalificacionesTests {
 		assertThat(reporte.filas().get(0).valores()).containsEntry("resultado", "16");
 		var parcial = servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, COMPETENCIA,
 				List.of(ITEM), true);
-		assertThat(parcial.columnas()).extracting(c -> c.titulo()).containsExactly("Práctica", "Promedio final");
+		assertThat(parcial.columnas()).extracting(c -> c.titulo()).containsExactly("Práctica", "Promedio del periodo");
 		assertThat(parcial.filas().get(0).valores()).containsEntry("resultado", "10")
 				.doesNotContainKey(item2.toString());
 	}

@@ -229,22 +229,64 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 				.andExpect(jsonPath(filaAna + ".periodos[3].nota").value(contains("15.6")))
 				.andExpect(jsonPath(filaAna + ".periodos[3].aportes[*].nota").value(hasItem("18")))
 				.andExpect(jsonPath(filaAna + ".periodos[0].nota").value(contains("—")))
-				// Final: promedio de los periodos con nota; es parcial porque faltan el I y el II bimestre.
+				// Final: promedio de los periodos con nota. El I y el II bimestre no tienen ítems: no la dejan pendiente.
 				.andExpect(jsonPath(filaAna + ".notaFinal.nota").value(contains("14.6")))
 				// 14,6 → 15 → A (14–17) en la tabla vigente; el III bimestre 13,6 → 14 también es A.
 				.andExpect(jsonPath(filaAna + ".notaFinal.nivel").value(contains("A")))
 				.andExpect(jsonPath(filaAna + ".periodos[2].nivel").value(contains("A")))
 				.andExpect(jsonPath(filaAna + ".periodos[0].nivel").value(contains((Object) null)))
-				.andExpect(jsonPath(filaAna + ".notaFinal.parcial").value(contains(true)));
+				.andExpect(jsonPath(filaAna + ".notaFinal.pendiente").value(contains(false)))
+				// Diego no tiene las notas que Ana sí: su nota oficial espera esos registros.
+				.andExpect(jsonPath("$.filas[?(@.matriculaId == '%s')].competencias[0].periodos[3].pendiente"
+						.formatted(matriculaDe("Diego José"))).value(contains(true)))
+				.andExpect(jsonPath("$.filas[?(@.matriculaId == '%s')].competencias[0].periodos[3].nota"
+						.formatted(matriculaDe("Diego José"))).value(contains("—")));
 
-		// El PDF del consolidado termina con la nota final de la competencia en letra.
+		// El PDF del IV bimestre termina con la nota de la competencia de ese periodo, no con la del año.
 		byte[] pdf = mvc.perform(conToken(get("/calificaciones/docente/reportes/exportar-pdf")
 				.param("tipo", "COMPETENCIA").param("planCursoId", plan("Geometría"))
 				.param("seccionId", seccionA()).param("periodoId", periodo(4)).param("competenciaIds", cantidad),
 				docente)).andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
 		try (var documento = org.apache.pdfbox.Loader.loadPDF(pdf)) {
 			org.assertj.core.api.Assertions.assertThat(new org.apache.pdfbox.text.PDFTextStripper().getText(documento))
-					.contains("Nota final de la competencia", "A · 14,6/20", "Logro esperado · Parcial", "13,6/20");
+					.contains("Nota de la competencia en el periodo", "Promedio del", "A · 15,6/20",
+							"Generado el")
+					.doesNotContain("Nota final", "13,6/20", "14,6/20");
+		}
+	}
+
+	@Test
+	void elResumenDelAnoMuestraElAporteFinalDelCursoYLaNotaDeLaCompetencia() throws Exception {
+		String cantidad = competencia(CANTIDAD);
+		String ana = matriculaDe("Ana Lucía");
+		itemConNota("Geometría", 3, cantidad, ana, 16);
+		itemConNota("Aritmética", 3, cantidad, ana, 12);
+		itemConNota("Geometría", 4, cantidad, ana, 18);
+		itemConNota("Aritmética", 4, cantidad, ana, 14);
+
+		String valores = "$.filas[?(@.matriculaId == '%s')].valores['%s:%s']";
+		mvc.perform(conToken(get("/calificaciones/docente/cursos/%s/secciones/%s/resumen-anual"
+				.formatted(plan("Geometría"), seccionA())).param("competenciaIds", cantidad), docente))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.columnas.length()").value(10))
+				.andExpect(jsonPath("$.columnas[4].titulo").value("Aporte final"))
+				.andExpect(jsonPath("$.columnas[4].competencia").value("Aporte de Geometría · " + CANTIDAD))
+				.andExpect(jsonPath("$.columnas[9].titulo").value("Nota final"))
+				// Geometría aporta 16 y 18: su aporte final es 17. La competencia: 13,6 y 15,6 → 14,6.
+				.andExpect(jsonPath(valores.formatted(ana, cantidad, "aporte:" + periodo(3))).value(contains("16")))
+				.andExpect(jsonPath(valores.formatted(ana, cantidad, "aporte:final")).value(contains("17")))
+				.andExpect(jsonPath(valores.formatted(ana, cantidad, "aporte:final_estado"))
+						.value(contains("A · Logro esperado")))
+				.andExpect(jsonPath(valores.formatted(ana, cantidad, "oficial:" + periodo(3))).value(contains("13.6")))
+				.andExpect(jsonPath(valores.formatted(ana, cantidad, "oficial:final")).value(contains("14.6")));
+
+		byte[] pdf = mvc.perform(conToken(get("/calificaciones/docente/cursos/%s/secciones/%s/resumen-anual/pdf"
+				.formatted(plan("Geometría"), seccionA())).param("competenciaIds", cantidad), docente))
+				.andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+		try (var documento = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+			org.assertj.core.api.Assertions.assertThat(new org.apache.pdfbox.text.PDFTextStripper().getText(documento))
+					.contains("Resumen del año", "Aporte final", "Nota final", "17/20", "14,6/20",
+							"no es el promedio de los aportes finales", "Generado el");
 		}
 	}
 

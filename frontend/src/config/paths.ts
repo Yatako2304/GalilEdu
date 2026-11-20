@@ -52,10 +52,11 @@ export const paths = {
       getHref: () => '/app/cambiar-contrasena',
     },
 
-    // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios)
+    // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios). Calificaciones: reporte institucional (HU-64), sin frame.
     admin: {
       root: roleRoot(ADMIN),
       usuarios: route(ADMIN, 'usuarios'),
+      calificaciones: route(ADMIN, 'calificaciones'),
     },
 
     // Figma: 🌟 Personal Administrativo

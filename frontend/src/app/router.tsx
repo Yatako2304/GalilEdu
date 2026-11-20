@@ -112,6 +112,10 @@ export const createAppRouter = (
               paths.app.admin.usuarios.path,
               () => import('./routes/app/admin/usuarios'),
             ],
+            [
+              paths.app.admin.calificaciones.path,
+              () => import('./routes/app/admin/calificaciones'),
+            ],
           ],
         ),
 

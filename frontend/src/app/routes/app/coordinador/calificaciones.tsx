@@ -1,16 +1,14 @@
 import { ContentLayout } from '@/components/layouts';
-import { ModulePlaceholder } from '@/components/module-placeholder';
+import { ReportesNotas } from '@/features/calificaciones/components/reportes-notas';
 
-const CoordinadorCalificacionesRoute = () => {
-  return (
-    <ContentLayout title="Calificaciones">
-      <ModulePlaceholder
-        feature="calificaciones"
-        historias={['HU-57']}
-        figmaNodeId="327:4560"
-      />
-    </ContentLayout>
-  );
-};
+// HU-63 (por curso y grado) y HU-64 (institucional). Figma > Coordinador > «Competencias reporte» (349:11639).
+const CoordinadorCalificacionesRoute = () => (
+  <ContentLayout
+    title="Calificaciones"
+    subtitle="Reportes de notas por curso y grado, y de toda la institución."
+  >
+    <ReportesNotas vistas={['grado', 'institucional']} />
+  </ContentLayout>
+);
 
 export default CoordinadorCalificacionesRoute;

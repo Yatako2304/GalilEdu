@@ -55,15 +55,23 @@ public class RepositorioCalificaciones {
 
 	public record CalificacionFila(UUID id, UUID matriculaId, UUID estudianteId, String estudiante,
 			BigDecimal notaNumerica, String nivelLogro, String evidenciaNombreArchivo, String evidenciaTipoMime,
-			Integer evidenciaTamanoBytes, Instant evidenciaSubidoEn) {
+			Integer evidenciaTamanoBytes, Instant evidenciaSubidoEn, int modificaciones, boolean noEvaluado,
+			String motivoNoEvaluado) {
 	}
 
 	public record EvidenciaFila(String nombreArchivo, String tipoMime, byte[] contenido) {
 	}
 
+	/**
+	 * noEvaluado: la celda está resuelta sin nota; itemUsado: alguien de la sección tiene registrado el ítem. Las dos
+	 * cosas sacan el ítem del cálculo de este estudiante.
+	 */
 	public record DetalleReporteFila(UUID matriculaId, UUID estudianteId, String estudiante, UUID itemId,
 			String item, UUID competenciaId, String competencia, BigDecimal pesoPorcentaje, BigDecimal notaNumerica,
-			String nivelLogro, String evidenciaNombre, Instant ordenItem) {
+			String nivelLogro, String evidenciaNombre, Instant ordenItem, boolean noEvaluado, boolean itemUsado) {
+		public boolean cuenta() {
+			return itemUsado && !noEvaluado;
+		}
 	}
 
 	public List<CursoFila> cursos(UUID docenteId) {
@@ -256,7 +264,10 @@ public class RepositorioCalificaciones {
 				       concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno) AS estudiante,
 				       ci.nota_numerica, ci.nivel_logro,
 				       ev.nombre_archivo AS evidencia_nombre_archivo, ev.tipo_mime AS evidencia_tipo_mime,
-				       ev.tamano_bytes AS evidencia_tamano_bytes, ev.subido_en AS evidencia_subido_en
+				       ev.tamano_bytes AS evidencia_tamano_bytes, ev.subido_en AS evidencia_subido_en,
+				       (SELECT count(*) FROM academico.modificacion_calificacion mc
+				         WHERE mc.item_evaluacion_id = ? AND mc.matricula_id = m.id)::int AS modificaciones,
+				       coalesce(ci.no_evaluado, false) AS no_evaluado, ci.motivo_no_evaluado
 				FROM matricula.matricula m
 				JOIN estudiantes.estudiante e ON e.id = m.estudiante_id
 				JOIN personas.persona p ON p.id = e.persona_id
@@ -264,7 +275,7 @@ public class RepositorioCalificaciones {
 				       ON ci.matricula_id = m.id AND ci.item_evaluacion_id = ?
 				LEFT JOIN academico.evidencia_calificacion ev ON ev.calificacion_id = ci.id
 				WHERE m.seccion_id = ? AND m.estado = 'MATRICULADO' AND NOT e.eliminado
-				ORDER BY p.apellido_paterno, p.apellido_materno, p.nombres""").params(itemId, seccionId)
+				ORDER BY p.apellido_paterno, p.apellido_materno, p.nombres""").params(itemId, itemId, seccionId)
 				.query(CalificacionFila.class).list();
 	}
 
@@ -283,8 +294,76 @@ public class RepositorioCalificaciones {
 				FROM academico.item_evaluacion ie WHERE ie.id = ?
 				ON CONFLICT (item_evaluacion_id, matricula_id) DO UPDATE
 				SET nota_numerica = EXCLUDED.nota_numerica, nivel_logro = EXCLUDED.nivel_logro,
+				    no_evaluado = FALSE, motivo_no_evaluado = NULL,
 				    registrado_por = EXCLUDED.registrado_por, actualizado_en = now()
 				RETURNING id""").params(matriculaId, nota, nivel, docenteId, itemId).query(UUID.class).single();
+	}
+
+	/** Resuelve la celda sin nota: el ítem no cuenta para este estudiante. */
+	public void marcarNoEvaluado(UUID itemId, UUID matriculaId, String motivo, UUID docenteId) {
+		jdbc.sql("""
+				INSERT INTO academico.calificacion_item
+				    (item_evaluacion_id, seccion_id, matricula_id, no_evaluado, motivo_no_evaluado, registrado_por)
+				SELECT ie.id, ie.seccion_id, ?, TRUE, ?, ?
+				FROM academico.item_evaluacion ie WHERE ie.id = ?
+				ON CONFLICT (item_evaluacion_id, matricula_id) DO UPDATE
+				SET nota_numerica = NULL, nivel_logro = NULL, no_evaluado = TRUE,
+				    motivo_no_evaluado = EXCLUDED.motivo_no_evaluado, registrado_por = EXCLUDED.registrado_por,
+				    actualizado_en = now()""").params(matriculaId, motivo, docenteId, itemId).update();
+	}
+
+	/** El valor vigente de una celda: una nota (numérica o nivel) o «No evaluado». */
+	public record ValorCalificacion(BigDecimal notaNumerica, String nivelLogro, boolean noEvaluado) {
+		public ValorCalificacion(BigDecimal notaNumerica, String nivelLogro) {
+			this(notaNumerica, nivelLogro, false);
+		}
+
+		public static final ValorCalificacion NO_EVALUADO = new ValorCalificacion(null, null, true);
+	}
+
+	public Optional<ValorCalificacion> valorCalificacion(UUID itemId, UUID matriculaId) {
+		return jdbc.sql("""
+				SELECT nota_numerica, nivel_logro, no_evaluado FROM academico.calificacion_item
+				WHERE item_evaluacion_id = ? AND matricula_id = ? FOR UPDATE""").params(itemId, matriculaId)
+				.query(ValorCalificacion.class).optional();
+	}
+
+	/**
+	 * HU-60: deja constancia de un cambio de una celda. anterior null = estaba vacía (registro fuera de plazo); nueva
+	 * null = la nota se quitó.
+	 */
+	public void registrarModificacion(UUID itemId, UUID matriculaId, ValorCalificacion anterior,
+			ValorCalificacion nueva, String motivo, UUID usuarioId) {
+		jdbc.sql("""
+				INSERT INTO academico.modificacion_calificacion
+				    (item_evaluacion_id, matricula_id, nota_anterior, nivel_anterior, no_evaluado_anterior,
+				     nota_nueva, nivel_nuevo, no_evaluado_nuevo, motivo, modificado_por)
+				VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""")
+				.params(itemId, matriculaId, anterior == null ? null : anterior.notaNumerica(),
+						anterior == null ? null : anterior.nivelLogro(), anterior != null && anterior.noEvaluado(),
+						nueva == null ? null : nueva.notaNumerica(), nueva == null ? null : nueva.nivelLogro(),
+						nueva != null && nueva.noEvaluado(), motivo, usuarioId)
+				.update();
+	}
+
+	public record ModificacionFila(BigDecimal notaAnterior, String nivelAnterior, boolean noEvaluadoAnterior,
+			BigDecimal notaNueva, String nivelNuevo, boolean noEvaluadoNuevo, String motivo, String modificadoPor,
+			Instant modificadoEn) {
+	}
+
+	/** Historial de cambios de la nota de un estudiante en un ítem, del más reciente al más antiguo. */
+	public List<ModificacionFila> historial(UUID itemId, UUID matriculaId) {
+		return jdbc.sql("""
+				SELECT mc.nota_anterior, mc.nivel_anterior, mc.no_evaluado_anterior, mc.nota_nueva, mc.nivel_nuevo,
+				       mc.no_evaluado_nuevo, mc.motivo,
+				       concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno) AS modificado_por,
+				       mc.modificado_en
+				FROM academico.modificacion_calificacion mc
+				JOIN seguridad.usuario u ON u.id = mc.modificado_por
+				JOIN personas.persona p ON p.id = u.persona_id
+				WHERE mc.item_evaluacion_id = ? AND mc.matricula_id = ?
+				ORDER BY mc.modificado_en DESC, mc.id""").params(itemId, matriculaId)
+				.query(ModificacionFila.class).list();
 	}
 
 	public void quitarCalificacion(UUID itemId, UUID matriculaId) {
@@ -328,7 +407,10 @@ public class RepositorioCalificaciones {
 				       concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno) AS estudiante,
 				       ie.id AS item_id, ie.nombre AS item, ic.competencia_id, c.nombre AS competencia,
 				       ic.peso_porcentaje, ci.nota_numerica, ci.nivel_logro,
-				       ev.nombre_archivo AS evidencia_nombre, ie.creado_en AS orden_item
+				       ev.nombre_archivo AS evidencia_nombre, ie.creado_en AS orden_item,
+				       coalesce(ci.no_evaluado, false) AS no_evaluado,
+				       EXISTS (SELECT 1 FROM academico.calificacion_item usado
+				               WHERE usado.item_evaluacion_id = ie.id) AS item_usado
 				FROM matricula.matricula m
 				JOIN estudiantes.estudiante e ON e.id = m.estudiante_id
 				JOIN personas.persona p ON p.id = e.persona_id
@@ -351,7 +433,8 @@ public class RepositorioCalificaciones {
 
 	/**
 	 * Ítems de todos los cursos de la sección que evalúan las competencias, en todos los periodos, cruzados con cada
-	 * estudiante matriculado. Un ítem sin nota aparece con nota nula: así se sabe que la nota está a medias.
+	 * estudiante matriculado. Un ítem sin nota aparece con nota nula: es un registro faltante y deja la nota pendiente.
+	 * No aparecen los ítems «No evaluado» del estudiante ni los que nadie de la sección tiene registrados: no cuentan.
 	 */
 	public List<CalificacionCompetenciaFila> calificacionesCompetencias(UUID seccionId, List<UUID> competenciaIds) {
 		if (competenciaIds.isEmpty()) {
@@ -368,6 +451,9 @@ public class RepositorioCalificaciones {
 				LEFT JOIN academico.calificacion_item ci
 				  ON ci.item_evaluacion_id = ie.id AND ci.matricula_id = m.id
 				WHERE ie.seccion_id = :seccion AND ic.competencia_id IN (:competencias)
+				  AND (ci.id IS NULL OR NOT ci.no_evaluado)
+				  AND EXISTS (SELECT 1 FROM academico.calificacion_item usado
+				               WHERE usado.item_evaluacion_id = ie.id)
 				ORDER BY ie.creado_en""")
 				.param("seccion", seccionId).param("competencias", competenciaIds)
 				.query(CalificacionCompetenciaFila.class).list();

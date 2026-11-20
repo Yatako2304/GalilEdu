@@ -9,6 +9,9 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
 
+import com.galiledu.academico.dominio.CalculoNotas.Aporte;
+import com.galiledu.academico.dominio.CalculoNotas.AporteFinal;
+import com.galiledu.academico.dominio.CalculoNotas.Avance;
 import com.galiledu.academico.dominio.CalculoNotas.Calificacion;
 import com.galiledu.academico.dominio.CalculoNotas.CursoPeso;
 import com.galiledu.academico.dominio.CalculoNotas.ResultadoCompetencia;
@@ -54,8 +57,8 @@ class CalculoNotasTests {
 		assertThat(texto(r, 0)).isEqualTo("13.6");
 		assertThat(texto(r, 1)).isEqualTo("15.6");
 		assertThat(r.notaFinal().map(CalculoNotas::texto)).contains("14.6");
-		assertThat(r.parcial()).isFalse();
-		assertThat(r.periodos().get(0).aportes().get(ALGEBRA).map(CalculoNotas::texto)).contains("16");
+		assertThat(r.pendiente()).isFalse();
+		assertThat(r.periodos().get(0).aportes().get(ALGEBRA).nota().map(CalculoNotas::texto)).contains("16");
 	}
 
 	@Test
@@ -69,23 +72,62 @@ class CalculoNotasTests {
 	}
 
 	@Test
-	void unCursoSinNotasNoCuentaYLaNotaQuedaParcial() {
+	void unCursoSinItemsQueCuentenNoParticipaEnElPeriodo() {
+		// Álgebra no tiene ítems registrados en el periodo: no participa y la nota no queda pendiente.
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
 				List.of(nota(ARITMETICA, P1, "12")), "PROMEDIO_PONDERADO", "PROMEDIO_PERIODOS");
 
 		assertThat(texto(r, 0)).isEqualTo("12");
-		assertThat(r.periodos().get(0).parcial()).isTrue();
-		assertThat(r.periodos().get(0).aportes().get(ALGEBRA)).isEmpty();
+		assertThat(r.periodos().get(0).pendiente()).isFalse();
+		assertThat(r.periodos().get(0).aportes().get(ALGEBRA).conteo()).isEqualTo(Avance.VACIO);
 	}
 
 	@Test
-	void unItemSinCalificarDejaLaNotaParcial() {
+	void unRegistroFaltanteDejaLaNotaPendienteSinNumero() {
+		// A Aritmética le falta un ítem: su avance cuenta lo que falta como 0 (12 × 50 % + 0 × 50 % = 6) y no es
+		// nota oficial.
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
 				List.of(nota(ALGEBRA, P1, "16"), nota(ARITMETICA, P1, "50", "12"), nota(ARITMETICA, P1, "50", null)),
 				"PROMEDIO_PONDERADO", "PROMEDIO_PERIODOS");
 
+		assertThat(r.periodos().get(0).nota()).isEmpty();
+		assertThat(r.periodos().get(0).avance()).isEqualTo(new Avance(2, 3));
+		assertThat(r.notaFinal()).isEmpty();
+		assertThat(r.pendiente()).isTrue();
+		Aporte aritmetica = r.periodos().get(0).aportes().get(ARITMETICA);
+		assertThat(aritmetica.avance().map(CalculoNotas::texto)).contains("6");
+		assertThat(aritmetica.nota()).isEmpty();
+	}
+
+	@Test
+	void unRegistroFaltanteEnUnPeriodoDejaLaFinalPendiente() {
+		ResultadoCompetencia r = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60,
+				List.of(nota(ALGEBRA, P1, "16"), nota(ARITMETICA, P1, "12"), nota(ALGEBRA, P2, "18"),
+						nota(ARITMETICA, P2, null)),
+				"PROMEDIO_PONDERADO", "PROMEDIO_PERIODOS");
+
 		assertThat(texto(r, 0)).isEqualTo("13.6");
-		assertThat(r.periodos().get(0).parcial()).isTrue();
+		assertThat(r.periodos().get(1).nota()).isEmpty();
+		assertThat(r.notaFinal()).isEmpty();
+		assertThat(r.avance()).isEqualTo(new Avance(3, 4));
+	}
+
+	@Test
+	void elAporteFinalDelCursoEsperaQueTodosSusPeriodosEstenCompletos() {
+		ResultadoCompetencia completo = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60,
+				List.of(nota(ALGEBRA, P1, "16"), nota(ALGEBRA, P2, "18")), "PROMEDIO_PONDERADO", "PROMEDIO_PERIODOS");
+		AporteFinal algebra = CalculoNotas.aporteFinal(
+				completo.periodos().stream().map(p -> p.aportes().get(ALGEBRA)).toList(), "PROMEDIO_PERIODOS",
+				"PROMEDIO_PONDERADO");
+		assertThat(algebra.nota().map(CalculoNotas::texto)).contains("17");
+
+		ResultadoCompetencia pendiente = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60,
+				List.of(nota(ALGEBRA, P1, "16"), nota(ALGEBRA, P2, null)), "PROMEDIO_PONDERADO", "PROMEDIO_PERIODOS");
+		AporteFinal faltante = CalculoNotas.aporteFinal(
+				pendiente.periodos().stream().map(p -> p.aportes().get(ALGEBRA)).toList(), "PROMEDIO_PERIODOS",
+				"PROMEDIO_PONDERADO");
+		assertThat(faltante.nota()).isEmpty();
+		assertThat(faltante.pendiente()).isTrue();
 	}
 
 	@Test
@@ -98,7 +140,7 @@ class CalculoNotasTests {
 
 		assertThat(r.periodos().get(0).nota()).isEmpty();
 		assertThat(r.notaFinal()).isEmpty();
-		assertThat(r.periodos().get(0).aportes().get(ARITMETICA).map(CalculoNotas::texto)).contains("12");
+		assertThat(r.periodos().get(0).aportes().get(ARITMETICA).nota().map(CalculoNotas::texto)).contains("12");
 	}
 
 	@Test
@@ -110,23 +152,24 @@ class CalculoNotasTests {
 	}
 
 	@Test
-	void conUltimoPeriodoLaFinalEsElUltimoConNotaYEsParcialSiFaltaElUltimo() {
+	void conUltimoPeriodoLaFinalEsElUltimoPeriodoConNota() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60,
 				List.of(nota(ALGEBRA, P1, "16"), nota(ARITMETICA, P1, "12")), "PROMEDIO_PONDERADO",
 				"ULTIMO_PERIODO");
 
 		assertThat(r.notaFinal().map(CalculoNotas::texto)).contains("13.6");
-		assertThat(r.parcial()).isTrue();
+		assertThat(r.pendiente()).isFalse();
 	}
 
 	@Test
-	void mientrasFalteUnPeriodoLaFinalEsParcial() {
+	void unPeriodoSinItemsNoCuentaParaLaFinal() {
+		// El II periodo aún no tiene ítems: no deja la final pendiente; la final usa los periodos con nota.
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60,
 				List.of(nota(ALGEBRA, P1, "16"), nota(ARITMETICA, P1, "12")), "PROMEDIO_PONDERADO",
 				"PROMEDIO_PERIODOS");
 
 		assertThat(r.notaFinal().map(CalculoNotas::texto)).contains("13.6");
-		assertThat(r.parcial()).isTrue();
+		assertThat(r.pendiente()).isFalse();
 		assertThat(r.periodos().get(1).nota()).isEmpty();
 	}
 
@@ -155,7 +198,7 @@ class CalculoNotasTests {
 						nivel(ALGEBRA, P1, "AD", "2026-05-09T10:00:00Z"),
 						nivel(ARITMETICA, P1, "A", "2026-05-02T10:00:00Z")),
 				"ULTIMO_NIVEL", "ULTIMO_PERIODO");
-		assertThat(r.periodos().get(0).aportes().get(ALGEBRA).map(CalculoNotas::texto)).contains("AD");
+		assertThat(r.periodos().get(0).aportes().get(ALGEBRA).nota().map(CalculoNotas::texto)).contains("AD");
 		assertThat(texto(r, 0)).isEqualTo("A");
 	}
 
@@ -179,24 +222,34 @@ class CalculoNotasTests {
 						nivel(ARITMETICA, P1, "B", "2026-05-02T10:00:00Z")),
 				"NIVEL_MAS_FRECUENTE", "ULTIMO_PERIODO");
 		assertThat(r.periodos().get(0).nota()).isEmpty();
-		assertThat(r.periodos().get(0).aportes().get(ARITMETICA).map(CalculoNotas::texto)).contains("B");
+		assertThat(r.periodos().get(0).aportes().get(ARITMETICA).nota().map(CalculoNotas::texto)).contains("B");
 	}
 
 	@Test
-	void unCursoSinNotaNoVotaYLaNotaQuedaParcial() {
+	void unCursoSinItemsNoVota() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
 				List.of(nivel(ALGEBRA, P1, "C", "2026-05-01T10:00:00Z")), "NIVEL_MAS_FRECUENTE", "ULTIMO_PERIODO");
 		assertThat(texto(r, 0)).isEqualTo("C");
-		assertThat(r.periodos().get(0).parcial()).isTrue();
+		assertThat(r.periodos().get(0).pendiente()).isFalse();
 	}
 
 	@Test
-	void sinNotasNoHayNotaNiEsParcial() {
+	void enLaEscalaCualitativaUnNivelFaltanteDejaLaNotaPendiente() {
+		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
+				List.of(nivel(ALGEBRA, P1, "C", "2026-05-01T10:00:00Z"),
+						nivel(ARITMETICA, P1, null, "2026-05-02T10:00:00Z")),
+				"NIVEL_MAS_FRECUENTE", "ULTIMO_PERIODO");
+		assertThat(r.periodos().get(0).nota()).isEmpty();
+		assertThat(r.periodos().get(0).pendiente()).isTrue();
+	}
+
+	@Test
+	void sinNotasNoHayNotaNiEsPendiente() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60, List.of(),
 				"PROMEDIO_PONDERADO", "PROMEDIO_PERIODOS");
 
 		assertThat(r.notaFinal()).isEmpty();
-		assertThat(r.parcial()).isFalse();
+		assertThat(r.pendiente()).isFalse();
 	}
 
 	@Test
