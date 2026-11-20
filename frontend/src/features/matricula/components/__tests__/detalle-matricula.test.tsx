@@ -44,6 +44,12 @@ const detalle = (extras: Partial<DetalleDto> = {}): DetalleDto => ({
     capacidad: 30,
     ocupadas: 12,
   },
+  seccionAsignada: null,
+  seccionSeleccionada: {
+    id: 's-a',
+    nombre: 'A',
+    etiqueta: '1.° A',
+  },
   estado: 'SECCION_RESERVADA',
   codigo: null,
   pasoActual: 2,
@@ -54,6 +60,8 @@ const detalle = (extras: Partial<DetalleDto> = {}): DetalleDto => ({
   puedeCambiarSeccion: true,
   puedeEditarDocumentos: true,
   puedeValidar: false,
+  extemporanea: false,
+  motivoExtemporanea: null,
   documentos: [
     {
       id: 'd-1',
@@ -105,6 +113,8 @@ const secciones = () =>
 test('muestra datos, estado de cada documento y deja Validar deshabilitado', async () => {
   await renderApp(<DetalleMatricula matricula={detalle()} />);
 
+  expect(screen.getByText('Por asignar')).toBeVisible();
+  expect(screen.getByText('Sección reservada')).toBeVisible();
   expect(screen.getByText('1.° A · Tutor: Raúl Vargas')).toBeVisible();
   expect(screen.getByText('Observado')).toBeVisible();
   expect(screen.getByText('Pendiente')).toBeVisible();
@@ -169,6 +179,81 @@ test('sube un documento pendiente', async () => {
 
   await waitFor(() => expect(subidos).toHaveLength(1));
   expect((subidos[0].get('archivo') as File).name).toBe('dni.png');
+});
+
+test('HU-72: elimina un documento subido después de confirmar', async () => {
+  const eliminar = vi.spyOn(api, 'delete').mockResolvedValue(
+    detalle({
+      documentos: detalle().documentos.map((documento) =>
+        documento.id === 'd-1' ? { ...documento, archivo: null } : documento,
+      ),
+    }),
+  );
+  await renderApp(<DetalleMatricula matricula={detalle()} />);
+
+  await userEvent.click(
+    screen.getByRole('button', {
+      name: 'Eliminar Ficha de matrícula firmada',
+    }),
+  );
+  const dialogo = await screen.findByRole('dialog', {
+    name: '¿Eliminar documento?',
+  });
+  await userEvent.click(
+    within(dialogo).getByRole('button', { name: 'Eliminar' }),
+  );
+
+  await waitFor(() =>
+    expect(eliminar).toHaveBeenCalledWith(
+      '/matricula/matriculas/m-1/documentos/d-1',
+    ),
+  );
+});
+
+test('HU-72: no ofrece eliminar un documento aprobado o con pago pendiente', async () => {
+  const base = detalle();
+  const aprobado = {
+    ...base.documentos[0],
+    archivo: base.documentos[0].archivo && {
+      ...base.documentos[0].archivo,
+      estado: 'APROBADO' as const,
+    },
+  };
+  const { rerender } = await renderApp(
+    <DetalleMatricula matricula={detalle({ documentos: [aprobado] })} />,
+  );
+  expect(
+    screen.queryByRole('button', { name: /^Eliminar / }),
+  ).not.toBeInTheDocument();
+
+  rerender(
+    <DetalleMatricula
+      matricula={detalle({
+        estado: 'PENDIENTE_PAGO',
+        documentos: [base.documentos[0]],
+      })}
+    />,
+  );
+  expect(
+    screen.queryByRole('button', { name: /^Eliminar / }),
+  ).not.toBeInTheDocument();
+});
+
+test('HU-25: muestra que la matrícula es extemporánea y su motivo', async () => {
+  await renderApp(
+    <DetalleMatricula
+      matricula={detalle({
+        extemporanea: true,
+        motivoExtemporanea: 'Traslado familiar después del cierre',
+      })}
+    />,
+  );
+
+  expect(screen.getByText('Tipo de matrícula')).toBeVisible();
+  expect(screen.getByText('Extemporánea')).toBeVisible();
+  expect(
+    screen.getByText('Traslado familiar después del cierre'),
+  ).toBeVisible();
 });
 
 test('cambia de sección tras confirmar', async () => {
@@ -451,6 +536,12 @@ test('matriculado: el último paso del indicador figura completado', async () =>
         estado: 'MATRICULADO',
         codigo: 'MAT-2027-0001',
         pasoActual: 4,
+        seccionAsignada: {
+          id: 's-a',
+          nombre: 'A',
+          etiqueta: '1.° A',
+        },
+        seccionSeleccionada: null,
       })}
     />,
   );

@@ -31,6 +31,19 @@ const enteroOpcional = z
     'Debe terminar en 2 hermanos o más.',
   );
 
+const hermanosDesde = entero.refine(
+  (valor) => Number(valor) >= 2,
+  'Debe empezar desde 2 hermanos.',
+);
+
+const tramoFormulario = z.object({
+  // Los campos se validan condicionalmente en superRefine. Si el descuento es
+  // de porcentaje único, estas filas están ocultas y no deben bloquear el envío.
+  hermanosDesde: z.string(),
+  hermanosHasta: z.string(),
+  porcentaje: z.string(),
+});
+
 export const descuentoSchema = z
   .object({
     nombre: z
@@ -44,16 +57,7 @@ export const descuentoSchema = z
     tipo: z.enum(['PORCENTAJE_UNICO', 'POR_HERMANOS']),
     aplicacion: z.enum(['MANUAL', 'AUTOMATICO']),
     porcentaje: z.string(),
-    tramos: z.array(
-      z.object({
-        hermanosDesde: entero.refine(
-          (valor) => Number(valor) >= 2,
-          'Debe empezar desde 2 hermanos.',
-        ),
-        hermanosHasta: enteroOpcional,
-        porcentaje,
-      }),
-    ),
+    tramos: z.array(tramoFormulario),
     conceptos: z.array(z.string()),
     condicion: z.string().max(300, 'La condición admite hasta 300 caracteres.'),
   })
@@ -84,6 +88,22 @@ export const descuentoSchema = z
     }
     if (valores.tipo === 'POR_HERMANOS') {
       valores.tramos.forEach((tramo, indice) => {
+        const campos = [
+          ['hermanosDesde', hermanosDesde.safeParse(tramo.hermanosDesde)],
+          ['hermanosHasta', enteroOpcional.safeParse(tramo.hermanosHasta)],
+          ['porcentaje', porcentaje.safeParse(tramo.porcentaje)],
+        ] as const;
+
+        campos.forEach(([campo, resultado]) => {
+          if (!resultado.success) {
+            contexto.addIssue({
+              code: z.ZodIssueCode.custom,
+              path: ['tramos', indice, campo],
+              message: resultado.error.issues[0].message,
+            });
+          }
+        });
+
         if (
           tramo.hermanosHasta &&
           Number(tramo.hermanosHasta) < Number(tramo.hermanosDesde)
@@ -97,6 +117,12 @@ export const descuentoSchema = z
       });
 
       valores.tramos.forEach((tramo, indice) => {
+        if (
+          !hermanosDesde.safeParse(tramo.hermanosDesde).success ||
+          !enteroOpcional.safeParse(tramo.hermanosHasta).success
+        )
+          return;
+
         const desde = Number(tramo.hermanosDesde);
         const hasta = tramo.hermanosHasta
           ? Number(tramo.hermanosHasta)
@@ -108,6 +134,12 @@ export const descuentoSchema = z
           return;
 
         valores.tramos.slice(0, indice).forEach((anterior, indiceAnterior) => {
+          if (
+            !hermanosDesde.safeParse(anterior.hermanosDesde).success ||
+            !enteroOpcional.safeParse(anterior.hermanosHasta).success
+          )
+            return;
+
           const desdeAnterior = Number(anterior.hermanosDesde);
           const hastaAnterior = anterior.hermanosHasta
             ? Number(anterior.hermanosHasta)
@@ -133,3 +165,11 @@ export const descuentoSchema = z
   });
 
 export type ValoresDescuento = z.infer<typeof descuentoSchema>;
+
+export const configuracionDescuentoSchema = z.object({
+  porcentajeMaximo: porcentaje,
+});
+
+export type ValoresConfiguracionDescuento = z.infer<
+  typeof configuracionDescuentoSchema
+>;

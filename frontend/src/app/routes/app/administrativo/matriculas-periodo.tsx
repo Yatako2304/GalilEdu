@@ -14,6 +14,8 @@ const AdministrativoMatriculasPeriodoRoute = () => {
   const { data: periodo } = usePeriodoMatriculas(periodoId);
   const [nueva, setNueva] = React.useState(false);
   const cerrado = periodo?.estado === 'CERRADO';
+  const permiteCrear =
+    periodo?.estado === 'ABIERTO' || (cerrado && periodo.permiteExtemporanea);
   return (
     <ContentLayout
       title={periodo ? `Matrículas ${periodo.anio}` : 'Matrículas del periodo'}
@@ -26,9 +28,8 @@ const AdministrativoMatriculasPeriodoRoute = () => {
       ]}
       subtitle="Revisa el estado de cada estudiante y realiza las acciones disponibles según la etapa de su matrícula."
       actions={
-        // Solo con el periodo abierto se asignan secciones de matrícula regular. La extemporánea (HU-25) aún no existe.
         <Button
-          disabled={periodo?.estado !== 'ABIERTO'}
+          disabled={!permiteCrear}
           icon={<CirclePlus className="size-4" />}
           onClick={() => setNueva(true)}
         >
@@ -40,6 +41,7 @@ const AdministrativoMatriculasPeriodoRoute = () => {
       {nueva && (
         <DialogoNuevaMatricula
           periodoId={periodoId}
+          modo={cerrado ? 'extemporanea' : 'regular'}
           onCerrar={() => setNueva(false)}
         />
       )}

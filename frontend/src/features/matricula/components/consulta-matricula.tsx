@@ -224,6 +224,21 @@ const ProgresoMatricula = ({
   </Card>
 );
 
+const DatoMatricula = ({
+  etiqueta,
+  children,
+}: {
+  etiqueta: string;
+  children: React.ReactNode;
+}) => (
+  <div>
+    <dt className="text-caption-1 text-content-quartiary">{etiqueta}</dt>
+    <dd className="mt-1 text-body-3 font-medium text-content-primary">
+      {children}
+    </dd>
+  </div>
+);
+
 const DeudaPendiente = ({
   deuda,
 }: {
@@ -401,32 +416,47 @@ export const ConsultaMatricula = ({
           <Card>
             <CardHeader>
               <div>
-                <CardTitle>Estado de matrícula</CardTitle>
+                <CardTitle>Datos del estudiante y apoderado</CardTitle>
                 <p className="mt-1 text-body-3 text-content-quartiary">
                   Información asignada para el periodo {estado?.periodo.anio}
                 </p>
               </div>
             </CardHeader>
             <CardContent>
-              <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                <div>
-                  <dt className="text-caption-1 text-content-quartiary">
-                    Grado
-                  </dt>
-                  <dd className="mt-1 text-body-3 font-medium text-content-primary">
-                    {estado?.matricula?.grado ??
-                      estado?.estudiante.grado ??
-                      '—'}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-caption-1 text-content-quartiary">
-                    Sección
-                  </dt>
-                  <dd className="mt-1 text-body-3 font-medium text-content-primary">
-                    {estado?.matricula?.seccion ?? 'Por definir'}
-                  </dd>
-                </div>
+              <dl className="grid gap-x-8 gap-y-5 sm:grid-cols-2">
+                <DatoMatricula etiqueta="Estudiante">
+                  {estado?.estudiante.nombre ?? elegido?.nombre ?? '—'}
+                </DatoMatricula>
+                <DatoMatricula etiqueta="DNI">
+                  {estado?.datos.documento ?? '—'}
+                </DatoMatricula>
+                <DatoMatricula etiqueta="Grado">
+                  {estado?.matricula?.grado ?? estado?.estudiante.grado ?? '—'}
+                </DatoMatricula>
+                <DatoMatricula etiqueta="Sección">
+                  {estado?.datos.seccion ? (
+                    `${estado.datos.seccion}${estado.datos.tutor ? ` · Tutor: ${estado.datos.tutor}` : ''}`
+                  ) : (
+                    <>
+                      <span className="block">Por asignar</span>
+                      <span className="mt-0.5 block text-body-4 font-normal text-content-tertiary">
+                        Se asigna al confirmar la matrícula
+                      </span>
+                    </>
+                  )}
+                </DatoMatricula>
+                <DatoMatricula etiqueta="Apoderado">
+                  {estado?.datos.apoderado ?? '—'}
+                </DatoMatricula>
+                <DatoMatricula etiqueta="Contacto">
+                  {estado?.datos.contacto ?? '—'}
+                </DatoMatricula>
+                <DatoMatricula etiqueta="Contacto de emergencia">
+                  {estado?.datos.contactoEmergencia ?? '—'}
+                </DatoMatricula>
+                <DatoMatricula etiqueta="Información médica">
+                  {estado?.datos.informacionMedica || 'Ninguna'}
+                </DatoMatricula>
                 <div>
                   <dt className="text-caption-1 text-content-quartiary">
                     Estado
@@ -437,14 +467,9 @@ export const ConsultaMatricula = ({
                     </Tag>
                   </dd>
                 </div>
-                <div>
-                  <dt className="text-caption-1 text-content-quartiary">
-                    Cierre del periodo
-                  </dt>
-                  <dd className="mt-1 text-body-3 font-medium text-content-primary">
-                    {fechaPeriodo(estado?.periodo.cierre)}
-                  </dd>
-                </div>
+                <DatoMatricula etiqueta="Cierre del periodo">
+                  {fechaPeriodo(estado?.periodo.cierre)}
+                </DatoMatricula>
               </dl>
               {estado?.matricula?.codigo && (
                 <p className="mt-5 border-t border-stroke-tertiary pt-4 text-body-3 text-content-secondary">

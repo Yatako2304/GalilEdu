@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { FileItem } from '@/components/ui/files';
-import { Input } from '@/components/ui/form';
+import { Input, Textarea } from '@/components/ui/form';
 import { useNotifications } from '@/components/ui/notifications';
 import { Stepper } from '@/components/ui/stepper';
 import { Tag } from '@/components/ui/tag';
@@ -21,6 +21,7 @@ import { PreparacionMatricula, SeccionOpcion } from '@/types/api';
 import {
   useBuscarEstudiantes,
   useCrearMatricula,
+  useCrearMatriculaExtemporanea,
   usePreparacionMatricula,
   useSeccionesDelAlumno,
 } from '../api/matriculas-periodo';
@@ -40,9 +41,11 @@ const PASOS = [
 const DatosDelEstudiante = ({
   datos,
   seccion,
+  textoSinSeccion = 'Sin vacantes',
 }: {
   datos: PreparacionMatricula;
   seccion: { etiqueta: string; tutor: string | null } | null;
+  textoSinSeccion?: string;
 }) => (
   <Card>
     <CardHeader>
@@ -58,7 +61,7 @@ const DatosDelEstudiante = ({
             'Sección',
             seccion
               ? `${seccion.etiqueta}${seccion.tutor ? ` · Tutor: ${seccion.tutor}` : ''}`
-              : 'Sin vacantes',
+              : textoSinSeccion,
           ],
           ['Apoderado', datos.apoderado ?? '—'],
           ['Contacto', datos.contacto || '—'],
@@ -280,29 +283,38 @@ const BuscadorDeEstudiantes = ({
 // Figma > Personal Administrativo > A6 · "Nueva matrícula" (paso 1: datos y documentos). HU-24, HU-72, HU-29.
 export const DialogoNuevaMatricula = ({
   periodoId,
+  modo = 'regular',
   onCerrar,
 }: {
   periodoId: string;
+  modo?: 'regular' | 'extemporanea';
   onCerrar: () => void;
 }) => {
+  const esExtemporanea = modo === 'extemporanea';
   const { addNotification } = useNotifications();
   const [estudianteId, setEstudianteId] = React.useState<string>();
   const [archivos, setArchivos] = React.useState<Record<string, File>>({});
+  const [motivo, setMotivo] = React.useState('');
   const { data: datos, isLoading } = usePreparacionMatricula(
     periodoId,
     estudianteId,
   );
   const crear = useCrearMatricula(periodoId);
+  const crearExtemporanea = useCrearMatriculaExtemporanea(periodoId);
   const [cambiando, setCambiando] = React.useState(false);
   const [elegida, setElegida] = React.useState<SeccionOpcion>();
   const secciones = useSeccionesDelAlumno(periodoId, estudianteId, cambiando);
-  // La sección que se mostrará y se enviará: la elegida o, si no, la que propone el servidor.
-  const seccion = elegida ?? datos?.seccion ?? null;
+  // En una matrícula regular se usa la propuesta del servidor si no se cambia.
+  // En una extemporánea no hay asignación automática: debe existir una elección explícita.
+  const seccion = esExtemporanea
+    ? (elegida ?? null)
+    : (elegida ?? datos?.seccion ?? null);
 
   const elegirEstudiante = (id?: string) => {
     setEstudianteId(id);
     setArchivos({});
     setElegida(undefined);
+    setMotivo('');
   };
 
   const todosCargados =
@@ -317,14 +329,23 @@ export const DialogoNuevaMatricula = ({
     if (!datos || !seccion || enviando.current) return;
     enviando.current = true;
     try {
-      const creada = await crear.mutateAsync({
-        estudianteId: datos.estudianteId,
-        seccionId: elegida?.id,
-        archivos,
-      });
+      const creada = esExtemporanea
+        ? await crearExtemporanea.mutateAsync({
+            estudianteId: datos.estudianteId,
+            seccionId: seccion.id,
+            motivo,
+            archivos,
+          })
+        : await crear.mutateAsync({
+            estudianteId: datos.estudianteId,
+            seccionId: elegida?.id,
+            archivos,
+          });
       addNotification({
         type: creada.seccionReasignada ? 'warning' : 'success',
-        title: 'Matrícula registrada',
+        title: esExtemporanea
+          ? 'Matrícula extemporánea registrada'
+          : 'Matrícula registrada',
         message: creada.seccionReasignada
           ? `La sección elegida se llenó: ${datos.nombre} quedó en ${creada.seccion}.`
           : `${datos.nombre} quedó con la sección ${creada.seccion} reservada.`,
@@ -345,7 +366,7 @@ export const DialogoNuevaMatricula = ({
               Paso 1 · Datos y documentos
             </DialogDescription>
             <DialogTitle className="text-h6 font-semibold text-content-primary">
-              Nueva matrícula
+              {esExtemporanea ? 'Matrícula extemporánea' : 'Nueva matrícula'}
             </DialogTitle>
           </div>
 
@@ -384,7 +405,21 @@ export const DialogoNuevaMatricula = ({
                   la capacidad de una sección.
                 </Alert>
               )}
-              <DatosDelEstudiante datos={datos} seccion={seccion} />
+              <DatosDelEstudiante
+                datos={datos}
+                seccion={seccion}
+                textoSinSeccion={esExtemporanea ? 'Por elegir' : 'Sin vacantes'}
+              />
+              {esExtemporanea && (
+                <Textarea
+                  label="Motivo *"
+                  value={motivo}
+                  maxLength={500}
+                  showCount
+                  required
+                  onChange={(e) => setMotivo(e.target.value)}
+                />
+              )}
               <DocumentosDeLaMatricula
                 periodoId={periodoId}
                 datos={datos}
@@ -415,11 +450,11 @@ export const DialogoNuevaMatricula = ({
           <Button
             type="button"
             variant="secondary"
-            disabled={!seccion}
+            disabled={!datos?.seccion}
             onClick={() => setCambiando(true)}
             icon={<RefreshCw className="size-4" aria-hidden="true" />}
           >
-            Cambiar sección
+            {esExtemporanea ? 'Elegir sección' : 'Cambiar sección'}
           </Button>
           <div className="ml-auto flex gap-3">
             <Button type="button" variant="tertiary" onClick={onCerrar}>
@@ -427,7 +462,12 @@ export const DialogoNuevaMatricula = ({
             </Button>
             <Button
               type="button"
-              disabled={!seccion || crear.isPending}
+              disabled={
+                !seccion ||
+                (esExtemporanea && !motivo.trim()) ||
+                crear.isPending ||
+                crearExtemporanea.isPending
+              }
               onClick={guardar}
             >
               Guardar
@@ -445,6 +485,7 @@ export const DialogoNuevaMatricula = ({
           }
           cargando={secciones.isLoading}
           guardando={false}
+          soloElegir={esExtemporanea}
           onCerrar={() => setCambiando(false)}
           alConfirmar={(id) => {
             setElegida(secciones.data?.secciones.find((s) => s.id === id));

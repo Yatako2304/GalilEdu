@@ -68,10 +68,13 @@ const preparacion = (
 });
 
 // MSW no puede leer un multipart bajo jsdom: lo que se envía se comprueba en la llamada a axios.
-const servir = (prep: PreparacionMatricula = preparacion()) => {
+const servir = (
+  prep: PreparacionMatricula = preparacion(),
+  endpoint = '/matricula/periodos/periodo-2027/matriculas',
+) => {
   const guardados: FormData[] = [];
   vi.spyOn(api, 'post').mockImplementation(async (url, datos) => {
-    expect(url).toBe('/matricula/periodos/periodo-2027/matriculas');
+    expect(url).toBe(endpoint);
     guardados.push(datos as FormData);
     return {
       id: 'm-1',
@@ -315,4 +318,74 @@ test('al reabrir el modal vuelve a consultar y ya propone la sección recién cr
   await userEvent.click(screen.getByRole('button', { name: 'alternar' }));
 
   expect(await screen.findByText('3.° A')).toBeVisible();
+});
+
+test('HU-25: registra una matrícula extemporánea con sección elegida y motivo', async () => {
+  const guardados = servir(
+    preparacion(),
+    '/matricula/periodos/periodo-2027/matriculas-extemporaneas',
+  );
+  server.use(
+    http.get(`${API}/estudiantes/e-camila/secciones`, () =>
+      HttpResponse.json({
+        grado: '3.° de secundaria',
+        seleccionadaId: null,
+        secciones: [
+          {
+            id: 's-a',
+            etiqueta: '3.° A',
+            tutor: 'Raúl Vargas',
+            capacidad: 30,
+            ocupadas: 12,
+          },
+        ],
+      }),
+    ),
+  );
+  const onCerrar = vi.fn();
+  await renderApp(
+    <DialogoNuevaMatricula
+      periodoId="periodo-2027"
+      modo="extemporanea"
+      onCerrar={onCerrar}
+    />,
+  );
+
+  expect(
+    await screen.findByRole('heading', { name: 'Matrícula extemporánea' }),
+  ).toBeVisible();
+  await userEvent.click(await screen.findByText('Camila Torres Huamán'));
+  expect(await screen.findByText('Por elegir')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+
+  await userEvent.click(screen.getByRole('button', { name: 'Elegir sección' }));
+  const secciones = await screen.findByRole('dialog', {
+    name: 'Elegir sección',
+  });
+  await userEvent.click(
+    within(secciones).getByRole('radio', { name: 'Sección 3.° A' }),
+  );
+  await userEvent.click(
+    within(secciones).getByRole('button', { name: 'Elegir sección' }),
+  );
+  const confirmacion = await screen.findByRole('dialog', {
+    name: '¿Elegir sección?',
+  });
+  await userEvent.click(
+    within(confirmacion).getByRole('button', { name: 'Elegir sección' }),
+  );
+
+  await userEvent.type(
+    screen.getByRole('textbox', { name: 'Motivo *' }),
+    'Traslado familiar después del cierre',
+  );
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+
+  await waitFor(() => expect(onCerrar).toHaveBeenCalled());
+  expect(guardados).toHaveLength(1);
+  expect(guardados[0].get('estudianteId')).toBe('e-camila');
+  expect(guardados[0].get('seccionId')).toBe('s-a');
+  expect(guardados[0].get('motivo')).toBe(
+    'Traslado familiar después del cierre',
+  );
 });

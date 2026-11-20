@@ -270,7 +270,16 @@ export const MatriculasPeriodo = ({ periodoId }: { periodoId: string }) => {
               title: 'Sección',
               field: 'seccion',
               sortable: true,
-              Cell: ({ entry }) => <span>{entry.seccion ?? '—'}</span>,
+              Cell: ({ entry }) => (
+                <div>
+                  <p>{entry.seccionAsignada?.etiqueta ?? 'Por asignar'}</p>
+                  {!entry.seccionAsignada && entry.seccionSeleccionada && (
+                    <p className="text-body-4 text-content-tertiary">
+                      Reserva: {entry.seccionSeleccionada.etiqueta}
+                    </p>
+                  )}
+                </div>
+              ),
             },
             {
               title: 'Estado',
