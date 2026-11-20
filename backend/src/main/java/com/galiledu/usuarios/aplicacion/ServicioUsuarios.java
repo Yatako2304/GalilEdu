@@ -180,21 +180,6 @@ public class ServicioUsuarios {
 	}
 
 	/**
-	 * Al cambiar el correo de una persona con cuenta: la cuenta usa el correo de la persona, así que se le genera
-	 * una contraseña nueva y se envía al correo nuevo junto con su código de usuario.
-	 */
-	@Transactional
-	public void reenviarCredenciales(Persona persona) {
-		usuarios.findByPersonaId(persona.getId())
-				.filter(u -> !u.isEliminado())
-				.ifPresent(u -> {
-					String contrasena = GeneradorCredenciales.contrasena();
-					u.reemplazarContrasena(contrasenas.encode(contrasena));
-					notificador.enviar(persona.getCorreo(), persona.getNombres(), u.getNombreUsuario(), contrasena);
-				});
-	}
-
-	/**
 	 * La persona dejó de ser padre, madre o apoderado presente de todos sus estudiantes (la quitaron de la
 	 * inscripción, no registra o falleció): se le quita el rol Apoderado. Si era su único rol, se conserva y la cuenta
 	 * queda inactiva (la cuenta siempre tiene al menos un rol; si vuelve a ser familiar, asegurarRol la reactiva).

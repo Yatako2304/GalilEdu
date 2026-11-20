@@ -42,10 +42,10 @@ test('el botón está deshabilitado hasta llenar usuario y contraseña', async (
   await waitFor(() => expect(boton).toBeEnabled());
 });
 
-test('no muestra "¿Olvidaste tu contraseña?" mientras HU-4 no esté implementada', async () => {
+test('muestra "¿Olvidaste tu contraseña?" con el enlace a la recuperación (HU-4)', async () => {
   await renderApp(<LoginForm onSuccess={vi.fn()} />, { user: null });
 
   expect(
-    screen.queryByText(/olvidaste tu contraseña/i),
-  ).not.toBeInTheDocument();
+    screen.getByRole('link', { name: '¿Olvidaste tu contraseña?' }),
+  ).toHaveAttribute('href', '/auth/recuperar-contrasena');
 });

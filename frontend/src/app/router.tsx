@@ -70,6 +70,24 @@ export const createAppRouter = (
         import('./routes/auth/recuperar-contrasena').then(convert(queryClient)),
     },
     {
+      // HU-5: fuera de AppRoot porque en Figma no lleva el menú lateral.
+      path: paths.app.cambiarContrasena.path,
+      element: (
+        <ProtectedRoute>
+          <Outlet />
+        </ProtectedRoute>
+      ),
+      children: [
+        {
+          index: true,
+          lazy: () =>
+            import('./routes/app/cambiar-contrasena').then(
+              convert(queryClient),
+            ),
+        },
+      ],
+    },
+    {
       path: paths.app.root.path,
       element: (
         <ProtectedRoute>

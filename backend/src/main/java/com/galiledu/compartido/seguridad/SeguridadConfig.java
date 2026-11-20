@@ -64,6 +64,9 @@ public class SeguridadConfig {
 				.authorizeHttpRequests(a -> a
 						.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 						.requestMatchers("/auth/login", "/auth/logout", "/actuator/health", "/error").permitAll()
+						// HU-4: quien olvidó su contraseña aún no tiene sesión.
+						.requestMatchers(HttpMethod.POST, "/auth/recuperar-contrasena", "/auth/recuperar-contrasena/**")
+						.permitAll()
 						// Webhook de la pasarela: lo llama Stripe sin sesión; se valida con la firma (FirmaStripe).
 						.requestMatchers(HttpMethod.POST, "/pagos/pasarela/stripe/notificaciones").permitAll()
 						.anyRequest().authenticated())
@@ -99,11 +102,13 @@ public class SeguridadConfig {
 	@Bean
 	JwtDecoder decodificadorJwt(SecretKey clave, VerificadorSesion verificador) {
 		NimbusJwtDecoder decodificador = NimbusJwtDecoder.withSecretKey(clave).macAlgorithm(MacAlgorithm.HS256).build();
-		// Además de la firma y la expiración, la cuenta debe seguir activa: desactivar o eliminar corta la sesión ya.
-		OAuth2TokenValidator<Jwt> cuentaVigente = jwt -> verificador.sesionVigente(UUID.fromString(jwt.getSubject()))
-				? OAuth2TokenValidatorResult.success()
-				: OAuth2TokenValidatorResult
-						.failure(new OAuth2Error("invalid_token", "La sesión ya no es válida", null));
+		// Además de la firma y la expiración, la cuenta debe seguir activa (desactivar o eliminar corta la sesión ya) y
+		// el token debe ser posterior al último cambio de contraseña (HU-5: se cierra la sesión en todos los dispositivos).
+		OAuth2TokenValidator<Jwt> cuentaVigente = jwt -> verificador.sesionVigente(UUID.fromString(jwt.getSubject()),
+				jwt.getIssuedAt())
+						? OAuth2TokenValidatorResult.success()
+						: OAuth2TokenValidatorResult
+								.failure(new OAuth2Error("invalid_token", "La sesión ya no es válida", null));
 		decodificador
 				.setJwtValidator(new DelegatingOAuth2TokenValidator<>(JwtValidators.createDefault(), cuentaVigente));
 		return decodificador;
