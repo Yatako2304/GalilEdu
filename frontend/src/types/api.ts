@@ -734,6 +734,11 @@ export type MatriculaActual = {
   documentosRequeridos: number;
   documentosEntregados: number;
   confirmadoEn: string | null;
+  extemporanea: boolean;
+  /** Sección oficial; solo existe cuando la matrícula está formalizada. */
+  seccionAsignada: SeccionMatricula | null;
+  /** Reserva de cupo durante el proceso; todavía no es la sección oficial. */
+  seccionSeleccionada: SeccionMatricula | null;
 };
 
 export type ImpedimentoMatricula = {
@@ -749,6 +754,18 @@ export type CuotaDeudaFamiliar = {
   monto: number;
 };
 
+/** HU-32 · Tarjeta "Datos del estudiante y apoderado". */
+export type DatosEstudianteApoderado = {
+  documento: string | null;
+  /** Sección oficial; null hasta que la matrícula quede formalizada. */
+  seccion: string | null;
+  tutor: string | null;
+  apoderado: string | null;
+  contacto: string | null;
+  contactoEmergencia: string | null;
+  informacionMedica: string;
+};
+
 export type EstadoMatriculaApoderado = {
   estudiante: { id: string; nombre: string; grado: string };
   periodo: PeriodoMatricula;
@@ -759,6 +776,8 @@ export type EstadoMatriculaApoderado = {
   deuda: { total: number; cuotas: CuotaDeudaFamiliar[] };
   /** HU-31: cuota de matrícula y si se puede pagar ya. Null mientras no exista. */
   pagoMatricula?: PagoMatricula | null;
+  /** HU-32: información de la tarjeta del estudiante y su apoderado. */
+  datos: DatosEstudianteApoderado;
   /** Cambios de sección de la matrícula confirmada (vacío antes), sin el nombre de quien los hizo. */
   cambiosSeccion?: CambioSeccionRegistrado[];
 };
@@ -980,6 +999,15 @@ export type DescuentoAplicable = {
   condicion: string | null;
   aplicable: boolean;
   motivo: string | null;
+  /** Solo para POR_HERMANOS; incluye al estudiante evaluado. */
+  cantidadHermanosMatriculados: number | null;
+  /** Hermano menor beneficiario; puede contener a ambos cuando son gemelos. */
+  beneficiarios: BeneficiarioHermanos[];
+};
+
+export type BeneficiarioHermanos = {
+  estudianteId: string;
+  nombre: string;
 };
 
 export type DescuentoActual = {
@@ -999,6 +1027,7 @@ export type SolicitudAplicarDescuento = {
   motivo: string;
   vigenciaDesde?: string | null;
   vigenciaHasta?: string | null;
+  hastaFinEscolaridad?: boolean | null;
   reemplazar: boolean;
 };
 
@@ -1013,6 +1042,7 @@ export type DescuentoAplicadoVista = {
   porcentaje: number;
   vigenciaDesde: string;
   vigenciaHasta: string | null;
+  hastaFinEscolaridad: boolean;
   motivo: string;
   estado: EstadoDescuentoAplicado;
   aplicadoPor: string | null;
@@ -1980,6 +2010,8 @@ export type FilaMatriculaPeriodo = {
   gradoCodigo: string;
   grado: string;
   seccion: string | null;
+  seccionAsignada: SeccionMatricula | null;
+  seccionSeleccionada: SeccionMatricula | null;
   estado: EstadoMatricula;
   codigo: string | null;
   tipo: 'NUEVO' | 'CONTINUADOR';
@@ -2005,6 +2037,13 @@ export type SeccionAsignada = {
   tutor: string | null;
   capacidad: number;
   ocupadas: number;
+};
+
+/** Referencia breve que distingue la sección oficial de la que reserva el cupo. */
+export type SeccionMatricula = {
+  id: string;
+  nombre: string;
+  etiqueta: string;
 };
 
 export type DocumentoPedido = {
@@ -2095,6 +2134,8 @@ export type DetalleMatricula = {
   gradoCodigo: string;
   grado: string;
   seccion: SeccionAsignada | null;
+  seccionAsignada: SeccionMatricula | null;
+  seccionSeleccionada: SeccionMatricula | null;
   estado: EstadoMatricula;
   codigo: string | null;
   pasoActual: number;
@@ -2106,6 +2147,8 @@ export type DetalleMatricula = {
   puedeEditarDocumentos: boolean;
   puedeValidar: boolean;
   documentos: DocumentoDeMatricula[];
+  extemporanea: boolean;
+  motivoExtemporanea: string | null;
 };
 
 // ---------- Documentos de matrícula del apoderado (HU-28, HU-29) ----------
@@ -2124,4 +2167,109 @@ export type DocumentosApoderado = {
   estado: EstadoMatricula | null;
   puedeSubir: boolean;
   documentos: DocumentoApoderado[];
+};
+
+// Asistencia · HU-65 (registro y corrección de la asistencia diaria)
+export type EstadoAsistencia = 'PRESENTE' | 'TARDANZA' | 'FALTA';
+
+export type SeccionAsistencia = {
+  id: string;
+  anio: number;
+  grado: string;
+  nombre: string;
+  cargo: 'TUTOR' | 'COTUTOR';
+};
+
+export type RegistroDelDia = {
+  id: string;
+  version: number;
+  registradoEn: string;
+  registradoPor: string | null;
+  corregidoEn: string | null;
+  corregidoPor: string | null;
+};
+
+export type FilaAsistencia = {
+  matriculaId: string;
+  estudianteId: string;
+  nombres: string;
+  apellidos: string;
+  documento: string;
+  estado: EstadoAsistencia | null;
+  /** "08:10:00" o null. */
+  horaLlegada: string | null;
+  modificado: boolean;
+  /** HU-67: null si la falta o tardanza no está justificada. */
+  justificacion: JustificacionDia | null;
+};
+
+export type MotivoJustificacion =
+  'CITA_MEDICA' | 'ENFERMEDAD' | 'TRAMITE_OFICIAL' | 'OTRO';
+
+export type JustificacionDia = {
+  motivo: MotivoJustificacion;
+  detalle: string | null;
+  /** null si no tiene sustento adjunto. */
+  archivoNombre: string | null;
+  registradaEn: string;
+  registradaPor: string | null;
+};
+
+export type AsistenciaDelDia = {
+  seccion: SeccionAsistencia;
+  fecha: string;
+  hoy: string;
+  editable: boolean;
+  motivoNoEscolar: string | null;
+  registro: RegistroDelDia | null;
+  resumen: {
+    presentes: number;
+    tardanzas: number;
+    faltas: number;
+    sinMarcar: number;
+    total: number;
+  };
+  estudiantes: FilaAsistencia[];
+};
+
+export type MarcaAsistencia = {
+  matriculaId: string;
+  estado: EstadoAsistencia;
+  horaLlegada?: string | null;
+};
+
+// Asistencia · HU-68 (reporte de inasistencias y tardanzas)
+export type TipoReporteAsistencia = 'MES' | 'PERIODO';
+
+export type OpcionReporte = { valor: string; etiqueta: string };
+
+export type FilaReporteAsistencia = {
+  matriculaId: string;
+  nombres: string;
+  apellidos: string;
+  documento: string;
+  /** Incluye las justificadas. */
+  faltas: number;
+  faltasJustificadas: number;
+  /** Incluye las justificadas. */
+  tardanzas: number;
+  tardanzasJustificadas: number;
+};
+
+export type ReporteAsistencia = {
+  seccion: SeccionAsistencia;
+  tipo: TipoReporteAsistencia;
+  valor: string;
+  etiqueta: string;
+  desde: string;
+  hasta: string;
+  diasRegistrados: number;
+  opciones: { meses: OpcionReporte[]; periodos: OpcionReporte[] };
+  filas: FilaReporteAsistencia[];
+  totales: {
+    faltas: number;
+    faltasJustificadas: number;
+    tardanzas: number;
+    tardanzasJustificadas: number;
+  };
 };

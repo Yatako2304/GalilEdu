@@ -59,11 +59,27 @@ const estado: EstadoMatriculaApoderado = {
     documentosRequeridos: 4,
     documentosEntregados: 0,
     confirmadoEn: null,
+    extemporanea: false,
+    seccionAsignada: null,
+    seccionSeleccionada: {
+      id: 's-a',
+      nombre: 'A',
+      etiqueta: '1.° A',
+    },
   },
   pasoActual: 1,
   puedeContinuar: true,
   impedimentos: [],
   deuda: { total: 0, cuotas: [] },
+  datos: {
+    documento: '75123468',
+    seccion: null,
+    tutor: null,
+    apoderado: 'Selene Curo',
+    contacto: '987 654 321 · selene.curo@correo.com',
+    contactoEmergencia: 'Luis Paredes (Padre) · 912 345 678',
+    informacionMedica: 'Ninguna',
+  },
 };
 
 test('muestra el periodo, grado, sección y estado asignados', async () => {
@@ -79,9 +95,58 @@ test('muestra el periodo, grado, sección y estado asignados', async () => {
 
   expect(screen.getByText('Periodo abierto')).toBeInTheDocument();
   expect(screen.getAllByText('1.° de primaria')).not.toHaveLength(0);
-  expect(screen.getByText('Por definir')).toBeInTheDocument();
+  expect(screen.getByText('Por asignar')).toBeInTheDocument();
   expect(screen.getByText('Sección reservada')).toBeInTheDocument();
   expect(screen.getByText('31 ene 2027')).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', {
+      name: 'Datos del estudiante y apoderado',
+    }),
+  ).toBeInTheDocument();
+  expect(screen.getByText('75123468')).toBeInTheDocument();
+  expect(screen.getByText('Selene Curo')).toBeInTheDocument();
+  expect(
+    screen.getByText('Se asigna al confirmar la matrícula'),
+  ).toBeInTheDocument();
+});
+
+test('muestra la sección oficial y su tutor cuando la matrícula está formalizada', async () => {
+  await renderApp(
+    <ConsultaMatricula
+      hijos={hijos}
+      estudianteId="sofia"
+      estado={{
+        ...estado,
+        estudiante: {
+          id: 'sofia',
+          nombre: 'Sofía Paredes',
+          grado: '4.° de secundaria',
+        },
+        matricula: {
+          ...estado.matricula!,
+          estado: 'MATRICULADO',
+          grado: '4.° de secundaria',
+          codigo: 'MAT-2027-SOF-001',
+          seccionAsignada: {
+            id: 's-b',
+            nombre: 'B',
+            etiqueta: '4.° B',
+          },
+        },
+        datos: {
+          ...estado.datos,
+          seccion: '4.° B',
+          tutor: 'Lucía Ayala Prado',
+        },
+      }}
+      isLoading={false}
+      onElegir={vi.fn()}
+    />,
+  );
+
+  expect(
+    screen.getByText('4.° B · Tutor: Lucía Ayala Prado'),
+  ).toBeInTheDocument();
 });
 
 test('permite elegir otro estudiante a cargo', async () => {
@@ -124,7 +189,7 @@ test('informa cuando el periodo cerró y aún no existe una sección', async () 
   );
 
   expect(screen.getByText('Periodo cerrado')).toBeInTheDocument();
-  expect(screen.getByText('Por definir')).toBeInTheDocument();
+  expect(screen.getByText('Por asignar')).toBeInTheDocument();
   expect(screen.getByText('Sin iniciar')).toBeInTheDocument();
   expect(
     screen.getByText('El periodo de matrícula está cerrado.'),
@@ -263,6 +328,12 @@ test('ya matriculado, el avance muestra los 4 pasos completados', async () => {
           ...estado.matricula!,
           estado: 'MATRICULADO',
           codigo: 'MAT-2027-0001',
+          seccionAsignada: {
+            id: 's-a',
+            nombre: 'A',
+            etiqueta: '1.° A',
+          },
+          seccionSeleccionada: null,
         },
         pasoActual: 4,
       }}
@@ -312,6 +383,12 @@ test('la constancia y el cronograma solo se ofrecen con la matrícula confirmada
           seccion: 'A',
           codigo: 'MAT-2027-0001',
           confirmadoEn: '2027-01-10T15:00:00Z',
+          seccionAsignada: {
+            id: 's-a',
+            nombre: 'A',
+            etiqueta: '1.° A',
+          },
+          seccionSeleccionada: null,
         },
       }}
     />,
@@ -355,7 +432,7 @@ test('sin matrícula y sin impedimentos el apoderado la empieza en el paso 1', a
   );
 
   expect(screen.getAllByText('Sin iniciar')).not.toHaveLength(0);
-  expect(screen.getByText('Por definir')).toBeInTheDocument();
+  expect(screen.getByText('Por asignar')).toBeInTheDocument();
   expect(
     await screen.findByText('Ficha de matrícula firmada'),
   ).toBeInTheDocument();
@@ -377,6 +454,12 @@ test('muestra los cambios de sección de la matrícula confirmada', async () => 
           estado: 'MATRICULADO',
           seccion: '1.° B',
           codigo: 'MAT-2027-0008',
+          seccionAsignada: {
+            id: 's-b',
+            nombre: 'B',
+            etiqueta: '1.° B',
+          },
+          seccionSeleccionada: null,
         },
         cambiosSeccion: cambios,
       }}

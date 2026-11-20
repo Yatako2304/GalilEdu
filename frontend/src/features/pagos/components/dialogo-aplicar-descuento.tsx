@@ -13,9 +13,10 @@ import {
   DialogDescription,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Input, RadioCard, Textarea } from '@/components/ui/form';
+import { Checkbox, Input, RadioCard, Textarea } from '@/components/ui/form';
 import { IconBadge } from '@/components/ui/icon-badge';
 import { useNotifications } from '@/components/ui/notifications';
+import { DescuentoAplicable } from '@/types/api';
 
 import {
   useAplicarDescuento,
@@ -32,9 +33,19 @@ const esquema = z
       .max(500, 'El motivo admite hasta 500 caracteres.'),
     vigenciaDesde: z.string(),
     vigenciaHasta: z.string(),
+    hastaFinColegio: z.boolean(),
   })
   .superRefine((valores, contexto) => {
+    if (!valores.hastaFinColegio && !valores.vigenciaHasta) {
+      contexto.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['vigenciaHasta'],
+        message:
+          'Ingresa una fecha final o elige que dure hasta terminar el colegio.',
+      });
+    }
     if (
+      !valores.hastaFinColegio &&
       valores.vigenciaDesde &&
       valores.vigenciaHasta &&
       valores.vigenciaHasta < valores.vigenciaDesde
@@ -48,6 +59,20 @@ const esquema = z
   });
 
 type Valores = z.infer<typeof esquema>;
+
+const descripcionDescuento = (descuento: DescuentoAplicable) => {
+  if (!descuento.aplicable) {
+    return descuento.motivo ?? 'No aplicable para este estudiante.';
+  }
+  const base = `${descuento.porcentaje ?? '—'} % · Aplica a: ${descuento.conceptos.join(', ')}`;
+  if (descuento.tipo !== 'POR_HERMANOS' || !descuento.beneficiarios.length) {
+    return base;
+  }
+  const nombres = descuento.beneficiarios
+    .map((beneficiario) => beneficiario.nombre)
+    .join(' y ');
+  return `${base} · ${descuento.beneficiarios.length > 1 ? 'Beneficiarios' : 'Beneficiario'}: ${nombres}`;
+};
 
 export const DialogoAplicarDescuento = ({
   abierto,
@@ -68,9 +93,11 @@ export const DialogoAplicarDescuento = ({
       motivo: '',
       vigenciaDesde: '',
       vigenciaHasta: '',
+      hastaFinColegio: false,
     },
   });
   const seleccionadoId = form.watch('descuentoId');
+  const hastaFinColegio = form.watch('hastaFinColegio');
   const seleccionado = aplicables.data?.descuentos.find(
     (descuento) => descuento.id === seleccionadoId,
   );
@@ -82,6 +109,12 @@ export const DialogoAplicarDescuento = ({
     );
     if (primero) form.setValue('descuentoId', primero.id);
   }, [abierto, aplicables.data, form]);
+
+  React.useEffect(() => {
+    if (hastaFinColegio) {
+      form.setValue('vigenciaHasta', '', { shouldValidate: true });
+    }
+  }, [form, hastaFinColegio]);
 
   const cerrar = () => {
     form.reset();
@@ -104,7 +137,8 @@ export const DialogoAplicarDescuento = ({
         descuentoId: valores.descuentoId,
         motivo: valores.motivo.trim(),
         vigenciaDesde: valores.vigenciaDesde || null,
-        vigenciaHasta: valores.vigenciaHasta || null,
+        vigenciaHasta: valores.hastaFinColegio ? null : valores.vigenciaHasta,
+        hastaFinEscolaridad: valores.hastaFinColegio,
         reemplazar: !!aplicables.data?.actual || requiereConfirmacion,
       },
       {
@@ -171,12 +205,7 @@ export const DialogoAplicarDescuento = ({
                     value={descuento.id}
                     disabled={!descuento.aplicable}
                     label={descuento.nombre}
-                    helperText={
-                      descuento.aplicable
-                        ? `${descuento.porcentaje ?? '—'} % · Aplica a: ${descuento.conceptos.join(', ')}`
-                        : (descuento.motivo ??
-                          'No aplicable para este estudiante.')
-                    }
+                    helperText={descripcionDescuento(descuento)}
                     {...form.register('descuentoId')}
                   />
                 ))}
@@ -207,10 +236,16 @@ export const DialogoAplicarDescuento = ({
                 <Input
                   type="date"
                   label="Hasta"
+                  disabled={hastaFinColegio}
                   registration={form.register('vigenciaHasta')}
                   error={form.formState.errors.vigenciaHasta}
                 />
               </div>
+              <Checkbox
+                label="Hasta que el estudiante termine el colegio"
+                helperText="El descuento seguirá vigente en los siguientes años escolares, salvo que sea revocado."
+                {...form.register('hastaFinColegio')}
+              />
             </div>
 
             <Textarea

@@ -1,11 +1,13 @@
 import {
   EllipsisVertical,
   Pencil,
+  SlidersHorizontal,
   ToggleLeft,
   ToggleRight,
 } from 'lucide-react';
 import * as React from 'react';
 
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -19,9 +21,14 @@ import { Table } from '@/components/ui/table';
 import { Tag } from '@/components/ui/tag';
 import { DescuentoVista } from '@/types/api';
 
-import { useCambiarEstadoDescuento, useDescuentos } from '../api/descuentos';
+import {
+  useCambiarEstadoDescuento,
+  useConfiguracionDescuentos,
+  useDescuentos,
+} from '../api/descuentos';
 
 import { DialogoDescuento } from './dialogo-descuento';
+import { DialogoLimiteDescuento } from './dialogo-limite-descuento';
 
 const porcentaje = (descuento: DescuentoVista) => {
   if (descuento.tipo === 'PORCENTAJE_UNICO')
@@ -86,8 +93,10 @@ export const CatalogoDescuentos = ({
   onNuevoAbiertoChange: (abierto: boolean) => void;
 }) => {
   const catalogo = useDescuentos();
+  const configuracion = useConfiguracionDescuentos();
   const { addNotification } = useNotifications();
   const [editando, setEditando] = React.useState<DescuentoVista | null>(null);
+  const [limiteAbierto, setLimiteAbierto] = React.useState(false);
   const cambiarEstado = useCambiarEstadoDescuento((descuento) =>
     addNotification({
       type: 'success',
@@ -109,6 +118,39 @@ export const CatalogoDescuentos = ({
 
   return (
     <>
+      <Card className="mb-6 flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-surface-accent-light text-content-accent-primary">
+            <SlidersHorizontal className="size-5" aria-hidden="true" />
+          </span>
+          <div>
+            <p className="text-label-1 font-semibold text-content-primary">
+              Límite institucional de descuento
+            </p>
+            <p className="mt-1 text-body-4 text-content-tertiary">
+              Porcentaje máximo permitido al crear o editar descuentos.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 self-end sm:self-auto">
+          <strong className="text-h6 text-content-primary">
+            {configuracion.data
+              ? `${configuracion.data.porcentajeMaximo} %`
+              : '—'}
+          </strong>
+          <Button
+            type="button"
+            size="sm"
+            variant="primary-light"
+            icon={<Pencil className="size-4" aria-hidden="true" />}
+            disabled={!configuracion.data}
+            onClick={() => setLimiteAbierto(true)}
+          >
+            Cambiar límite
+          </Button>
+        </div>
+      </Card>
+
       <Card className="p-6">
         <Table<DescuentoVista>
           data={catalogo.data ?? []}
@@ -188,6 +230,13 @@ export const CatalogoDescuentos = ({
         onOpenChange={(abierto) => !abierto && setEditando(null)}
         descuento={editando}
       />
+      {configuracion.data && (
+        <DialogoLimiteDescuento
+          abierto={limiteAbierto}
+          porcentajeMaximo={configuracion.data.porcentajeMaximo}
+          onOpenChange={setLimiteAbierto}
+        />
+      )}
     </>
   );
 };

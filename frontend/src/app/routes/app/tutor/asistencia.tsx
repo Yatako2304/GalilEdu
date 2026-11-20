@@ -1,16 +1,5 @@
-import { ContentLayout } from '@/components/layouts';
-import { ModulePlaceholder } from '@/components/module-placeholder';
+import { AsistenciaSeccion } from '@/features/asistencia/components/asistencia-seccion';
 
-const TutorAsistenciaRoute = () => {
-  return (
-    <ContentLayout title="Asistencia">
-      <ModulePlaceholder
-        feature="asistencia"
-        historias={['HU-65']}
-        figmaNodeId="868:1046"
-      />
-    </ContentLayout>
-  );
-};
+const TutorAsistenciaRoute = () => <AsistenciaSeccion />;
 
 export default TutorAsistenciaRoute;
