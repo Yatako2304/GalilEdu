@@ -110,6 +110,18 @@ export const useSubirDocumento = (matriculaId: string) => {
   });
 };
 
+// DELETE /matricula/matriculas/{id}/documentos/{documentoId} (HU-72)
+export const useEliminarDocumento = (matriculaId: string) => {
+  const refrescar = useRefrescarDetalle(matriculaId);
+  return useMutation({
+    mutationFn: (documentoId: string): Promise<DetalleMatricula> =>
+      api.delete(
+        `/matricula/matriculas/${matriculaId}/documentos/${documentoId}`,
+      ),
+    onSuccess: refrescar,
+  });
+};
+
 // GET /matricula/matriculas/{id}/documentos/{documentoId}/archivo → lo abre en una pestaña nueva
 export const abrirDocumentoDeMatricula = async (
   matriculaId: string,

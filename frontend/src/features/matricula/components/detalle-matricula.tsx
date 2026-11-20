@@ -1,4 +1,4 @@
-import { Eye, MessageSquareWarning, Paperclip } from 'lucide-react';
+import { Eye, MessageSquareWarning, Paperclip, Trash2 } from 'lucide-react';
 import * as React from 'react';
 import { Link } from 'react-router';
 
@@ -25,6 +25,7 @@ import {
 
 import {
   abrirDocumentoDeMatricula,
+  useEliminarDocumento,
   useObservarDocumento,
   useSubirDocumento,
   useValidarMatricula,
@@ -120,41 +121,55 @@ export const etiquetaDetalleMatricula = (
   );
 };
 
-const DatosMatricula = ({ matricula }: { matricula: DetalleMatriculaDto }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>Datos del estudiante y apoderado</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
-        {[
-          ['Estudiante', matricula.nombre],
-          ['DNI', matricula.documento],
-          ['Grado', matricula.grado],
+const DatosMatricula = ({ matricula }: { matricula: DetalleMatriculaDto }) => {
+  const seccionGuardada = matricula.seccion
+    ? `${matricula.seccion.etiqueta}${matricula.seccion.tutor ? ` · Tutor: ${matricula.seccion.tutor}` : ''}`
+    : '—';
+  const campos = [
+    ['Estudiante', matricula.nombre],
+    ['DNI', matricula.documento],
+    ['Grado', matricula.grado],
+    ['Sección', matricula.seccionAsignada ? seccionGuardada : 'Por asignar'],
+    ...(matricula.seccionSeleccionada
+      ? [['Sección reservada', seccionGuardada]]
+      : []),
+    ['Apoderado', matricula.apoderado ?? '—'],
+    ['Contacto', matricula.contacto || '—'],
+    ['Contacto de emergencia', matricula.contactoEmergencia ?? '—'],
+    ['Información médica', matricula.informacionMedica],
+    ...(matricula.extemporanea
+      ? [
+          ['Tipo de matrícula', 'Extemporánea'],
           [
-            'Sección',
-            matricula.seccion
-              ? `${matricula.seccion.etiqueta}${matricula.seccion.tutor ? ` · Tutor: ${matricula.seccion.tutor}` : ''}`
-              : '—',
+            'Motivo de matrícula extemporánea',
+            matricula.motivoExtemporanea ?? '—',
           ],
-          ['Apoderado', matricula.apoderado ?? '—'],
-          ['Contacto', matricula.contacto || '—'],
-          ['Contacto de emergencia', matricula.contactoEmergencia ?? '—'],
-          ['Información médica', matricula.informacionMedica],
-        ].map(([etiqueta, valor]) => (
-          <div key={etiqueta}>
-            <dt className="text-caption-1 text-content-quartiary">
-              {etiqueta}
-            </dt>
-            <dd className="mt-1 text-body-3 font-medium text-content-primary">
-              {valor}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </CardContent>
-  </Card>
-);
+        ]
+      : []),
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Datos del estudiante y apoderado</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+          {campos.map(([etiqueta, valor]) => (
+            <div key={etiqueta}>
+              <dt className="text-caption-1 text-content-quartiary">
+                {etiqueta}
+              </dt>
+              <dd className="mt-1 text-body-3 font-medium text-content-primary">
+                {valor}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </CardContent>
+    </Card>
+  );
+};
 
 const ESTADO_ARCHIVO: Record<
   ArchivoGuardado['estado'],
@@ -174,12 +189,20 @@ const DocumentosMatricula = ({
   const [elegido, setElegido] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const subir = useSubirDocumento(matricula.id);
+  const eliminar = useEliminarDocumento(matricula.id);
   const observar = useObservarDocumento(matricula.id);
   const [observando, setObservando] = React.useState<{
     id: string;
     nombre: string;
   } | null>(null);
+  const [eliminando, setEliminando] = React.useState<{
+    id: string;
+    nombre: string;
+  } | null>(null);
   const { addNotification } = useNotifications();
+  const puedeEliminarDocumentos =
+    matricula.estado === 'SECCION_RESERVADA' ||
+    matricula.estado === 'EN_VALIDACION';
 
   const confirmarObservacion = async (observacion: string) => {
     if (!observando) return;
@@ -191,6 +214,25 @@ const DocumentosMatricula = ({
         message: `${observando.nombre} volvió al apoderado para su corrección.`,
       });
       setObservando(null);
+    } catch {
+      // El cliente HTTP muestra el mensaje específico del backend.
+    }
+  };
+
+  const confirmarEliminacion = async () => {
+    if (!eliminando) return;
+    try {
+      const actualizado = await eliminar.mutateAsync(eliminando.id);
+      addNotification({
+        type: 'success',
+        title: 'Documento eliminado',
+        message:
+          actualizado.estado === 'SECCION_RESERVADA' &&
+          matricula.estado === 'EN_VALIDACION'
+            ? `${eliminando.nombre} fue eliminado y la matrícula volvió a sección reservada.`
+            : `${eliminando.nombre} fue eliminado de la matrícula.`,
+      });
+      setEliminando(null);
     } catch {
       // El cliente HTTP muestra el mensaje específico del backend.
     }
@@ -225,7 +267,7 @@ const DocumentosMatricula = ({
           <CardTitle>Documentos de matrícula</CardTitle>
           <CardDescription>
             {matricula.puedeEditarDocumentos
-              ? 'Puedes subir o reemplazar documentos: PDF, JPG o PNG, máximo 10 MB. Al reemplazar, el documento vuelve a revisión.'
+              ? `Puedes subir, reemplazar${puedeEliminarDocumentos ? ' o eliminar' : ''} documentos: PDF, JPG o PNG, máximo 10 MB. Al reemplazar, el documento vuelve a revisión.`
               : 'Esta matrícula ya no admite cambios en sus documentos.'}
           </CardDescription>
         </div>
@@ -353,16 +395,38 @@ const DocumentosMatricula = ({
                     )}
                   {matricula.puedeEditarDocumentos &&
                     archivo.estado !== 'APROBADO' && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        disabled={subir.isPending}
-                        aria-label={`Reemplazar ${documento.nombre}`}
-                        onClick={() => pedir(documento.id)}
-                      >
-                        Reemplazar
-                      </Button>
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={subir.isPending}
+                          aria-label={`Reemplazar ${documento.nombre}`}
+                          onClick={() => pedir(documento.id)}
+                        >
+                          Reemplazar
+                        </Button>
+                        {puedeEliminarDocumentos && (
+                          <Button
+                            type="button"
+                            variant="error-light"
+                            size="sm"
+                            disabled={eliminar.isPending}
+                            icon={
+                              <Trash2 className="size-4" aria-hidden="true" />
+                            }
+                            aria-label={`Eliminar ${documento.nombre}`}
+                            onClick={() =>
+                              setEliminando({
+                                id: documento.id,
+                                nombre: documento.nombre,
+                              })
+                            }
+                          >
+                            Eliminar
+                          </Button>
+                        )}
+                      </>
                     )}
                 </>
               }
@@ -382,6 +446,16 @@ const DocumentosMatricula = ({
             onCerrar={() => setObservando(null)}
           />
         )}
+        <DialogoConfirmacion
+          open={Boolean(eliminando)}
+          onOpenChange={(abierto) => !abierto && setEliminando(null)}
+          tipo="eliminar"
+          titulo="¿Eliminar documento?"
+          descripcion={`Se eliminará ${eliminando?.nombre ?? 'este documento'} de la matrícula. Para continuar con la validación tendrás que volver a subirlo.`}
+          textoConfirmar="Eliminar"
+          cargando={eliminar.isPending}
+          onConfirmar={() => void confirmarEliminacion()}
+        />
       </CardContent>
     </Card>
   );

@@ -113,6 +113,31 @@ export type SolicitudNuevaMatricula = {
   archivos: Record<string, File>;
 };
 
+export type SolicitudMatriculaExtemporanea = {
+  estudianteId: string;
+  /** En una matrícula extemporánea la sección siempre la elige el usuario. */
+  seccionId: string;
+  motivo: string;
+  /** Archivo por id de documento requerido (solo los ya subidos). */
+  archivos: Record<string, File>;
+};
+
+const agregarArchivos = (datos: FormData, archivos: Record<string, File>) => {
+  Object.entries(archivos).forEach(([documentoId, archivo]) =>
+    datos.append(documentoId, archivo),
+  );
+};
+
+const invalidarPeriodo = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  periodoId: string,
+) =>
+  queryClient.invalidateQueries({
+    queryKey: ['matricula', 'periodo', periodoId],
+    predicate: ({ queryKey }) =>
+      queryKey[3] !== 'preparacion' && queryKey[3] !== 'secciones',
+  });
+
 // POST /matricula/periodos/{id}/matriculas (multipart: estudianteId + un archivo por documento)
 export const useCrearMatricula = (periodoId: string) => {
   const queryClient = useQueryClient();
@@ -125,18 +150,36 @@ export const useCrearMatricula = (periodoId: string) => {
       const datos = new FormData();
       datos.append('estudianteId', estudianteId);
       if (seccionId) datos.append('seccionId', seccionId);
-      Object.entries(archivos).forEach(([documentoId, archivo]) =>
-        datos.append(documentoId, archivo),
-      );
+      agregarArchivos(datos, archivos);
       return api.post(`/matricula/periodos/${periodoId}/matriculas`, datos);
     },
     // La preparación y las secciones del alumno ya no aplican (ahora tiene matrícula): recargarlas
     // respondería 409 y mostraría un error justo después del éxito.
-    onSuccess: () =>
-      queryClient.invalidateQueries({
-        queryKey: ['matricula', 'periodo', periodoId],
-        predicate: ({ queryKey }) =>
-          queryKey[3] !== 'preparacion' && queryKey[3] !== 'secciones',
-      }),
+    onSuccess: () => invalidarPeriodo(queryClient, periodoId),
+  });
+};
+
+// POST /matricula/periodos/{id}/matriculas-extemporaneas
+// multipart: estudianteId, seccionId, motivo y un archivo por documento.
+export const useCrearMatriculaExtemporanea = (periodoId: string) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      estudianteId,
+      seccionId,
+      motivo,
+      archivos,
+    }: SolicitudMatriculaExtemporanea): Promise<MatriculaCreada> => {
+      const datos = new FormData();
+      datos.append('estudianteId', estudianteId);
+      datos.append('seccionId', seccionId);
+      datos.append('motivo', motivo.trim());
+      agregarArchivos(datos, archivos);
+      return api.post(
+        `/matricula/periodos/${periodoId}/matriculas-extemporaneas`,
+        datos,
+      );
+    },
+    onSuccess: () => invalidarPeriodo(queryClient, periodoId),
   });
 };
