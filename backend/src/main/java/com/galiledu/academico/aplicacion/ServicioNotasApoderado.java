@@ -178,11 +178,20 @@ public class ServicioNotasApoderado {
 		return libreta(notas(usuarioId, estudianteId, anio));
 	}
 
+	/**
+	 * Las mismas notas para el Coordinador, de cualquier estudiante matriculado (con los ítems calificados por el
+	 * docente). Solo lectura. 404 si la matrícula no existe.
+	 */
+	@Transactional(readOnly = true)
+	public NotasApoderado notasMatricula(UUID matriculaId) {
+		return notas(repositorio.matricula(matriculaId)
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("La matrícula no existe.")));
+	}
+
 	/** La misma libreta para el Coordinador, de cualquier estudiante matriculado. 404 si la matrícula no existe. */
 	@Transactional(readOnly = true)
 	public byte[] libretaMatricula(UUID matriculaId) {
-		return libreta(notas(repositorio.matricula(matriculaId)
-				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("La matrícula no existe."))));
+		return libreta(notasMatricula(matriculaId));
 	}
 
 	private byte[] libreta(NotasApoderado datos) {
