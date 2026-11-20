@@ -229,23 +229,31 @@ public class ConsultasPagos {
 				.list();
 	}
 
+	public record HermanoMatriculado(UUID estudianteId, String nombre, LocalDate fechaNacimiento) {
+	}
+
 	/**
 	 * RF-75, RF-86: estudiantes con matrícula formalizada en ese año que comparten un padre, madre o apoderado con el
-	 * estudiante, contándolo a él (Sofía sola = 1).
+	 * estudiante, contándolo a él (Sofía sola = 1), del menor al mayor (fecha de nacimiento más reciente primero).
 	 */
-	public int hermanosMatriculados(UUID estudianteId, UUID anioEscolarId) {
+	public List<HermanoMatriculado> hermanosMatriculados(UUID estudianteId, UUID anioEscolarId) {
 		return jdbc.sql("""
-				SELECT count(DISTINCT m.estudiante_id)
+				SELECT DISTINCT m.estudiante_id, concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno),
+				       p.fecha_nacimiento
 				FROM matricula.matricula m
+				JOIN estudiantes.estudiante e ON e.id = m.estudiante_id
+				JOIN personas.persona p ON p.id = e.persona_id
 				WHERE m.anio_escolar_id = :anio AND m.estado = 'MATRICULADO'
 				  AND (m.estudiante_id = :estudiante OR m.estudiante_id IN (
 				       SELECT h.estudiante_id FROM estudiantes.vinculo_familiar v
 				       JOIN estudiantes.vinculo_familiar h ON h.persona_id = v.persona_id
-				       WHERE v.estudiante_id = :estudiante AND v.persona_id IS NOT NULL))""")
+				       WHERE v.estudiante_id = :estudiante AND v.persona_id IS NOT NULL))
+				ORDER BY 3 DESC NULLS LAST, 2""")
 				.param("anio", anioEscolarId)
 				.param("estudiante", estudianteId)
-				.query(Integer.class)
-				.single();
+				.query((rs, i) -> new HermanoMatriculado(rs.getObject(1, UUID.class), rs.getString(2),
+						rs.getObject(3, LocalDate.class)))
+				.list();
 	}
 
 	/** HU-40: ¿el usuario es padre, madre o apoderado del estudiante? Ambos padres pueden consultar (corrección 2). */
