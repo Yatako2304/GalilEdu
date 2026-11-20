@@ -86,6 +86,20 @@ public class ConsultasMatricula {
 				.optional();
 	}
 
+	/** La matrícula más reciente del estudiante que no esté anulada (la ficha muestra su sección). */
+	public Optional<UUID> matriculaVigenteDe(UUID estudianteId) {
+		return jdbc.sql("""
+				SELECT m.id
+				FROM matricula.matricula m
+				JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
+				WHERE m.estudiante_id = ? AND m.estado <> 'ANULADA'
+				ORDER BY a.anio DESC
+				LIMIT 1""")
+				.param(estudianteId)
+				.query((rs, i) -> rs.getObject(1, UUID.class))
+				.optional();
+	}
+
 	/**
 	 * HU-31: matrícula PENDIENTE_PAGO → MATRICULADO con su código MAT-AAAA-NNNN (correlativo por año) y la fecha de
 	 * confirmación (RF-68). Devuelve el código, o vacío si la matrícula no estaba pendiente de pago.
@@ -168,7 +182,7 @@ public class ConsultasMatricula {
 
 	public record FilaListado(UUID id, UUID estudianteId, String nombre, String documento, String gradoCodigo,
 			String grado, String seccion, String estado, String codigo, String tipo, UUID seccionId,
-			String seccionNombre) {
+			String seccionNombre, OffsetDateTime actualizadoEn) {
 	}
 
 	/**
@@ -202,7 +216,8 @@ public class ConsultasMatricula {
 		List<FilaListado> filas = jdbc.sql("""
 				SELECT m.id, e.id, concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno),
 				       p.numero_documento, g.codigo, g.nombre, CASE WHEN s.id IS NULL THEN NULL
-				       ELSE g.numero || '.° ' || s.nombre END, m.estado, m.codigo, m.tipo_estudiante, s.id, s.nombre
+				       ELSE g.numero || '.° ' || s.nombre END, m.estado, m.codigo, m.tipo_estudiante, s.id, s.nombre,
+				       m.actualizado_en
 				""" + filtros
 				+ " ORDER BY " + columna + sentido + ", p.apellido_paterno, p.nombres, m.id LIMIT :tam OFFSET :desde")
 				.param("anio", anioEscolarId).param("grado", gradoCodigo).param("estado", estado)
@@ -210,7 +225,7 @@ public class ConsultasMatricula {
 				.query((rs, i) -> new FilaListado(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
 						rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getString(7),
 						rs.getString(8), rs.getString(9), rs.getString(10), rs.getObject(11, UUID.class),
-						rs.getString(12)))
+						rs.getString(12), rs.getObject(13, OffsetDateTime.class)))
 				.list();
 		return new PaginaFilas<>(filas, total);
 	}
@@ -220,7 +235,9 @@ public class ConsultasMatricula {
 			"estudiante", "p.apellido_paterno",
 			"grado", "g.orden",
 			"seccion", "s.nombre",
-			"estado", "m.estado");
+			"estado", "m.estado",
+			// Actividad reciente: la última vez que se tocó la matrícula (documentos, validación, sección, pago).
+			"reciente", "m.actualizado_en");
 
 	public record EstudianteFila(UUID id, String nombre, String documento, String gradoCodigo, String grado) {
 	}

@@ -48,6 +48,16 @@ public class MatriculaDetalleController {
 			@Size(max = 300) String observacion) {
 	}
 
+	/** {@code matriculaId} es null cuando el estudiante aún no tiene matrícula. */
+	public record MatriculaDeEstudiante(UUID matriculaId) {
+	}
+
+	/** GET /api/matricula/matriculas/de-estudiante/{estudianteId} · la matrícula vigente del estudiante. */
+	@GetMapping("/de-estudiante/{estudianteId}")
+	public MatriculaDeEstudiante deEstudiante(@PathVariable UUID estudianteId) {
+		return new MatriculaDeEstudiante(servicio.matriculaVigenteDe(estudianteId).orElse(null));
+	}
+
 	/** GET /api/matricula/matriculas/{id} */
 	@GetMapping("/{id}")
 	public DetalleMatricula detalle(@PathVariable UUID id) {
