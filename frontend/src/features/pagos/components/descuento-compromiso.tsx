@@ -11,10 +11,16 @@ import { useDescuentoCompromiso } from '../api/descuentos';
 
 import { DialogoRevocarDescuento } from './dialogo-revocar-descuento';
 
-const vigencia = (desde: string, hasta: string | null) =>
-  hasta
-    ? `${formatDay(desde)} – ${formatDay(hasta)}`
-    : `Desde ${formatDay(desde)}`;
+const vigencia = (
+  desde: string,
+  hasta: string | null,
+  hastaFinEscolaridad: boolean,
+) => {
+  if (hastaFinEscolaridad) {
+    return `Desde ${formatDay(desde)} · Hasta que termine el colegio`;
+  }
+  return hasta ? `${formatDay(desde)} – ${formatDay(hasta)}` : formatDay(desde);
+};
 
 export const DescuentoCompromiso = ({
   compromisoId,
@@ -66,8 +72,12 @@ export const DescuentoCompromiso = ({
           <div className="flex items-start justify-between gap-4">
             <dt className="text-body-3 text-content-tertiary">Vigencia</dt>
             <dd className="text-right text-body-3 font-medium text-content-primary">
-              {vigencia(activo.vigenciaDesde, activo.vigenciaHasta)} (
-              {datos.cuotasConDescuento} periodos)
+              {vigencia(
+                activo.vigenciaDesde,
+                activo.vigenciaHasta,
+                activo.hastaFinEscolaridad,
+              )}{' '}
+              ({datos.cuotasConDescuento} periodos)
             </dd>
           </div>
           <div className="flex items-start justify-between gap-4">

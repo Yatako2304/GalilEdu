@@ -1,8 +1,8 @@
 # Matrícula
 
 - **HU:** HU-24, 27, 30 (iteración 1) · HU-28, 29, 31, 32 (2) · HU-25, 26, 33, 71, 72 (3)
-- **Estado:** 🚧 en desarrollo: HU-24, HU-27, HU-30 y HU-31 completas (HU-24: listado A3, Nueva matrícula, detalle A5/B6/B7 y Cambiar sección, todo conectado a la BD)
-- **Última actualización:** 2026-11-16
+- **Estado:** 🚧 en desarrollo: HU-24, HU-25, HU-27, HU-30, HU-31 y HU-72 completas (listado A3, matrícula regular y extemporánea, detalle A5/B6/B7, documentos y cambio de sección conectados a la BD)
+- **Última actualización:** 2026-11-19
 
 ## Alcance
 
@@ -39,7 +39,7 @@ Si el colegio completa todos los documentos (al crear la matrícula o al subir e
 - **Indicadores:** *en proceso* = no matriculados; *requieren acción* = sección reservada o en validación (lo que espera el colegio).
 - **Nueva matrícula (A6):** el botón abre el modal «Nueva matrícula» (paso 1): se busca al alumno por nombre o DNI, se ven sus datos, su sección y los 4 documentos pendientes, y «Guardar» crea la matrícula en `SECCION_RESERVADA`. La sección se asigna sola: la primera del grado con cupo en orden alfabético (si A está llena pasa a B; sin cupo en ninguna, no se puede guardar). Solo con el periodo ABIERTO; con el periodo cerrado se usa «Matrícula extemporánea» (HU-25). Los documentos se pueden subir ahora o después. El tipo es CONTINUADOR si el estudiante estuvo matriculado en un año anterior; si no, NUEVO. Solo se ofrecen estudiantes cuyo año académico es el del periodo.
 - **Cambiar sección (A5 y A6):** el modal lista las secciones del grado con tutor, vacantes libres y ocupación `n/capacidad`; la actual va marcada, las llenas no se pueden elegir y se muestra el «Efecto en las vacantes» (se libera una en el origen y se ocupa una en el destino). Al confirmar «¿Cambiar sección?» la matrícula se mueve y queda un registro en `matricula.cambio_seccion`. **HU-26:** desde el detalle de la matrícula el modal pide el **motivo** (obligatorio: «Reorganización por cambio de año escolar» o «Solicitud del apoderado», con observación opcional de hasta 300 caracteres) y el detalle muestra la tarjeta **«Cambios de sección»** (más reciente primero: origen → destino, motivo, quién y cuándo; `GET /matricula/matriculas/{id}/cambios-seccion`). En Nueva matrícula no se pide motivo porque aún no hay sección de origen. Ver la [decisión](../decisiones/2026-11-16-fabricio99-s-cambio-de-seccion-con-motivo.md). En Nueva matrícula la elección se envía con «Guardar» (`seccionId`); si entre tanto la sección se llenó, se reasigna a la primera con cupo y se avisa. Con el periodo cerrado solo se puede cambiar de sección a quienes ya están `MATRICULADO`.
-- **Detalle (A5, B6, B7):** `GET /matricula/matriculas/{id}` alimenta la pantalla real para todos los estados (stepper con `pasoActual`, alerta según el estado, datos del estudiante y apoderado, documentos con su estado EN_REVISION/APROBADO/OBSERVADO). Los documentos se pueden **ver** y **subir o reemplazar** (el reemplazo vuelve a `EN_REVISION`); retirada o anulada no admite cambios. En EN_VALIDACION cada documento en revisión tiene **Observar** (motivo obligatorio: la matrícula vuelve a SECCION_RESERVADA y el apoderado reemplaza solo ese documento; los aprobados quedan bloqueados) y **Validar** abre «¿Aprobar documentación?» (aprueba y pasa a PENDIENTE_PAGO; deshabilitado si hay observados). Pendiente: la cuota de matrícula y el bloqueo por deuda (HU-30/36). En PENDIENTE_PAGO y MATRICULADO se integra la tarjeta de pago de HU-36/37.
+- **Detalle (A5, B6, B7):** `GET /matricula/matriculas/{id}` alimenta la pantalla real para todos los estados (stepper con `pasoActual`, alerta según el estado, datos del estudiante y apoderado, identificación y motivo si es extemporánea, documentos con su estado EN_REVISION/APROBADO/OBSERVADO). Los documentos se pueden **ver**, **subir, reemplazar o eliminar** según el estado; el reemplazo vuelve a `EN_REVISION`, y retirada o anulada no admite cambios. En EN_VALIDACION cada documento en revisión tiene **Observar** (motivo obligatorio: la matrícula vuelve a SECCION_RESERVADA y el apoderado reemplaza solo ese documento; los aprobados quedan bloqueados) y **Validar** abre «¿Aprobar documentación?» (aprueba y pasa a PENDIENTE_PAGO; deshabilitado si hay observados). Pendiente: la cuota de matrícula y el bloqueo por deuda (HU-30/36). En PENDIENTE_PAGO y MATRICULADO se integra la tarjeta de pago de HU-36/37.
 - **Matrícula extemporánea (HU-25, RF-54/55):** con el periodo CERRADO (y `permitir_extemporanea`), el botón «Matrícula extemporánea» de A3 registra a un estudiante fuera de fechas con `POST /matricula/periodos/{id}/matriculas-extemporaneas`. Figma no tiene modal propio: reutiliza «Nueva matrícula» con un campo **motivo** obligatorio (≤ 500, la constancia del caso excepcional) y la **sección elegida a mano** (debe ser del grado y tener cupo; no se reasigna sola). Queda con `extemporanea = true` y su motivo, que el detalle muestra. Sigue el flujo normal: el apoderado puede subir documentos y pagar la cuota aunque el periodo esté cerrado, y el personal puede cambiarle de sección.
 - **La sección es resultado de la matrícula formalizada (corrección del PO):** solo con la matrícula MATRICULADO la sección es oficial: los GET la devuelven en `seccionAsignada` y notas, asistencia y horarios solo cuentan a los MATRICULADO. Mientras está en proceso (SECCION_RESERVADA, EN_VALIDACION o PENDIENTE_PAGO) la sección elegida —por el sistema, por el personal en «Cambiar sección» o en la matrícula extemporánea— va en `seccionSeleccionada`: **reserva el cupo** (por eso el estado se llama SECCION_RESERVADA) pero no es oficial, y el apoderado ve «Por asignar». Retirada o anulada no ocupa cupo ni queda relacionada (ambas null). Ver la [decisión](../decisiones/2026-11-19-leonardo-montoya-seccion-y-descuentos.md).
 - **Eliminar documentos (HU-72):** en el detalle, el personal puede **eliminar** un documento subido (`DELETE /matricula/matriculas/{id}/documentos/{documentoId}`) mientras la matrícula está en SECCION_RESERVADA o EN_VALIDACION; los aprobados no se eliminan. Si estaba en validación vuelve a SECCION_RESERVADA porque ya falta un documento.
@@ -47,7 +47,7 @@ Si el colegio completa todos los documentos (al crear la matrícula o al subir e
 
 - La deuda (HU-30) se pide a Pagos con `ServicioEstadoCuenta.cuotasVencidas` (IEstadoCuenta): pensiones impagas después del vencimiento más los días de gracia, solo del estudiante consultado. Solo bloquea si el periodo tiene `bloquear_por_morosidad`. El estado visible del periodo (PROGRAMADO, ABIERTO o CERRADO) lo calcula Configuración con `ServicioPeriodoMatricula.estadoEn` y el `Clock` de la app.
 - `pasoActual` del stepper: 1 SECCION_RESERVADA, 2 EN_VALIDACION, 3 PENDIENTE_PAGO, 4 MATRICULADO (0 sin matrícula). En la pantalla del apoderado, con MATRICULADO los 4 pasos se muestran completados (Figma "HU-32 Confirmación de matrícula").
-- Si `periodo.abierto` es false, el frontend no muestra la opción de matricular (RF-59).
+- Con el periodo ABIERTO el frontend ofrece «Nueva matrícula»; con el periodo CERRADO solo habilita «Matrícula extemporánea» cuando `permiteExtemporanea` es verdadero. En PROGRAMADO no permite crear ninguna.
 - `pagoMatricula` (HU-31): la cuota de matrícula con `puedePagar` y, si no se puede, el `motivo`. Es null mientras la cuota no exista.
 
 ## HU-31 · Derivación a pagos
@@ -109,9 +109,9 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 - **Sofía y Mateo tienen situaciones diferentes en 2027:** Mateo tiene una sección reservada en 1.° A; Sofía está matriculada en 4.° A de 2026, pero no tiene una matrícula creada para 2027, por lo que en el periodo consultado aparece pendiente de asignación.
 - **La deuda se valida por estudiante (HU-30, corregida en la iteración 2):** la pensión vencida de S/ 600 pertenece a Sofía y solo bloquea la matrícula de Sofía. Mateo no tiene deuda propia, así que la deuda de su hermana ya no lo bloquea.
 - **Tarjeta de pago (HU-36/37):** ya está integrada en el detalle real de HU-24 (estados PENDIENTE_PAGO y MATRICULADO).
-- **Pantallas administrativas:** A3, A5, B6 y B7 son reales (HU-24). HU-25 (extemporánea) y HU-72 (eliminar documentos) tienen backend; falta su pantalla.
+- **Pantallas administrativas:** A3, A5, B6 y B7 son reales. HU-25 reutiliza el modal de Nueva matrícula con motivo y elección manual de sección; HU-72 agrega la eliminación confirmada de documentos en A5.
 - **Plantillas para el personal administrativo:** Nueva matrícula y el detalle muestran «Plantilla» en cada documento que la tiene (`GET /matricula/periodos/{id}/documentos/{id}/plantilla`).
-- **Pantalla del apoderado (HU-28 y HU-29):** «Matrícula 2027» muestra la tarjeta «Documentos de matrícula»: descarga de plantilla, subir o reemplazar el firmado, ver el archivo y «Enviar a validación» (habilitado con todos los documentos). Los avisos cambian según la etapa (en validación, documentación validada, matriculado). Siguen pendientes la tarjeta de pago del apoderado (HU-31), la constancia y los datos del estudiante y apoderado dentro de esta pantalla.
+- **Pantalla del apoderado (HU-28 a HU-32):** «Matrícula 2027» muestra la tarjeta «Datos del estudiante y apoderado», la documentación, el pago y el progreso. La tarjeta consume `datos` del estado; mientras el proceso no esté formalizado muestra **Por asignar** y no revela la reserva, y con MATRICULADO muestra la sección oficial y su tutor. También permite descargar la constancia y abrir el cronograma cuando corresponde.
 - **HU-37 solo corresponde a estudiantes matriculados:** Sofía tiene el cronograma 2026 de los datos de prueba. Mateo todavía está en `SECCION_RESERVADA`, así que no debe tener pensiones generadas hasta completar la matrícula.
 - **Figma es la fuente visual; la API es la fuente de los datos:** textos, jerarquía y componentes siguen los frames indicados arriba. Año, fechas, grado, sección, deuda, montos y estados se muestran desde el backend.
 
@@ -132,13 +132,38 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
    ```
 3. Abre `http://localhost:3000`. Todos los usuarios de prueba usan la contraseña `Galiledu2026`.
 
+### HU-25 · Matrícula extemporánea
+
+> Requiere un estudiante activo inscrito para el año del periodo y todavía sin matrícula. Los datos mínimos del repositorio solo incluyen a Mateo para 2027 y él ya tiene matrícula; si el buscador aparece vacío, se debe preparar un candidato de prueba en la base o usar el ambiente que ya lo tenga.
+
+1. Inicia sesión como personal administrativo con `U20260002`.
+2. En **Configuración → Periodos de matrícula**, abre un periodo **cerrado** que permita matrículas extemporáneas y pulsa **Ver matrículas**.
+3. Comprueba que el encabezado muestra el botón **Matrícula extemporánea** habilitado y presiónalo.
+4. Busca y elige al estudiante sin matrícula.
+5. Comprueba que la sección figura **Por elegir**, selecciona manualmente una sección con vacantes y escribe un **Motivo**. El botón **Guardar** debe seguir deshabilitado mientras falte cualquiera de esos dos datos.
+6. Guarda y abre el detalle recién creado.
+7. Comprueba **Tipo de matrícula: Extemporánea**, el motivo ingresado y el estado **Sección reservada**.
+
+**Resultado esperado:** se registra una matrícula extemporánea en el periodo cerrado, conserva exactamente la sección elegida y muestra su motivo en el detalle. Un periodo abierto o sin permiso devuelve el mensaje del backend y no crea nada.
+
+### HU-72 · Eliminar documento de matrícula
+
+1. Inicia sesión como personal administrativo con `U20260002` y abre el detalle de **Mateo Paredes**:
+   `http://localhost:3000/app/administrativo/matricula/detalle/50000000-0000-0000-0000-000000000002`
+2. Si un documento está pendiente, súbelo primero con un PDF, JPG o PNG de hasta 10 MB.
+3. En el documento subido, pulsa **Eliminar** y confirma **¿Eliminar documento?**.
+4. Comprueba que vuelve a mostrarse como **Pendiente**. Si la matrícula estaba EN_VALIDACION, también debe volver a **Sección reservada**.
+5. Comprueba que un documento **Aprobado** no ofrece Eliminar y que tampoco aparece la acción en PENDIENTE_PAGO o MATRICULADO.
+
+**Resultado esperado:** solo se eliminan documentos no aprobados de matrículas en SECCION_RESERVADA o EN_VALIDACION; cualquier bloqueo del backend se muestra con su mensaje específico.
+
 ### HU-27 · Consulta del periodo y estado de matrícula
 
 1. Inicia sesión como apoderado con `U20260003`.
 2. En el menú lateral, abre **Matrícula** (`/app/apoderado/matricula`).
 3. Con **Mateo Paredes** seleccionado, comprueba:
    - título **Matrícula 2027** y estado del periodo;
-   - grado **1.° de primaria**, sección **A** y estado **Sección reservada**;
+   - grado **1.° de primaria**, sección **Por asignar** y estado **Sección reservada** (la reserva 1.° A no se revela al apoderado);
    - cierre **31 oct 2026** y primer paso del progreso.
 4. Abre el selector de estudiante y elige **Sofía Paredes**.
 5. Comprueba que la consulta cambia de hijo y que, para el periodo 2027, Sofía aparece **Pendiente de asignación** y sin sección confirmada.
@@ -153,6 +178,15 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 4. En la tarjeta **Deuda pendiente**, comprueba la pensión de septiembre, vencida el 30 de septiembre de 2026, por **S/ 600.00**, y el mensaje que atribuye la deuda a Sofía.
 
 **Resultado esperado:** la deuda solo bloquea el proceso del hijo que la tiene (corrección de la iteración 2).
+
+### HU-32 · Confirmación y datos de la matrícula
+
+1. Inicia sesión como apoderado con `U20260003` y abre **Matrícula**.
+2. En una matrícula todavía en proceso, comprueba que la tarjeta **Datos del estudiante y apoderado** muestra estudiante, DNI, grado, apoderado, contacto, emergencia e información médica, pero la sección dice **Por asignar**.
+3. Selecciona un hijo cuya matrícula esté **MATRICULADO**.
+4. Comprueba que la misma tarjeta muestra la sección oficial y el tutor, y que aparecen **Descargar constancia** y **Ver cronograma de pensiones**.
+
+**Resultado esperado:** la información personal viene de `estado.datos`; la sección y el tutor solo se exponen después de formalizar la matrícula.
 
 ### HU-36 · Generación de la cuota de matrícula
 
@@ -195,6 +229,6 @@ El periodo 2026 está cerrado y el de 2027 habilitado. Ambos piden los 4 documen
 - **Decisión de producto (2026-11-06): observar documentos.** El colegio observa un documento individual con un motivo; la matrícula regresa a SECCION_RESERVADA, el apoderado reemplaza solo los observados (los aprobados quedan bloqueados) y vuelve a enviar a validación. Si el colegio sube el documento observado por el apoderado, la matrícula vuelve sola a EN_VALIDACION. No se envía correo: el aviso es en pantalla.
 
 - **Decisión de producto (2026-11-06): el apoderado inicia la matrícula.** No espera a que el colegio le reserve la sección (Figma › Apoderado › HU-28 y el PO: la sección la elige el sistema). La matrícula se crea al enviar todos los documentos a validación, así a la bandeja del Personal administrativo solo llega lo que está listo para revisar. Ver [la decisión](../decisiones/2026-11-06-scuro-star-apoderado-inicia-matricula.md).
-- **Decisión de producto (2026-11-06): sección del apoderado.** Mientras la matrícula no esté MATRICULADO, el apoderado no ve la sección: `GET /matricula/apoderado/estudiantes/{id}/estado` devuelve `matricula.seccion = null` y la pantalla muestra "Por definir". El personal administrativo sí ve la sección reservada.
+- **Decisión de producto (actualizada 2026-11-19): sección del apoderado.** Mientras la matrícula no esté MATRICULADO, el apoderado no ve la reserva: `seccionAsignada` y `datos.seccion` son null y la pantalla muestra **Por asignar**. El personal administrativo sí ve `seccionSeleccionada` como sección reservada. Al formalizar, la sección pasa a `seccionAsignada` y se muestra junto con el tutor.
 
 - **Pantalla del apoderado (Figma páginas 13 y 14).** La tarjeta "Pago de matrícula" (`pagoMatricula`) va a la derecha de los datos y documentos, como el detalle del colegio. `matricula.confirmadoEn` trae la fecha de confirmación; con la matrícula MATRICULADO aparecen **Descargar constancia** (HTML imprimible, guardar como PDF) y **Ver cronograma de pensiones**. Tras pagar la matrícula, el resultado del pago ofrece **Ver matrícula** del hijo correspondiente (el detalle de la orden trae `estudianteId` y `matricula` por cuota) y "Volver a Pensiones" abre las pensiones del estudiante que pagó (`?estudiante=`). Sin hacer: notificación al apoderado.

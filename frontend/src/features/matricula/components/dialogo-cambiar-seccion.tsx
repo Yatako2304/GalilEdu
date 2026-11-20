@@ -48,6 +48,7 @@ export const DialogoCambiarSeccion = ({
   cargando,
   guardando,
   pedirMotivo = false,
+  soloElegir = false,
   alConfirmar,
   onCerrar,
 }: {
@@ -56,6 +57,8 @@ export const DialogoCambiarSeccion = ({
   cargando: boolean;
   guardando: boolean;
   pedirMotivo?: boolean;
+  /** Nueva matrícula extemporánea: no existe una sección actual que cambiar. */
+  soloElegir?: boolean;
   alConfirmar: (seccionId: string, motivo?: MotivoElegido) => void;
   onCerrar: () => void;
 }) => {
@@ -78,11 +81,11 @@ export const DialogoCambiarSeccion = ({
           <div className="flex-1 space-y-5 overflow-y-auto p-6">
             <div>
               <DialogTitle className="text-h6 font-semibold text-content-primary">
-                Cambiar sección
+                {soloElegir ? 'Elegir sección' : 'Cambiar sección'}
               </DialogTitle>
               <DialogDescription className="mt-1 text-body-4 text-content-tertiary">
                 {secciones
-                  ? `Elige otra sección de ${secciones.grado}. Las secciones sin vacantes no se pueden elegir.`
+                  ? `${soloElegir ? 'Elige una' : 'Elige otra'} sección de ${secciones.grado}. Las secciones sin vacantes no se pueden elegir.`
                   : 'Cargando secciones…'}
               </DialogDescription>
             </div>
@@ -201,7 +204,7 @@ export const DialogoCambiarSeccion = ({
               disabled={!hayCambio || faltaMotivo || guardando}
               onClick={() => setConfirmando(true)}
             >
-              Cambiar sección
+              {soloElegir ? 'Elegir sección' : 'Cambiar sección'}
             </Button>
           </div>
         </DialogContent>
@@ -212,11 +215,11 @@ export const DialogoCambiarSeccion = ({
           open={confirmando}
           onOpenChange={setConfirmando}
           tipo="guardar"
-          titulo="¿Cambiar sección?"
+          titulo={soloElegir ? '¿Elegir sección?' : '¿Cambiar sección?'}
           descripcion={`${
             actual ? `Se liberará una vacante en ${actual.etiqueta} y ` : 'Se '
           }ocupará una en ${destino.etiqueta}. El horario y el tutor del estudiante se actualizarán a los de la nueva sección.`}
-          textoConfirmar="Cambiar sección"
+          textoConfirmar={soloElegir ? 'Elegir sección' : 'Cambiar sección'}
           cargando={guardando}
           onConfirmar={() => {
             setConfirmando(false);
