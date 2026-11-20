@@ -8,6 +8,12 @@ import {
 import * as React from 'react';
 
 import { Alert } from '@/components/ui/alert';
+import {
+  BarraDistribucion,
+  LeyendaNiveles,
+  NIVELES_REPORTE,
+  porcentajeDe,
+} from '@/components/ui/barra-distribucion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/form';
@@ -29,6 +35,7 @@ import {
   CeldaResumen,
   DistribucionNiveles,
   EscalaEvaluacion,
+  ReporteInstitucional,
 } from '@/types/api';
 import { cn } from '@/utils/cn';
 
@@ -393,6 +400,28 @@ const Celda = ({
 
 // ---------- HU-64 ----------
 
+/** «50 %» con la cantidad debajo; «—» si no hay calificaciones. */
+const CeldaNivel = ({
+  cantidad,
+  calificaciones,
+}: {
+  cantidad: number;
+  calificaciones: number;
+}) => {
+  const porcentaje = porcentajeDe(cantidad, calificaciones);
+  if (porcentaje === null) {
+    return <span className="text-content-quartiary">—</span>;
+  }
+  return (
+    <span className="whitespace-nowrap">
+      <span className="text-content-primary">{porcentaje} %</span>{' '}
+      <span className="text-caption-2 text-content-quartiary">
+        ({cantidad})
+      </span>
+    </span>
+  );
+};
+
 const ReporteDelColegio = ({
   anio,
   periodoId,
@@ -420,8 +449,8 @@ const ReporteDelColegio = ({
         >
           <CardTitle>Reporte institucional de notas</CardTitle>
           <p className="mt-1 text-body-4 text-content-quartiary">
-            Cuántas notas de competencia hay en cada nivel de logro, por grado,
-            sección y área.
+            Resultados de las competencias por nivel de logro en todo el
+            colegio: por grado, sección y área.
           </p>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4 pb-6">
@@ -432,133 +461,241 @@ const ReporteDelColegio = ({
       {isLoading || !reporte ? (
         <Cargando />
       ) : (
-        <>
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <StatCard
-              icon={<Users className="size-5" />}
-              value={reporte.estudiantes}
-              label="Estudiantes evaluados"
-            />
-            <StatCard
-              icon={<TrendingUp className="size-5" />}
-              iconColor="success"
-              value={
-                reporte.total.porcentajeLogro === null
-                  ? '—'
-                  : `${reporte.total.porcentajeLogro} %`
-              }
-              label="Notas con logro esperado o destacado"
-            />
-            <StatCard
-              icon={<BarChart3 className="size-5" />}
-              iconColor="warning"
-              value={reporte.total.b}
-              label="Notas en proceso (B)"
-            />
-            <StatCard
-              icon={<TrendingDown className="size-5" />}
-              iconColor="error"
-              value={reporte.total.c}
-              label="Notas en inicio (C)"
-            />
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Por grado y sección · {reporte.periodo}</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-6">
-              {!reporte.filas.length ? (
-                <Vacio texto="No hay secciones con plan de evaluación." />
-              ) : (
-                <TablaDistribucion
-                  primera="Grado y sección"
-                  conEstudiantes
-                  filas={[
-                    ...reporte.filas.map((f) => ({
-                      clave: `${f.gradoCodigo}-${f.seccion ?? 'total'}`,
-                      nombre: f.seccion
-                        ? `${f.grado} · Sección ${f.seccion}`
-                        : `${f.grado} (total)`,
-                      total: f.seccion === null,
-                      estudiantes: f.estudiantes,
-                      distribucion: f.distribucion,
-                    })),
-                    {
-                      clave: 'colegio',
-                      nombre: 'Todo el colegio',
-                      total: true,
-                      estudiantes: reporte.estudiantes,
-                      distribucion: reporte.total,
-                    },
-                  ]}
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Por área</CardTitle>
-            </CardHeader>
-            <CardContent className="pb-6">
-              {!reporte.areas.length ? (
-                <Vacio texto="No hay áreas con competencias evaluadas." />
-              ) : (
-                <TablaDistribucion
-                  primera="Área"
-                  filas={reporte.areas.map((a) => ({
-                    clave: a.area,
-                    nombre: a.area,
-                    distribucion: a.distribucion,
-                  }))}
-                />
-              )}
-            </CardContent>
-          </Card>
-          <p className="text-caption-1 text-content-quartiary">
-            Cada nota oficial de competencia de cada estudiante cuenta una vez.
-            Pendientes: falta registrar algún ítem, así que aún no hay nota
-            (pídele al docente que lo complete). Sin notas: todavía no hay ítems
-            que cuenten.
-          </p>
-        </>
+        <ResultadosDelColegio reporte={reporte} />
       )}
     </div>
+  );
+};
+
+const ResultadosDelColegio = ({
+  reporte,
+}: {
+  reporte: ReporteInstitucional;
+}) => {
+  const total = reporte.total;
+  const porcentajeTotal = (cantidad: number) => {
+    const p = porcentajeDe(cantidad, total.calificaciones);
+    return p === null ? '—' : `${p} %`;
+  };
+  const deCalificaciones = (cantidad: number) =>
+    total.calificaciones ? `${cantidad} de ${total.calificaciones}` : undefined;
+
+  const seccionesPorCompletar = reporte.filas.filter(
+    (f) => f.seccion !== null && f.distribucion.porCompletar > 0,
+  );
+  const areasConCalificaciones = reporte.areas.filter(
+    (a) => a.distribucion.calificaciones > 0 || a.distribucion.porCompletar > 0,
+  );
+  const areasSinCalificaciones = reporte.areas
+    .filter((a) => !areasConCalificaciones.includes(a))
+    .map((a) => a.area);
+
+  // Cada grado con su total arriba y sus secciones debajo; al final, todo el colegio.
+  const grados = [...new Set(reporte.filas.map((f) => f.gradoCodigo))];
+  const filasGrados: FilaDistribucion[] = grados.flatMap((codigo) => {
+    const delGrado = reporte.filas.filter((f) => f.gradoCodigo === codigo);
+    const totalGrado = delGrado.find((f) => f.seccion === null);
+    return [
+      ...(totalGrado
+        ? [
+            {
+              clave: `${codigo}-total`,
+              nombre: totalGrado.grado,
+              tipo: 'grupo' as const,
+              estudiantes: totalGrado.estudiantes,
+              distribucion: totalGrado.distribucion,
+            },
+          ]
+        : []),
+      ...delGrado
+        .filter((f) => f.seccion !== null)
+        .map((f) => ({
+          clave: `${codigo}-${f.seccion}`,
+          nombre: `Sección ${f.seccion}`,
+          tipo: 'detalle' as const,
+          estudiantes: f.estudiantes,
+          distribucion: f.distribucion,
+        })),
+    ];
+  });
+
+  return (
+    <>
+      {total.porCompletar > 0 && (
+        <Alert
+          type="warning"
+          title={`${total.porCompletar} calificaciones por completar no se cuentan todavía`}
+        >
+          Falta registrar algún ítem en{' '}
+          {seccionesPorCompletar
+            .map(
+              (f) =>
+                `${f.grado} · Sección ${f.seccion} (${f.distribucion.porCompletar})`,
+            )
+            .join(', ')}
+          . Se contarán cuando el docente las complete.
+        </Alert>
+      )}
+      {reporte.sinCalcular.length > 0 && (
+        <Alert type="warning" title="Competencias que no se pueden calcular">
+          Los pesos de sus cursos no suman 100 %:{' '}
+          {reporte.sinCalcular
+            .map((c) => `${c.grado} · ${c.competencia}`)
+            .join('; ')}
+          . Ajústalos en el plan de evaluación.
+        </Alert>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard
+          icon={<Users className="size-5" />}
+          value={reporte.estudiantes}
+          label="Estudiantes"
+          trend={`${total.calificaciones} calificaciones`}
+          trendTone="neutral"
+        />
+        <StatCard
+          icon={<TrendingUp className="size-5" />}
+          iconColor="success"
+          value={porcentajeTotal(total.ad + total.a)}
+          label="Logro esperado o destacado"
+          trend={deCalificaciones(total.ad + total.a)}
+          trendTone="neutral"
+        />
+        <StatCard
+          icon={<BarChart3 className="size-5" />}
+          iconColor="warning"
+          value={porcentajeTotal(total.b)}
+          label="En proceso (B)"
+          trend={deCalificaciones(total.b)}
+          trendTone="neutral"
+        />
+        <StatCard
+          icon={<TrendingDown className="size-5" />}
+          iconColor="error"
+          value={porcentajeTotal(total.c)}
+          label="En inicio (C)"
+          trend={deCalificaciones(total.c)}
+          trendTone="neutral"
+        />
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Resultados por grado y sección</CardTitle>
+          <p className="mt-1 text-body-4 text-content-quartiary">
+            {reporte.periodo} · Año escolar {reporte.anio}
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3 pb-6">
+          {!reporte.filas.length ? (
+            <Vacio texto="No hay secciones con plan de evaluación." />
+          ) : (
+            <>
+              <LeyendaNiveles />
+              <TablaDistribucion
+                titulo="Resultados por grado y sección"
+                primera="Grado y sección"
+                conEstudiantes
+                filas={[
+                  ...filasGrados,
+                  {
+                    clave: 'colegio',
+                    nombre: 'Todo el colegio',
+                    tipo: 'total',
+                    estudiantes: reporte.estudiantes,
+                    distribucion: total,
+                  },
+                ]}
+              />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Resultados por área</CardTitle>
+          <p className="mt-1 text-body-4 text-content-quartiary">
+            {reporte.periodo} · Año escolar {reporte.anio}
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3 pb-6">
+          {!areasConCalificaciones.length ? (
+            <Vacio texto="Todavía no hay áreas con calificaciones." />
+          ) : (
+            <TablaDistribucion
+              titulo="Resultados por área"
+              primera="Área"
+              filas={areasConCalificaciones.map((a) => ({
+                clave: a.area,
+                nombre: a.area,
+                tipo: 'detalle',
+                distribucion: a.distribucion,
+              }))}
+            />
+          )}
+          {areasSinCalificaciones.length > 0 && (
+            <p className="text-body-4 text-content-quartiary">
+              Aún sin calificaciones en este periodo:{' '}
+              {areasSinCalificaciones.join(', ')}.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      <p className="text-caption-1 text-content-quartiary">
+        Cada estudiante recibe una calificación por competencia. Los porcentajes
+        se calculan sobre las calificaciones completas; entre paréntesis, la
+        cantidad. Notas calculadas al consultar el reporte.
+      </p>
+    </>
   );
 };
 
 type FilaDistribucion = {
   clave: string;
   nombre: string;
-  total?: boolean;
+  /** grupo: total de un grado; detalle: una sección o un área; total: todo el colegio. */
+  tipo: 'grupo' | 'detalle' | 'total';
   estudiantes?: number;
   distribucion: DistribucionNiveles;
 };
 
 const TablaDistribucion = ({
+  titulo,
   primera,
   conEstudiantes,
   filas,
 }: {
+  titulo: string;
   primera: string;
   conEstudiantes?: boolean;
   filas: FilaDistribucion[];
 }) => (
   <div className="overflow-x-auto rounded-lg border border-stroke-tertiary">
-    <TableElement className="min-w-[720px]">
+    <TableElement aria-label={titulo} className="min-w-[820px]">
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[30%]">{primera}</TableHead>
-          {conEstudiantes && <TableHead>Estudiantes</TableHead>}
-          {(['AD', 'A', 'B', 'C'] as const).map((nivel) => (
-            <TableHead key={nivel}>
+          <TableHead>{primera}</TableHead>
+          {conEstudiantes && (
+            <TableHead className="text-right">Estudiantes</TableHead>
+          )}
+          <TableHead
+            className="text-right"
+            title="Calificaciones de competencia completas"
+          >
+            Calificaciones
+          </TableHead>
+          <TableHead className="w-36">Distribución</TableHead>
+          {NIVELES_REPORTE.map(({ nivel }) => (
+            <TableHead key={nivel} className="text-right">
               <NotaNivel nivel={nivel} size="sm" />
             </TableHead>
           ))}
-          <TableHead title="Falta registrar algún ítem">Pendientes</TableHead>
-          <TableHead title="Aún no hay ítems que cuenten">Sin notas</TableHead>
-          <TableHead>% con A o AD</TableHead>
+          <TableHead className="text-right" title="Logro esperado o destacado">
+            A o AD
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -567,29 +704,45 @@ const TablaDistribucion = ({
           return (
             <TableRow
               key={fila.clave}
-              className={cn(fila.total && 'bg-surface-secondary font-semibold')}
+              className={cn(
+                fila.tipo === 'grupo' && 'bg-surface-secondary font-semibold',
+                fila.tipo === 'total' &&
+                  'border-t-2 border-stroke-secondary bg-surface-tertiary font-semibold',
+              )}
             >
-              <TableCell className="text-content-primary">
-                {fila.nombre}
-              </TableCell>
-              {conEstudiantes && <TableCell>{fila.estudiantes}</TableCell>}
-              <TableCell>{d.ad}</TableCell>
-              <TableCell>{d.a}</TableCell>
-              <TableCell>{d.b}</TableCell>
-              <TableCell>{d.c}</TableCell>
               <TableCell
                 className={cn(
-                  d.pendientes
-                    ? 'text-content-warning'
-                    : 'text-content-quartiary',
+                  'whitespace-nowrap text-content-primary',
+                  fila.tipo === 'detalle' && conEstudiantes && 'pl-8',
                 )}
               >
-                {d.pendientes}
+                {fila.nombre}
               </TableCell>
-              <TableCell className="text-content-quartiary">
-                {d.sinNotas}
+              {conEstudiantes && (
+                <TableCell className="text-right">{fila.estudiantes}</TableCell>
+              )}
+              <TableCell className="text-right">
+                <span className="flex flex-col items-end">
+                  <span>{d.calificaciones}</span>
+                  {d.porCompletar > 0 && (
+                    <span className="whitespace-nowrap text-caption-2 font-normal text-content-warning">
+                      +{d.porCompletar} por completar
+                    </span>
+                  )}
+                </span>
               </TableCell>
               <TableCell>
+                <BarraDistribucion conteo={d} />
+              </TableCell>
+              {NIVELES_REPORTE.map(({ nivel, clave }) => (
+                <TableCell key={nivel} className="text-right">
+                  <CeldaNivel
+                    cantidad={d[clave]}
+                    calificaciones={d.calificaciones}
+                  />
+                </TableCell>
+              ))}
+              <TableCell className="text-right font-semibold text-content-primary">
                 {d.porcentajeLogro === null ? '—' : `${d.porcentajeLogro} %`}
               </TableCell>
             </TableRow>
