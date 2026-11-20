@@ -1,6 +1,6 @@
 # Calificaciones
 
-- **HU:** HU-57, HU-59, HU-60 y HU-62 (Docente) · HU-63 y HU-64 (reportes del Coordinador y del Administrador) · HU-69 (Apoderado)
+- **HU:** HU-57, HU-59, HU-60 y HU-62 (Docente) · HU-63 (reporte del Coordinador) y HU-64 (reporte institucional del Personal administrativo y el Coordinador) · HU-69 (Apoderado)
 - **Estado:** ✅ HU-57, HU-59 y HU-62 terminadas y verificadas · 🚧 HU-60, HU-63, HU-64 y HU-69 con backend, frontend y pruebas; falta revisión del equipo y confirmar criterios con el PO
 - **Última actualización:** 2026-11-20
 
@@ -30,7 +30,7 @@ En **Calificar alumnos**, el docente selecciona únicamente el **Ítem de evalua
 | HU-62 | Consolidado de notas de un curso | ✅ | Selecciona una o varias competencias y sus ítems; muestra resultados por competencia y promedio general de la selección con la regla del año; descarga una tabla en PDF. |
 | HU-60 | Modificación de una calificación | 🚧 | El docente cambia una nota ya registrada con un motivo obligatorio (10 a 500 caracteres), también después de la fecha límite mientras el año esté ACTIVO y el periodo haya empezado. Cada cambio queda en un historial (antes, después, motivo, quién, cuándo). El registro en lote sigue cerrado fuera del plazo. |
 | HU-63 | Reporte de notas por curso y grado | 🚧 | Coordinador. Por competencia del grado: una columna por sección y otra del grado completo, con el promedio, su nivel y el % de estudiantes con A o AD. Todos los cursos (nota oficial) o un curso (su aporte); un periodo o la nota final. PDF. **Ver estudiantes** abre el detalle de una sección: la nota oficial de cada competencia por estudiante (del periodo o la final, con «Pendiente» donde falten registros), o **Todo el año** (por competencia, el nivel de cada periodo y la nota final, como un registro consolidado), y su libreta en PDF. **Ítems** abre las notas del estudiante con los ítems que calificó cada docente por periodo (la misma vista del apoderado). Solo lectura y solo el Coordinador; ver la [decisión del 20/11](../decisiones/2026-11-20-alex-sanchezz-coordinador-ve-items.md). |
-| HU-64 | Reporte institucional de notas | 🚧 | Coordinador y Administrador. Como un reporte de logros: el porcentaje (y la cantidad) de calificaciones de competencia en cada nivel (AD, A, B, C) y «A o AD», con una barra de distribución, por grado (con sus secciones debajo), por área y todo el colegio. Lo que no se cuenta va en avisos aparte. PDF. Ver la [decisión del 20/11](../decisiones/2026-11-20-alex-sanchezz-reporte-institucional.md). |
+| HU-64 | Reporte institucional de notas | 🚧 | Personal administrativo (lo dice la HU) y Coordinador; el Administrador ya no lo tiene ([decisión del 20/11](../decisiones/2026-11-20-alex-sanchezz-hu64-personal-administrativo.md)). Como un reporte de logros: el porcentaje (y la cantidad) de calificaciones de competencia en cada nivel (AD, A, B, C) y «A o AD», con una barra de distribución, por grado (con sus secciones debajo), por área y todo el colegio. Lo que no se cuenta va en avisos aparte. PDF. Ver la [decisión del 20/11](../decisiones/2026-11-20-alex-sanchezz-reporte-institucional.md). |
 | HU-69 | Consulta de notas por el apoderado | 🚧 | Solo sus hijos matriculados. Por periodo: cursos con su docente, lo que aportan a cada competencia y sus ítems; la nota oficial de cada competencia por periodo y final; con el año terminado, el resultado final por niveles de logro. Descarga la libreta en PDF. |
 
 ## Pantallas (Figma)
@@ -42,7 +42,7 @@ En **Calificar alumnos**, el docente selecciona únicamente el **Ítem de evalua
 | Consolidar y exportar notas | `648:17853` y detalle `631:16187` | Botón **Consolidado de notas**, con los filtros, selección múltiple de competencias e ítems, interruptor de promedio del periodo y tabla agrupada; el selector «Periodo lectivo» agrega «Todo el año» (resumen del año, sin frame en Figma) |
 | Modificar una calificación (HU-60) | — (sin frame) | Columna **Acciones** → **Modificar** en «Calificar alumnos»; modal con la nota actual, la nueva, el motivo y el historial. Sigue el modal «Ítem de calificación» |
 | Reporte por curso y grado (HU-63) | Coordinador › «Competencias reporte» `349:11639` (fragmento) | `/app/coordinador/calificaciones`, pestaña **Por curso y grado** |
-| Reporte institucional (HU-64) | — (sin frame) | Pestaña **Institucional** del Coordinador y `/app/admin/calificaciones` (menú **Académico › Calificaciones** del Administrador) |
+| Reporte institucional (HU-64) | — (sin frame) | Pestaña **Institucional** del Coordinador y `/app/administrativo/calificaciones` (menú **Académico y operaciones › Calificaciones** del Personal administrativo) |
 | Consulta del apoderado (HU-69) | Apoderado › `467:7656` y «Resultado final» `1105:2091` | `/app/apoderado/calificaciones` |
 
 **Figma frente a las decisiones registradas (HU-63 y HU-69).** Figma muestra «% aprobados», una letra por curso, «Situación final: Aprobado» y «Cursos aprobados 5 de 5». Por la [nota oficial por competencia](../decisiones/2026-11-16-alex-sanchezz-nota-oficial-competencia.md) y el [nivel de logro sin aprobado](../decisiones/2026-11-18-alex-sanchezz-nivel-de-logro-sin-aprobado.md), se implementó así (lo eligió alex-sanchezz el 19/11): «% con A o AD» en lugar de «% aprobados»; la letra del curso es un resumen **referencial** de sus ítems y la nota oficial se muestra por competencia; el resultado final cuenta las competencias por nivel de logro, sin «Aprobado». Las tarjetas «Promedio del periodo» y «Cursos en proceso» pasan a «Competencias con logro esperado o destacado» y «Por reforzar». Véase la [decisión de las HU-60, 63, 64 y 69](../decisiones/2026-11-19-alex-sanchezz-modificacion-reportes-apoderado.md).
@@ -165,11 +165,11 @@ Reportes y apoderado (prefijo `/api/calificaciones`):
 
 | Método | Ruta | Rol | Qué hace |
 | --- | --- | --- | --- |
-| GET | `/reportes/anios` | Coordinador, Administrador | Años ACTIVO o CERRADO con parámetros, periodos y grados con sus cursos. |
+| GET | `/reportes/anios` | Coordinador, Personal adm. | Años ACTIVO o CERRADO con parámetros, periodos y grados con sus cursos. |
 | GET | `/reportes/grado?anioEscolarId=&grado=&planCursoId=&periodoId=` y `/reportes/grado/pdf` | Coordinador | HU-63. Sin `planCursoId`, nota oficial; sin `periodoId`, nota final. |
 | GET | `/reportes/secciones/{seccionId}/notas` | Coordinador | Detalle de una sección: `{seccionId, anio, grado, seccion, notas}`, donde `notas` tiene la forma de `notas-competencia` del docente con todas las competencias del grado. 404 si la sección no existe o su año no ha empezado. |
 | GET | `/reportes/matriculas/{matriculaId}/libreta` | Coordinador | La libreta en PDF de un estudiante, la misma del apoderado. 404 si la matrícula no existe. |
-| GET | `/reportes/institucional?anioEscolarId=&periodoId=` y `/reportes/institucional/pdf` | Coordinador, Administrador | HU-64. |
+| GET | `/reportes/institucional?anioEscolarId=&periodoId=` y `/reportes/institucional/pdf` | Coordinador, Personal adm. | HU-64. |
 | GET | `/apoderado/estudiantes` | Apoderado | HU-69: hijos matriculados con sus años. |
 | GET | `/apoderado/estudiantes/{id}/notas?anio=` y `/apoderado/estudiantes/{id}/libreta?anio=` | Apoderado | HU-69: notas del año (sin `anio`, el más reciente) y libreta en PDF. |
 
@@ -207,7 +207,7 @@ La carga es idempotente: reutiliza los identificadores de personas y estudiantes
 | --- | --- | --- |
 | HU-69 (apoderada con dos hijos) | `U20269001` | la común del repositorio (`Galiledu2026`) |
 | HU-63 y HU-64 (Coordinador) | `U20260005` | igual |
-| HU-64 (Administrador) | `U20260001` | igual |
+| HU-64 (Personal administrativo) | `U20260002` | igual |
 | HU-60 (docente María Fernández) | `U20260004` | igual |
 
 Es idempotente: no cambia notas, ítems ni usuarios que ya existan. Para no cargarlo en local, define `FLYWAY_LOCATIONS=classpath:db/migration,classpath:db/datos-prueba`.

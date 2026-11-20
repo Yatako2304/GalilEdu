@@ -23,12 +23,12 @@ import com.galiledu.academico.aplicacion.ServicioNotasApoderado;
 import com.galiledu.academico.aplicacion.ServicioReportesNotas;
 
 /**
- * Reportes de notas: por curso y grado (HU-63, Coordinador) e institucional (HU-64, Coordinador y Administrador). Sin
- * {@code periodoId}, la nota final del año.
+ * Reportes de notas: por curso y grado (HU-63, Coordinador) e institucional (HU-64, Personal administrativo y
+ * Coordinador). Sin {@code periodoId}, la nota final del año.
  */
 @RestController
 @RequestMapping("/calificaciones/reportes")
-@PreAuthorize("hasAnyRole('COORDINADOR', 'ADMINISTRADOR')")
+@PreAuthorize("hasAnyRole('COORDINADOR', 'PERSONAL_ADMINISTRATIVO')")
 public class ReporteNotasController {
 	private final ServicioReportesNotas servicio;
 	private final ServicioNotasApoderado apoderado;

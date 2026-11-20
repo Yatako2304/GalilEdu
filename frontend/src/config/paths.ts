@@ -66,7 +66,6 @@ export const paths = {
     admin: {
       root: roleRoot(ADMIN),
       usuarios: route(ADMIN, 'usuarios'),
-      calificaciones: route(ADMIN, 'calificaciones'),
       configuracionAcceso: route(ADMIN, 'configuracion-acceso'),
     },
 
@@ -132,6 +131,8 @@ export const paths = {
       },
       competencias: route(ADMINISTRATIVO, 'competencias'),
       ambientes: route(ADMINISTRATIVO, 'ambientes'),
+      // HU-64: reporte institucional de notas.
+      calificaciones: route(ADMINISTRATIVO, 'calificaciones'),
     },
 
     // Figma: 🌟 Coordinador
