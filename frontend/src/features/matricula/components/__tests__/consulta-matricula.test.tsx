@@ -229,8 +229,10 @@ test('con la documentación validada avisa de la cuota y muestra el pago', async
           cuotaId: 'cuota-matricula',
           concepto: 'Matrícula 2027',
           monto: 850,
+          montoDescuento: 0,
           fechaVencimiento: '2027-01-31',
           estado: 'PENDIENTE',
+          fechaPago: null,
           responsable: 'Luis Paredes',
           puedePagar: true,
           motivo: null,
@@ -360,4 +362,47 @@ test('sin matrícula y sin impedimentos el apoderado la empieza en el paso 1', a
   expect(
     screen.getByRole('button', { name: 'Enviar a validación' }),
   ).toBeDisabled();
+});
+
+// Como en el detalle del colegio: la tarjeta de cambios de sección aparece solo si hubo cambios.
+test('muestra los cambios de sección de la matrícula confirmada', async () => {
+  const conCambios = (cambios: EstadoMatriculaApoderado['cambiosSeccion']) => (
+    <ConsultaMatricula
+      hijos={hijos}
+      estudianteId="mateo"
+      estado={{
+        ...estado,
+        matricula: {
+          ...estado.matricula!,
+          estado: 'MATRICULADO',
+          seccion: '1.° B',
+          codigo: 'MAT-2027-0008',
+        },
+        cambiosSeccion: cambios,
+      }}
+      isLoading={false}
+      onElegir={vi.fn()}
+    />
+  );
+  const { unmount } = await renderApp(
+    conCambios([
+      {
+        id: 'c-1',
+        origen: '1.° A',
+        destino: '1.° B',
+        motivo: 'Reorganización',
+        observacion: null,
+        realizadoPor: null,
+        realizadoEn: '2026-11-10T15:00:00Z',
+      },
+    ]),
+  );
+
+  expect(screen.getByText('Cambios de sección')).toBeInTheDocument();
+  expect(screen.getByText(/1\.° A/)).toBeInTheDocument();
+  expect(screen.getByText(/Reorganización/)).toBeInTheDocument();
+  unmount();
+
+  await renderApp(conCambios([]));
+  expect(screen.queryByText('Cambios de sección')).not.toBeInTheDocument();
 });

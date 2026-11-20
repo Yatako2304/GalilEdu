@@ -2,6 +2,7 @@ package com.galiledu.usuarios.dominio;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -55,6 +56,9 @@ public class Usuario {
 	private Instant bloqueadoHasta;
 	@Column(name = "ultimo_acceso")
 	private Instant ultimoAcceso;
+	/** HU-5: los tokens emitidos antes de este momento ya no valen (se cambió la contraseña). */
+	@Column(name = "sesiones_desde")
+	private Instant sesionesDesde;
 	@Column(name = "creado_en", nullable = false, updatable = false)
 	private Instant creadoEn;
 	@Column(name = "actualizado_en", nullable = false)
@@ -144,11 +148,16 @@ public class Usuario {
 		reemplazarRoles(nuevosRoles);
 	}
 
-	/** Contraseña nueva (p. ej. al cambiar el correo de la persona): se envía al correo nuevo. */
+	/**
+	 * Contraseña nueva (al cambiar el correo de la persona, HU-4 y HU-5). Quita el bloqueo y cierra las sesiones
+	 * abiertas: los tokens emitidos antes dejan de valer. Se trunca al segundo porque la fecha de emisión del token
+	 * (iat) está en segundos.
+	 */
 	public void reemplazarContrasena(String contrasenaHash) {
 		this.contrasenaHash = contrasenaHash;
 		intentosFallidos = 0;
 		bloqueadoHasta = null;
+		sesionesDesde = Instant.now().truncatedTo(ChronoUnit.SECONDS);
 	}
 
 	public void agregarRol(Rol rol) {
@@ -185,6 +194,10 @@ public class Usuario {
 	public Instant getBloqueadoHasta() {
 		return bloqueadoHasta;
 	}
+	public Instant getSesionesDesde() {
+		return sesionesDesde;
+	}
+
 	public Instant getUltimoAcceso() {
 		return ultimoAcceso;
 	}

@@ -20,7 +20,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
 /**
- * La asistencia de una sección en un día (asistencia.registro_diario, V19), con el estado de cada estudiante. Se
+ * La asistencia de una sección en un día (asistencia.registro_diario, V25), con el estado de cada estudiante. Se
  * registra una sola vez y luego solo se corrige: cada cambio deja una {@link CorreccionAsistencia}.
  */
 @Entity

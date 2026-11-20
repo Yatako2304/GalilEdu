@@ -15,7 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 /**
- * Justificación de una falta o tardanza (asistencia.justificacion, V20). Una por asistencia. El adjunto es opcional;
+ * Justificación de una falta o tardanza (asistencia.justificacion, V26). Una por asistencia. El adjunto es opcional;
  * su contenido se carga solo al descargarlo.
  */
 @Entity

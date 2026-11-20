@@ -1,6 +1,7 @@
 package com.galiledu.usuarios.infraestructura;
 
 import java.sql.Timestamp;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,6 +17,15 @@ import com.galiledu.usuarios.aplicacion.VinculosUsuario;
  */
 @Component
 public class VinculosUsuarioSql implements VinculosUsuario {
+	/** Igual que {@code Estudiante.situacion}: retirado, matriculado en su año académico o inscrito. */
+	private static final String SITUACION = """
+			CASE WHEN e.estado = 'RETIRADO' THEN 'RETIRADO'
+			     WHEN EXISTS (SELECT 1 FROM matricula.matricula m
+			                  JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
+			                  WHERE m.estudiante_id = e.id AND a.anio = e.anio_academico
+			                    AND m.estado = 'MATRICULADO') THEN 'MATRICULADO'
+			     ELSE 'INSCRITO' END""";
+
 	private final JdbcClient jdbc;
 
 	public VinculosUsuarioSql(JdbcClient jdbc) {
@@ -71,6 +81,51 @@ public class VinculosUsuarioSql implements VinculosUsuario {
 				ORDER BY g.orden, s.nombre""")
 				.param("usuarioId", usuarioId)
 				.query(SeccionTutoria.class)
+				.list();
+	}
+
+	@Override
+	public List<EstudianteDeFamilia> estudiantesDeFamilia(UUID personaId) {
+		return jdbc.sql("""
+				SELECT DISTINCT e.id AS estudiante_id, p.nombres, p.apellido_paterno, p.apellido_materno,
+				       g.nombre AS grado, e.anio_academico, %s AS estado
+				FROM estudiantes.vinculo_familiar v
+				JOIN estudiantes.estudiante e ON e.id = v.estudiante_id
+				JOIN personas.persona p ON p.id = e.persona_id
+				JOIN configuracion.grado g ON g.codigo = e.grado_codigo
+				WHERE v.persona_id = :personaId AND NOT e.eliminado
+				ORDER BY p.apellido_paterno, p.apellido_materno, p.nombres""".formatted(SITUACION))
+				.param("personaId", personaId)
+				.query(EstudianteDeFamilia.class)
+				.list();
+	}
+
+	@Override
+	public List<IntegranteFamilia> integrantesDe(Collection<UUID> estudianteIds) {
+		if (estudianteIds.isEmpty()) {
+			return List.of();
+		}
+		return jdbc.sql("""
+				SELECT v.estudiante_id, v.parentesco, v.persona_id, v.relacion, v.motivo_no_registra
+				FROM estudiantes.vinculo_familiar v
+				WHERE v.estudiante_id IN (:estudiantes)""")
+				.param("estudiantes", estudianteIds)
+				.query(IntegranteFamilia.class)
+				.list();
+	}
+
+	@Override
+	public List<ContactoDeEmergencia> contactosDeEmergencia(Collection<UUID> estudianteIds) {
+		if (estudianteIds.isEmpty()) {
+			return List.of();
+		}
+		return jdbc.sql("""
+				SELECT c.estudiante_id, c.nombre_completo, c.parentesco, c.celular, c.telefono_fijo
+				FROM estudiantes.contacto_emergencia c
+				WHERE c.estudiante_id IN (:estudiantes)
+				ORDER BY c.orden""")
+				.param("estudiantes", estudianteIds)
+				.query(ContactoDeEmergencia.class)
 				.list();
 	}
 }

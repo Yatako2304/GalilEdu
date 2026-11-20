@@ -2,7 +2,7 @@
 
 - **HU:** HU-52, 53, 54, 55, 56 (iteración 1) · HU-43 (3)
 - **Estado:** ✅ hecho: la iteración 1 (HU-52 a HU-56) y HU-43 (iteración 3, ambientes físicos), con backend y frontend
-- **Última actualización:** 2026-11-18
+- **Última actualización:** 2026-11-20
 
 ## Alcance
 
@@ -18,6 +18,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan. Un ár
 
 **Figma frente a los RF de Notion:**
 - RF-130 a RF-132 dicen que el plan lo configura el Coordinador; en Figma está en el menú del Personal administrativo. **Excepción a "manda Figma" (2026-10-20, a pedido del equipo):** lo tienen los dos roles, con los mismos permisos. El Coordinador lo ve en su menú como "Plan de evaluación" (`/app/coordinador/plan-evaluacion`).
+- Las HU-52 a HU-55 dicen «Personal Administrativo» y en Figma solo están en su menú. **Excepción a "manda Figma" (2026-11-20):** el Coordinador también las tiene, con los mismos permisos, como **Plan curricular** (`/app/coordinador/plan-curricular`) y **Escala de calificación** (`/app/coordinador/escala-calificacion`). Los ambientes físicos siguen siendo solo del Personal administrativo. Ver la [decisión](../decisiones/2026-11-20-alex-sanchezz-catalogo-academico-coordinador.md).
 - RF-126 pide una descripción obligatoria para el área; en Figma es opcional. Aquí manda Figma.
 - El modal de Figma muestra escala, agregación de ítems y consolidación por competencia. Esta parte fue reemplazada por la [decisión de parámetros de evaluación por año](../decisiones/2026-11-04-josezavaleta-parametros-evaluacion-por-anio.md): el modal solo permite indicar horas semanales y marcar competencias.
 
@@ -37,9 +38,9 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan. Un ár
 
 | Pantalla | Frame en Figma | Ruta |
 | --- | --- | --- |
-| Plan curricular | Personal Administrativo › "CI-14 · Plan curricular: áreas, competencias y cursos (HU-52, 53, 54)" y modales "Nueva área", "Nueva competencia", "Nuevo curso", "¿Desactivar …?" | `/app/administrativo/competencias` |
+| Plan curricular | Personal Administrativo › "CI-14 · Plan curricular: áreas, competencias y cursos (HU-52, 53, 54)" y modales "Nueva área", "Nueva competencia", "Nuevo curso", "¿Desactivar …?" | `/app/administrativo/competencias` · `/app/coordinador/plan-curricular` |
 | Plan de evaluación | "CI-17 · Plan de evaluación — 1.° de secundaria 2026 (HU-56)", modal "Aritmética · 1.° de secundaria", "CI-20 · … sin cursos" | pestaña · `/app/coordinador/plan-evaluacion` (no está en Figma) |
-| Escala de calificación | "CI-23 · Escala de calificación — tabla de conversión vigente (HU-55)", modal "Nueva versión de la tabla de conversión" | pestaña |
+| Escala de calificación | "CI-23 · Escala de calificación — tabla de conversión vigente (HU-55)", modal "Nueva versión de la tabla de conversión" | pestaña · `/app/coordinador/escala-calificacion` |
 | Ambientes físicos | "CI-26 · Ambientes físicos (HU-43)" (nodo `857:10215`) y modal "Nuevo ambiente físico" (nodo `857:11500`). El modal "¿Desactivar …?" no está en Figma | `/app/administrativo/ambientes` |
 
 ## Base de datos

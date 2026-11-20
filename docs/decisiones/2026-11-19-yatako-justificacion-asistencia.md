@@ -11,7 +11,7 @@ El tutor o cotutor justifica una falta o tardanza ya registrada desde la columna
 
 ## Archivos principales
 
-- `backend/src/main/resources/db/migration/V20__asistencia_justificacion.sql`
+- `backend/src/main/resources/db/migration/V26__asistencia_justificacion.sql`
 - `backend/src/main/java/com/galiledu/asistencia/dominio/Justificacion.java` y `ServicioAsistencia` (`justificar`, `sustento`)
 - `frontend/src/features/asistencia/components/dialogo-justificar.tsx`, `tabla-asistencia.tsx` y `asistencia-seccion.tsx` (`SelectorFecha`)
 

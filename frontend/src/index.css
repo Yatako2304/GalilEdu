@@ -125,3 +125,10 @@
     @apply bg-background font-sans text-foreground antialiased;
   }
 }
+
+/* Edge (y el antiguo Internet Explorer) dibuja su propio ojo para ver la contraseña. Los campos de contraseña ya tienen
+   el botón de Figma (Eye / EyeOff), así que se oculta el del navegador para que no salgan dos. */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear {
+  display: none;
+}

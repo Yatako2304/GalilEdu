@@ -32,16 +32,18 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.CursoDocente;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.EvidenciaResumen;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.FilaCalificacion;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ItemEvaluacion;
+import com.galiledu.academico.aplicacion.DtosCalificaciones.ModificacionCalificacion;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.NotasCompetencias;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ReporteCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudItem;
+import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudModificacion;
 import com.galiledu.academico.aplicacion.ServicioCalificaciones;
 import com.galiledu.academico.aplicacion.ServicioNotasCompetencia;
 import com.galiledu.compartido.seguridad.ServicioJwt;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 
-/** API del flujo de Calificaciones del usuario Docente (HU-57, HU-59 y HU-62). */
+/** API del flujo de Calificaciones del usuario Docente (HU-57, HU-59, HU-60 y HU-62). */
 @RestController
 @RequestMapping("/calificaciones/docente")
 @PreAuthorize("hasRole('DOCENTE')")
@@ -64,6 +66,24 @@ public class CalificacionController {
 			@RequestParam(required = false) String competenciaIds, Authentication autenticacion) {
 		return notasCompetencia.notasDocente(ServicioJwt.usuarioActual(autenticacion), planCursoId, seccionId,
 				ids(competenciaIds));
+	}
+
+	/**
+	 * Resumen del año: por competencia, el aporte de este curso en cada periodo y su aporte final (referencial), y la
+	 * nota oficial de la competencia en cada periodo y la final. Sin competenciaIds, todas las del curso.
+	 */
+	@GetMapping("/cursos/{planCursoId}/secciones/{seccionId}/resumen-anual")
+	public ReporteCalificaciones resumenAnual(@PathVariable UUID planCursoId, @PathVariable UUID seccionId,
+			@RequestParam(required = false) String competenciaIds, Authentication autenticacion) {
+		return notasCompetencia.resumenAnual(ServicioJwt.usuarioActual(autenticacion), planCursoId, seccionId,
+				ids(competenciaIds));
+	}
+
+	@GetMapping(value = "/cursos/{planCursoId}/secciones/{seccionId}/resumen-anual/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+	public ResponseEntity<byte[]> resumenAnualPdf(@PathVariable UUID planCursoId, @PathVariable UUID seccionId,
+			@RequestParam(required = false) String competenciaIds, Authentication autenticacion) {
+		return ReporteNotasController.pdf(notasCompetencia.pdfResumenAnual(ServicioJwt.usuarioActual(autenticacion),
+				planCursoId, seccionId, ids(competenciaIds)), "resumen-anual-notas.pdf");
 	}
 
 	@GetMapping("/cursos")
@@ -112,6 +132,21 @@ public class CalificacionController {
 	public List<FilaCalificacion> guardarCalificaciones(@PathVariable UUID itemId,
 			@Valid @RequestBody SolicitudCalificaciones solicitud, Authentication autenticacion) {
 		return servicio.guardarCalificaciones(ServicioJwt.usuarioActual(autenticacion), itemId, solicitud);
+	}
+
+	/** HU-60: modifica una nota ya registrada con un motivo, también fuera del plazo de registro. */
+	@PutMapping("/items/{itemId}/calificaciones/{matriculaId}")
+	public FilaCalificacion modificarCalificacion(@PathVariable UUID itemId, @PathVariable UUID matriculaId,
+			@Valid @RequestBody SolicitudModificacion solicitud, Authentication autenticacion) {
+		return servicio.modificarCalificacion(ServicioJwt.usuarioActual(autenticacion), itemId, matriculaId,
+				solicitud);
+	}
+
+	/** HU-60: historial de cambios de la nota de un estudiante en un ítem. */
+	@GetMapping("/items/{itemId}/calificaciones/{matriculaId}/historial")
+	public List<ModificacionCalificacion> historial(@PathVariable UUID itemId, @PathVariable UUID matriculaId,
+			Authentication autenticacion) {
+		return servicio.historial(ServicioJwt.usuarioActual(autenticacion), itemId, matriculaId);
 	}
 
 	@PostMapping(path = "/items/{itemId}/calificaciones/{matriculaId}/evidencia", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -172,15 +207,15 @@ public class CalificacionController {
 			@RequestParam(required = false) String competenciaIds,
 			@RequestParam(defaultValue = "true") boolean incluirPromedio, Authentication autenticacion) {
 		UUID docente = ServicioJwt.usuarioActual(autenticacion);
-		// Al final del consolidado por competencia va la nota final de cada competencia, con su nivel de logro.
+		// Al final del consolidado por competencia va la nota oficial de cada competencia en el mismo periodo.
 		List<UUID> competencias = !ids(competenciaIds).isEmpty()
 				? ids(competenciaIds)
 				: objetivoId == null ? List.of() : List.of(objetivoId);
-		ReporteCalificaciones notasFinales = "COMPETENCIA".equalsIgnoreCase(tipo) && !competencias.isEmpty()
-				? notasCompetencia.reporteNotasFinales(docente, planCursoId, seccionId, competencias)
+		ReporteCalificaciones notasPeriodo = "COMPETENCIA".equalsIgnoreCase(tipo) && !competencias.isEmpty()
+				? notasCompetencia.reporteNotasPeriodo(docente, planCursoId, seccionId, periodoId, competencias)
 				: null;
 		byte[] contenido = servicio.exportarPdf(docente, tipo, planCursoId, seccionId, periodoId, objetivoId,
-				ids(itemIds), incluirPromedio, ids(competenciaIds), notasFinales);
+				ids(itemIds), incluirPromedio, ids(competenciaIds), notasPeriodo);
 		return ResponseEntity.ok().contentType(MediaType.APPLICATION_PDF)
 				.header(HttpHeaders.CONTENT_DISPOSITION,
 						ContentDisposition.attachment().filename("consolidado-notas.pdf").build().toString())

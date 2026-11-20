@@ -12,6 +12,8 @@ import {
   EvidenciaCalificacion,
   FilaCalificacion,
   ItemEvaluacion,
+  ModificacionCalificacion,
+  NivelLogro,
   NotasCompetencias,
   ReporteCalificaciones,
   SolicitudItemEvaluacion,
@@ -124,6 +126,36 @@ export const useGuardarCalificaciones = () =>
       api.put(`${base}/items/${itemId}/calificaciones`, { calificaciones }),
   );
 
+// HU-60: resolver una celda fuera del lote: modificar una nota, registrarla fuera de plazo o marcarla «No evaluado».
+// El motivo es obligatorio salvo al registrar por primera vez una nota dentro del plazo.
+export const useModificarCalificacion = () =>
+  useMutacion(
+    ({
+      itemId,
+      matriculaId,
+      ...datos
+    }: {
+      itemId: string;
+      matriculaId: string;
+      notaNumerica: number | null;
+      nivelLogro: NivelLogro | null;
+      noEvaluado?: boolean;
+      motivo?: string;
+    }): Promise<FilaCalificacion> =>
+      api.put(`${base}/items/${itemId}/calificaciones/${matriculaId}`, datos),
+  );
+
+export const useHistorialCalificacion = (itemId: string, matriculaId: string) =>
+  useQuery(
+    queryOptions({
+      queryKey: ['calificaciones-docente', 'historial', itemId, matriculaId],
+      queryFn: (): Promise<ModificacionCalificacion[]> =>
+        api.get(
+          `${base}/items/${itemId}/calificaciones/${matriculaId}/historial`,
+        ),
+    }),
+  );
+
 export const useGuardarEvidencia = () =>
   useMutacion(
     ({
@@ -180,6 +212,33 @@ export const useNotasCompetencia = (
     }),
   );
 
+// Resumen del año: por competencia, el aporte de este curso en cada periodo y su aporte final (referencial), y la
+// nota oficial de la competencia en cada periodo y la final.
+export type FiltrosResumenAnual = SeleccionCurso & { competenciaIds: string };
+
+const rutaResumen = ({ planCursoId, seccionId }: SeleccionCurso) =>
+  `${base}/cursos/${planCursoId}/secciones/${seccionId}/resumen-anual`;
+
+export const useResumenAnual = (filtros: FiltrosResumenAnual | null) =>
+  useQuery(
+    queryOptions({
+      queryKey: ['calificaciones-docente', 'resumen-anual', filtros],
+      queryFn: (): Promise<ReporteCalificaciones> =>
+        api.get(rutaResumen(filtros!), {
+          params: { competenciaIds: filtros!.competenciaIds },
+        }),
+      enabled: !!filtros,
+    }),
+  );
+
+export const exportarResumenAnual = async (filtros: FiltrosResumenAnual) => {
+  const contenido = (await api.get(`${rutaResumen(filtros)}/pdf`, {
+    params: { competenciaIds: filtros.competenciaIds },
+    responseType: 'blob',
+  })) as Blob;
+  descargarBlob(contenido, 'resumen-anual-notas.pdf');
+};
+
 export type FiltrosReporte = SeleccionPeriodo & {
   tipo: TipoReporteCalificaciones;
   objetivoId?: string;
@@ -221,7 +280,7 @@ export const exportarReporte = async (filtros: FiltrosReporte) => {
   descargarBlob(contenido, 'consolidado-notas.pdf');
 };
 
-const descargarBlob = (contenido: Blob, nombre: string) => {
+export const descargarBlob = (contenido: Blob, nombre: string) => {
   const url = URL.createObjectURL(contenido);
   const enlace = document.createElement('a');
   enlace.href = url;

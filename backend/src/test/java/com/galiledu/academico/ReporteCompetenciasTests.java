@@ -115,12 +115,16 @@ class ReporteCompetenciasTests {
 	}
 
 	@Test
-	void cuentaLaNotaCeroYOmiteLosItemsSinCalificar() {
+	void cuentaLaNotaCeroYTambienComoCeroLoQueFaltaRegistrar() {
+		// En el promedio del periodo (vista del docente) lo que falta cuenta como 0: es un piso que solo sube.
+		// General: (0 × 60 + 0 × 60 + 20 × 80) / 200 = 8. Sin contar el faltante habría dado 11,43.
 		notas("0", null, "20", false);
 		var reporte = servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, null, List.of(), true,
 				COMPETENCIAS);
 		assertThat(reporte.filas().get(0).valores()).containsEntry(COMPETENCIA_1 + ":resultado", "0")
-				.containsEntry("resultado_general", "11.43");
+				.containsEntry("resultado_general", "8")
+				.containsEntry("resultado_general_estado",
+						"Faltan registros (cuentan como 0) · 70 % del peso calificado");
 	}
 
 	@Test
@@ -143,7 +147,7 @@ class ReporteCompetenciasTests {
 				.map(d -> new DetalleReporteFila(d.matriculaId(), d.estudianteId(), d.estudiante(), d.itemId(),
 						d.item(),
 						d.competenciaId(), d.competencia(), null, d.notaNumerica(), d.nivelLogro(), d.evidenciaNombre(),
-						d.ordenItem()))
+						d.ordenItem(), d.noEvaluado(), d.itemUsado()))
 				.toList();
 		when(repositorio.detallesReporte(PLAN, SECCION, PERIODO)).thenReturn(sinPesos);
 		var reporte = servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, null, List.of(), true,
@@ -193,6 +197,6 @@ class ReporteCompetenciasTests {
 			boolean cualitativa, int orden) {
 		return new DetalleReporteFila(MATRICULA, UUID.randomUUID(), "Ana Pérez", item, "Ítem", competencia,
 				"Competencia", BigDecimal.valueOf(peso), nota == null || cualitativa ? null : new BigDecimal(nota),
-				cualitativa ? nota : null, null, INICIO.plusSeconds(orden));
+				cualitativa ? nota : null, null, INICIO.plusSeconds(orden), false, true);
 	}
 }

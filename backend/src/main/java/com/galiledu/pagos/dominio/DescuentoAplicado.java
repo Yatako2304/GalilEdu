@@ -37,6 +37,9 @@ public class DescuentoAplicado {
 	private LocalDate vigenciaDesde;
 	@Column(name = "vigencia_hasta")
 	private LocalDate vigenciaHasta;
+	/** Corrección del PO: rige sin fecha de fin, hasta que el estudiante termine el colegio. */
+	@Column(name = "hasta_fin_escolaridad", nullable = false)
+	private boolean hastaFinEscolaridad;
 	@Column(nullable = false)
 	private String motivo;
 	@Enumerated(EnumType.STRING)
@@ -57,14 +60,15 @@ public class DescuentoAplicado {
 	}
 
 	public static DescuentoAplicado nuevo(UUID estudianteId, Descuento descuento, BigDecimal porcentaje,
-			LocalDate desde, LocalDate hasta, String motivo, UUID usuarioId) {
+			LocalDate desde, LocalDate hasta, boolean hastaFinEscolaridad, String motivo, UUID usuarioId) {
 		DescuentoAplicado d = new DescuentoAplicado();
 		d.estudianteId = estudianteId;
 		d.descuentoId = descuento.getId();
 		d.nombre = descuento.getNombre();
 		d.porcentaje = porcentaje;
 		d.vigenciaDesde = desde;
-		d.vigenciaHasta = hasta;
+		d.vigenciaHasta = hastaFinEscolaridad ? null : hasta;
+		d.hastaFinEscolaridad = hastaFinEscolaridad;
 		d.motivo = motivo;
 		d.estado = EstadoDescuentoAplicado.ACTIVO;
 		d.aplicadoPor = usuarioId;
@@ -120,6 +124,10 @@ public class DescuentoAplicado {
 
 	public LocalDate getVigenciaHasta() {
 		return vigenciaHasta;
+	}
+
+	public boolean isHastaFinEscolaridad() {
+		return hastaFinEscolaridad;
 	}
 
 	public String getMotivo() {

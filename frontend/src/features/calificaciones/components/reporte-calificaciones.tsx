@@ -24,15 +24,25 @@ import { cn } from '@/utils/cn';
 
 import {
   exportarReporte,
+  exportarResumenAnual,
   FiltrosReporte,
+  FiltrosResumenAnual,
   SeleccionPeriodo,
   useReporteCalificaciones,
+  useResumenAnual,
 } from '../api/calificaciones';
 
 import { colorLogro } from './logro';
 import { NotasCompetencia } from './notas-competencia';
 
 type OpcionGrado = { value: string; label: string };
+
+/** Valor del selector de periodo para el resumen del año. */
+const TODO_EL_ANIO = 'ANIO';
+
+/** Igual que ServicioCalificaciones.FALTAN_REGISTROS y POR_REGISTRAR. */
+const FALTAN_REGISTROS = 'Faltan registros';
+const POR_REGISTRAR = 'Por registrar';
 
 const NOMBRES_REGLA: Record<string, string> = {
   PROMEDIO_SIMPLE: 'promedio simple',
@@ -75,6 +85,10 @@ export const ReporteCalificacionesVista = ({
   const [incluirPromedio, setIncluirPromedio] = React.useState(true);
   const [filtrosGenerados, setFiltrosGenerados] =
     React.useState<FiltrosReporte | null>(null);
+  // «Todo el año»: el consolidado de un periodo no trae datos de otros periodos; el año va en su propio resumen.
+  const [todoElAnio, setTodoElAnio] = React.useState(false);
+  const [filtrosAnio, setFiltrosAnio] =
+    React.useState<FiltrosResumenAnual | null>(null);
 
   const catalogoCompetencias = competencias
     .map((competencia) => competencia.id)
@@ -84,6 +98,7 @@ export const ReporteCalificacionesVista = ({
       catalogoCompetencias ? [catalogoCompetencias.split(',')[0]] : [],
     );
     setFiltrosGenerados(null);
+    setFiltrosAnio(null);
   }, [catalogoCompetencias, seleccion.planCursoId, seleccion.seccionId]);
 
   const itemsCompetencia = React.useMemo(
@@ -111,8 +126,22 @@ export const ReporteCalificacionesVista = ({
 
   const { data: reporte, isLoading } =
     useReporteCalificaciones(filtrosGenerados);
+  const resumen = useResumenAnual(filtrosAnio);
+
+  React.useEffect(() => {
+    setFiltrosAnio(null);
+  }, [seleccionCompetencias]);
 
   const generar = () => {
+    if (todoElAnio) {
+      if (!competenciaIds.length) return;
+      setFiltrosAnio({
+        planCursoId: seleccion.planCursoId,
+        seccionId: seleccion.seccionId,
+        competenciaIds: competenciaIds.join(','),
+      });
+      return;
+    }
     if (!competenciaIds.length || !itemIds.length) return;
     setFiltrosGenerados({
       ...seleccion,
@@ -128,6 +157,18 @@ export const ReporteCalificacionesVista = ({
     setItemIds([]);
     setIncluirPromedio(true);
     setFiltrosGenerados(null);
+    setFiltrosAnio(null);
+  };
+
+  const elegirPeriodo = (valor: string) => {
+    setFiltrosGenerados(null);
+    setFiltrosAnio(null);
+    if (valor === TODO_EL_ANIO) {
+      setTodoElAnio(true);
+      return;
+    }
+    setTodoElAnio(false);
+    onPeriodoChange(valor);
   };
 
   return (
@@ -164,12 +205,15 @@ export const ReporteCalificacionesVista = ({
           />
           <Select
             label="Periodo lectivo"
-            value={periodo.id}
-            options={curso.periodos.map((actual) => ({
-              label: actual.nombre,
-              value: actual.id,
-            }))}
-            onChange={(evento) => onPeriodoChange(evento.target.value)}
+            value={todoElAnio ? TODO_EL_ANIO : periodo.id}
+            options={[
+              ...curso.periodos.map((actual) => ({
+                label: actual.nombre,
+                value: actual.id,
+              })),
+              { label: 'Todo el año', value: TODO_EL_ANIO },
+            ]}
+            onChange={(evento) => elegirPeriodo(evento.target.value)}
           />
         </div>
 
@@ -184,41 +228,51 @@ export const ReporteCalificacionesVista = ({
             onValueChange={setCompetenciaIds}
             placeholder="Selecciona las competencias"
           />
-          <MultiSelect
-            label="Ítems de calificación"
-            value={itemIds}
-            options={itemsCompetencia.map((item) => ({
-              label: item.nombre,
-              value: item.id,
-            }))}
-            onValueChange={setItemIds}
-            disabled={!itemsCompetencia.length}
-            placeholder="Selecciona los ítems"
-          />
+          {!todoElAnio && (
+            <MultiSelect
+              label="Ítems de calificación"
+              value={itemIds}
+              options={itemsCompetencia.map((item) => ({
+                label: item.nombre,
+                value: item.id,
+              }))}
+              onValueChange={setItemIds}
+              disabled={!itemsCompetencia.length}
+              placeholder="Selecciona los ítems"
+            />
+          )}
         </div>
 
         <div className="mt-6 flex flex-wrap items-end justify-between gap-5">
-          <div className="flex items-start gap-3">
-            <div>
-              <span
-                id="etiqueta-promedio-final"
-                className="block text-label-2 font-medium text-content-primary"
-              >
-                Incluir promedio final
-              </span>
-              <span className="mt-1 block max-w-md text-body-4 text-content-quartiary">
-                Calcula el promedio de este curso en cada competencia (su aporte
-                a la nota de la competencia) y un promedio general de
-                referencia, con la regla del año escolar:{' '}
-                {NOMBRES_REGLA[curso.reglaNota] ?? curso.reglaNota}.
-              </span>
+          {todoElAnio ? (
+            <p className="max-w-xl text-body-4 text-content-quartiary">
+              Por competencia: lo que aporta este curso en cada periodo y su
+              aporte final (referencial), y la nota de la competencia en cada
+              periodo y la final, que combina todos los cursos del grado.
+            </p>
+          ) : (
+            <div className="flex items-start gap-3">
+              <div>
+                <span
+                  id="etiqueta-promedio-periodo"
+                  className="block text-label-2 font-medium text-content-primary"
+                >
+                  Incluir promedio del periodo
+                </span>
+                <span className="mt-1 block max-w-md text-body-4 text-content-quartiary">
+                  Calcula el promedio de este curso en cada competencia durante
+                  el periodo (su aporte a la nota de la competencia) y un
+                  promedio general de referencia, con la regla del año escolar:{' '}
+                  {NOMBRES_REGLA[curso.reglaNota] ?? curso.reglaNota}.
+                </span>
+              </div>
+              <Switch
+                checked={incluirPromedio}
+                onCheckedChange={setIncluirPromedio}
+                aria-labelledby="etiqueta-promedio-periodo"
+              />
             </div>
-            <Switch
-              checked={incluirPromedio}
-              onCheckedChange={setIncluirPromedio}
-              aria-labelledby="etiqueta-promedio-final"
-            />
-          </div>
+          )}
 
           <div className="flex gap-3">
             <Button type="button" variant="primary-light" onClick={limpiar}>
@@ -227,16 +281,57 @@ export const ReporteCalificacionesVista = ({
             <Button
               type="button"
               onClick={generar}
-              disabled={!competenciaIds.length || !itemIds.length}
-              isLoading={isLoading}
+              disabled={
+                !competenciaIds.length || (!todoElAnio && !itemIds.length)
+              }
+              isLoading={todoElAnio ? resumen.isLoading : isLoading}
             >
-              Generar consolidado
+              {todoElAnio ? 'Generar resumen del año' : 'Generar consolidado'}
             </Button>
           </div>
         </div>
       </Card>
 
-      {(filtrosGenerados || isLoading) && (
+      {todoElAnio && filtrosAnio && (
+        <Card className="overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stroke-tertiary px-5 py-4">
+            <div>
+              <h2 className="text-label-1 font-medium text-content-primary">
+                Resumen del año
+              </h2>
+              <p className="mt-1 max-w-2xl text-body-4 text-content-quartiary">
+                El aporte final de {curso.curso} es referencial. La nota de la
+                competencia combina todos los cursos en cada periodo: no es el
+                promedio de los aportes finales. La consolida la coordinación.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="primary-light"
+              size="sm"
+              icon={<Download className="size-4" />}
+              iconPosition="right"
+              disabled={!resumen.data?.filas.length}
+              onClick={() => exportarResumenAnual(filtrosAnio)}
+            >
+              Descargar PDF
+            </Button>
+          </div>
+          {resumen.isLoading ? (
+            <div className="flex h-56 items-center justify-center">
+              <Spinner />
+            </div>
+          ) : resumen.data && resumen.data.filas.length ? (
+            <TablaConsolidado reporte={resumen.data} escala={curso.escala} />
+          ) : (
+            <div className="flex h-48 items-center justify-center px-5 text-center text-body-3 text-content-quartiary">
+              No hay estudiantes matriculados para mostrar.
+            </div>
+          )}
+        </Card>
+      )}
+
+      {!todoElAnio && (filtrosGenerados || isLoading) && (
         <Card className="overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stroke-tertiary px-5 py-4">
             <h2 className="text-label-1 font-medium text-content-primary">
@@ -271,7 +366,7 @@ export const ReporteCalificacionesVista = ({
         </Card>
       )}
 
-      {filtrosGenerados?.competenciaIds && (
+      {!todoElAnio && filtrosGenerados?.competenciaIds && (
         <NotasCompetencia
           seleccion={{
             planCursoId: filtrosGenerados.planCursoId,
@@ -293,7 +388,8 @@ const TablaConsolidado = ({
 }) => {
   const grupos: { clave: string; titulo: string; columnas: number }[] = [];
   reporte.columnas.forEach((columna) => {
-    const clave = columna.competenciaId ?? 'resumen';
+    // En el resumen del año una competencia tiene dos grupos: el aporte del curso y la nota de la competencia.
+    const clave = `${columna.competenciaId ?? 'resumen'}|${columna.competencia ?? ''}`;
     const ultimo = grupos.at(-1);
     if (ultimo?.clave === clave) {
       ultimo.columnas++;
@@ -360,12 +456,18 @@ const TablaConsolidado = ({
               const esPromedio =
                 columna.promedio ?? columna.clave === 'resultado';
               const estado = fila.valores[`${columna.clave}_estado`];
+              // Un promedio al que le faltan registros es solo avance: en gris, sin letra ni color de logro.
+              const incompleto = estado?.startsWith(FALTAN_REGISTROS);
+              const sinNota = valor === POR_REGISTRAR || valor === 'NE';
               return (
                 <TableCell key={columna.clave}>
                   <span
                     className={cn(
                       'block',
-                      esPromedio && 'font-semibold text-content-primary',
+                      esPromedio &&
+                        !incompleto &&
+                        'font-semibold text-content-primary',
+                      (incompleto || sinNota) && 'text-content-quartiary',
                     )}
                   >
                     {formatearNota(valor, escala)}
@@ -391,6 +493,7 @@ const TablaConsolidado = ({
 };
 
 const formatearNota = (valor: string, escala: CursoDocente['escala']) => {
-  if (valor === '—' || escala !== 'VIGESIMAL') return valor;
+  // Solo los números llevan «/20»: «—», «NE» y «Pendiente (3 de 4)» quedan igual.
+  if (escala !== 'VIGESIMAL' || !/^\d+(\.\d+)?$/.test(valor)) return valor;
   return `${valor.replace('.', ',')}/20`;
 };

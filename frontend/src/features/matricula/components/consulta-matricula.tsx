@@ -27,6 +27,7 @@ import {
 import { descargarConstancia } from '../lib/constancia-matricula';
 
 import { DocumentosApoderado } from './documentos-apoderado';
+import { TarjetaCambiosSeccion } from './historial-cambios-seccion';
 
 const estados: Record<
   EstadoMatricula,
@@ -474,6 +475,11 @@ export const ConsultaMatricula = ({
           {/* Sin matrícula, el apoderado la inicia aquí mismo cuando nada lo impide (periodo, inscripción, deuda). */}
           {(estado?.matricula || estado?.puedeContinuar) && estudianteId && (
             <DocumentosApoderado estudianteId={estudianteId} />
+          )}
+
+          {/* Como en el colegio: solo aparece si la matrícula cambió de sección. */}
+          {estado?.cambiosSeccion && estado.cambiosSeccion.length > 0 && (
+            <TarjetaCambiosSeccion cambios={estado.cambiosSeccion} />
           )}
         </div>
         {pagoMatricula}

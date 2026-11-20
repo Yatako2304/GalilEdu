@@ -36,7 +36,7 @@ type Props = {
 
 /**
  * Nota oficial de la competencia: una por periodo y una final. Combina todos los cursos del grado que la evalúan con
- * el peso del plan de evaluación (solo en promedio ponderado). El «Promedio final» del consolidado es el aporte de
+ * el peso del plan de evaluación (solo en promedio ponderado). El «Promedio del periodo» del consolidado es el aporte de
  * este curso en un periodo; esta tarjeta es la nota que va a la libreta.
  */
 export const NotasCompetencia = ({ seleccion, competenciaIds }: Props) => {
@@ -54,7 +54,11 @@ export const NotasCompetencia = ({ seleccion, competenciaIds }: Props) => {
             Es la nota oficial: una por periodo y una final
             {data ? ` (${CONSOLIDACION[data.consolidacion]})` : ''}. Combina
             todos los cursos del grado que evalúan la competencia; tu «Promedio
-            final» es el aporte de este curso.
+            del periodo» es el aporte de este curso en cada periodo.
+          </p>
+          <p className="mt-1 max-w-2xl text-body-4 text-content-quartiary">
+            Mientras falte registrar algún ítem, la nota queda pendiente: solo
+            se muestra cuando está completa.
           </p>
           <p className="mt-1 max-w-2xl text-body-4 text-content-quartiary">
             La nota final va en nivel de logro (AD, A, B, C): la nota se
@@ -183,6 +187,9 @@ const TablaCompetencia = ({
                             <li key={a.planCursoId}>
                               {nombreCurso[a.planCursoId]}:{' '}
                               {formatearNota(a.nota, datos.escala)}
+                              {a.pendiente &&
+                                // Avance de trabajo: en vigesimal lo que falta cuenta como 0.
+                                ` (faltan ${a.total - a.calificadas} de ${a.total}${datos.escala === 'VIGESIMAL' ? ', cuentan como 0' : ''})`}
                             </li>
                           ))}
                         </ul>
@@ -210,41 +217,49 @@ const Celda = ({
   nota: NotaResultado;
   escala: NotasCompetencias['escala'];
   final?: boolean;
-}) => (
-  <>
-    {final && nota.nivel ? (
-      // La nota final de la competencia va en nivel de logro (AD, A, B, C); el número queda como referencia.
-      <>
-        <span
-          className="block text-label-1 font-semibold text-content-primary"
-          aria-label={`Nivel de logro ${nota.nivel}`}
-        >
-          {nota.nivel}
-        </span>
-        {escala === 'VIGESIMAL' && (
-          <span className="block text-caption-1 text-content-tertiary">
-            {formatearNota(nota.nota, escala)}
+}) =>
+  nota.pendiente ? (
+    // Una nota oficial existe solo cuando está completa: mientras falte registrar algún ítem no hay número ni letra.
+    <>
+      <span className="block text-content-quartiary">Pendiente</span>
+      <span className="mt-1 block text-caption-1 text-content-quartiary">
+        {nota.calificadas} de {nota.total} ítems registrados
+      </span>
+    </>
+  ) : (
+    <>
+      {final && nota.nivel ? (
+        // La nota final de la competencia va en nivel de logro (AD, A, B, C); el número queda como referencia.
+        <>
+          <span
+            className="block text-label-1 font-semibold text-content-primary"
+            aria-label={`Nivel de logro ${nota.nivel}`}
+          >
+            {nota.nivel}
           </span>
-        )}
-      </>
-    ) : (
-      <span className="block text-content-primary">
-        {formatearNota(nota.nota, escala)}
-        {nota.nivel && escala === 'VIGESIMAL' && (
-          <span className="text-content-tertiary"> · {nota.nivel}</span>
-        )}
-      </span>
-    )}
-    {nota.nota !== '—' && (
-      <span className={cn('mt-1 block text-caption-1', colorLogro(nota.logro))}>
-        {nota.logro}
-        {nota.parcial && (
-          <span className="text-content-quartiary"> · Parcial</span>
-        )}
-      </span>
-    )}
-  </>
-);
+          {escala === 'VIGESIMAL' && (
+            <span className="block text-caption-1 text-content-tertiary">
+              {formatearNota(nota.nota, escala)}
+            </span>
+          )}
+        </>
+      ) : (
+        <span className="block text-content-primary">
+          {formatearNota(nota.nota, escala)}
+          {nota.nivel && escala === 'VIGESIMAL' && (
+            <span className="text-content-tertiary"> · {nota.nivel}</span>
+          )}
+        </span>
+      )}
+      {nota.nota !== '—' && (
+        <span
+          className={cn('mt-1 block text-caption-1', colorLogro(nota.logro))}
+        >
+          {nota.logro}
+        </span>
+      )}
+    </>
+  );
 
 const formatearNota = (valor: string, escala: NotasCompetencias['escala']) => {
   if (valor === '—' || escala !== 'VIGESIMAL') return valor;

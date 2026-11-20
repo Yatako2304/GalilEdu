@@ -9,3 +9,4 @@ export * from './checkbox';
 export * from './option-card';
 export * from './tag-field';
 export * from './multi-select';
+export * from './codigo-verificacion';

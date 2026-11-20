@@ -70,6 +70,7 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `view_sidebar` | `PanelLeft` | Ocultar o mostrar el menú lateral |
 | `schedule` | `Clock` | Modal Nueva estructura horaria |
 | `coffee` | `Coffee` | Receso en la jornada y en su vista previa |
+| `sync` | `RefreshCw` | «Cambiar contraseña» en el menú de la tarjeta del usuario (HU-5) |
 | `supervisor_account` | `UserCog` | Modal Asignar tutor |
 | `percent` | `Percent` | Modal "Pesos de una competencia" (plan de evaluación) |
 | `domain` | `Building2` | KPI "Ambientes activos" y modal Nuevo ambiente físico (CI-26) |
@@ -77,6 +78,7 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `science` | `FlaskConical` | KPI "Espacios especiales" (CI-26) |
 | `fact_check` | `ListChecks` | Asistencia: modal "¿Guardar la asistencia de hoy?" (AS-04) |
 | `summarize` | `FileText` | Asistencia: botón "Reporte mensual" (AS-01) |
+| — (no está en Figma) | `KeyRound` | Menú del Administrador › «Configuración de acceso» y fila «Usuario y contraseña» (HU-2) |
 
 ## Notas para quien siga
 

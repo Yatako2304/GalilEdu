@@ -31,8 +31,15 @@ public final class ArchivoReporteCalificaciones {
 	private static final Color VERDE = new Color(32, 119, 61);
 	private static final Color ROJO = new Color(184, 38, 49);
 	private static final Color AMBAR = new Color(154, 91, 0);
+	/** Tamaño del nivel de logro o del aviso que va debajo de un promedio. */
+	private static final float TAMANO_ESTADO = 7.5f;
+	private static final String PIE_CONSOLIDADO = "Calificaciones registradas de los ítems seleccionados. Por registrar: falta"
+			+ " la nota. NE: no evaluado. —: nadie tiene registrado el ítem.";
 	private final PDDocument documento;
 	private final PDType0Font fuente;
+	private String primeraColumna = "Estudiante";
+	private String vacio = "No hay estudiantes matriculados para mostrar.";
+	private String pie = PIE_CONSOLIDADO;
 
 	private ArchivoReporteCalificaciones(PDDocument documento) throws IOException {
 		this.documento = documento;
@@ -50,11 +57,11 @@ public final class ArchivoReporteCalificaciones {
 	}
 
 	/**
-	 * El consolidado del curso y, al final, la nota final de cada competencia con su nivel de logro (AD, A, B, C).
-	 * notasFinales es null cuando no corresponde (reportes por ítem o por periodo).
+	 * El consolidado de un periodo y, al final, la nota oficial de cada competencia en ese mismo periodo, con su nivel
+	 * de logro (AD, A, B, C). notasPeriodo es null cuando no corresponde (reportes por ítem o por periodo).
 	 */
 	public static byte[] pdf(ReporteCalificaciones reporte, String contexto, String parametros, String escala,
-			ReporteCalificaciones notasFinales) {
+			ReporteCalificaciones notasPeriodo) {
 		try (PDDocument documento = new PDDocument(); ByteArrayOutputStream salida = new ByteArrayOutputStream()) {
 			documento.getDocumentInformation().setTitle("Consolidado de notas");
 			documento.getDocumentInformation().setAuthor("GalilEdu");
@@ -64,14 +71,53 @@ public final class ArchivoReporteCalificaciones {
 				archivo.tabla("Consolidado de notas", reporte, bloques.get(indice), contexto, parametros, escala,
 						indice + 1, bloques.size());
 			}
-			if (notasFinales != null && !notasFinales.columnas().isEmpty()) {
-				String explicacion = "Nota oficial de la competencia: combina todos los cursos del grado que la evalúan."
-						+ " La nota final se expresa en nivel de logro (AD, A, B, C): la nota vigesimal se redondea"
-						+ " al entero (0,5 sube) y se ubica en la tabla de conversión vigente. Parcial: aún faltan notas.";
-				List<List<ColumnaReporte>> finales = bloquesPorCompetencia(notasFinales.columnas());
-				for (int indice = 0; indice < finales.size(); indice++) {
-					archivo.tabla("Nota final de la competencia", notasFinales, finales.get(indice), contexto,
-							explicacion, escala, indice + 1, finales.size());
+			if (notasPeriodo != null && !notasPeriodo.columnas().isEmpty()) {
+				String explicacion = "Nota oficial de la competencia en este periodo: combina todos los cursos del grado"
+						+ " que la evalúan. La consolida la coordinación y puede cambiar mientras otros cursos registren"
+						+ " notas. Se expresa en nivel de logro (AD, A, B, C): la nota vigesimal se redondea al entero"
+						+ " (0,5 sube) y se ubica en la tabla de conversión vigente. Parcial: aún faltan notas.";
+				List<List<ColumnaReporte>> delPeriodo = bloquesPorCompetencia(notasPeriodo.columnas());
+				for (int indice = 0; indice < delPeriodo.size(); indice++) {
+					archivo.tabla("Nota de la competencia en el periodo", notasPeriodo, delPeriodo.get(indice),
+							contexto, explicacion, escala, indice + 1, delPeriodo.size());
+				}
+			}
+			archivo.numerarPaginas();
+			documento.save(salida);
+			return salida.toByteArray();
+		} catch (IOException excepcion) {
+			throw new UncheckedIOException("No se pudo generar el PDF de calificaciones.", excepcion);
+		}
+	}
+
+	/** Una tabla de un PDF de resumen: su encabezado, el contexto (curso, grado, año…) y una línea de parámetros. */
+	/** primeraColumna: el título de la primera columna de esta tabla; null usa el del documento. */
+	public record TablaPdf(String encabezado, String contexto, String parametros, ReporteCalificaciones reporte,
+			String primeraColumna) {
+		public TablaPdf(String encabezado, String contexto, String parametros, ReporteCalificaciones reporte) {
+			this(encabezado, contexto, parametros, reporte, null);
+		}
+	}
+
+	/**
+	 * PDF de resumen (reportes HU-63 y HU-64, libreta del apoderado HU-69) con el mismo estilo que el consolidado. Cada
+	 * fila de {@code reporte.filas()} es una competencia, una sección o un área: primeraColumna dice cuál.
+	 */
+	public static byte[] pdfResumen(String titulo, String primeraColumna, String pie, String vacio, String escala,
+			List<TablaPdf> tablas) {
+		try (PDDocument documento = new PDDocument(); ByteArrayOutputStream salida = new ByteArrayOutputStream()) {
+			documento.getDocumentInformation().setTitle(titulo);
+			documento.getDocumentInformation().setAuthor("GalilEdu");
+			var archivo = new ArchivoReporteCalificaciones(documento);
+			archivo.primeraColumna = primeraColumna;
+			archivo.pie = pie;
+			archivo.vacio = vacio;
+			for (TablaPdf tabla : tablas) {
+				archivo.primeraColumna = tabla.primeraColumna() != null ? tabla.primeraColumna() : primeraColumna;
+				List<List<ColumnaReporte>> bloques = bloquesPorCompetencia(tabla.reporte().columnas());
+				for (int indice = 0; indice < bloques.size(); indice++) {
+					archivo.tabla(tabla.encabezado(), tabla.reporte(), bloques.get(indice), tabla.contexto(),
+							tabla.parametros(), escala, indice + 1, bloques.size());
 				}
 			}
 			archivo.numerarPaginas();
@@ -139,8 +185,7 @@ public final class ArchivoReporteCalificaciones {
 				y = encabezados(lienzo, reporte.titulo(), columnas, y, anchoDato);
 				if (reporte.filas().isEmpty()) {
 					celda(lienzo, MARGEN, y, ancho, 40, Color.WHITE);
-					texto(lienzo, "No hay estudiantes matriculados para mostrar.", MARGEN + 10, y - 24, 10, GRIS,
-							false);
+					texto(lienzo, vacio, MARGEN + 10, y - 24, 10, GRIS, false);
 				}
 				int primeraFila = siguiente;
 				while (siguiente < reporte.filas().size()) {
@@ -173,7 +218,7 @@ public final class ArchivoReporteCalificaciones {
 			altoItem = Math.max(altoItem, lineas(columna.titulo(), anchoDato - 12, 9).size() * 12 + 12);
 		}
 		celda(lienzo, MARGEN, y, ANCHO_ESTUDIANTE, altoGrupo + altoItem, AZUL);
-		texto(lienzo, "Estudiante", MARGEN + 10, y - (altoGrupo + altoItem) / 2, 10, Color.WHITE, true);
+		texto(lienzo, primeraColumna, MARGEN + 10, y - (altoGrupo + altoItem) / 2, 10, Color.WHITE, true);
 		for (int inicio = 0; inicio < columnas.size();) {
 			int fin = finGrupo(columnas, inicio);
 			float x = MARGEN + ANCHO_ESTUDIANTE + inicio * anchoDato;
@@ -208,7 +253,12 @@ public final class ArchivoReporteCalificaciones {
 		float alto = Math.max(36, lineas(fila.estudiante(), ANCHO_ESTUDIANTE - 20, 9).size() * 12 + 14);
 		for (ColumnaReporte columna : columnas) {
 			String nota = nota(fila.valores().get(columna.clave()), columna, escala);
-			alto = Math.max(alto, lineas(nota, anchoDato - 12, 10).size() * 13 + (columna.promedio() ? 24 : 14));
+			String estado = fila.valores().get(columna.clave() + "_estado");
+			// El estado va debajo de la nota, en varias líneas si no cabe («Faltan registros (cuentan como 0) · …»).
+			float altoEstado = columna.promedio() && estado != null
+					? lineas(estado, anchoDato - 12, TAMANO_ESTADO).size() * (TAMANO_ESTADO + 3) + 4
+					: 0;
+			alto = Math.max(alto, lineas(nota, anchoDato - 12, 10).size() * 13 + altoEstado + 14);
 		}
 		return alto;
 	}
@@ -223,10 +273,14 @@ public final class ArchivoReporteCalificaciones {
 			float x = MARGEN + ANCHO_ESTUDIANTE + indice * anchoDato;
 			celda(lienzo, x, y, anchoDato, alto, columna.promedio() ? CLARO : fondo);
 			String valor = nota(fila.valores().get(columna.clave()), columna, escala);
-			float base = parrafo(lienzo, valor, x + 6, y - 10, anchoDato - 12, 10, AZUL, columna.promedio());
 			String estado = fila.valores().get(columna.clave() + "_estado");
+			// Un promedio al que le faltan registros es solo avance: va en gris y sin negrita.
+			boolean incompleto = estado != null && estado.startsWith("Faltan registros");
+			boolean sinNota = "Por registrar".equals(valor) || "NE".equals(valor);
+			float base = parrafo(lienzo, valor, x + 6, y - 10, anchoDato - 12, 10,
+					incompleto || sinNota ? GRIS : AZUL, columna.promedio() && !incompleto);
 			if (columna.promedio() && estado != null) {
-				texto(lienzo, estado, x + 6, base - 4, 7.5f, colorLogro(estado), false);
+				parrafo(lienzo, estado, x + 6, base - 2, anchoDato - 12, TAMANO_ESTADO, colorLogro(estado), false);
 			}
 		}
 	}
@@ -256,8 +310,7 @@ public final class ArchivoReporteCalificaciones {
 			PDPage pagina = documento.getPage(indice);
 			try (PDPageContentStream lienzo = new PDPageContentStream(documento, pagina,
 					PDPageContentStream.AppendMode.APPEND, true, true)) {
-				texto(lienzo, "Calificaciones registradas de los ítems seleccionados. —: pendiente.", MARGEN, 30, 8,
-						GRIS, false);
+				texto(lienzo, pie, MARGEN, 30, 8, GRIS, false);
 				texto(lienzo, "Página " + (indice + 1) + " de " + documento.getNumberOfPages(), 710, 30, 8, GRIS,
 						false);
 			}

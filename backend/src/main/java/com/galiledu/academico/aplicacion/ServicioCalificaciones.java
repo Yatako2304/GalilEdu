@@ -7,12 +7,16 @@ import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -31,12 +35,14 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.EvidenciaResumen;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.FilaCalificacion;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.FilaReporte;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ItemEvaluacion;
+import com.galiledu.academico.aplicacion.DtosCalificaciones.ModificacionCalificacion;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.PeriodoCurso;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.RegistroCalificacion;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.ReporteCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCalificaciones;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudCompetenciaItem;
 import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudItem;
+import com.galiledu.academico.aplicacion.DtosCalificaciones.SolicitudModificacion;
 import com.galiledu.academico.dominio.CalculoNotas;
 import com.galiledu.academico.infraestructura.ArchivoReporteCalificaciones;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones;
@@ -49,9 +55,10 @@ import com.galiledu.academico.infraestructura.RepositorioCalificaciones.ItemCont
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones.ItemFila;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones.PeriodoContexto;
 import com.galiledu.academico.infraestructura.RepositorioCalificaciones.PeriodoFila;
+import com.galiledu.academico.infraestructura.RepositorioCalificaciones.ValorCalificacion;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 
-/** Casos de uso del docente para HU-57, HU-59 y HU-62. */
+/** Casos de uso del docente para HU-57, HU-59, HU-60 y HU-62. */
 @Service
 public class ServicioCalificaciones {
 	private static final long TAMANO_MAXIMO = 10L * 1024 * 1024;
@@ -59,6 +66,7 @@ public class ServicioCalificaciones {
 	private static final Set<String> TIPOS_EVIDENCIA = Set.of("application/pdf", "application/msword",
 			"application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/jpeg", "image/png");
 	private static final Map<String, Integer> ORDEN_NIVEL = Map.of("C", 0, "B", 1, "A", 2, "AD", 3);
+	static final int MOTIVO_MINIMO = 10;
 
 	private final RepositorioCalificaciones repositorio;
 	private final Clock reloj;
@@ -79,8 +87,8 @@ public class ServicioCalificaciones {
 		LocalDate hoy = LocalDate.now(reloj);
 		return repositorio.periodos(curso.planCursoId(), curso.seccionId()).stream()
 				.map(p -> new PeriodoCurso(p.id(), p.numero(), p.nombre(), p.fechaInicio(), p.fechaFin(),
-						p.fechaLimiteNotas(), estado(p, curso, hoy), abierto(p, curso, hoy), p.competencias(),
-						p.items()))
+						p.fechaLimiteNotas(), estado(p, curso, hoy), abierto(p, curso, hoy),
+						modificable(curso.estadoAnio(), p.fechaInicio(), hoy), p.competencias(), p.items()))
 				.toList();
 	}
 
@@ -96,6 +104,14 @@ public class ServicioCalificaciones {
 	private static boolean abierto(PeriodoFila periodo, CursoFila curso, LocalDate hoy) {
 		return "ACTIVO".equals(curso.estadoAnio()) && !hoy.isBefore(periodo.fechaInicio())
 				&& !hoy.isAfter(periodo.fechaLimiteNotas());
+	}
+
+	/**
+	 * HU-60: una nota ya registrada se puede modificar, con motivo, desde que empieza el periodo y mientras el año esté
+	 * ACTIVO, también después de la fecha límite de registro. Con el año cerrado ya no se modifica.
+	 */
+	private static boolean modificable(String estadoAnio, LocalDate fechaInicio, LocalDate hoy) {
+		return "ACTIVO".equals(estadoAnio) && !hoy.isBefore(fechaInicio);
 	}
 
 	@Transactional(readOnly = true)
@@ -182,21 +198,117 @@ public class ServicioCalificaciones {
 		return calificaciones(docenteId, itemId);
 	}
 
+	/**
+	 * El lote solo <b>registra</b> celdas vacías. Una celda ya resuelta (con nota o «No evaluado») se cambia únicamente
+	 * con {@link #modificarCalificacion}, que pide motivo y deja historial: así cada cambio tiene un motivo escrito por
+	 * el docente. Repetir el mismo valor o enviar vacía una celda ya resuelta no cambia nada.
+	 */
 	private void guardarCalificacion(UUID docenteId, ItemContexto item, RegistroCalificacion registro) {
 		BigDecimal nota = registro.notaNumerica();
 		String nivel = registro.nivelLogro();
+		Optional<ValorCalificacion> anterior = repositorio.valorCalificacion(item.id(), registro.matriculaId());
 		if (nota == null && nivel == null) {
-			repositorio.quitarCalificacion(item.id(), registro.matriculaId());
 			return;
 		}
-		if ("VIGESIMAL".equals(item.escala())) {
+		exigirValor(item.escala(), nota, nivel);
+		ValorCalificacion nueva = new ValorCalificacion(nota, nivel);
+		if (anterior.isPresent()) {
+			if (iguales(anterior.get(), nueva)) {
+				return;
+			}
+			throw ExcepcionNegocio.conflicto(
+					"Una de las notas ya está registrada: para cambiarla usa «Modificar» e indica el motivo.");
+		}
+		repositorio.guardarCalificacion(item.id(), registro.matriculaId(), nota, nivel, docenteId);
+	}
+
+	private static void exigirValor(String escala, BigDecimal nota, String nivel) {
+		if ("VIGESIMAL".equals(escala)) {
 			if (nota == null || nivel != null) {
 				throw ExcepcionNegocio.invalido("La escala vigesimal requiere una calificación numérica de 0 a 20.");
 			}
 		} else if (nivel == null || nota != null) {
 			throw ExcepcionNegocio.invalido("La escala cualitativa requiere un nivel AD, A, B o C.");
 		}
-		repositorio.guardarCalificacion(item.id(), registro.matriculaId(), nota, nivel, docenteId);
+	}
+
+	private static boolean iguales(ValorCalificacion a, ValorCalificacion b) {
+		boolean notas = a.notaNumerica() == null
+				? b.notaNumerica() == null
+				: b.notaNumerica() != null && a.notaNumerica().compareTo(b.notaNumerica()) == 0;
+		return notas && Objects.equals(a.nivelLogro(), b.nivelLogro()) && a.noEvaluado() == b.noEvaluado();
+	}
+
+	/**
+	 * HU-60: resuelve una celda fuera del registro en lote. Sirve para:
+	 * <ul>
+	 * <li><b>modificar</b> una nota ya registrada;</li>
+	 * <li><b>registrar fuera de plazo</b> una nota que falta, después de la fecha límite;</li>
+	 * <li>marcar la celda como <b>«No evaluado»</b> (el ítem no cuenta para el estudiante).</li>
+	 * </ul>
+	 * Se permite desde que empieza el periodo y mientras el año esté ACTIVO. Exige motivo (10 a 500 caracteres) salvo
+	 * para registrar una nota en una celda vacía dentro del plazo, y deja el cambio en el historial.
+	 */
+	@Transactional
+	public FilaCalificacion modificarCalificacion(UUID docenteId, UUID itemId, UUID matriculaId,
+			SolicitudModificacion solicitud) {
+		ItemContexto item = itemConAcceso(docenteId, itemId);
+		LocalDate hoy = LocalDate.now(reloj);
+		if (!modificable(item.estadoAnio(), item.fechaInicio(), hoy)) {
+			throw ExcepcionNegocio.conflicto(
+					"Solo se modifican calificaciones de un periodo ya iniciado y de un año escolar activo.");
+		}
+		if (!repositorio.matriculaPertenece(matriculaId, item.seccionId())) {
+			throw ExcepcionNegocio.invalido("El estudiante no pertenece a la sección del curso.");
+		}
+		Optional<ValorCalificacion> anterior = repositorio.valorCalificacion(itemId, matriculaId);
+		boolean enPlazo = !hoy.isAfter(item.fechaLimiteNotas());
+		ValorCalificacion nueva;
+		if (solicitud.marcaNoEvaluado()) {
+			if (solicitud.notaNumerica() != null || solicitud.nivelLogro() != null) {
+				throw ExcepcionNegocio.invalido("«No evaluado» no lleva calificación.");
+			}
+			nueva = ValorCalificacion.NO_EVALUADO;
+		} else {
+			exigirValor(item.escala(), solicitud.notaNumerica(), solicitud.nivelLogro());
+			nueva = new ValorCalificacion(solicitud.notaNumerica(), solicitud.nivelLogro());
+		}
+		if (anterior.isPresent() && iguales(anterior.get(), nueva)) {
+			throw ExcepcionNegocio.invalido(nueva.noEvaluado()
+					? "La celda ya está marcada como «No evaluado»."
+					: "La nueva calificación es igual a la actual.");
+		}
+		// Registrar por primera vez una nota dentro del plazo es parte del registro: no pide motivo ni deja historial.
+		boolean conHistorial = anterior.isPresent() || !enPlazo || nueva.noEvaluado();
+		String motivo = solicitud.motivo() == null ? "" : solicitud.motivo().strip();
+		if (conHistorial && motivo.length() < MOTIVO_MINIMO) {
+			throw ExcepcionNegocio.invalido(
+					"Explica el motivo (al menos " + MOTIVO_MINIMO + " caracteres): queda en el historial.");
+		}
+		if (nueva.noEvaluado()) {
+			repositorio.marcarNoEvaluado(itemId, matriculaId, motivo, docenteId);
+		} else {
+			repositorio.guardarCalificacion(itemId, matriculaId, nueva.notaNumerica(), nueva.nivelLogro(), docenteId);
+		}
+		if (conHistorial) {
+			repositorio.registrarModificacion(itemId, matriculaId, anterior.orElse(null), nueva, motivo, docenteId);
+		}
+		return calificaciones(docenteId, itemId).stream().filter(f -> f.matriculaId().equals(matriculaId))
+				.findFirst().orElseThrow();
+	}
+
+	/** HU-60: los cambios de la nota de un estudiante en un ítem, del más reciente al más antiguo. */
+	@Transactional(readOnly = true)
+	public List<ModificacionCalificacion> historial(UUID docenteId, UUID itemId, UUID matriculaId) {
+		ItemContexto item = itemConAcceso(docenteId, itemId);
+		if (!repositorio.matriculaPertenece(matriculaId, item.seccionId())) {
+			throw ExcepcionNegocio.noEncontrado("El estudiante no pertenece a la sección del curso.");
+		}
+		return repositorio.historial(itemId, matriculaId).stream()
+				.map(f -> new ModificacionCalificacion(f.notaAnterior(), f.nivelAnterior(), f.noEvaluadoAnterior(),
+						f.notaNueva(), f.nivelNuevo(), f.noEvaluadoNuevo(), f.motivo(), f.modificadoPor(),
+						f.modificadoEn()))
+				.toList();
 	}
 
 	@Transactional
@@ -323,11 +435,14 @@ public class ServicioCalificaciones {
 				competenciaIds, null);
 	}
 
-	/** notasFinales: la nota final de cada competencia, que va al final del PDF (null para no incluirla). */
+	/**
+	 * notasPeriodo: la nota oficial de cada competencia en el mismo periodo, que va al final del PDF (null para no
+	 * incluirla).
+	 */
 	@Transactional(readOnly = true)
 	public byte[] exportarPdf(UUID docenteId, String tipo, UUID planCursoId, UUID seccionId, UUID periodoId,
 			UUID objetivoId, List<UUID> itemIds, boolean incluirPromedio, List<UUID> competenciaIds,
-			ReporteCalificaciones notasFinales) {
+			ReporteCalificaciones notasPeriodo) {
 		ReporteCalificaciones reporte = reporte(docenteId, tipo, planCursoId, seccionId, periodoId, objetivoId,
 				itemIds, incluirPromedio, competenciaIds);
 		CursoFila curso = repositorio.cursos(docenteId).stream()
@@ -337,7 +452,8 @@ public class ServicioCalificaciones {
 				.filter(p -> p.id().equals(periodoId)).findFirst()
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("El periodo no pertenece al año del curso."));
 		String contexto = curso.curso() + " · " + curso.grado() + " · Sección " + curso.seccion()
-				+ " · Año escolar " + curso.anio() + " · " + periodo.nombre();
+				+ " · Año escolar " + curso.anio() + " · " + periodo.nombre() + " · Generado el "
+				+ LocalDateTime.now(reloj).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
 		String regla = switch (curso.reglaNota()) {
 			case "PROMEDIO_PONDERADO" -> "Promedio ponderado";
 			case "PROMEDIO_SIMPLE" -> "Promedio simple";
@@ -347,9 +463,9 @@ public class ServicioCalificaciones {
 		};
 		String parametros = "Escala: " + ("VIGESIMAL".equals(curso.escala()) ? "0 a 20" : "AD, A, B, C")
 				+ " · Regla del año escolar: " + regla
-				+ " · El promedio final es el aporte de este curso a cada competencia; la nota oficial de la"
-				+ " competencia combina todos los cursos del grado que la evalúan.";
-		return ArchivoReporteCalificaciones.pdf(reporte, contexto, parametros, curso.escala(), notasFinales);
+				+ " · El promedio del periodo es el aporte de este curso a cada competencia en el periodo; la nota"
+				+ " oficial de la competencia combina todos los cursos del grado que la evalúan.";
+		return ArchivoReporteCalificaciones.pdf(reporte, contexto, parametros, curso.escala(), notasPeriodo);
 	}
 
 	private ReporteCalificaciones reporteItem(List<DetalleReporteFila> detalles, ItemFila item) {
@@ -362,7 +478,10 @@ public class ServicioCalificaciones {
 		return new ReporteCalificaciones(item.nombre(), "Calificaciones por ítem", columnas,
 				filas.stream().map(f -> new FilaReporte(f.matriculaId(), f.estudiante(), Map.of("nota", valor(f),
 						"evidencia", f.evidenciaNombre() == null ? "—" : f.evidenciaNombre(), "estado",
-						valor(f).equals("—") ? "Pendiente" : "Calificado"))).toList());
+						f.noEvaluado()
+								? "No evaluado"
+								: f.notaNumerica() != null || f.nivelLogro() != null ? "Calificado" : "Pendiente")))
+						.toList());
 	}
 
 	private ReporteCalificaciones reporteCompetencia(List<DetalleReporteFila> detalles, UUID competenciaId,
@@ -394,7 +513,7 @@ public class ServicioCalificaciones {
 		List<ColumnaReporte> columnas = new ArrayList<>(items.stream()
 				.map(i -> new ColumnaReporte(i.itemId().toString(), i.item())).toList());
 		if (incluirPromedio) {
-			columnas.add(new ColumnaReporte("resultado", "Promedio final"));
+			columnas.add(new ColumnaReporte("resultado", "Promedio del periodo"));
 		}
 		List<CalculoNotas.Rango> rangos = rangosConversion(periodo.fechaInicio());
 		Map<UUID, List<DetalleReporteFila>> porEstudiante = competencia.stream()
@@ -404,9 +523,8 @@ public class ServicioCalificaciones {
 			Map<String, String> valores = new LinkedHashMap<>();
 			lista.forEach(d -> valores.put(d.itemId().toString(), valor(d)));
 			if (incluirPromedio) {
-				String resultado = resultado(lista, periodo.reglaNota());
-				valores.put("resultado", resultado);
-				valores.put("resultado_estado", logroResultado(resultado, periodo.escala(), rangos));
+				registrarResultado(valores, "resultado", resultado(lista, periodo.reglaNota()), lista, false, periodo,
+						rangos);
 			}
 			return new FilaReporte(lista.get(0).matriculaId(), lista.get(0).estudiante(), valores);
 		}).toList();
@@ -452,7 +570,7 @@ public class ServicioCalificaciones {
 				}
 			}
 			if (incluirPromedio) {
-				columnas.add(new ColumnaReporte(claveReporte(competenciaId, "resultado"), "Promedio final",
+				columnas.add(new ColumnaReporte(claveReporte(competenciaId, "resultado"), "Promedio del periodo",
 						competenciaId, permitidas.get(competenciaId), true));
 			}
 		}
@@ -471,14 +589,14 @@ public class ServicioCalificaciones {
 			lista.forEach(d -> valores.put(claveReporte(d.competenciaId(), d.itemId().toString()), valor(d)));
 			if (incluirPromedio) {
 				for (UUID competenciaId : seleccionadas) {
-					String resultado = resultado(lista.stream()
-							.filter(d -> d.competenciaId().equals(competenciaId)).toList(), periodo.reglaNota());
-					registrarResultado(valores, claveReporte(competenciaId, "resultado"), resultado, periodo,
-							rangos);
+					List<DetalleReporteFila> deCompetencia = lista.stream()
+							.filter(d -> d.competenciaId().equals(competenciaId)).toList();
+					registrarResultado(valores, claveReporte(competenciaId, "resultado"),
+							resultado(deCompetencia, periodo.reglaNota()), deCompetencia, false, periodo, rangos);
 				}
 				if (promedioGeneral) {
 					registrarResultado(valores, "resultado_general", resultadoDeItemsUnicos(lista, periodo.reglaNota()),
-							periodo, rangos);
+							lista, true, periodo, rangos);
 				}
 			}
 			return new FilaReporte(estudiante.matriculaId(), estudiante.estudiante(), valores);
@@ -492,10 +610,53 @@ public class ServicioCalificaciones {
 		return competenciaId + ":" + columna;
 	}
 
+	/** Lo que se muestra debajo de un promedio al que le faltan registros: sin letra ni significado. */
+	static final String FALTAN_REGISTROS = "Faltan registros";
+
+	/**
+	 * El promedio del periodo es la vista de trabajo del docente. Si falta registrar algún ítem, en vigesimal lo que
+	 * falta cuenta como 0 (ver {@link #resultado}); no lleva nivel de logro (una letra se leería como nota) y dice
+	 * cuánto está calificado: en ponderado, «Faltan registros (cuentan como 0) · 70 % del peso calificado»; en las
+	 * demás reglas, «… · 2 de 3 ítems». La nota oficial de la competencia, en cambio, queda pendiente.
+	 *
+	 * @param unicos
+	 *            el promedio general cuenta cada ítem una vez aunque apunte a varias competencias
+	 */
 	private static void registrarResultado(Map<String, String> valores, String clave, String resultado,
-			PeriodoContexto periodo, List<CalculoNotas.Rango> rangos) {
+			List<DetalleReporteFila> detalles, boolean unicos, PeriodoContexto periodo,
+			List<CalculoNotas.Rango> rangos) {
 		valores.put(clave, resultado);
-		valores.put(clave + "_estado", logroResultado(resultado, periodo.escala(), rangos));
+		List<DetalleReporteFila> cuentan = detalles.stream().filter(DetalleReporteFila::cuenta).toList();
+		List<DetalleReporteFila> calificados = cuentan.stream()
+				.filter(d -> d.notaNumerica() != null || d.nivelLogro() != null).toList();
+		long total = unicos ? cuentan.stream().map(DetalleReporteFila::itemId).distinct().count() : cuentan.size();
+		long conNota = unicos
+				? calificados.stream().map(DetalleReporteFila::itemId).distinct().count()
+				: calificados.size();
+		if (conNota == total) {
+			valores.put(clave + "_estado", logroResultado(resultado, periodo.escala(), rangos));
+			return;
+		}
+		String respaldo;
+		if ("PROMEDIO_PONDERADO".equals(periodo.reglaNota())) {
+			// Un ítem compartido suma su peso en cada competencia, igual que en el promedio general.
+			BigDecimal peso = suma(cuentan);
+			int porcentaje = peso.signum() == 0
+					? 0
+					: suma(calificados).multiply(BigDecimal.valueOf(100)).divide(peso, 0, RoundingMode.HALF_UP)
+							.intValue();
+			respaldo = porcentaje + " % del peso calificado";
+		} else {
+			respaldo = conNota + " de " + total + " ítems";
+		}
+		// En vigesimal lo que falta cuenta como 0 en este promedio (un piso); en letras no hay 0.
+		valores.put(clave + "_estado", FALTAN_REGISTROS
+				+ ("VIGESIMAL".equals(periodo.escala()) ? " (cuentan como 0)" : "") + " · " + respaldo);
+	}
+
+	private static BigDecimal suma(List<DetalleReporteFila> detalles) {
+		return detalles.stream().map(d -> d.pesoPorcentaje() == null ? BigDecimal.ZERO : d.pesoPorcentaje())
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
 	private static String resultadoDeItemsUnicos(List<DetalleReporteFila> detalles, String regla) {
@@ -507,7 +668,8 @@ public class ServicioCalificaciones {
 							anterior.matriculaId(), anterior.estudianteId(), anterior.estudiante(), anterior.itemId(),
 							anterior.item(), anterior.competenciaId(), anterior.competencia(),
 							anterior.pesoPorcentaje().add(actual.pesoPorcentaje()), anterior.notaNumerica(),
-							anterior.nivelLogro(), anterior.evidenciaNombre(), anterior.ordenItem()));
+							anterior.nivelLogro(), anterior.evidenciaNombre(), anterior.ordenItem(),
+							anterior.noEvaluado(), anterior.itemUsado()));
 		}
 		return resultado(new ArrayList<>(unicos.values()), regla);
 	}
@@ -556,13 +718,22 @@ public class ServicioCalificaciones {
 		return new ReporteCalificaciones("Reporte del periodo", "Resultados por competencia", columnas, filas);
 	}
 
+	/**
+	 * El promedio del periodo de un estudiante (vista de trabajo del docente). Sin ninguna nota, «—». En la escala
+	 * vigesimal, un ítem que cuenta y aún no tiene nota entra como <b>0</b>: así el promedio es un piso que solo puede
+	 * subir al registrar lo que falta. En la escala de letras no hay un 0, así que se usan solo los niveles
+	 * registrados.
+	 * La nota oficial no se calcula así: queda pendiente hasta que no falte nada.
+	 */
 	private static String resultado(List<DetalleReporteFila> detalles, String regla) {
-		List<DetalleReporteFila> calificados = detalles.stream()
+		List<DetalleReporteFila> cuentan = detalles.stream().filter(DetalleReporteFila::cuenta).toList();
+		List<DetalleReporteFila> calificados = cuentan.stream()
 				.filter(d -> d.notaNumerica() != null || d.nivelLogro() != null).toList();
 		if (calificados.isEmpty()) {
 			return "—";
 		}
 		if (calificados.get(0).notaNumerica() != null) {
+			calificados = cuentan.stream().map(ServicioCalificaciones::faltanteComoCero).toList();
 			BigDecimal suma;
 			BigDecimal divisor;
 			if ("PROMEDIO_PONDERADO".equals(regla)) {
@@ -642,7 +813,9 @@ public class ServicioCalificaciones {
 				: new EvidenciaResumen(fila.evidenciaNombreArchivo(), fila.evidenciaTipoMime(),
 						fila.evidenciaTamanoBytes(), fila.evidenciaSubidoEn());
 		return new FilaCalificacion(fila.id(), fila.matriculaId(), fila.estudianteId(), fila.estudiante(),
-				fila.notaNumerica(), fila.nivelLogro(), evidencia, fila.id() == null ? "PENDIENTE" : "CALIFICADO");
+				fila.notaNumerica(), fila.nivelLogro(), evidencia,
+				fila.id() == null ? "PENDIENTE" : fila.noEvaluado() ? "NO_EVALUADO" : "CALIFICADO",
+				fila.modificaciones(), fila.noEvaluado(), fila.motivoNoEvaluado());
 	}
 
 	private ItemContexto itemConAcceso(UUID docenteId, UUID itemId) {
@@ -690,11 +863,34 @@ public class ServicioCalificaciones {
 		return objetivoId;
 	}
 
+	private static DetalleReporteFila faltanteComoCero(DetalleReporteFila d) {
+		if (d.notaNumerica() != null || d.nivelLogro() != null) {
+			return d;
+		}
+		return new DetalleReporteFila(d.matriculaId(), d.estudianteId(), d.estudiante(), d.itemId(), d.item(),
+				d.competenciaId(), d.competencia(), d.pesoPorcentaje(), BigDecimal.ZERO, null, d.evidenciaNombre(),
+				d.ordenItem(), d.noEvaluado(), d.itemUsado());
+	}
+
+	/** Lo que se muestra de una celda que aún no tiene nota pero cuenta: falta registrarla. */
+	static final String POR_REGISTRAR = "Por registrar";
+
+	/**
+	 * Valor de una celda del consolidado: la nota, «NE» si es «No evaluado», «Por registrar» si falta y el ítem cuenta,
+	 * o
+	 * «—» si nadie tiene registrado el ítem todavía.
+	 */
 	private static String valor(DetalleReporteFila fila) {
+		if (fila.noEvaluado()) {
+			return "NE";
+		}
 		if (fila.notaNumerica() != null) {
 			return fila.notaNumerica().stripTrailingZeros().toPlainString();
 		}
-		return fila.nivelLogro() == null ? "—" : fila.nivelLogro();
+		if (fila.nivelLogro() != null) {
+			return fila.nivelLogro();
+		}
+		return fila.itemUsado() ? POR_REGISTRAR : "—";
 	}
 
 	private static String csv(String valor) {

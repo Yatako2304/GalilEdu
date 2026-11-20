@@ -35,13 +35,42 @@ class ArchivoReporteCalificacionesTests {
 			assertThat(pdf.getPage(0).getMediaBox().getWidth()).isGreaterThan(pdf.getPage(0).getMediaBox().getHeight());
 			String texto = new PDFTextStripper().getText(pdf);
 			assertThat(texto).contains("Consolidado de notas", "Álgebra", "IV Bimestre", "Regla del año escolar",
-					"Práctica 1", "Práctica 2", "Promedio final", "Promedio general", "Ana Lucía García López",
+					"Práctica 1", "Práctica 2", "Promedio del", "Promedio general", "Ana Lucía García López",
 					"Diego José Quispe Mendoza", "Camila Sofía Torres Vargas", "17/20", "A · Logro esperado",
 					"B · En proceso",
 					"Página 1 de 1");
 			Files.write(Path.of("target/reporte-pdf-demo.pdf"), archivo);
 			ImageIO.write(new PDFRenderer(pdf).renderImageWithDPI(0, 125), "png",
 					Path.of("target/reporte-pdf-demo.png").toFile());
+		}
+	}
+
+	@Test
+	void unPromedioConRegistrosFaltantesMuestraElAvisoCompletoSinEncimarse() throws Exception {
+		UUID competencia = UUID.randomUUID();
+		var columnas = List.of(
+				new ColumnaReporte("c:i1", "Práctica 1", competencia, "Resuelve problemas de cantidad", false),
+				new ColumnaReporte("c:i2", "FSSAF", competencia, "Resuelve problemas de cantidad", false),
+				new ColumnaReporte("c:resultado", "Promedio del periodo", competencia,
+						"Resuelve problemas de cantidad", true));
+		var filas = List.of(
+				new FilaReporte(UUID.randomUUID(), "Ana Lucía García López",
+						Map.of("c:i1", "12", "c:i2", "8", "c:resultado", "11.8", "c:resultado_estado",
+								"B · En proceso")),
+				new FilaReporte(UUID.randomUUID(), "Diego José Quispe Mendoza",
+						Map.of("c:i1", "15", "c:i2", "Por registrar", "c:resultado", "9.5", "c:resultado_estado",
+								"Faltan registros (cuentan como 0) · 70 % del peso calificado")));
+		byte[] archivo = ArchivoReporteCalificaciones.pdf(
+				new ReporteCalificaciones("Resuelve problemas de cantidad", "Consolidado", columnas, filas), CONTEXTO,
+				PARAMETROS, "VIGESIMAL");
+		try (PDDocument pdf = Loader.loadPDF(archivo)) {
+			ImageIO.write(new PDFRenderer(pdf).renderImageWithDPI(0, 125), "png",
+					Path.of("target/reporte-pdf-faltan-registros.png").toFile());
+			String texto = new PDFTextStripper().getText(pdf);
+			// El aviso se parte en varias líneas dentro de su celda: se lee completo.
+			assertThat(texto.replaceAll("\\s+", " "))
+					.contains("Faltan registros (cuentan como 0) · 70 % del peso calificado", "9,5/20",
+							"Por registrar");
 		}
 	}
 
@@ -82,7 +111,7 @@ class ArchivoReporteCalificacionesTests {
 		try (PDDocument pdf = Loader
 				.loadPDF(ArchivoReporteCalificaciones.pdf(reporte, CONTEXTO, PARAMETROS, "VIGESIMAL"))) {
 			assertThat(new PDFTextStripper().getText(pdf)).contains("No hay estudiantes matriculados")
-					.doesNotContain("Promedio final", "Promedio general");
+					.doesNotContain("Promedio del periodo", "Promedio general");
 		}
 	}
 
@@ -99,7 +128,7 @@ class ArchivoReporteCalificacionesTests {
 			for (int item = 1; item <= 2; item++)
 				columnas.add(new ColumnaReporte("c" + competencia + ":i" + item,
 						"Práctica " + item, id, titulos[competencia - 1], false));
-			columnas.add(new ColumnaReporte("c" + competencia + ":resultado", "Promedio final", id,
+			columnas.add(new ColumnaReporte("c" + competencia + ":resultado", "Promedio del periodo", id,
 					titulos[competencia - 1], true));
 		}
 		if (competencias > 1)

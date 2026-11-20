@@ -13,7 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/** Un cambio del historial de correcciones (asistencia.correccion, V19): antes, después, quién y cuándo. */
+/** Un cambio del historial de correcciones (asistencia.correccion, V25): antes, después, quién y cuándo. */
 @Entity
 @Table(schema = "asistencia", name = "correccion")
 public class CorreccionAsistencia {

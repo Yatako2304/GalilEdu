@@ -11,7 +11,7 @@ Agregué el módulo `asistencia` (esquema, backend y frontend). El tutor o cotut
 
 ## Archivos principales
 
-- `backend/src/main/resources/db/migration/V19__asistencia.sql`
+- `backend/src/main/resources/db/migration/V25__asistencia.sql`
 - `backend/src/main/java/com/galiledu/asistencia/` (`ServicioAsistencia`, `RegistroAsistencia`, `ReglaDiaEscolar`, `AsistenciaController`)
 - `frontend/src/features/asistencia/` y `frontend/src/components/ui/segmented-control/`
 

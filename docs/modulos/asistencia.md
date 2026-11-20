@@ -68,7 +68,7 @@ Decisiones del 19/11 ([HU-65](../decisiones/2026-11-19-yatako-asistencia-diaria.
 
 ## Base de datos
 
-- **Esquema:** `asistencia` · **Migraciones:** `V19__asistencia.sql`, `V20__asistencia_justificacion.sql`
+- **Esquema:** `asistencia` · **Migraciones:** `V25__asistencia.sql`, `V26__asistencia_justificacion.sql`
 
 | Tabla | Para qué |
 | --- | --- |

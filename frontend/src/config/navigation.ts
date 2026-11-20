@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   BookOpenCheck,
   Building2,
   CalendarCheck,
@@ -7,6 +8,8 @@ import {
   GraduationCap,
   Contact,
   Home,
+  KeyRound,
+  Layers,
   type LucideIcon,
   Star,
   Users,
@@ -54,6 +57,12 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           href: paths.app.admin.usuarios.getHref(),
           icon: Users,
         },
+        // HU-2: no está en Figma (ver docs/decisiones/2026-11-19-scuro-star-inicio-sesion-google.md).
+        {
+          label: 'Configuración de acceso',
+          href: paths.app.admin.configuracionAcceso.getHref(),
+          icon: KeyRound,
+        },
       ],
     },
   ],
@@ -77,6 +86,12 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           label: 'Pensiones',
           href: paths.app.administrativo.pensiones.getHref(),
           icon: Wallet,
+        },
+        {
+          // HU-64: reporte institucional de notas (no hay frame; mismo ícono que en los demás roles).
+          label: 'Calificaciones',
+          href: paths.app.administrativo.calificaciones.getHref(),
+          icon: Star,
         },
       ],
     },
@@ -117,9 +132,21 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           icon: Star,
         },
         {
+          // HU-52 a HU-54: no está en el menú del Coordinador en Figma; lo comparte con el Personal administrativo.
+          label: 'Plan curricular',
+          href: paths.app.coordinador.planCurricular.getHref(),
+          icon: Layers,
+        },
+        {
           label: 'Plan de evaluación',
           href: paths.app.coordinador.planEvaluacion.getHref(),
           icon: BookOpenCheck,
+        },
+        {
+          // HU-55: tabla de conversión de vigesimal a AD/A/B/C (tampoco está en el menú del Coordinador en Figma).
+          label: 'Escala de calificación',
+          href: paths.app.coordinador.escalaCalificacion.getHref(),
+          icon: ArrowLeftRight,
         },
         {
           label: 'Reserva de espacios especiales',
@@ -180,10 +207,11 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
       title: 'General',
       items: [
         inicioItem(paths.app.apoderado.root.getHref()),
+        // Figma > Apoderado > sidebar «Familia» → «Datos de la Familia» (antes este ítem era «Datos del Alumno»).
         {
-          label: 'Datos del Alumno',
-          href: paths.app.apoderado.datosAlumno.getHref(),
-          icon: Contact,
+          label: 'Familia',
+          href: paths.app.apoderado.familia.getHref(),
+          icon: Users,
         },
       ],
     },

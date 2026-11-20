@@ -37,6 +37,7 @@ import com.galiledu.usuarios.aplicacion.Dtos.SolicitudUsuario;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioCreado;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioDetalle;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioResumen;
+import com.galiledu.usuarios.aplicacion.Dtos.UsuarioSesion;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuariosPorRol;
 import com.galiledu.usuarios.dominio.EstadoUsuario;
 import com.galiledu.usuarios.dominio.GeneradorCredenciales;
@@ -180,21 +181,6 @@ public class ServicioUsuarios {
 	}
 
 	/**
-	 * Al cambiar el correo de una persona con cuenta: la cuenta usa el correo de la persona, así que se le genera
-	 * una contraseña nueva y se envía al correo nuevo junto con su código de usuario.
-	 */
-	@Transactional
-	public void reenviarCredenciales(Persona persona) {
-		usuarios.findByPersonaId(persona.getId())
-				.filter(u -> !u.isEliminado())
-				.ifPresent(u -> {
-					String contrasena = GeneradorCredenciales.contrasena();
-					u.reemplazarContrasena(contrasenas.encode(contrasena));
-					notificador.enviar(persona.getCorreo(), persona.getNombres(), u.getNombreUsuario(), contrasena);
-				});
-	}
-
-	/**
 	 * La persona dejó de ser padre, madre o apoderado presente de todos sus estudiantes (la quitaron de la
 	 * inscripción, no registra o falleció): se le quita el rol Apoderado. Si era su único rol, se conserva y la cuenta
 	 * queda inactiva (la cuenta siempre tiene al menos un rol; si vuelve a ser familiar, asegurarRol la reactiva).
@@ -235,6 +221,24 @@ public class ServicioUsuarios {
 		personas.actualizar(usuario.getPersona(), solicitud.persona());
 		usuario.reemplazarRoles(roles);
 		return detalleDe(usuario);
+	}
+
+	/**
+	 * Cualquier usuario edita sus propios datos personales desde «Mis datos» (ampliación de HU-9: no está en el
+	 * backlog de Notion, que solo cubre la edición por el administrador). Mismas reglas de formato y duplicados;
+	 * no toca roles ni el estado de la cuenta.
+	 */
+	@Transactional(readOnly = true)
+	public DatosPersona misDatos(UUID id) {
+		return DatosPersona.de(obtener(id).getPersona());
+	}
+
+	@Transactional
+	public UsuarioSesion actualizarMisDatos(UUID id, DatosPersona datos) {
+		datos.exigirCompletos();
+		Usuario usuario = obtener(id);
+		personas.actualizar(usuario.getPersona(), datos);
+		return UsuarioSesion.de(usuario);
 	}
 
 	/** HU-12: el usuario ya no puede iniciar sesión, pero se conserva su información. */

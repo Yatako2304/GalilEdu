@@ -46,6 +46,7 @@ const fila = (extras: Partial<FilaMatriculaPeriodo>): FilaMatriculaPeriodo => ({
   estado: 'SECCION_RESERVADA',
   codigo: null,
   tipo: 'NUEVO',
+  actualizadoEn: '2026-11-20T15:30:00Z',
   ...extras,
 });
 
@@ -174,5 +175,51 @@ test('el buscador, el filtro de grado y el orden se piden al servidor', async ()
         (p) => p.get('orden') === 'grado' && p.get('direccion') === 'desc',
       ),
     ).toBe(true),
+  );
+});
+
+test('por defecto ordena por actividad reciente, lo último primero, y muestra la fecha', async () => {
+  const pedidos = servir(periodo());
+  await renderApp(<MatriculasPeriodo periodoId="periodo-2027" />);
+  await screen.findByText('Mateo Alonso Paredes Rojas');
+
+  expect(
+    pedidos.some(
+      (p) => p.get('orden') === 'reciente' && p.get('direccion') === 'desc',
+    ),
+  ).toBe(true);
+  expect(
+    screen.getByRole('button', { name: 'Última actividad' }),
+  ).toBeInTheDocument();
+  // 15:30 UTC son las 10:30 en Lima.
+  expect(screen.getAllByText(/10:30/).length).toBeGreaterThan(0);
+});
+
+test('se puede volver al orden por nombre y a la actividad reciente', async () => {
+  const pedidos = servir(periodo());
+  await renderApp(<MatriculasPeriodo periodoId="periodo-2027" />);
+  await screen.findByText('Mateo Alonso Paredes Rojas');
+
+  await userEvent.click(screen.getByRole('button', { name: 'Estudiante' }));
+  await waitFor(() =>
+    expect(
+      pedidos.some(
+        (p) => p.get('orden') === 'estudiante' && p.get('direccion') === 'asc',
+      ),
+    ).toBe(true),
+  );
+  // Con otro texto de búsqueda la consulta es nueva (no sale del caché).
+  await userEvent.type(
+    screen.getByRole('textbox', { name: 'Buscar por nombre, DNI o código' }),
+    'ma',
+  );
+  await waitFor(() => expect(pedidos.at(-1)?.get('texto')).toBe('ma'));
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Última actividad' }),
+  );
+  await waitFor(() =>
+    expect(
+      `${pedidos.at(-1)?.get('orden')}/${pedidos.at(-1)?.get('direccion')}`,
+    ).toBe('reciente/desc'),
   );
 });

@@ -273,7 +273,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.param("planCursoId", plan).param("seccionId", seccion).param("periodoId", periodo)
 				.param("objetivoId", competencia).param("itemIds", item).param("incluirPromedio", "true"), docente))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.columnas[1].titulo").value("Promedio final"))
+				.andExpect(jsonPath("$.columnas[1].titulo").value("Promedio del periodo"))
 				.andExpect(jsonPath("$.filas[0].valores.resultado").value("17"))
 				.andExpect(jsonPath("$.filas[0].valores.resultado_estado").value("A · Logro esperado"));
 		mvc.perform(conToken(get("/calificaciones/docente/reportes").param("tipo", "COMPETENCIA")

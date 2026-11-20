@@ -15,7 +15,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-/** Estado de un estudiante en un registro diario (asistencia.asistencia_estudiante, V19). */
+/** Estado de un estudiante en un registro diario (asistencia.asistencia_estudiante, V25). */
 @Entity
 @Table(schema = "asistencia", name = "asistencia_estudiante")
 public class AsistenciaEstudiante {
