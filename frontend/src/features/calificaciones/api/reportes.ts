@@ -90,6 +90,17 @@ export const useNotasSeccion = (seccionId: string | null) =>
     }),
   );
 
+// Notas de un estudiante para el Coordinador (solo lectura): sus cursos con los ítems calificados por el docente.
+export const useNotasMatricula = (matriculaId: string | null) =>
+  useQuery(
+    queryOptions({
+      queryKey: ['reportes-notas', 'matricula', matriculaId],
+      queryFn: (): Promise<NotasApoderado> =>
+        api.get(`${reportes}/matriculas/${matriculaId}/notas`),
+      enabled: !!matriculaId,
+    }),
+  );
+
 export const descargarLibretaMatricula = async (matriculaId: string) => {
   const contenido = (await api.get(
     `${reportes}/matriculas/${matriculaId}/libreta`,

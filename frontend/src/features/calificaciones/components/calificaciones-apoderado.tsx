@@ -385,7 +385,7 @@ const ResultadoFinal = ({ notas }: { notas: NotasApoderado }) => {
   );
 };
 
-const Leyenda = ({ vigesimal }: { vigesimal: boolean }) => (
+export const Leyenda = ({ vigesimal }: { vigesimal: boolean }) => (
   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-caption-1 text-content-tertiary">
     <span>
       {vigesimal
@@ -402,7 +402,7 @@ const Leyenda = ({ vigesimal }: { vigesimal: boolean }) => (
 );
 
 /** Figma: «Cursos · III Bimestre», cada curso desplegable con sus competencias e ítems. */
-const CursosDelPeriodo = ({
+export const CursosDelPeriodo = ({
   notas,
   periodoId,
 }: {
@@ -521,7 +521,14 @@ const CursosDelPeriodo = ({
 };
 
 /** La nota oficial: cada competencia por periodo y la nota final (Figma «Notas finales por curso», por competencia). */
-const NotasPorCompetencia = ({ notas }: { notas: NotasApoderado }) => {
+export const NotasPorCompetencia = ({
+  notas,
+  paraCoordinador,
+}: {
+  notas: NotasApoderado;
+  /** El aviso de pesos incompletos le dice al Coordinador qué ajustar, en vez de hablarle al apoderado. */
+  paraCoordinador?: boolean;
+}) => {
   const vigesimal = notas.escala === 'VIGESIMAL';
   const sinCalcular = notas.competencias.some((c) => !c.calculable);
   return (
@@ -540,8 +547,9 @@ const NotasPorCompetencia = ({ notas }: { notas: NotasApoderado }) => {
       <CardContent className="space-y-4 pb-6">
         {sinCalcular && (
           <Alert type="warning" title="Notas oficiales pendientes">
-            Algunas competencias todavía no tienen nota oficial: el colegio está
-            terminando de configurar cuánto aporta cada curso.
+            {paraCoordinador
+              ? 'Algunas competencias no tienen nota oficial porque los pesos de sus cursos no suman 100 %. Ajústalos en el plan de evaluación.'
+              : 'Algunas competencias todavía no tienen nota oficial: el colegio está terminando de configurar cuánto aporta cada curso.'}
           </Alert>
         )}
         <div className="overflow-x-auto rounded-lg border border-stroke-tertiary">

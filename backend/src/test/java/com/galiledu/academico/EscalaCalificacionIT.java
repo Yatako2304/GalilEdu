@@ -115,6 +115,17 @@ class EscalaCalificacionIT extends PruebaIntegracion {
 	}
 
 	@Test
+	void elCoordinadorTambienConsultaYAgregaVersiones() throws Exception {
+		String coordinador = token(COORDINADOR);
+		mvc.perform(conToken(get("/tablas-conversion/vigente"), coordinador))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.estado").value("VIGENTE"));
+		mvc.perform(conToken(post("/tablas-conversion"), coordinador, version(HOY.plusYears(10), 10, 13, 16)))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.estado").value("PROGRAMADA"));
+	}
+
+	@Test
 	void otrosRolesReciben403() throws Exception {
 		mvc.perform(conToken(get("/tablas-conversion"), token(DOCENTE))).andExpect(status().isForbidden());
 		mvc.perform(conToken(post("/tablas-conversion"), token(ADMIN), version(HOY.plusYears(9), 10, 13, 17)))

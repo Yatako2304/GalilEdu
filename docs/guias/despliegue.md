@@ -113,9 +113,13 @@ La primera vez, Caddy tarda unos segundos en obtener el certificado. Luego abre 
 
 > **Correo:** la contraseña es una *contraseña de aplicación* de Google (Cuenta de Google → Seguridad → Verificación en dos pasos → Contraseñas de aplicaciones), no la contraseña normal. Va solo en `deploy/.env` del servidor, nunca en Git. Para probarlo, crea un usuario con un correo real: debe recibir sus credenciales.
 
-### 4.4 Inicio de sesión con Google (cuando esté en `main`)
+### 4.4 Inicio de sesión con Google (opcional)
 
-En Google Cloud → **Credenciales** → el cliente OAuth → **Orígenes autorizados de JavaScript**, agrega `https://galiledu.duckdns.org` (el mismo valor de `URL_PUBLICA`; no hace falta URI de redireccionamiento). Luego, en `deploy/.env`, completa las variables de Google que indique esa funcionalidad y vuelve a correr `actualizar.sh`.
+Google solo acepta orígenes con **HTTPS y dominio** (no una IP): hace falta haber hecho 4.1 a 4.3.
+
+1. En [Google Cloud](https://console.cloud.google.com/apis/credentials) → **Credenciales**, crea (o abre) un **ID de cliente de OAuth** de tipo **Aplicación web** y agrega `https://galiledu.duckdns.org` (el mismo valor de `URL_PUBLICA`) en **Orígenes autorizados de JavaScript**. Para desarrollo, agrega también `http://localhost:3000`. No hace falta URI de redireccionamiento.
+2. En `/opt/galiledu/deploy/.env` completa `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` (nunca en Git) y ejecuta `bash /opt/galiledu/deploy/actualizar.sh`.
+3. Entra como administrador a **Seguridad › Configuración de acceso** y activa **Inicio de sesión con Google**. Solo entra quien tenga registrado en GalilEdu el mismo correo de su cuenta de Google.
 
 ## Datos de prueba y seguridad
 

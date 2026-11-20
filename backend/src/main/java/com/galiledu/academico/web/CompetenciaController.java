@@ -16,10 +16,13 @@ import com.galiledu.academico.aplicacion.DtosAcademico.CompetenciaResumen;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudCompetencia;
 import com.galiledu.academico.aplicacion.ServicioPlanCurricular;
 
-/** Competencias de un área (HU-53). Se crean desde POST /areas/{id}/competencias. */
+/**
+ * Competencias de un área (HU-53). Se crean desde POST /areas/{id}/competencias. Personal administrativo y
+ * Coordinador.
+ */
 @RestController
 @RequestMapping("/competencias")
-@PreAuthorize("hasRole('PERSONAL_ADMINISTRATIVO')")
+@PreAuthorize("hasAnyRole('PERSONAL_ADMINISTRATIVO', 'COORDINADOR')")
 public class CompetenciaController {
 	private final ServicioPlanCurricular servicio;
 

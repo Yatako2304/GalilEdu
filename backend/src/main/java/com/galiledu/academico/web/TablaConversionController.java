@@ -19,10 +19,12 @@ import com.galiledu.academico.aplicacion.DtosAcademico.TablaConversionDetalle;
 import com.galiledu.academico.aplicacion.ServicioEscalaCalificacion;
 import com.galiledu.compartido.seguridad.ServicioJwt;
 
-/** Figma > Personal Administrativo > CI-23 · Escala de calificación (HU-55). */
+/**
+ * Figma > Personal Administrativo > CI-23 · Escala de calificación (HU-55). Personal administrativo y Coordinador.
+ */
 @RestController
 @RequestMapping("/tablas-conversion")
-@PreAuthorize("hasRole('PERSONAL_ADMINISTRATIVO')")
+@PreAuthorize("hasAnyRole('PERSONAL_ADMINISTRATIVO', 'COORDINADOR')")
 public class TablaConversionController {
 	private final ServicioEscalaCalificacion servicio;
 

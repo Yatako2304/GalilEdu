@@ -55,6 +55,9 @@ services:
       URL_FRONTEND: ${URL_PUBLICA:-http://localhost}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # Inicio de sesión con Google (HU-2 y HU-3): sin estas llaves el botón de Google no aparece.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/actuator/health || exit 1"]
       interval: 10s

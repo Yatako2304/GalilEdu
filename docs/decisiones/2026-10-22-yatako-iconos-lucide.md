@@ -76,6 +76,7 @@ Figma dibuja los íconos con *Material Icons* (página "・Material Icons"), per
 | `domain` | `Building2` | KPI "Ambientes activos" y modal Nuevo ambiente físico (CI-26) |
 | `meeting_room` | `DoorOpen` | KPI "Aulas regulares" (CI-26) |
 | `science` | `FlaskConical` | KPI "Espacios especiales" (CI-26) |
+| — (no está en Figma) | `KeyRound` | Menú del Administrador › «Configuración de acceso» y fila «Usuario y contraseña» (HU-2) |
 
 ## Notas para quien siga
 

@@ -91,7 +91,12 @@ public final class ArchivoReporteCalificaciones {
 	}
 
 	/** Una tabla de un PDF de resumen: su encabezado, el contexto (curso, grado, año…) y una línea de parámetros. */
-	public record TablaPdf(String encabezado, String contexto, String parametros, ReporteCalificaciones reporte) {
+	/** primeraColumna: el título de la primera columna de esta tabla; null usa el del documento. */
+	public record TablaPdf(String encabezado, String contexto, String parametros, ReporteCalificaciones reporte,
+			String primeraColumna) {
+		public TablaPdf(String encabezado, String contexto, String parametros, ReporteCalificaciones reporte) {
+			this(encabezado, contexto, parametros, reporte, null);
+		}
 	}
 
 	/**
@@ -108,6 +113,7 @@ public final class ArchivoReporteCalificaciones {
 			archivo.pie = pie;
 			archivo.vacio = vacio;
 			for (TablaPdf tabla : tablas) {
+				archivo.primeraColumna = tabla.primeraColumna() != null ? tabla.primeraColumna() : primeraColumna;
 				List<List<ColumnaReporte>> bloques = bloquesPorCompetencia(tabla.reporte().columnas());
 				for (int indice = 0; indice < bloques.size(); indice++) {
 					archivo.tabla(tabla.encabezado(), tabla.reporte(), bloques.get(indice), tabla.contexto(),
