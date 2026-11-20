@@ -73,10 +73,12 @@ public final class DtosReportesNotas {
 	// ---------- HU-64 · Reporte institucional ----------
 
 	/**
-	 * Notas por nivel de logro. pendientes: falta registrar algún ítem (la coordinación puede pedir que se complete);
-	 * sinNotas: todavía no hay ítems que cuenten.
+	 * Calificaciones de competencia por nivel de logro. calificaciones: las completas (AD + A + B + C), base de los
+	 * porcentajes. porCompletar: a las que les falta registrar algún ítem; no se cuentan hasta que se completen (la
+	 * coordinación puede pedírselo al docente). porcentajeLogro: A o AD sobre calificaciones; null si no hay ninguna.
 	 */
-	public record Distribucion(int ad, int a, int b, int c, int pendientes, int sinNotas, Integer porcentajeLogro) {
+	public record Distribucion(int calificaciones, int ad, int a, int b, int c, int porCompletar,
+			Integer porcentajeLogro) {
 	}
 
 	/** Una sección de un grado; con seccion null, el total del grado. */
@@ -87,11 +89,18 @@ public final class DtosReportesNotas {
 	public record AreaInstitucional(String area, Distribucion distribucion) {
 	}
 
+	/** Competencia de un grado que no se puede calcular porque los pesos de sus cursos no suman 100 %. */
+	public record CompetenciaSinCalcular(String grado, String competencia) {
+	}
+
 	/**
-	 * Cada nota oficial de competencia de cada estudiante cuenta una vez, en el periodo elegido o en la nota final.
+	 * Cada nota oficial de competencia de cada estudiante cuenta una vez (una calificación), en el periodo elegido o en
+	 * la nota final. estudiantes: los de las secciones de grados con plan de evaluación. Las áreas van todas, también
+	 * las que aún no tienen calificaciones.
 	 */
 	public record ReporteInstitucional(int anio, String periodo, String escala, int estudiantes,
-			List<FilaInstitucional> filas, List<AreaInstitucional> areas, Distribucion total) {
+			List<FilaInstitucional> filas, List<AreaInstitucional> areas, Distribucion total,
+			List<CompetenciaSinCalcular> sinCalcular) {
 	}
 
 	// ---------- HU-69 · Consulta de notas por el apoderado ----------

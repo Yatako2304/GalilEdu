@@ -143,13 +143,31 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 
 	@DisplayName("Solo el coordinador ve el detalle de una sección")
 	@Test
+	void elCoordinadorVeLosItemsQueCalificoElDocenteSinPoderModificarlos() throws Exception {
+		String ana = datos.matriculaDe("Ana Lucía");
+		String aritmetica = "$.cursos[?(@.curso == 'Aritmética')].competencias[?(@.competencia == '%s')]"
+				.formatted(DatosNotasPrueba.CANTIDAD);
+		mvc.perform(conToken(get("/calificaciones/reportes/matriculas/" + ana + "/notas"), token(COORDINADOR)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.estudiante").value("Ana Lucía García López"))
+				.andExpect(jsonPath("$.seccion").value("A"))
+				.andExpect(jsonPath(aritmetica + ".periodos[2].items[0].item").value(contains("Examen de cantidad")))
+				.andExpect(jsonPath(aritmetica + ".periodos[2].items[0].nota").value(contains("16")))
+				.andExpect(jsonPath(aritmetica + ".periodos[2].aporte.nota").value(contains("16")));
+		mvc.perform(conToken(get("/calificaciones/reportes/matriculas/" + java.util.UUID.randomUUID() + "/notas"),
+				token(COORDINADOR))).andExpect(status().isNotFound());
+	}
+
+	@DisplayName("Solo el coordinador ve el detalle de una sección")
+	@Test
 	void soloElCoordinadorVeElDetalleDeUnaSeccion() throws Exception {
 		String seccion = "/calificaciones/reportes/secciones/" + datos.seccionA() + "/notas";
-		String libreta = "/calificaciones/reportes/matriculas/" + datos.matriculaDe("Ana Lucía") + "/libreta";
-		for (String usuario : new String[]{ADMIN, DOCENTE, PERSONAL_ADMINISTRATIVO}) {
+		String matricula = "/calificaciones/reportes/matriculas/" + datos.matriculaDe("Ana Lucía");
+		for (String usuario : new String[]{ADMIN, DOCENTE, PERSONAL_ADMINISTRATIVO, APODERADO}) {
 			String token = token(usuario);
 			mvc.perform(conToken(get(seccion), token)).andExpect(status().isForbidden());
-			mvc.perform(conToken(get(libreta), token)).andExpect(status().isForbidden());
+			mvc.perform(conToken(get(matricula + "/libreta"), token)).andExpect(status().isForbidden());
+			mvc.perform(conToken(get(matricula + "/notas"), token)).andExpect(status().isForbidden());
 		}
 		mvc.perform(conToken(get("/calificaciones/reportes/secciones/" + java.util.UUID.randomUUID() + "/notas"),
 				token(COORDINADOR))).andExpect(status().isNotFound());
@@ -160,36 +178,67 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 	@DisplayName("El reporte institucional cuenta cada nota de competencia una vez")
 	@Test
 	void elReporteInstitucionalCuentaCadaNotaDeCompetenciaUnaVez() throws Exception {
-		String admin = token(ADMIN);
+		String personal = token(PERSONAL_ADMINISTRATIVO);
 		mvc.perform(conToken(get("/calificaciones/reportes/institucional")
-				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026).param("periodoId", periodo3), admin))
+				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026).param("periodoId", periodo3), personal))
 				.andExpect(status().isOk())
+				// Ana Lucía (A) y Diego José (C) cuentan; Camila Sofía está por completar y no se cuenta.
+				.andExpect(jsonPath("$.total.calificaciones").value(2))
 				.andExpect(jsonPath("$.total.ad").value(0))
 				.andExpect(jsonPath("$.total.a").value(1))
 				.andExpect(jsonPath("$.total.b").value(0))
 				.andExpect(jsonPath("$.total.c").value(1))
 				.andExpect(jsonPath("$.total.porcentajeLogro").value(50))
-				.andExpect(jsonPath("$.total.pendientes").value(1))
+				.andExpect(jsonPath("$.total.porCompletar").value(1))
+				.andExpect(jsonPath("$.total.sinNotas").doesNotExist())
+				.andExpect(jsonPath("$.sinCalcular").isEmpty())
+				// Las secciones sin estudiantes no salen.
+				.andExpect(jsonPath("$.filas[?(@.estudiantes == 0)]").isEmpty())
 				.andExpect(jsonPath("$.filas[?(@.gradoCodigo == 'SEC-1' && @.seccion == 'A')].distribucion.a")
 						.value(contains(1)))
 				.andExpect(jsonPath("$.areas[*].area", hasItem("Matemática")));
 
 		mvc.perform(conToken(get("/calificaciones/reportes/institucional/pdf")
-				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026), admin))
+				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026), personal))
 				.andExpect(status().isOk())
 				.andExpect(content().contentType(MediaType.APPLICATION_PDF));
 	}
 
 	@DisplayName("Permisos de los reportes")
 	@Test
+	void unaCompetenciaConPesosIncompletosNoEntraEnElReporteInstitucionalYSeInforma() throws Exception {
+		jdbc.sql("UPDATE academico.plan_competencia SET peso_curso = NULL WHERE plan_curso_id = ?::uuid")
+				.param(datos.plan("Geometría")).update();
+		mvc.perform(conToken(get("/calificaciones/reportes/institucional")
+				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026).param("periodoId", periodo3), token(COORDINADOR)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.sinCalcular[*].competencia", hasItem(DatosNotasPrueba.CANTIDAD)))
+				.andExpect(jsonPath("$.total.a").value(0))
+				.andExpect(jsonPath("$.total.c").value(0))
+				// El área sigue en la lista aunque no tenga calificaciones.
+				.andExpect(jsonPath("$.areas[*].area", hasItem("Matemática")));
+	}
+
+	@DisplayName("Permisos de los reportes")
+	@Test
 	void permisosDeLosReportes() throws Exception {
-		mvc.perform(conToken(get("/calificaciones/reportes/anios"), token(ADMIN))).andExpect(status().isOk())
+		// HU-64 es del Personal administrativo (y el Coordinador); el reporte por curso y grado, solo del Coordinador.
+		String personal = token(PERSONAL_ADMINISTRATIVO);
+		mvc.perform(conToken(get("/calificaciones/reportes/anios"), personal)).andExpect(status().isOk())
 				.andExpect(jsonPath("$[?(@.anio == 2026)].grados[*].codigo", hasItem("SEC-1")));
 		mvc.perform(conToken(get("/calificaciones/reportes/grado").param("anioEscolarId", DatosNotasPrueba.ANIO_2026)
-				.param("grado", "SEC-1"), token(ADMIN))).andExpect(status().isForbidden());
-		mvc.perform(conToken(get("/calificaciones/reportes/institucional")
-				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026), token(DOCENTE)))
-				.andExpect(status().isForbidden());
+				.param("grado", "SEC-1"), personal)).andExpect(status().isForbidden());
+		mvc.perform(conToken(get("/calificaciones/reportes/institucional/pdf")
+				.param("anioEscolarId", DatosNotasPrueba.ANIO_2026), personal))
+				.andExpect(status().isOk());
+		// El Administrador ya no tiene Calificaciones.
+		for (String usuario : new String[]{ADMIN, DOCENTE}) {
+			String token = token(usuario);
+			mvc.perform(conToken(get("/calificaciones/reportes/anios"), token)).andExpect(status().isForbidden());
+			mvc.perform(conToken(get("/calificaciones/reportes/institucional")
+					.param("anioEscolarId", DatosNotasPrueba.ANIO_2026), token))
+					.andExpect(status().isForbidden());
+		}
 	}
 
 	// ---------- HU-69 ----------

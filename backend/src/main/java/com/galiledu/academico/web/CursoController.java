@@ -16,10 +16,13 @@ import com.galiledu.academico.aplicacion.DtosAcademico.CursoResumen;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudCurso;
 import com.galiledu.academico.aplicacion.ServicioPlanCurricular;
 
-/** Cursos de un área y sus grados (HU-54). Se crean desde POST /areas/{id}/cursos. */
+/**
+ * Cursos de un área y sus grados (HU-54). Se crean desde POST /areas/{id}/cursos. Personal administrativo y
+ * Coordinador.
+ */
 @RestController
 @RequestMapping("/cursos")
-@PreAuthorize("hasRole('PERSONAL_ADMINISTRATIVO')")
+@PreAuthorize("hasAnyRole('PERSONAL_ADMINISTRATIVO', 'COORDINADOR')")
 public class CursoController {
 	private final ServicioPlanCurricular servicio;
 

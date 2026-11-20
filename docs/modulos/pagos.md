@@ -1,8 +1,8 @@
 # Pagos y pensiones
 
-- **HU:** HU-36, 37 (iteración 1) · HU-35, 38–42 (2)
-- **Estado:** 🚧 en desarrollo: HU-35, 36, 37, 38, 39, 40 y 41 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
-- **Última actualización:** 2026-11-06
+- **HU:** HU-36, 37 (iteración 1) · HU-35, 38–41 (2) · HU-42 (3)
+- **Estado:** 🚧 en desarrollo: HU-35 a HU-42 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
+- **Última actualización:** 2026-11-19
 
 ## Alcance
 
@@ -31,11 +31,11 @@ Al pagar, el recargo cubierto queda guardado en `pago_detalle.recargo`.
 Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-cuenta`, `/pagos/estudiantes/{id}/compromisos`, `/pagos/compromisos/{id}` (y `/morosidad`, `/pagos`, `/descuento`, `/descuentos-aplicables`, `/descuentos`), `/pagos/descuentos`, `/pagos/descuentos-aplicados/{id}/revocacion`, `/pagos/apoderado/...`, `/pagos/matriculas/{id}/cronograma`, `/pagos/compromisos/{id}/retiro` y `/pagos/matriculas/{id}/cuota-matricula`.
 
 - El tarifario se lee con el servicio de Configuración (`ServicioTarifario.vigente` y `calendario`, de Luciana); ya no hay SQL propio sobre `pagos.tarifario` para generar cuotas. Sin tarifario CONFIRMADO responde 409 "El tarifario {año} aún no está confirmado.".
-- HU-35: el límite de descuento (RF-77) rige para lo que se registre o edite desde que se cambia; los descuentos ya guardados no se revalidan.
+- HU-35: el límite de descuento (RF-77) se consulta y se cambia en **Configuración de pensiones → Catálogo de descuentos → Cambiar límite**. Rige para lo que se registre o edite desde el cambio; los descuentos ya guardados no se revalidan.
 - **Cuota de ingreso (corrección 4 de la iteración 1):** al generar la cuota de matrícula (HU-36) de un estudiante **NUEVO**, se agrega también la cuota de ingreso con el monto del tarifario (`monto_cuota_ingreso`) y el mismo vencimiento. Se cobra una sola vez por estudiante (no se genera si ya tiene una no anulada, ni si el tarifario no tiene monto). No condiciona la confirmación de la matrícula, que sigue dependiendo del pago de la cuota de matrícula; el apoderado la paga en línea como cualquier otra cuota y no genera mora.
 - HU-38: el descuento es del **estudiante**: al aplicarlo se rebajan las cuotas PENDIENTES sin pagos de todos sus compromisos vigentes cuyos conceptos cubre y que vencen dentro de la vigencia (por defecto, desde hoy). "Hermanos matriculados" cuenta a los estudiantes con matrícula MATRICULADO en el año del compromiso que comparten padre, madre o apoderado, incluido él mismo.
 - HU-38 (corrección del PO): el descuento **por hermanos** solo se aplica al hermano matriculado de **menor edad** del año (fecha de nacimiento más reciente; si son gemelos, a ambos). El porcentaje sale del tramo por la cantidad de hermanos matriculados. A otro hermano se le rechaza con 409 y en «descuentos aplicables» llega con `aplicable: false`, el motivo y los `beneficiarios`. Con 3 o más hermanos, también solo al menor (pendiente de confirmar con el PO).
-- HU-38 (corrección del PO): un descuento puede regir **hasta que el estudiante termine el colegio** (`hastaFinEscolaridad: true`, sin fecha de fin). Como el descuento es del estudiante, sigue rebajando la cuota de matrícula y las pensiones que se generen en los años siguientes, sin volver a registrarlo. Deja de aplicarse si el personal lo revoca o lo reemplaza, y en la práctica al terminar el colegio o retirarse, porque ya no se generan compromisos nuevos (el egreso todavía no existe en el sistema).
+- HU-38 (corrección del PO): un descuento puede regir **hasta que el estudiante termine el colegio** (`hastaFinEscolaridad: true`, sin fecha de fin). El personal elige esta opción en el formulario; como el descuento es del estudiante, sigue rebajando la cuota de matrícula y las pensiones que se generen en los años siguientes, sin volver a registrarlo. Deja de aplicarse si el personal lo revoca o lo reemplaza, y en la práctica al terminar el colegio o retirarse, porque ya no se generan compromisos nuevos (el egreso todavía no existe en el sistema).
 - HU-40: lo consulta cualquier padre, madre o apoderado vinculado al estudiante (no solo el responsable de matrícula, corrección 2). El "código de estudiante" es su número de documento porque la ficha no tiene otro código.
 
 - HU-36: cuando el colegio aprueba los documentos (HU-29/HU-72), Matrícula debe llamar a `ServicioCuotaMatricula.generar(matriculaId, usuarioId)`; para saber si ya se pagó (HU-31) usa `ServicioCuotaMatricula.buscar(matriculaId)` (no lanza error si aún no existe). Mientras tanto, el personal la genera con el `POST`. Como el cronograma, exige el tarifario del año CONFIRMADO (P19, HU-34): en los datos de prueba el de 2027 está EN_CONFIGURACION, así que hay que confirmarlo antes de generar la cuota de Mateo. La tarjeta "Pago de matrícula" de B6/B7 usa el `GET` (404 = todavía no generada) y su enlace "Ver compromiso de pago" lleva a P8 con el `estudianteId` de la respuesta.
@@ -43,7 +43,8 @@ Ver la tabla de [`backend/README.md`](../../backend/README.md): `/pagos/estado-c
 - Flujo de la HU-37: menú **Pensiones** → P2 ("Todos los alumnos") → ⋮ del alumno → **Ver cronograma** (P8, `/app/administrativo/pensiones/{estudianteId}`) o **Registrar retiro** (modal, fecha de hoy). Falta el enlace desde B7 ("Ver compromiso de pago") cuando exista ese detalle de matrícula.
 - En P8 ya están operativas las pestañas **Pagos** (P9), **Descuento** (P10) y **Morosidad** (P11). El catálogo global de descuentos se abre desde **Configuración de pensiones → Catálogo de descuentos** (P21).
 - P8 muestra el **recargo por mora** en la misma fila de cada cuota vencida. En los textos de la interfaz se usa **monto pagado**, **monto de cuotas** y **monto pendiente**; `capital` se conserva únicamente como nombre técnico del contrato con el backend.
-- En P21 los tramos por hermanos pueden quitarse mientras quede una fila editable. Antes de guardar se exige un mínimo de dos tramos y se rechazan rangos superpuestos, sin importar el orden en que se ingresen.
+- En P21 los tramos por hermanos pueden quitarse mientras quede una fila editable. Antes de guardar se exige un mínimo de dos tramos y se rechazan rangos superpuestos, sin importar el orden en que se ingresen. Los tramos ocultos no se validan cuando el tipo es **Porcentaje único** (DEF-01).
+- RF-77 se muestra en P21 mediante la tarjeta **Límite institucional de descuento** y el diálogo **Cambiar límite** (1 % a 100 %), construidos con los mismos componentes del sistema de diseño; el frame P21 original solo mostraba el catálogo y el límite no tenía pantalla propia.
 - La vista **Apoderado → Pensiones** permite cambiar de hijo y compromiso, consultar el cronograma con mora y revisar pagos. Las casillas y el botón de pago permanecen deshabilitados porque corresponden a HU-41.
 - Las pestañas "Compromisos vigentes" (P1, HU-38) y "Cuotas vencidas" (P3, HU-39) se ven desactivadas.
 
@@ -75,6 +76,24 @@ Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Códig
 | CAHU41-13 | Nadie puede pagar ni ver cuotas u órdenes de una familia que no es la suya. |
 
 Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaStripeTests`; `seleccion-cuotas.test.ts` y `pensiones-apoderado.test.tsx`.
+
+## HU-42 · Constancia de pago
+
+Ver la [decisión](../decisiones/2026-11-19-yatako-constancia-de-pago-pdf.md). Código: `ArchivoConstanciaPago` (PDF con PDFBox, mismo estilo que el reporte de notas), `ConsultasPagos.constancia` y `detalleConstancia`, `ServicioDeudaApoderado.constancia` y `constanciaPdf`, y `GET /pagos/apoderado/pagos/{id}/constancia`. Frontend: `descargarConstancia` (`api/pensiones-apoderado.ts`) y la columna de descarga de `TablaPagos`.
+
+- **Dónde:** Apoderado › Pensiones › pestaña **Pagos**: cada fila tiene el botón ⬇ "Descargar constancia C-AAAA-NNNNN". La tabla sigue siendo **una fila por pago** (una constancia), no una por concepto como en Figma (ver la decisión). P9 del personal usa la misma tabla **sin** el botón.
+- **Contenido (RF-107):** número de constancia, estudiante y documento, año escolar con grado y sección, fecha y hora del pago (Lima), referencia de la pasarela, estado (Confirmado u Observado con su observación), una fila por cuota cancelada (concepto, cuota, vencimiento, monto, recargo y subtotal) y los totales: monto de cuotas, recargo por mora y total pagado. Si hay muchas cuotas, la tabla continúa en otra página y los totales van al final.
+- **Historial (RF-108):** es la misma pestaña Pagos, ya ordenada del pago más reciente al más antiguo (RF-97).
+- **Acceso:** cualquier padre, madre o apoderado vinculado al estudiante (como HU-40). Un pago de otra familia o inexistente responde 404.
+
+| Código | Criterio de aceptación |
+| --- | --- |
+| CAHU42-1 | El apoderado ve en Pagos cada pago de su hijo con su número de constancia, del más reciente al más antiguo. |
+| CAHU42-2 | Al pulsar ⬇ descarga `constancia-C-AAAA-NNNNN.pdf` con los datos del RF-107. |
+| CAHU42-3 | No puede descargar la constancia de un pago de otra familia (404). |
+| CAHU42-4 | El personal administrativo no usa la vista del apoderado (403) y en P9 no aparece el botón. |
+
+Pruebas: `ArchivoConstanciaPagoTests` (contenido, pago observado y paginación), `DeudaApoderadoIT` (descarga, otra familia, pago inexistente y personal); `tablas-pagos.test.tsx` y `pensiones-apoderado.test.tsx` (botón y descarga).
 
 ## Pantallas (Figma)
 
@@ -126,4 +145,5 @@ Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaS
 - [x] Pasarela de pagos (HU-41): Stripe Checkout en modo de prueba, con una pasarela simulada mientras no haya llaves. Probado de punta a punta con Stripe en local (06/11): pago aprobado con la tarjeta 4242 y confirmado por consulta directa. Se quitó `payment_method_types` (Stripe ya no lo acepta; los métodos de pago se eligen en el dashboard).
 - [x] HU-40 + HU-41 (front): las casillas del cronograma de HU-40 arman el pago en línea con `useSeleccionCuotas` y `BarraPagoCuotas`; se quitó la tabla mínima `PagoCuotas`.
 - [ ] Crear la cuenta de Stripe en modo de prueba y configurar el webhook en el servidor (necesita HTTPS para el modo real).
-- [ ] Generar el PDF de la constancia y del estado de cuenta (RF-98 y RF-108).
+- [x] HU-42: PDF de la constancia y su descarga desde el historial del apoderado (RF-107 y RF-108).
+- [ ] Generar el PDF del estado de cuenta (RF-98).

@@ -188,4 +188,30 @@ public final class DtosPagos {
 			String estado,
 			List<String> cuotas) {
 	}
+
+	/**
+	 * HU-42 · RF-107: constancia de un pago confirmado. {@code anio}, {@code grado} y {@code seccion} pueden ser null
+	 * si el compromiso no está enlazado a una matrícula.
+	 */
+	public record ConstanciaPago(
+			UUID pagoId,
+			String numeroConstancia,
+			OffsetDateTime fechaPago,
+			String referencia,
+			BigDecimal montoTotal,
+			BigDecimal capital,
+			BigDecimal recargo,
+			String estado,
+			String observacion,
+			String estudiante,
+			String documento,
+			Integer anio,
+			String grado,
+			String seccion,
+			List<CuotaConstancia> cuotas) {
+	}
+
+	public record CuotaConstancia(String concepto, String cuota, LocalDate vencimiento, BigDecimal capital,
+			BigDecimal recargo) {
+	}
 }

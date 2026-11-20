@@ -336,3 +336,77 @@ test('con un pago abierto ofrece continuarlo o cancelarlo', async () => {
   );
   vi.unstubAllGlobals();
 });
+
+// HU-42 · RF-108: el apoderado descarga la constancia desde la pestaña Pagos.
+test('descarga la constancia del pago en PDF desde la pestaña Pagos', async () => {
+  const pedidas: string[] = [];
+  server.use(
+    http.get(`${env.API_URL}/pagos/pago-en-linea/cuotas`, () =>
+      HttpResponse.json({ estudiantes: [] }),
+    ),
+    http.get(`${env.API_URL}/pagos/apoderado/estudiantes`, () =>
+      HttpResponse.json(hijos),
+    ),
+    http.get(`${env.API_URL}/pagos/apoderado/estudiantes/:id/compromisos`, () =>
+      HttpResponse.json([
+        { id: 'compromiso-1', anio: 2026, estado: 'VIGENTE' },
+      ]),
+    ),
+    http.get(`${env.API_URL}/pagos/apoderado/compromisos/:id`, () =>
+      HttpResponse.json(detalle),
+    ),
+    http.get(`${env.API_URL}/pagos/apoderado/compromisos/:id/pagos`, () =>
+      HttpResponse.json([
+        {
+          id: 'pago-7',
+          numeroConstancia: 'C-2026-00007',
+          fechaPago: '2026-08-25T10:00:00-05:00',
+          capital: 600,
+          recargo: 0,
+          monto: 600,
+          estado: 'CONFIRMADO',
+          cuotas: ['Pensión de agosto'],
+        },
+      ]),
+    ),
+    http.get(
+      `${env.API_URL}/pagos/apoderado/pagos/:id/constancia`,
+      ({ params }) => {
+        pedidas.push(params.id as string);
+        return new HttpResponse(
+          new Blob(['%PDF-'], { type: 'application/pdf' }),
+          {
+            headers: { 'Content-Type': 'application/pdf' },
+          },
+        );
+      },
+    ),
+  );
+  const crearUrl = vi.fn(() => 'blob:constancia');
+  const liberarUrl = vi.fn();
+  const { createObjectURL, revokeObjectURL } = URL;
+  URL.createObjectURL = crearUrl;
+  URL.revokeObjectURL = liberarUrl;
+  const clic = vi
+    .spyOn(HTMLAnchorElement.prototype, 'click')
+    .mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.download).toBe('constancia-C-2026-00007.pdf');
+    });
+
+  await renderApp(<PensionesApoderado />);
+  await screen.findByText('Pensión de septiembre');
+  await userEvent.click(screen.getByRole('tab', { name: 'Pagos' }));
+  await userEvent.click(
+    await screen.findByRole('button', {
+      name: 'Descargar constancia C-2026-00007',
+    }),
+  );
+
+  await waitFor(() => expect(clic).toHaveBeenCalledTimes(1));
+  expect(pedidas).toEqual(['pago-7']);
+  expect(crearUrl).toHaveBeenCalledTimes(1);
+  expect(liberarUrl).toHaveBeenCalledWith('blob:constancia');
+  clic.mockRestore();
+  URL.createObjectURL = createObjectURL;
+  URL.revokeObjectURL = revokeObjectURL;
+});

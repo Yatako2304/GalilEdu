@@ -261,6 +261,26 @@ class PlanCurricularIT extends PruebaIntegracion {
 
 	@DisplayName("Otros roles reciben403")
 	@Test
+	void elCoordinadorTambienGestionaElPlanCurricular() throws Exception {
+		String coordinador = token(COORDINADOR);
+		String matematica = idArea("Matemática");
+		mvc.perform(conToken(get("/areas"), coordinador)).andExpect(status().isOk());
+		mvc.perform(conToken(post("/areas"), coordinador, """
+				{"nombre":"Tutoría"}"""))
+				.andExpect(status().isCreated());
+		mvc.perform(conToken(post("/areas/" + matematica + "/competencias"), coordinador, """
+				{"nombre":"Argumenta afirmaciones matemáticas"}"""))
+				.andExpect(status().isCreated());
+		mvc.perform(conToken(post("/areas/" + matematica + "/cursos"), coordinador, """
+				{"nombre":"Razonamiento matemático","grados":["SEC-1"]}"""))
+				.andExpect(status().isCreated());
+		mvc.perform(conToken(post("/cursos/" + idCurso("Computación") + "/desactivar"), coordinador))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.estado").value("INACTIVO"));
+	}
+
+	@DisplayName("Otros roles reciben403")
+	@Test
 	void otrosRolesReciben403() throws Exception {
 		String admin = token(ADMIN);
 		String docente = token(DOCENTE);

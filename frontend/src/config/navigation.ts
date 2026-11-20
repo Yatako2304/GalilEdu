@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   BookOpenCheck,
   Building2,
   CalendarCheck,
@@ -8,6 +9,7 @@ import {
   Contact,
   Home,
   KeyRound,
+  Layers,
   type LucideIcon,
   Star,
   Users,
@@ -63,17 +65,6 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
         },
       ],
     },
-    {
-      // HU-64: reporte institucional de notas (no hay frame del Administrador; mismo ícono que en los demás roles).
-      title: 'Académico',
-      items: [
-        {
-          label: 'Calificaciones',
-          href: paths.app.admin.calificaciones.getHref(),
-          icon: Star,
-        },
-      ],
-    },
   ],
   [ROLES.PERSONAL_ADMINISTRATIVO]: [
     inicio(paths.app.administrativo.root.getHref(), [
@@ -95,6 +86,12 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           label: 'Pensiones',
           href: paths.app.administrativo.pensiones.getHref(),
           icon: Wallet,
+        },
+        {
+          // HU-64: reporte institucional de notas (no hay frame; mismo ícono que en los demás roles).
+          label: 'Calificaciones',
+          href: paths.app.administrativo.calificaciones.getHref(),
+          icon: Star,
         },
       ],
     },
@@ -135,9 +132,21 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           icon: Star,
         },
         {
+          // HU-52 a HU-54: no está en el menú del Coordinador en Figma; lo comparte con el Personal administrativo.
+          label: 'Plan curricular',
+          href: paths.app.coordinador.planCurricular.getHref(),
+          icon: Layers,
+        },
+        {
           label: 'Plan de evaluación',
           href: paths.app.coordinador.planEvaluacion.getHref(),
           icon: BookOpenCheck,
+        },
+        {
+          // HU-55: tabla de conversión de vigesimal a AD/A/B/C (tampoco está en el menú del Coordinador en Figma).
+          label: 'Escala de calificación',
+          href: paths.app.coordinador.escalaCalificacion.getHref(),
+          icon: ArrowLeftRight,
         },
         {
           label: 'Reserva de espacios especiales',

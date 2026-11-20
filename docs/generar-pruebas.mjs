@@ -15,6 +15,7 @@ const AREAS = [
   { titulo: 'Pagos y descuentos', back: ['pagos'], front: ['features/pagos'] },
   { titulo: 'Horarios y reservas de ambientes', back: ['horarios'], front: ['features/horarios'] },
   { titulo: 'Configuración (año escolar, periodos, secciones, tarifario)', back: ['configuracion'], front: ['features/configuracion'] },
+  { titulo: 'Asistencia (registro, justificaciones, reportes)', back: ['asistencia'], front: ['features/asistencia'] },
   { titulo: 'Académico (calificaciones, catálogo, ambientes)', back: ['academico'], front: ['features/calificaciones', 'features/catalogo-academico'] },
   { titulo: 'Base común (rutas, componentes, utilidades)', back: ['.'], front: ['app', 'components', 'config', 'hooks', 'lib', 'utils'] },
 ];
@@ -122,7 +123,9 @@ for (const ruta of archivos(BACK, (n) => /(IT|Tests)\.java$/.test(n))) {
   const tests = leerJava(ruta);
   if (!tests.length) continue;
   const tipo = /Tests\.java$/.test(ruta) ? 'Unitaria' : 'Integración';
-  areaDeBack(ruta).back_.push({ ruta, titulo: humanizarArchivo(ruta.split(sep).pop()), tipo, tests });
+  const areaBack = areaDeBack(ruta);
+  if (!areaBack) throw new Error(`Sin área para ${rel(ruta)}: agrega su módulo a AREAS en docs/generar-pruebas.mjs`);
+  areaBack.back_.push({ ruta, titulo: humanizarArchivo(ruta.split(sep).pop()), tipo, tests });
 }
 for (const ruta of archivos(FRONT, (n) => /\.test\.tsx?$/.test(n))) {
   const items = leerVitest(ruta);

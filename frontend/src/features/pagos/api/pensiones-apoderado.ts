@@ -52,6 +52,20 @@ export const getPagosApoderado = (
 ): Promise<PagoRealizado[]> =>
   api.get(`/pagos/apoderado/compromisos/${compromisoId}/pagos`);
 
+/** HU-42 · RF-108: descarga la constancia del pago en PDF (`constancia-C-2026-00007.pdf`). */
+export const descargarConstancia = async (pago: PagoRealizado) => {
+  const contenido = (await api.get(
+    `/pagos/apoderado/pagos/${pago.id}/constancia`,
+    { responseType: 'blob' },
+  )) as Blob;
+  const url = URL.createObjectURL(contenido);
+  const enlace = document.createElement('a');
+  enlace.href = url;
+  enlace.download = `constancia-${pago.numeroConstancia}.pdf`;
+  enlace.click();
+  URL.revokeObjectURL(url);
+};
+
 export const usePagosApoderado = (compromisoId?: string) =>
   useQuery({
     queryKey: ['pagos', 'apoderado', 'compromisos', compromisoId, 'pagos'],

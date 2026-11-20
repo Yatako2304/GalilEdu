@@ -1,13 +1,24 @@
 package com.galiledu.pagos;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import com.galiledu.PruebaIntegracion;
 
@@ -21,6 +32,9 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 	private static final String COMPROMISO_SOFIA = "51000000-0000-0000-0000-000000000001";
 	/** Valeria Sánchez: no es hija de Luis Paredes. */
 	private static final String VALERIA = "20000000-0000-0000-0000-000000000003";
+
+	@Autowired
+	private JdbcClient jdbc;
 
 	@DisplayName("Lista los hijos con su saldo ordenados por apellido")
 	@Test
@@ -82,6 +96,56 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 	void unCompromisoInexistenteDevuelve404() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/compromisos/{id}", VALERIA), token(APODERADO)))
 				.andExpect(status().isNotFound());
+	}
+
+	/** HU-42 · RF-107/108: el apoderado descarga la constancia de un pago de su hija en PDF. */
+	@DisplayName("Descarga la constancia de un pago en pdf")
+	@Test
+	void descargaLaConstanciaDeUnPagoEnPdf() throws Exception {
+		byte[] archivo = mvc.perform(conToken(get("/pagos/apoderado/pagos/{id}/constancia", pago("C-2026-00007")),
+				token(APODERADO)))
+				.andExpect(status().isOk())
+				.andExpect(content().contentType(MediaType.APPLICATION_PDF))
+				.andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION,
+						containsString("constancia-C-2026-00007.pdf")))
+				.andReturn().getResponse().getContentAsByteArray();
+		try (PDDocument pdf = Loader.loadPDF(archivo)) {
+			assertThat(new PDFTextStripper().getText(pdf)).contains("Constancia de pago", "N.° C-2026-00007",
+					"Sofía Paredes Rojas", "DNI 74125896", "4.° de secundaria A", "Pensión de agosto",
+					"Total pagado", "S/ 600.00");
+		}
+	}
+
+	@DisplayName("No descarga la constancia de otra familia")
+	@Test
+	void noDescargaLaConstanciaDeOtraFamilia() throws Exception {
+		jdbc.sql("""
+				INSERT INTO pagos.pago (id, estudiante_id, numero_constancia, fecha_pago, monto_total)
+				VALUES ('99000000-0000-0000-0000-000000000001', ?::uuid, 'C-2026-99999', now(), 10)""")
+				.param(VALERIA).update();
+		mvc.perform(conToken(get("/pagos/apoderado/pagos/{id}/constancia", "99000000-0000-0000-0000-000000000001"),
+				token(APODERADO)))
+				.andExpect(status().isNotFound());
+	}
+
+	@DisplayName("Un pago inexistente devuelve404")
+	@Test
+	void unPagoInexistenteDevuelve404() throws Exception {
+		mvc.perform(conToken(get("/pagos/apoderado/pagos/{id}/constancia", VALERIA), token(APODERADO)))
+				.andExpect(status().isNotFound());
+	}
+
+	@DisplayName("El personal no descarga constancias desde la vista del apoderado")
+	@Test
+	void elPersonalNoDescargaConstanciasDesdeLaVistaDelApoderado() throws Exception {
+		mvc.perform(conToken(get("/pagos/apoderado/pagos/{id}/constancia", pago("C-2026-00007")),
+				token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isForbidden());
+	}
+
+	private String pago(String constancia) {
+		return jdbc.sql("SELECT id::text FROM pagos.pago WHERE numero_constancia = ?").param(constancia)
+				.query(String.class).single();
 	}
 
 	@DisplayName("El personal usa su propia vista")

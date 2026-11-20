@@ -1,3 +1,6 @@
+import { Download } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import {
   TableBody,
@@ -13,12 +16,20 @@ import { formatDate } from '@/utils/format';
 
 import { soles } from './formato';
 
+/**
+ * Historial de pagos (una fila por pago, es decir, por constancia). P9 del personal lo usa sin descarga; la vista del
+ * apoderado pasa `onDescargar` para la constancia en PDF (HU-42).
+ */
 export const TablaPagos = ({
   pagos,
   isLoading,
+  onDescargar,
+  descargandoId,
 }: {
   pagos?: PagoRealizado[];
   isLoading: boolean;
+  onDescargar?: (pago: PagoRealizado) => void;
+  descargandoId?: string | null;
 }) => {
   if (isLoading) {
     return (
@@ -47,6 +58,11 @@ export const TablaPagos = ({
           <TableHead className="text-right">Recargo</TableHead>
           <TableHead className="text-right">Total pagado</TableHead>
           <TableHead>Estado</TableHead>
+          {onDescargar && (
+            <TableHead>
+              <span className="sr-only">Descargar constancia</span>
+            </TableHead>
+          )}
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -70,6 +86,18 @@ export const TablaPagos = ({
                 {pago.estado === 'CONFIRMADO' ? 'Confirmado' : 'Observado'}
               </Tag>
             </TableCell>
+            {onDescargar && (
+              <TableCell className="text-right">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Descargar constancia ${pago.numeroConstancia}`}
+                  disabled={descargandoId === pago.id}
+                  icon={<Download className="size-4" aria-hidden="true" />}
+                  onClick={() => onDescargar(pago)}
+                />
+              </TableCell>
+            )}
           </TableRow>
         ))}
       </TableBody>

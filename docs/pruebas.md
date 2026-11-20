@@ -10,13 +10,14 @@ Cada funcionalidad tiene pruebas en el **backend** (Java: de integración contra
 |---|---:|---:|---:|
 | [Estudiantes (inscripción, edición, estado)](#estudiantes-inscripción-edición-estado) | 47 | 77 | 124 |
 | [Usuarios y acceso (login, Google, contraseñas, carga masiva)](#usuarios-y-acceso-login-google-contraseñas-carga-masiva) | 110 | 49 | 159 |
-| [Matrícula](#matrícula) | 107 | 53 | 160 |
-| [Pagos y descuentos](#pagos-y-descuentos) | 74 | 33 | 107 |
+| [Matrícula](#matrícula) | 107 | 58 | 165 |
+| [Pagos y descuentos](#pagos-y-descuentos) | 81 | 42 | 123 |
 | [Horarios y reservas de ambientes](#horarios-y-reservas-de-ambientes) | 307 | 164 | 471 |
 | [Configuración (año escolar, periodos, secciones, tarifario)](#configuración-año-escolar-periodos-secciones-tarifario) | 649 | 504 | 1153 |
-| [Académico (calificaciones, catálogo, ambientes)](#académico-calificaciones-catálogo-ambientes) | 323 | 132 | 455 |
-| [Base común (rutas, componentes, utilidades)](#base-común-rutas-componentes-utilidades) | 9 | 175 | 184 |
-| **Total** | **1626** | **1187** | **2813** |
+| [Asistencia (registro, justificaciones, reportes)](#asistencia-registro-justificaciones-reportes) | 55 | 15 | 70 |
+| [Académico (calificaciones, catálogo, ambientes)](#académico-calificaciones-catálogo-ambientes) | 327 | 134 | 461 |
+| [Base común (rutas, componentes, utilidades)](#base-común-rutas-componentes-utilidades) | 9 | 188 | 197 |
+| **Total** | **1692** | **1231** | **2923** |
 
 Cómo correrlas:
 
@@ -516,7 +517,7 @@ cd frontend && npm test
 
 ## Matrícula
 
-107 pruebas de backend y 53 de frontend.
+107 pruebas de backend y 58 de frontend.
 
 ### Backend
 
@@ -689,11 +690,12 @@ cd frontend && npm test
 
 ### Frontend
 
-#### Consulta matrícula (10)
+#### Consulta matrícula (11)
 
 `frontend/src/features/matricula/components/__tests__/consulta-matricula.test.tsx`
 
 - muestra el periodo, grado, sección y estado asignados
+- muestra la sección oficial y su tutor cuando la matrícula está formalizada
 - permite elegir otro estudiante a cargo
 - informa cuando el periodo cerró y aún no existe una sección
 - aclara que la deuda de otro hijo bloquea la matrícula seleccionada
@@ -704,7 +706,7 @@ cd frontend && npm test
 - sin matrícula y sin impedimentos el apoderado la empieza en el paso 1
 - muestra los cambios de sección de la matrícula confirmada
 
-#### Detalle matrícula (15)
+#### Detalle matrícula (18)
 
 `frontend/src/features/matricula/components/__tests__/detalle-matricula.test.tsx`
 
@@ -712,6 +714,9 @@ cd frontend && npm test
 - con el periodo cerrado y la sección reservada no se puede cambiar de sección
 - una matrícula retirada no permite subir ni reemplazar documentos
 - sube un documento pendiente
+- HU-72: elimina un documento subido después de confirmar
+- HU-72: no ofrece eliminar un documento aprobado o con pago pendiente
+- HU-25: muestra que la matrícula es extemporánea y su motivo
 - cambia de sección tras confirmar
 - HU-26: el historial muestra los cambios con su motivo y quién los hizo
 - HU-26: sin cambios previos no se muestra la tarjeta de historial
@@ -724,7 +729,7 @@ cd frontend && npm test
 - un documento aprobado ya no se reemplaza ni muestra su plantilla
 - matriculado: el último paso del indicador figura completado
 
-#### Diálogo nueva matrícula (8)
+#### Diálogo nueva matrícula (9)
 
 `frontend/src/features/matricula/components/__tests__/dialogo-nueva-matricula.test.tsx`
 
@@ -736,6 +741,7 @@ cd frontend && npm test
 - rechaza un archivo que no es PDF ni imagen
 - sin vacantes en el grado avisa y no deja guardar
 - al reabrir el modal vuelve a consultar y ya propone la sección recién creada
+- HU-25: registra una matrícula extemporánea con sección elegida y motivo
 
 #### Documentos apoderado (6)
 
@@ -779,7 +785,7 @@ cd frontend && npm test
 
 ## Pagos y descuentos
 
-74 pruebas de backend y 33 de frontend.
+81 pruebas de backend y 42 de frontend.
 
 ### Backend
 
@@ -863,7 +869,7 @@ cd frontend && npm test
 - El backend rechaza aplicarlo al hermano que no corresponde
 - Si los menores son gemelos ambos lo reciben
 
-#### Deuda apoderado · integración (7)
+#### Deuda apoderado · integración (11)
 
 `backend/src/test/java/com/galiledu/pagos/DeudaApoderadoIT.java`
 
@@ -873,6 +879,10 @@ cd frontend && npm test
 - Lista los compromisos de su hija
 - No ve la deuda de un estudiante ajeno
 - Un compromiso inexistente devuelve404
+- Descarga la constancia de un pago en pdf
+- No descarga la constancia de otra familia
+- Un pago inexistente devuelve404
+- El personal no descarga constancias desde la vista del apoderado
 - El personal usa su propia vista
 
 #### Pago en linea · integración (14)
@@ -904,6 +914,14 @@ cd frontend && npm test
 - Se calcula sobre el capital con descuento
 - Una cuota que no es pensión no genera mora
 
+#### Archivo constancia pago · unitaria (3)
+
+`backend/src/test/java/com/galiledu/pagos/infraestructura/ArchivoConstanciaPagoTests.java`
+
+- Incluye los datos del pago las cuotas el recargo y el total
+- Un pago observado muestra el estado y su observación
+- Muchas cuotas continuan en otra página y el total va al final
+
 #### Firma stripe · unitaria (3)
 
 `backend/src/test/java/com/galiledu/pagos/infraestructura/FirmaStripeTests.java`
@@ -914,21 +932,31 @@ cd frontend && npm test
 
 ### Frontend
 
-#### Catálogo descuentos (5)
+#### Catálogo descuentos (7)
 
 `frontend/src/features/pagos/components/__tests__/catalogo-descuentos.test.tsx`
 
 - muestra el catálogo y el formato de los porcentajes
+- crea un descuento de porcentaje único sin validar los tramos ocultos
+- permite cambiar el límite institucional de descuento
 - el formulario por hermanos empieza con dos tramos y permite agregar otro
 - permite quitar un tramo mientras conserva al menos una fila editable
 - avisa si Desde es mayor que Hasta y retira el aviso al corregirlo
 - rechaza tramos superpuestos y acepta rangos separados en cualquier orden
 
-#### Diálogo aplicar descuento (1)
+#### Descuento compromiso (1)
+
+`frontend/src/features/pagos/components/__tests__/descuento-compromiso.test.tsx`
+
+- muestra la vigencia hasta que el estudiante termine el colegio
+
+#### Diálogo aplicar descuento (3)
 
 `frontend/src/features/pagos/components/__tests__/dialogo-aplicar-descuento.test.tsx`
 
 - avisa el reemplazo del descuento vigente y exige el motivo
+- permite mantener el descuento hasta que el estudiante termine el colegio
+- explica que el descuento por hermanos corresponde al hermano menor
 
 #### Formato (4)
 
@@ -964,7 +992,7 @@ cd frontend && npm test
 - genera la cuota cuando todavía no existe
 - con la matrícula confirmada muestra su código
 
-#### Pensiones apoderado (4)
+#### Pensiones apoderado (5)
 
 `frontend/src/features/pagos/components/__tests__/pensiones-apoderado.test.tsx`
 
@@ -972,6 +1000,7 @@ cd frontend && npm test
 - marca las cuotas en orden y paga las seleccionadas
 - sin cuotas por pagar, "Pagar seleccionadas" queda deshabilitado
 - con un pago abierto ofrece continuarlo o cancelarlo
+- descarga la constancia del pago en PDF desde la pestaña Pagos
 
 #### Resultado pago (3)
 
@@ -992,12 +1021,15 @@ cd frontend && npm test
 - una cuota que no se puede pagar no se marca
 - une los nombres como en Figma
 
-#### Tablas pagos (2)
+#### Tablas pagos (5)
 
 `frontend/src/features/pagos/components/__tests__/tablas-pagos.test.tsx`
 
 - el cronograma muestra el recargo de la cuota vencida y términos claros
 - el historial distingue el monto de cuotas, el recargo y el total pagado
+- sin onDescargar (P9) no ofrece descargar la constancia
+- con onDescargar cada pago tiene su botón de descarga
+- mientras se descarga, el botón de ese pago queda deshabilitado
 
 ## Horarios y reservas de ambientes
 
@@ -3406,9 +3438,142 @@ cd frontend && npm test
 - aNumero devuelve null mientras lo escrito no sea un número
 - el total no arrastra errores de coma flotante
 
+## Asistencia (registro, justificaciones, reportes)
+
+55 pruebas de backend y 15 de frontend.
+
+### Backend
+
+#### Asistencia · integración (16)
+
+`backend/src/test/java/com/galiledu/asistencia/AsistenciaIT.java`
+
+- La tutora ve su sección
+- Sin registrar todos están sin marcar y se puede editar
+- Registra la asistencia con la hora de la tardanza
+- No guarda si falta marcar a un estudiante
+- La tardanza exige la hora de llegada
+- Rechaza estudiantes de otra sección
+- Solo se registra la asistencia de hoy
+- Un sábado no es día de clases
+- Entre bimestres son vacaciones
+- Corrige el mismo día y deja historial
+- Una corrección con una versión vieja se rechaza
+- Registrar dos veces sin versión se rechaza
+- Una corrección sin cambios no se guarda
+- Al día siguiente ya no se puede corregir
+- Una sección ajena no se ve
+- Solo el tutor usa asistencia
+
+#### Justificación (asistencia) · integración (10)
+
+`backend/src/test/java/com/galiledu/asistencia/JustificacionIT.java`
+
+- Justifica una falta con motivo detalle y sustento
+- Una tardanza se justifica sin sustento
+- Un presente no se justifica
+- El motivo es obligatorio y otro pide detalle
+- El sustento debe ser pdf o imagen de hasta5 mb
+- No se justifica dos veces
+- Se justifica un día pasado
+- Una falta justificada ya no se corrige
+- Un día sin registro no tiene nada que justificar
+- Otro rol no justifica
+
+#### Reporte asistencia · integración (7)
+
+`backend/src/test/java/com/galiledu/asistencia/ReporteAsistenciaIT.java`
+
+- Consolida el mes por apellidos con las justificadas aparte
+- Por período cuenta todo el bimestre
+- Un mes sin registros sale en cero
+- Sin parametros es el mes actual
+- Un mes fuera del año se rechaza
+- Exporta el reporte en pdf
+- Una sección ajena no se ve
+
+#### Rango reporte · unitaria (5)
+
+`backend/src/test/java/com/galiledu/asistencia/aplicacion/RangoReporteTests.java`
+
+- Sin parametros es el mes de hoy
+- El primer y último mes se recortan al año escolar
+- Un período usa sus fechas
+- Un mes o período ajeno al año se rechaza
+- Solo se ofrecen los meses y períodos que ya empezaron
+
+#### Regla día escolar · unitaria (4)
+
+`backend/src/test/java/com/galiledu/asistencia/aplicacion/ReglaDiaEscolarTests.java`
+
+- Un martes de bimestre es día escolar
+- El primer y último día del período cuentan
+- Un año que no está activo no tiene días escolares
+- Fuera del año entre bimestres y sábado no son días escolares
+
+#### Justificación (dominio) · unitaria (6)
+
+`backend/src/test/java/com/galiledu/asistencia/dominio/JustificacionTests.java`
+
+- Una falta se justifica con motivo y detalle limpio
+- Un detalle en blanco queda vacio
+- Un presente no se justifica
+- Sin motivo o con otro sin detalle no se justifica
+- El detalle tiene como maximo500 caracteres
+- El adjunto guarda nombre tipo y tamano
+
+#### Registro asistencia · unitaria (5)
+
+`backend/src/test/java/com/galiledu/asistencia/dominio/RegistroAsistenciaTests.java`
+
+- La tardanza exige hora y los demas estados la descartan
+- Sin estado no se puede marcar
+- Corregir solo registra los cambios y quien los hizo
+- Cambiar solo la hora de la tardanza también es una corrección
+- Sin cambios no se marca como corregido
+
+#### Archivo reporte asistencia · unitaria (2)
+
+`backend/src/test/java/com/galiledu/asistencia/infraestructura/ArchivoReporteAsistenciaTests.java`
+
+- Incluye la sección el rango las filas y los totales
+- Una sección grande continua en otra página con el total al final
+
+### Frontend
+
+#### Asistencia sección (8)
+
+`frontend/src/features/asistencia/components/__tests__/asistencia-seccion.test.tsx`
+
+- AS-01 a AS-04: avisa a quién falta marcar, exige la hora de la tardanza y guarda
+- "Marcar todos como presentes" respeta lo ya marcado
+- AS-05 y AS-06: corrige el mismo día y confirma solo los cambios
+- un día que no es escolar se ve sin poder marcar
+- sin sección a cargo lo dice
+- justifica una falta con motivo y detalle desde la columna Justificación
+- "Otro" pide el detalle y el sustento solo acepta PDF o imagen
+- el botón de fecha abre el calendario y consulta otro día
+
+#### Reporte asistencia (2)
+
+`frontend/src/features/asistencia/components/__tests__/reporte-asistencia.test.tsx`
+
+- muestra el mes actual por apellidos con las justificadas aparte
+- "Por bimestre" pide el periodo más reciente y el selector cambia el mes
+
+#### Asistencia (5)
+
+`frontend/src/features/asistencia/lib/asistencia.test.ts`
+
+- el botón de fecha dice el día como en Figma
+- "hoy" es la fecha de Lima aunque en UTC ya sea el día siguiente
+- cuenta presentes, tardanzas, faltas y sin marcar del borrador
+- solo cuenta como cambio lo que difiere de lo guardado
+- una tardanza sin hora no se puede guardar
+
 ## Académico (calificaciones, catálogo, ambientes)
 
-323 pruebas de backend y 132 de frontend.
+327 pruebas de backend y 134 de frontend.
 
 ### Backend
 
@@ -3558,7 +3723,7 @@ cd frontend && npm test
 - María puede calificar a tres alumnos en tres cursos
 - Volver a cargar la demo no duplica datos ni sobrescribe notas o items
 
-#### Escala calificación · integración (7)
+#### Escala calificación · integración (8)
 
 `backend/src/test/java/com/galiledu/academico/EscalaCalificacionIT.java`
 
@@ -3568,6 +3733,7 @@ cd frontend && npm test
 - Rechaza fechas pasadas y repetidas
 - Rechaza rangos con vacios o cruces
 - Válida notas y fecha
+- Otros roles reciben403
 - Otros roles reciben403
 
 #### Esquema académico · integración (8)
@@ -3613,7 +3779,7 @@ cd frontend && npm test
 - Con pesos incompletos no se calcula la nota de la competencia
 - El docente solo ve las competencias de su curso
 
-#### Plan curricular · integración (19)
+#### Plan curricular · integración (20)
 
 `backend/src/test/java/com/galiledu/academico/PlanCurricularIT.java`
 
@@ -3634,6 +3800,7 @@ cd frontend && npm test
 - Válida nombre y grados del curso
 - No quita un grado en el que el curso ya está planificado
 - Desactiva y reactiva curso
+- Otros roles reciben403
 - Otros roles reciben403
 - Sin sesión da401
 
@@ -3674,7 +3841,7 @@ cd frontend && npm test
 - Rechaza competencias ajenas al curso
 - Rechaza items ajenos a las competencias seleccionadas
 
-#### Reportes y notas apoderado · integración (10)
+#### Reportes y notas apoderado · integración (12)
 
 `backend/src/test/java/com/galiledu/academico/ReportesYNotasApoderadoIT.java`
 
@@ -3684,7 +3851,9 @@ cd frontend && npm test
 - El curso debe ser del grado
 - El coordinador ve la nota de cada estudiante de una sección y su libreta
 - Solo el coordinador ve el detalle de una sección
+- Solo el coordinador ve el detalle de una sección
 - El reporte institucional cuenta cada nota de competencia una vez
+- Permisos de los reportes
 - Permisos de los reportes
 - El apoderado ve las notas de su hijo por curso y competencia
 - El apoderado no ve a estudiantes que no son suyos
@@ -3925,14 +4094,16 @@ cd frontend && npm test
 - avisa cuando los pesos de los cursos no suman 100 %
 - «Todo el año» genera el resumen con el aporte final del curso y la nota de la competencia
 
-#### Reportes notas (4)
+#### Reportes notas (6)
 
 `frontend/src/features/calificaciones/components/__tests__/reportes-notas.test.tsx`
 
 - el reporte por grado muestra cada competencia por sección y en todo el grado
 - al elegir un curso pide su aporte y lo aclara
-- el reporte institucional resume los niveles por sección, grado y área
+- el reporte institucional muestra porcentajes por nivel, por grado, sección y área
 - el coordinador abre una sección y ve la nota de cada estudiante, con su libreta
+- «Todo el año» muestra el nivel de cada periodo y la nota final de cada estudiante
+- el coordinador ve los ítems que calificó el docente, sin poder cambiarlos
 
 #### Ambientes (api) (10)
 
@@ -4088,7 +4259,7 @@ cd frontend && npm test
 
 ## Base común (rutas, componentes, utilidades)
 
-9 pruebas de backend y 175 de frontend.
+9 pruebas de backend y 188 de frontend.
 
 ### Backend
 
@@ -4117,6 +4288,22 @@ cd frontend && npm test
 - El chequeo de salud responde up sin autenticación
 
 ### Frontend
+
+#### Rutas calificaciones (3)
+
+`frontend/src/app/__tests__/rutas-calificaciones.test.tsx`
+
+- el Personal administrativo abre Calificaciones desde su menú
+- el Administrador ya no tiene Calificaciones en su menú
+- el Administrador tampoco entra a la ruta del Personal administrativo
+
+#### Rutas catálogo coordinador (3)
+
+`frontend/src/app/__tests__/rutas-catalogo-coordinador.test.tsx`
+
+- el Coordinador abre el plan curricular desde su menú
+- el Coordinador abre la escala de calificación desde su menú
+- un Docente que abre la ruta del Coordinador es llevado a su inicio
 
 #### Rutas mis datos (3)
 
@@ -4174,6 +4361,13 @@ cd frontend && npm test
 
 - sin parámetros muestra el listado de periodos de matrícula con su botón "Nuevo periodo"
 - con ?matriculaId= sigue mostrando la tarjeta de P4, sin pedir ningún periodo
+
+#### Matrículas período (2)
+
+`frontend/src/app/routes/app/administrativo/__tests__/matriculas-periodo.test.tsx`
+
+- HU-25: un periodo cerrado con permiso habilita Matrícula extemporánea
+- HU-25: sin permiso el botón extemporáneo permanece deshabilitado
 
 #### Pensiones configuración (1)
 
@@ -4250,6 +4444,14 @@ cd frontend && npm test
 
 - should add proper page title and meta description
 
+#### Barra distribución (3)
+
+`frontend/src/components/ui/__tests__/barra-distribucion.test.tsx`
+
+- describe el porcentaje y la cantidad de cada nivel, de AD a C
+- sin calificaciones queda solo la pista gris
+- porcentajeDe redondea al entero y no divide entre cero
+
 #### Calendario compacto (6)
 
 `frontend/src/components/ui/__tests__/calendario-compacto.test.tsx`
@@ -4300,6 +4502,13 @@ cd frontend && npm test
 `frontend/src/components/ui/__tests__/schedule-block-claves.test.tsx`
 
 - ScheduleBlock: dos cursos con el mismo nombre se dibujan los dos y no repiten la clave
+
+#### Segmented control (2)
+
+`frontend/src/components/ui/__tests__/segmented-control.test.tsx`
+
+- es un grupo de opciones únicas que avisa la elegida
+- sin marcar y con error, marca el grupo como inválido
 
 #### Select lista flotante (9)
 

@@ -57,9 +57,90 @@ test('muestra el catálogo y el formato de los porcentajes', async () => {
   );
 
   expect(await screen.findByText('Beca institucional')).toBeInTheDocument();
-  expect(screen.getByText('50 %')).toBeInTheDocument();
+  expect(screen.getAllByText('50 %')).toHaveLength(2);
   expect(screen.getByText('2 hermanos: 10 % · 3+: 15 %')).toBeInTheDocument();
   expect(screen.getByText('Pensiones · Matrícula')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Cambiar límite' })).toBeEnabled();
+});
+
+test('crea un descuento de porcentaje único sin validar los tramos ocultos', async () => {
+  let solicitud: Record<string, unknown> | undefined;
+  server.use(
+    http.post(`${env.API_URL}/pagos/descuentos`, async ({ request }) => {
+      solicitud = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json(
+        {
+          ...descuentos[0],
+          id: 'descuento-nuevo',
+          nombre: solicitud.nombre,
+          porcentaje: solicitud.porcentaje,
+          conceptos: solicitud.conceptos,
+        },
+        { status: 201 },
+      );
+    }),
+  );
+
+  await renderApp(
+    <CatalogoDescuentos nuevoAbierto onNuevoAbiertoChange={() => undefined} />,
+  );
+
+  await userEvent.type(await screen.findByLabelText('Nombre *'), 'Beca nueva');
+  await userEvent.type(screen.getByLabelText(/Porcentaje \*/), '20');
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Crear descuento' }),
+  );
+
+  await waitFor(() =>
+    expect(solicitud).toMatchObject({
+      nombre: 'Beca nueva',
+      tipo: 'PORCENTAJE_UNICO',
+      porcentaje: 20,
+      tramos: [],
+      conceptos: ['PENSION'],
+    }),
+  );
+});
+
+test('permite cambiar el límite institucional de descuento', async () => {
+  let limite = 50;
+  server.use(
+    http.get(`${env.API_URL}/pagos/descuentos/configuracion`, () =>
+      HttpResponse.json({ porcentajeMaximo: limite }),
+    ),
+    http.put(
+      `${env.API_URL}/pagos/descuentos/configuracion`,
+      async ({ request }) => {
+        const cuerpo = (await request.json()) as { porcentajeMaximo: number };
+        limite = cuerpo.porcentajeMaximo;
+        return HttpResponse.json({ porcentajeMaximo: limite });
+      },
+    ),
+  );
+
+  await renderApp(
+    <CatalogoDescuentos
+      nuevoAbierto={false}
+      onNuevoAbiertoChange={() => undefined}
+    />,
+  );
+
+  await userEvent.click(
+    await screen.findByRole('button', { name: 'Cambiar límite' }),
+  );
+  const campo = screen.getByLabelText(/Porcentaje máximo \*/);
+  await userEvent.clear(campo);
+  await userEvent.type(campo, '60');
+  await userEvent.click(screen.getByRole('button', { name: 'Guardar límite' }));
+
+  expect(
+    await screen.findByText('El porcentaje máximo ahora es 60 %.'),
+  ).toBeInTheDocument();
+  await waitFor(() =>
+    expect(
+      screen.queryByRole('heading', { name: 'Límite de descuento' }),
+    ).not.toBeInTheDocument(),
+  );
 });
 
 test('el formulario por hermanos empieza con dos tramos y permite agregar otro', async () => {
