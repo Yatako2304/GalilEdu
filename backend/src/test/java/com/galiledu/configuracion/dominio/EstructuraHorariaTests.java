@@ -9,6 +9,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -44,6 +45,7 @@ class EstructuraHorariaTests {
 				.isInstanceOf(IllegalArgumentException.class).hasMessage(mensaje);
 	}
 
+	@DisplayName("Crea la estructura de figma con sus recesos y sus bloques por semana")
 	@Test
 	void creaLaEstructuraDeFigmaConSusRecesosYSusBloquesPorSemana() {
 		EstructuraHoraria e = EstructuraHoraria.crear(ANIO, "PRIMARIA", true, primaria());
@@ -57,6 +59,7 @@ class EstructuraHorariaTests {
 		assertThat(e.jornada().salidaMinutos()).isEqualTo(14 * 60 + 20);
 	}
 
+	@DisplayName("El modal de figma es12 bloques por semana con tres días")
 	@Test
 	void elModalDeFigmaEs12BloquesPorSemanaConTresDias() {
 		DefinicionEstructura talleres = new DefinicionEstructura("EH-TAR-26", "Secundaria · talleres de tarde",
@@ -68,6 +71,7 @@ class EstructuraHorariaTests {
 		assertThat(e.esPrincipal()).isFalse();
 	}
 
+	@DisplayName("Normaliza el código la descripción y el orden de los días")
 	@Test
 	void normalizaElCodigoLaDescripcionYElOrdenDeLosDias() {
 		DefinicionEstructura desordenada = new DefinicionEstructura("  eh-pri-26 ", "   ",
@@ -84,6 +88,7 @@ class EstructuraHorariaTests {
 
 	// ---------- Reglas de código, descripción y días ----------
 
+	@DisplayName("El código es obligatorio y admite hasta20 caracteres")
 	@Test
 	void elCodigoEsObligatorioYAdmiteHasta20Caracteres() {
 		DefinicionEstructura base = primaria();
@@ -97,6 +102,7 @@ class EstructuraHorariaTests {
 				null, base.diasLectivos(), base.horaEntrada(), 8, 45, List.of()))).doesNotThrowAnyException();
 	}
 
+	@DisplayName("El código se válida ya normalizado sin contar los espacios del borde")
 	@Test
 	void elCodigoSeValidaYaNormalizadoSinContarLosEspaciosDelBorde() {
 		DefinicionEstructura base = primaria();
@@ -116,6 +122,7 @@ class EstructuraHorariaTests {
 				base.diasLectivos(), base.horaEntrada(), 8, 45, List.of()))).isEmpty();
 	}
 
+	@DisplayName("La descripción es opcional y admite hasta100 caracteres")
 	@Test
 	void laDescripcionEsOpcionalYAdmiteHasta100Caracteres() {
 		DefinicionEstructura base = primaria();
@@ -128,6 +135,7 @@ class EstructuraHorariaTests {
 				base.horaEntrada(), 8, 45, List.of()), "La descripción admite hasta 100 caracteres.");
 	}
 
+	@DisplayName("Exige al menos un día lectivo sin repetir y solo de lunes a sábado")
 	@Test
 	void exigeAlMenosUnDiaLectivoSinRepetirYSoloDeLunesASabado() {
 		DefinicionEstructura base = primaria();
@@ -144,6 +152,7 @@ class EstructuraHorariaTests {
 
 	// ---------- Reglas de bloques, duración y recesos ----------
 
+	@DisplayName("Los bloques por día van de1 a12")
 	@Test
 	void losBloquesPorDiaVanDe1A12() {
 		assertErrorDeCreacion(conBloquesYDuracion(0, 45), "Los bloques por día van de 1 a 12.");
@@ -154,6 +163,7 @@ class EstructuraHorariaTests {
 				.doesNotThrowAnyException();
 	}
 
+	@DisplayName("La duración del bloque va de20 a120 minutos")
 	@Test
 	void laDuracionDelBloqueVaDe20A120Minutos() {
 		assertErrorDeCreacion(conBloquesYDuracion(2, 19), "La duración del bloque va de 20 a 120 minutos.");
@@ -164,6 +174,7 @@ class EstructuraHorariaTests {
 				.doesNotThrowAnyException();
 	}
 
+	@DisplayName("El receso dura de5 a60 minutos")
 	@Test
 	void elRecesoDuraDe5A60Minutos() {
 		assertErrorDeCreacion(conRecesos(List.of(new DatosReceso(3, 4))), "El receso dura de 5 a 60 minutos.");
@@ -173,6 +184,7 @@ class EstructuraHorariaTests {
 				.doesNotThrowAnyException();
 	}
 
+	@DisplayName("El receso va después de un bloque entre1 y bloques menos1")
 	@Test
 	void elRecesoVaDespuesDeUnBloqueEntre1YBloquesMenos1() {
 		// Con 8 bloques, el último receso posible va después del 7: tras el 8 no tendría sentido.
@@ -185,6 +197,7 @@ class EstructuraHorariaTests {
 				.doesNotThrowAnyException();
 	}
 
+	@DisplayName("Con un solo bloque no se puede poner un receso")
 	@Test
 	void conUnSoloBloqueNoSePuedePonerUnReceso() {
 		DefinicionEstructura base = primaria();
@@ -192,6 +205,7 @@ class EstructuraHorariaTests {
 				List.of(new DatosReceso(1, 15))), "Con un solo bloque por día no hay dónde poner un receso.");
 	}
 
+	@DisplayName("No permite dos recesos después del mismo bloque")
 	@Test
 	void noPermiteDosRecesosDespuesDelMismoBloque() {
 		assertErrorDeCreacion(conRecesos(List.of(new DatosReceso(3, 10), new DatosReceso(3, 15))),
@@ -200,6 +214,7 @@ class EstructuraHorariaTests {
 
 	// ---------- Hora límite de las 18:00 ----------
 
+	@DisplayName("La jornada puede terminar exactamente a las1800")
 	@Test
 	void laJornadaPuedeTerminarExactamenteALas1800() {
 		DefinicionEstructura limite = new DefinicionEstructura("EH-TAR-26", null, List.of("LUN"), LocalTime.of(14, 45),
@@ -210,6 +225,7 @@ class EstructuraHorariaTests {
 		assertThat(EstructuraHoraria.calcularJornada(limite).orElseThrow().salidaMinutos()).isEqualTo(18 * 60);
 	}
 
+	@DisplayName("Un minuto después de las1800 se rechaza y la vista previa conserva la jornada")
 	@Test
 	void unMinutoDespuesDeLas1800SeRechazaYLaVistaPreviaConservaLaJornada() {
 		DefinicionEstructura pasada = new DefinicionEstructura("EH-TAR-26", null, List.of("LUN"), LocalTime.of(14, 46),
@@ -221,6 +237,7 @@ class EstructuraHorariaTests {
 		assertThat(jornada.salidaMinutos()).isEqualTo(18 * 60 + 1);
 	}
 
+	@DisplayName("Una jornada que cruza la medianoche se rechaza")
 	@Test
 	void unaJornadaQueCruzaLaMedianocheSeRechaza() {
 		DefinicionEstructura noche = new DefinicionEstructura("EH-NOC", null, List.of("LUN"), LocalTime.of(23, 0), 4,
@@ -230,6 +247,7 @@ class EstructuraHorariaTests {
 		assertErrorDeCreacion(noche, "La jornada debe terminar como máximo a las 18:00.");
 	}
 
+	@DisplayName("Sin datos para calcular no hay jornada")
 	@Test
 	void sinDatosParaCalcularNoHayJornada() {
 		assertThat(EstructuraHoraria.calcularJornada(conBloquesYDuracion(13, 45))).isEmpty();
@@ -238,6 +256,7 @@ class EstructuraHorariaTests {
 		assertErrorDeCreacion(sinEntrada, "Ingresa la hora de inicio.");
 	}
 
+	@DisplayName("Detecta todos los errores juntos para la vista previa")
 	@Test
 	void detectaTodosLosErroresJuntosParaLaVistaPrevia() {
 		DefinicionEstructura mala = new DefinicionEstructura(" ", null, List.of(), LocalTime.of(8, 0), 13, 10,
@@ -253,6 +272,7 @@ class EstructuraHorariaTests {
 
 	// ---------- Nivel y año ----------
 
+	@DisplayName("El nivel es primaria o secundaria")
 	@Test
 	void elNivelEsPrimariaOSecundaria() {
 		assertThat(EstructuraHoraria.normalizarNivel(" secundaria ")).isEqualTo("SECUNDARIA");
@@ -261,6 +281,7 @@ class EstructuraHorariaTests {
 		assertThatThrownBy(() -> EstructuraHoraria.normalizarNivel(null)).isInstanceOf(IllegalArgumentException.class);
 	}
 
+	@DisplayName("Solo un año planificado se modifica")
 	@Test
 	void soloUnAnioPlanificadoSeModifica() {
 		assertThatCode(() -> EstructuraHoraria.validarAnioModificable(EstadoAnioEscolar.PLANIFICADO))
@@ -274,6 +295,7 @@ class EstructuraHorariaTests {
 
 	// ---------- Edición y principal ----------
 
+	@DisplayName("Editar cambia los datos pero no el nivel ni la principal")
 	@Test
 	void editarCambiaLosDatosPeroNoElNivelNiLaPrincipal() {
 		EstructuraHoraria e = EstructuraHoraria.crear(ANIO, "PRIMARIA", true, primaria());
@@ -287,6 +309,7 @@ class EstructuraHorariaTests {
 		assertThat(e.esPrincipal()).isTrue();
 	}
 
+	@DisplayName("Editar conserva los recesos que siguen en el mismo bloque y solo cambia su duración")
 	@Test
 	void editarConservaLosRecesosQueSiguenEnElMismoBloqueYSoloCambiaSuDuracion() {
 		EstructuraHoraria e = EstructuraHoraria.crear(ANIO, "PRIMARIA", true, primaria());
@@ -300,6 +323,7 @@ class EstructuraHorariaTests {
 		assertThat(e.getRecesos().get(0)).isSameAs(despuesDelTercero);
 	}
 
+	@DisplayName("Tras editar los recesos están en orden y la jornada es correcta sin recargar de la base")
 	@Test
 	void trasEditarLosRecesosEstanEnOrdenYLaJornadaEsCorrectaSinRecargarDeLaBase() {
 		EstructuraHoraria e = EstructuraHoraria.crear(ANIO, "PRIMARIA", true, primaria());
@@ -319,6 +343,7 @@ class EstructuraHorariaTests {
 		assertThat(jornada.salidaMinutos()).isEqualTo(14 * 60 + 30);
 	}
 
+	@DisplayName("Con bloques invalidos no se muestra un rango de receso sin sentido")
 	@Test
 	void conBloquesInvalidosNoSeMuestraUnRangoDeRecesoSinSentido() {
 		DefinicionEstructura base = primaria();
@@ -336,6 +361,7 @@ class EstructuraHorariaTests {
 				"Un receso va después de un bloque entre 1 y 7.");
 	}
 
+	@DisplayName("Editar solo los recesos actualiza la fecha de actualización")
 	@Test
 	void editarSoloLosRecesosActualizaLaFechaDeActualizacion() {
 		EstructuraHoraria e = EstructuraHoraria.crear(ANIO, "PRIMARIA", true, primaria());
@@ -347,6 +373,7 @@ class EstructuraHorariaTests {
 		assertThat(e.getActualizadoEn()).isAfter(Instant.EPOCH);
 	}
 
+	@DisplayName("Editar con datos invalidos no cambia nada")
 	@Test
 	void editarConDatosInvalidosNoCambiaNada() {
 		EstructuraHoraria e = EstructuraHoraria.crear(ANIO, "PRIMARIA", true, primaria());
@@ -357,6 +384,7 @@ class EstructuraHorariaTests {
 		assertThat(e.getRecesos()).hasSize(2);
 	}
 
+	@DisplayName("Marcar y desmarcar como principal")
 	@Test
 	void marcarYDesmarcarComoPrincipal() {
 		EstructuraHoraria e = EstructuraHoraria.crear(ANIO, "PRIMARIA", false, primaria());

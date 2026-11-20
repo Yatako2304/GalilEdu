@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.ResultActions;
 
@@ -69,6 +70,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 		return "{" + json.substring(json.indexOf("\"celdas\""));
 	}
 
+	@DisplayName("Sin cruces responde200 y una lista vacia")
 	@Test
 	void sinCrucesResponde200YUnaListaVacia() throws Exception {
 		UUID estructura = prepararSecundaria();
@@ -82,6 +84,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 		cruces(t2).andExpect(status().isOk()).andExpect(jsonPath("$", empty()));
 	}
 
+	@DisplayName("El mismo docente en dos secciones al mismo día y bloque es un cruce de docente")
 	@Test
 	void elMismoDocenteEnDosSeccionesAlMismoDiaYBloqueEsUnCruceDeDocente() throws Exception {
 		UUID estructura = prepararSecundaria();
@@ -99,6 +102,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 						+ " ya dicta Álgebra con 1.° T1 el lunes de 8:00 a 8:45."));
 	}
 
+	@DisplayName("El mismo ambiente con docentes distintos es un cruce de ambiente")
 	@Test
 	void elMismoAmbienteConDocentesDistintosEsUnCruceDeAmbiente() throws Exception {
 		UUID estructura = prepararSecundaria();
@@ -115,6 +119,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 						"1.° T1 ya usa TMP-A1 para Álgebra el lunes de 8:00 a 8:45."));
 	}
 
+	@DisplayName("Bloques de jornadas distintas que se superponen se cruzan")
 	@Test
 	void bloquesDeJornadasDistintasQueSeSuperponenSeCruzan() throws Exception {
 		// Secundaria entra a las 08:00 (bloque 2: 08:45 a 09:30) y primaria a las 08:30 (bloque 1: 08:30 a 09:15).
@@ -134,6 +139,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 						+ " ya dicta Álgebra con 1.° T1 el lunes de 8:45 a 9:30."));
 	}
 
+	@DisplayName("Bloques de jornadas distintas que solo se tocan no se cruzan")
 	@Test
 	void bloquesDeJornadasDistintasQueSoloSeTocanNoSeCruzan() throws Exception {
 		// El bloque 1 de secundaria termina a las 08:45 y el bloque 1 de primaria empieza a las 08:45.
@@ -150,6 +156,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 				.andExpect(jsonPath("$", empty()));
 	}
 
+	@DisplayName("Un bloque de otro año escolar no cruza")
 	@Test
 	void unBloqueDeOtroAnioEscolarNoCruza() throws Exception {
 		prepararSecundaria();
@@ -170,6 +177,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 		cruces(t1, new Celda("LUN", 1, algebra, aulaUno)).andExpect(status().isOk()).andExpect(jsonPath("$", empty()));
 	}
 
+	@DisplayName("El mismo par de bloques en el mismo año si cruza")
 	@Test
 	void elMismoParDeBloquesEnElMismoAnioSiCruza() throws Exception {
 		// Control de la prueba anterior: mismo docente, mismo ambiente y 08:15 a 09:00 contra 08:00 a 08:45, pero con
@@ -190,6 +198,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 				.andExpect(jsonPath("$[1].tipo").value("AMBIENTE"));
 	}
 
+	@DisplayName("Las celdas que el conversor omite no hacen fallar y se devuelven los cruces del resto")
 	@Test
 	void lasCeldasQueElConversorOmiteNoHacenFallarYSeDevuelvenLosCrucesDelResto() throws Exception {
 		UUID estructura = prepararSecundaria();
@@ -211,12 +220,14 @@ class CrucesHorarioIT extends PruebaHorarios {
 				.andExpect(jsonPath("$[0].numeroBloque").value(1));
 	}
 
+	@DisplayName("Una sección inexistente responde404")
 	@Test
 	void unaSeccionInexistenteResponde404() throws Exception {
 		cruces(UUID.randomUUID(), new Celda("LUN", 1, UUID.randomUUID(), UUID.randomUUID()))
 				.andExpect(status().isNotFound()).andExpect(jsonPath("$.message").value("La sección no existe."));
 	}
 
+	@DisplayName("Una celda sin día responde400")
 	@Test
 	void unaCeldaSinDiaResponde400() throws Exception {
 		prepararSecundaria();
@@ -228,6 +239,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.message").value("Elige el día de cada bloque."));
 	}
 
+	@DisplayName("Más de72 celdas responde400")
 	@Test
 	void masDe72CeldasResponde400() throws Exception {
 		prepararSecundaria();
@@ -241,6 +253,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.message").value("El horario admite hasta 72 bloques."));
 	}
 
+	@DisplayName("Sin el rol de coordinador responde403")
 	@Test
 	void sinElRolDeCoordinadorResponde403() throws Exception {
 		prepararSecundaria();
@@ -249,6 +262,7 @@ class CrucesHorarioIT extends PruebaHorarios {
 		cruces(t1, DOCENTE, cuerpoCruces(new Celda("LUN", 1, algebra, aulaUno))).andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Sin estructura principal ni horario guardado responde409")
 	@Test
 	void sinEstructuraPrincipalNiHorarioGuardadoResponde409() throws Exception {
 		aulaUno = ambiente("TMP-A1", "ACTIVO");

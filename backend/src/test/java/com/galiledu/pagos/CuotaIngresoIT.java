@@ -12,6 +12,7 @@ import java.util.Map;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -58,6 +59,7 @@ class CuotaIngresoIT extends PruebaIntegracion {
 				.param(MATEO).query().listOfRows();
 	}
 
+	@DisplayName("Al estudiante nuevo se le genera la cuota de ingreso con la de matrícula")
 	@Test
 	void alEstudianteNuevoSeLeGeneraLaCuotaDeIngresoConLaDeMatricula() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -73,6 +75,7 @@ class CuotaIngresoIT extends PruebaIntegracion {
 		assertThat(ingreso.getFirst().get("estado")).isEqualTo("PENDIENTE");
 	}
 
+	@DisplayName("Al continuador no se le cobra ingreso")
 	@Test
 	void alContinuadorNoSeLeCobraIngreso() throws Exception {
 		jdbc.sql("UPDATE matricula.matricula SET tipo_estudiante = 'CONTINUADOR' WHERE id = ?::uuid")
@@ -83,6 +86,7 @@ class CuotaIngresoIT extends PruebaIntegracion {
 		assertThat(cuotasIngresoDeMateo()).isEmpty();
 	}
 
+	@DisplayName("Sin monto de ingreso en el tarifario no se genera")
 	@Test
 	void sinMontoDeIngresoEnElTarifarioNoSeGenera() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -91,6 +95,7 @@ class CuotaIngresoIT extends PruebaIntegracion {
 		assertThat(cuotasIngresoDeMateo()).isEmpty();
 	}
 
+	@DisplayName("La cuota de ingreso se cobra una sola vez")
 	@Test
 	void laCuotaDeIngresoSeCobraUnaSolaVez() throws Exception {
 		// Mateo ya tuvo un compromiso 2026 con su cuota de ingreso

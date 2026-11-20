@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.PruebaIntegracion;
@@ -19,6 +20,7 @@ import com.galiledu.PruebaIntegracion;
 class MiFamiliaIT extends PruebaIntegracion {
 	private static final String APODERADO = "U20260003";
 
+	@DisplayName("Los hermanos con el mismo padre madre y apoderado son una sola familia")
 	@Test
 	void losHermanosConElMismoPadreMadreYApoderadoSonUnaSolaFamilia() throws Exception {
 		mvc.perform(conToken(get("/auth/mi-familia"), token(APODERADO)))
@@ -29,6 +31,7 @@ class MiFamiliaIT extends PruebaIntegracion {
 						contains("Mateo Alonso Paredes Rojas", "Sofía Paredes Rojas")));
 	}
 
+	@DisplayName("Muestra padre madre y apoderado y marca a quien consulta")
 	@Test
 	void muestraPadreMadreYApoderadoYMarcaAQuienConsulta() throws Exception {
 		mvc.perform(conToken(get("/auth/mi-familia"), token(APODERADO)))
@@ -40,6 +43,7 @@ class MiFamiliaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].apoderado").value(nullValue()));
 	}
 
+	@DisplayName("Los contactos de emergencia de los hermanos no se repiten")
 	@Test
 	void losContactosDeEmergenciaDeLosHermanosNoSeRepiten() throws Exception {
 		mvc.perform(conToken(get("/auth/mi-familia"), token(APODERADO)))
@@ -50,6 +54,7 @@ class MiFamiliaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].contactosEmergencia[0].celular").value("987654321"));
 	}
 
+	@DisplayName("Solo el apoderado puede verla")
 	@Test
 	void soloElApoderadoPuedeVerla() throws Exception {
 		mvc.perform(conToken(get("/auth/mi-familia"), token(DOCENTE))).andExpect(status().isForbidden());

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -71,6 +72,7 @@ class ClasesDelDocenteIT extends PruebaHorarios {
 		return usuario;
 	}
 
+	@DisplayName("Trae sus clases de varias secciones con la estructura y el nivel de cada una")
 	@Test
 	void traeSusClasesDeVariasSeccionesConLaEstructuraYElNivelDeCadaUna() {
 		preparar();
@@ -86,6 +88,7 @@ class ClasesDelDocenteIT extends PruebaHorarios {
 						algebraPrimaria, "Álgebra", aulaDos, "Aula TMP-A2"));
 	}
 
+	@DisplayName("Ordena por día de la semana y no alfabeticamente")
 	@Test
 	void ordenaPorDiaDeLaSemanaYNoAlfabeticamente() {
 		preparar();
@@ -101,6 +104,7 @@ class ClasesDelDocenteIT extends PruebaHorarios {
 				.containsExactly("LUN:2", "MAR:1", "MAR:3", "VIE:1");
 	}
 
+	@DisplayName("No trae las clases de otro docente ni las de un curso cuyo titular cambio")
 	@Test
 	void noTraeLasClasesDeOtroDocenteNiLasDeUnCursoCuyoTitularCambio() {
 		preparar();
@@ -115,6 +119,7 @@ class ClasesDelDocenteIT extends PruebaHorarios {
 				.containsExactly(t1);
 	}
 
+	@DisplayName("Un tutor que no dicta no tiene clases aunque sea tutor de una sección con horario")
 	@Test
 	void unTutorQueNoDictaNoTieneClasesAunqueSeaTutorDeUnaSeccionConHorario() {
 		preparar();
@@ -126,6 +131,7 @@ class ClasesDelDocenteIT extends PruebaHorarios {
 		assertThat(clasesDelDocente.clasesDe(tutor, ANIO_2027)).isEmpty();
 	}
 
+	@DisplayName("Solo trae el año pedido")
 	@Test
 	void soloTraeElAnioPedido() {
 		preparar();
@@ -135,6 +141,7 @@ class ClasesDelDocenteIT extends PruebaHorarios {
 		assertThat(clasesDelDocente.clasesDe(docente, ANIO_2027)).hasSize(1);
 	}
 
+	@DisplayName("Años devuelve solo los años con clases del docente")
 	@Test
 	void aniosDevuelveSoloLosAniosConClasesDelDocente() {
 		preparar();
@@ -148,6 +155,7 @@ class ClasesDelDocenteIT extends PruebaHorarios {
 		});
 	}
 
+	@DisplayName("Años de un docente sin clases es vacio")
 	@Test
 	void aniosDeUnDocenteSinClasesEsVacio() {
 		preparar();
@@ -160,6 +168,7 @@ class ClasesDelDocenteIT extends PruebaHorarios {
 		assertThat(clasesDelDocente.aniosDe(soloTutor())).isEmpty();
 	}
 
+	@DisplayName("Una sección sin horario guardado no aporta clases")
 	@Test
 	void unaSeccionSinHorarioGuardadoNoAportaClases() {
 		preparar();

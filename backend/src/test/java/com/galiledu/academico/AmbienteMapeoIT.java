@@ -6,6 +6,7 @@ import java.util.List;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -32,6 +33,7 @@ class AmbienteMapeoIT extends PruebaIntegracion {
 		return em.find(Ambiente.class, ambiente.getId());
 	}
 
+	@DisplayName("Guarda y lee los recursos como arreglo de postgre sql")
 	@Test
 	void guardaYLeeLosRecursosComoArregloDePostgreSql() {
 		var nuevo = Ambiente.crear(TipoAmbiente.AULA_REGULAR, new CodigoAmbiente("A-901"), "Aula de prueba", 30,
@@ -50,6 +52,7 @@ class AmbienteMapeoIT extends PruebaIntegracion {
 				.containsEntry("tipo", "character varying[]");
 	}
 
+	@DisplayName("Sin recursos guarda un arreglo vacio no nulo")
 	@Test
 	void sinRecursosGuardaUnArregloVacioNoNulo() {
 		var nuevo = Ambiente.crear(TipoAmbiente.ESPACIO_ESPECIAL, new CodigoAmbiente("E-901"), "Patio cubierto", 100,
@@ -64,6 +67,7 @@ class AmbienteMapeoIT extends PruebaIntegracion {
 		assertThat(cantidad).isZero();
 	}
 
+	@DisplayName("Lee los ambientes de los datos de prueba")
 	@Test
 	void leeLosAmbientesDeLosDatosDePrueba() {
 		var a101 = em.createQuery("SELECT a FROM Ambiente a WHERE a.codigo = 'A-101'", Ambiente.class)
@@ -85,6 +89,7 @@ class AmbienteMapeoIT extends PruebaIntegracion {
 		assertThat(auditorio.getRecursos()).containsExactly("Sonido", "Escenario");
 	}
 
+	@DisplayName("Editar y guardar actualiza el arreglo y no toca código ni tipo")
 	@Test
 	void editarYGuardarActualizaElArregloYNoTocaCodigoNiTipo() {
 		var existente = em.createQuery("SELECT a FROM Ambiente a WHERE a.codigo = 'A-102'", Ambiente.class)
@@ -104,6 +109,7 @@ class AmbienteMapeoIT extends PruebaIntegracion {
 		assertThat(leido.getEstado()).isEqualTo(EstadoAmbiente.INACTIVO);
 	}
 
+	@DisplayName("Llena el id y las fechas al guardar")
 	@Test
 	void llenaElIdYLasFechasAlGuardar() {
 		var nuevo = Ambiente.crear(TipoAmbiente.AULA_REGULAR, new CodigoAmbiente("A-902"), "Aula con fechas", 20,

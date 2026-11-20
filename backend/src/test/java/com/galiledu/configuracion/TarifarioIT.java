@@ -13,6 +13,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -65,6 +66,7 @@ class TarifarioIT extends PruebaIntegracion {
 
 	// --- GET ---
 
+	@DisplayName("El tarifario2027 está en configuración con su calendario")
 	@Test
 	void elTarifario2027EstaEnConfiguracionConSuCalendario() throws Exception {
 		mvc.perform(conToken(get(RUTA).param("anioEscolarId", ID_2027), personal))
@@ -92,6 +94,7 @@ class TarifarioIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.calendario.totalPensiones").value(6200.0));
 	}
 
+	@DisplayName("El tarifario2026 es de solo lectura por tener compromisos")
 	@Test
 	void elTarifario2026EsDeSoloLecturaPorTenerCompromisos() throws Exception {
 		mvc.perform(conToken(get(RUTA).param("anioEscolarId", ID_2026), personal))
@@ -104,6 +107,7 @@ class TarifarioIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.calendario.totalPensiones").value(6000.0));
 	}
 
+	@DisplayName("Un año sin tarifario devuelve una propuesta con los valores del año anterior")
 	@Test
 	void unAnioSinTarifarioDevuelveUnaPropuestaConLosValoresDelAnioAnterior() throws Exception {
 		String id2028 = anioSinTarifario(2028, "PLANIFICADO");
@@ -117,6 +121,7 @@ class TarifarioIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.calendario.cuotas.length()").value(10));
 	}
 
+	@DisplayName("Un año sin tarifario ni año anterior devuelve la propuesta vacia")
 	@Test
 	void unAnioSinTarifarioNiAnioAnteriorDevuelveLaPropuestaVacia() throws Exception {
 		String id2030 = anioSinTarifario(2030, "PLANIFICADO");
@@ -130,6 +135,7 @@ class TarifarioIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.calendario.totalPensiones").value(nullValue()));
 	}
 
+	@DisplayName("Un año cerrado es de solo lectura aunque no tenga tarifario")
 	@Test
 	void unAnioCerradoEsDeSoloLecturaAunqueNoTengaTarifario() throws Exception {
 		String id2025 = anioSinTarifario(2025, "CERRADO");
@@ -140,6 +146,7 @@ class TarifarioIT extends PruebaIntegracion {
 						.value("Año escolar cerrado: el tarifario se conserva como registro histórico."));
 	}
 
+	@DisplayName("El tarifario de un año que no existe da404")
 	@Test
 	void elTarifarioDeUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(get(RUTA).param("anioEscolarId", "00000000-0000-0000-0000-000000000000"), personal))
@@ -149,6 +156,7 @@ class TarifarioIT extends PruebaIntegracion {
 
 	// --- POST /{anioEscolarId}/confirmar ---
 
+	@DisplayName("Confirma el tarifario guarda los datos y queda confirmado")
 	@Test
 	void confirmaElTarifarioGuardaLosDatosYQuedaConfirmado() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/confirmar"), personal, cuerpoValido()))
@@ -167,6 +175,7 @@ class TarifarioIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.conceptos.montoPension").value(650.5));
 	}
 
+	@DisplayName("Confirmar dos veces regenera el calendario sin chocar con los unique")
 	@Test
 	void confirmarDosVecesRegeneraElCalendarioSinChocarConLosUnique() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/confirmar"), personal, cuerpoValido()))
@@ -179,6 +188,7 @@ class TarifarioIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.calendario.cuotas.length()").value(10));
 	}
 
+	@DisplayName("Confirmar crea el tarifario de un año que no lo tenía")
 	@Test
 	void confirmarCreaElTarifarioDeUnAnioQueNoLoTenia() throws Exception {
 		String id2028 = anioSinTarifario(2028, "PLANIFICADO");
@@ -191,6 +201,7 @@ class TarifarioIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.existe").value(true));
 	}
 
+	@DisplayName("Confirmar rechaza los datos invalidos sin tocar el tarifario")
 	@Test
 	void confirmarRechazaLosDatosInvalidosSinTocarElTarifario() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/confirmar"), personal,
@@ -210,6 +221,7 @@ class TarifarioIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.calendario.cuotas.length()").value(10));
 	}
 
+	@DisplayName("Confirmar un tarifario con compromisos da409")
 	@Test
 	void confirmarUnTarifarioConCompromisosDa409() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/" + ID_2026 + "/confirmar"), personal, cuerpoValido()))
@@ -218,6 +230,7 @@ class TarifarioIT extends PruebaIntegracion {
 						"Ya se generaron compromisos de pago 2026: los montos y el calendario no se pueden modificar."));
 	}
 
+	@DisplayName("Confirmar un año cerrado da409")
 	@Test
 	void confirmarUnAnioCerradoDa409() throws Exception {
 		String id2025 = anioSinTarifario(2025, "CERRADO");
@@ -228,6 +241,7 @@ class TarifarioIT extends PruebaIntegracion {
 						.value("Año escolar cerrado: el tarifario se conserva como registro histórico."));
 	}
 
+	@DisplayName("Confirmar en un año que no existe da404")
 	@Test
 	void confirmarEnUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/00000000-0000-0000-0000-000000000000/confirmar"), personal, cuerpoValido()))
@@ -237,6 +251,7 @@ class TarifarioIT extends PruebaIntegracion {
 
 	// --- Editar las fechas del año (HU-74) regenera el calendario ---
 
+	@DisplayName("Editar las fechas del año regenera el calendario del tarifario")
 	@Test
 	void editarLasFechasDelAnioRegeneraElCalendarioDelTarifario() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/confirmar"), personal, cuerpoValido()))
@@ -259,6 +274,7 @@ class TarifarioIT extends PruebaIntegracion {
 
 	// --- Permisos ---
 
+	@DisplayName("Solo el personal administrativo usa el tarifario")
 	@Test
 	void soloElPersonalAdministrativoUsaElTarifario() throws Exception {
 		for (String usuario : new String[]{DOCENTE, ADMIN}) {

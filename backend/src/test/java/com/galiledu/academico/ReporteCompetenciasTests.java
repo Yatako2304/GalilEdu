@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -69,6 +70,7 @@ class ReporteCompetenciasTests {
 		notas("10", "20", "14", false);
 	}
 
+	@DisplayName("Aplica la regla anual por competencia y al general sin duplicar items")
 	@ParameterizedTest
 	@CsvSource({"PROMEDIO_PONDERADO,16,13.2,14.6", "PROMEDIO_SIMPLE,15,12,14.67"})
 	void aplicaLaReglaAnualPorCompetenciaYAlGeneralSinDuplicarItems(String regla, String primera, String segunda,
@@ -90,6 +92,7 @@ class ReporteCompetenciasTests {
 				.containsEntry(COMPETENCIA_1 + ":resultado_estado", "Pendiente");
 	}
 
+	@DisplayName("Aplica las reglas cualitativas anuales")
 	@ParameterizedTest
 	@CsvSource({"NIVEL_MAS_FRECUENTE,A,A,B", "ULTIMO_NIVEL,B,B,B"})
 	void aplicaLasReglasCualitativasAnuales(String regla, String primera, String segunda, String general) {
@@ -104,6 +107,7 @@ class ReporteCompetenciasTests {
 				.containsEntry("resultado_general_estado", "En proceso");
 	}
 
+	@DisplayName("Respeta los items seleccionados y normaliza sus pesos")
 	@Test
 	void respetaLosItemsSeleccionadosYNormalizaSusPesos() {
 		var reporte = servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, null,
@@ -114,6 +118,7 @@ class ReporteCompetenciasTests {
 		assertThat(reporte.filas().get(0).valores()).containsEntry("resultado_general", "12.29");
 	}
 
+	@DisplayName("Cuenta la nota cero y también como cero lo que falta registrar")
 	@Test
 	void cuentaLaNotaCeroYTambienComoCeroLoQueFaltaRegistrar() {
 		// En el promedio del periodo (vista del docente) lo que falta cuenta como 0: es un piso que solo sube.
@@ -127,6 +132,7 @@ class ReporteCompetenciasTests {
 						"Faltan registros (cuentan como 0) · 70 % del peso calificado");
 	}
 
+	@DisplayName("Oculta todos los promedios cuando se desactiva el interruptor")
 	@Test
 	void ocultaTodosLosPromediosCuandoSeDesactivaElInterruptor() {
 		var reporte = servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, null, List.of(), false,
@@ -136,6 +142,7 @@ class ReporteCompetenciasTests {
 				COMPETENCIA_1 + ":resultado", COMPETENCIA_2 + ":resultado");
 	}
 
+	@DisplayName("Los resultados no ponderados admiten asociaciones sin peso")
 	@ParameterizedTest
 	@CsvSource({"PROMEDIO_SIMPLE,14.67", "NIVEL_MAS_FRECUENTE,B", "ULTIMO_NIVEL,B"})
 	void losResultadosNoPonderadosAdmitenAsociacionesSinPeso(String regla, String esperado) {
@@ -155,6 +162,7 @@ class ReporteCompetenciasTests {
 		assertThat(reporte.filas().get(0).valores()).containsEntry("resultado_general", esperado);
 	}
 
+	@DisplayName("Admite una sola competencia sin repetir el promedio")
 	@Test
 	void admiteUnaSolaCompetenciaSinRepetirElPromedio() {
 		var reporte = servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, null, List.of(), true,
@@ -164,6 +172,7 @@ class ReporteCompetenciasTests {
 				.doesNotContainKey("resultado_general");
 	}
 
+	@DisplayName("Rechaza competencias ajenas al curso")
 	@Test
 	void rechazaCompetenciasAjenasAlCurso() {
 		assertThatThrownBy(() -> servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, null,
@@ -171,6 +180,7 @@ class ReporteCompetenciasTests {
 				.isInstanceOf(ExcepcionNegocio.class).hasMessage("Una competencia no pertenece al plan del curso.");
 	}
 
+	@DisplayName("Rechaza items ajenos a las competencias seleccionadas")
 	@Test
 	void rechazaItemsAjenosALasCompetenciasSeleccionadas() {
 		assertThatThrownBy(() -> servicio.reporte(DOCENTE, "COMPETENCIA", PLAN, SECCION, PERIODO, null,

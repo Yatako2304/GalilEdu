@@ -29,6 +29,7 @@ Al ejecutar `npm install` en `frontend/` se instala un hook de Git (`frontend/.h
 
 - **Frontend:** ESLint + Prettier corrigen los archivos `.ts/.tsx` que vas a commitear y se revisan los tipos ([`.lintstagedrc.cjs`](../../frontend/.lintstagedrc.cjs)).
 - **Backend:** Spotless formatea los `.java` que vas a commitear y los vuelve a agregar.
+- **Catálogo de pruebas:** se regenera `docs/pruebas.md` (`node docs/generar-pruebas.mjs`) y se agrega al commit. No lo edites a mano; ver [pruebas.md](pruebas.md#catálogo-de-pruebas).
 
 Si el hook encuentra un error que no puede corregir solo, el commit se cancela y te muestra qué arreglar. En una emergencia puedes saltarlo con `git commit --no-verify`, pero el CI igual lo revisará.
 

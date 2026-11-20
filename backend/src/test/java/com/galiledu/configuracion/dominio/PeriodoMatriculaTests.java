@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -45,6 +46,7 @@ class PeriodoMatriculaTests {
 
 	// --- Habilitar ---
 
+	@DisplayName("Guardar la configuración deja el período habilitado con los flags explicitos")
 	@Test
 	void guardarLaConfiguracionDejaElPeriodoHabilitadoConLosFlagsExplicitos() {
 		PeriodoMatricula p = periodo(doc("Ficha de matrícula"), doc("DNI del estudiante"));
@@ -61,12 +63,14 @@ class PeriodoMatriculaTests {
 		assertThat(p.getDocumentos()).extracting(DocumentoRequerido::getOrden).containsExactly(1, 2);
 	}
 
+	@DisplayName("Las fechas se guardan en hora de lima")
 	@Test
 	void lasFechasSeGuardanEnHoraDeLima() {
 		// 10:00 en Lima (UTC-5) es 15:00 UTC
 		assertThat(instante(INICIO)).isEqualTo(Instant.parse("2026-12-01T15:00:00Z"));
 	}
 
+	@DisplayName("Un período sin documentos es válido")
 	@Test
 	void unPeriodoSinDocumentosEsValido() {
 		assertThat(periodo().getDocumentos()).isEmpty();
@@ -74,6 +78,7 @@ class PeriodoMatriculaTests {
 
 	// --- Estado calculado ---
 
+	@DisplayName("Es programado antes del inicio")
 	@Test
 	void esProgramadoAntesDelInicio() {
 		assertThat(periodo().estadoEn(instante(INICIO).minusSeconds(1)))
@@ -81,6 +86,7 @@ class PeriodoMatriculaTests {
 		assertThat(periodo().estadoEn(AHORA)).isEqualTo(EstadoVisiblePeriodoMatricula.PROGRAMADO);
 	}
 
+	@DisplayName("Es abierto desde el inicio hasta el cierre ambos incluidos")
 	@Test
 	void esAbiertoDesdeElInicioHastaElCierreAmbosIncluidos() {
 		PeriodoMatricula p = periodo();
@@ -91,12 +97,14 @@ class PeriodoMatriculaTests {
 		assertThat(p.estadoEn(instante(CIERRE))).isEqualTo(EstadoVisiblePeriodoMatricula.ABIERTO);
 	}
 
+	@DisplayName("Es cerrado después del cierre")
 	@Test
 	void esCerradoDespuesDelCierre() {
 		assertThat(periodo().estadoEn(instante(CIERRE).plusSeconds(1)))
 				.isEqualTo(EstadoVisiblePeriodoMatricula.CERRADO);
 	}
 
+	@DisplayName("Un período guardado como cerrado es cerrado aunque la fecha este dentro del rango")
 	@Test
 	void unPeriodoGuardadoComoCerradoEsCerradoAunqueLaFechaEsteDentroDelRango() {
 		PeriodoMatricula p = periodo();
@@ -107,6 +115,7 @@ class PeriodoMatriculaTests {
 				.isEqualTo(EstadoVisiblePeriodoMatricula.CERRADO);
 	}
 
+	@DisplayName("Un período que nunca se habilito nunca está abierto")
 	@Test
 	void unPeriodoQueNuncaSeHabilitoNuncaEstaAbierto() {
 		PeriodoMatricula p = periodo();
@@ -117,6 +126,7 @@ class PeriodoMatriculaTests {
 		assertThat(p.estadoEn(instante(CIERRE).plusSeconds(1))).isEqualTo(EstadoVisiblePeriodoMatricula.CERRADO);
 	}
 
+	@DisplayName("Un habilitado que ya vencio se detecta para marcarlo cerrado")
 	@Test
 	void unHabilitadoQueYaVencioSeDetectaParaMarcarloCerrado() {
 		PeriodoMatricula p = periodo();
@@ -129,6 +139,7 @@ class PeriodoMatriculaTests {
 
 	// --- Fechas ---
 
+	@DisplayName("La fecha y la hora de inicio y cierre son obligatorias")
 	@Test
 	void laFechaYLaHoraDeInicioYCierreSonObligatorias() {
 		rechazaDatos("Ingresa la fecha y la hora de inicio.",
@@ -137,6 +148,7 @@ class PeriodoMatriculaTests {
 				() -> PeriodoMatricula.validar(INICIO, null, List.of(), AHORA));
 	}
 
+	@DisplayName("El cierre debe ser posterior al inicio")
 	@Test
 	void elCierreDebeSerPosteriorAlInicio() {
 		rechazaDatos("La fecha de cierre debe ser posterior a la de inicio.",
@@ -146,6 +158,7 @@ class PeriodoMatriculaTests {
 		PeriodoMatricula.validar(INICIO, INICIO.plusMinutes(1), List.of(), AHORA);
 	}
 
+	@DisplayName("El inicio no puede ser anterior a ahora")
 	@Test
 	void elInicioNoPuedeSerAnteriorAAhora() {
 		rechazaDatos("La fecha de inicio no puede ser anterior a la fecha y hora actuales.",
@@ -156,18 +169,21 @@ class PeriodoMatriculaTests {
 
 	// --- Documentos ---
 
+	@DisplayName("El nombre del documento es obligatorio")
 	@Test
 	void elNombreDelDocumentoEsObligatorio() {
 		rechazaDatos("Ingresa el nombre del documento.", () -> periodo(doc("  ")));
 		rechazaDatos("Ingresa el nombre del documento.", () -> periodo(doc(null)));
 	}
 
+	@DisplayName("El nombre admite hasta100 caracteres")
 	@Test
 	void elNombreAdmiteHasta100Caracteres() {
 		periodo(doc("x".repeat(100)));
 		rechazaDatos("El nombre del documento no puede pasar de 100 caracteres.", () -> periodo(doc("x".repeat(101))));
 	}
 
+	@DisplayName("La descripción es opcional y admite hasta100 caracteres")
 	@Test
 	void laDescripcionEsOpcionalYAdmiteHasta100Caracteres() {
 		periodo(new DatosDocumento(null, "Ficha", "d".repeat(100)));
@@ -176,11 +192,13 @@ class PeriodoMatriculaTests {
 				() -> periodo(new DatosDocumento(null, "Ficha", "d".repeat(101))));
 	}
 
+	@DisplayName("El nombre es único en el período sin distinguir mayúsculas ni espacios")
 	@Test
 	void elNombreEsUnicoEnElPeriodoSinDistinguirMayusculasNiEspacios() {
 		rechazaDatos("Ya hay un documento llamado \"dni\" en este periodo.", () -> periodo(doc("DNI"), doc(" dni ")));
 	}
 
+	@DisplayName("Una descripción vacia se guarda como nula")
 	@Test
 	void unaDescripcionVaciaSeGuardaComoNula() {
 		PeriodoMatricula p = periodo(new DatosDocumento(null, "  Ficha  ", "  "));
@@ -191,6 +209,7 @@ class PeriodoMatriculaTests {
 
 	// --- Editar ---
 
+	@DisplayName("Un período programado cambia sus fechas y sus documentos")
 	@Test
 	void unPeriodoProgramadoCambiaSusFechasYSusDocumentos() {
 		PeriodoMatricula p = periodo(doc("Ficha"), doc("DNI"));
@@ -212,6 +231,7 @@ class PeriodoMatriculaTests {
 		assertThat(p.getDocumentos().get(2).getId()).isNull(); // nuevo: JPA le asigna el id
 	}
 
+	@DisplayName("Editar quita los documentos que no vienen")
 	@Test
 	void editarQuitaLosDocumentosQueNoVienen() {
 		PeriodoMatricula p = periodo(doc("Ficha"), doc("DNI"));
@@ -222,6 +242,7 @@ class PeriodoMatriculaTests {
 		assertThat(p.getDocumentos()).extracting(DocumentoRequerido::getNombre).containsExactly("DNI");
 	}
 
+	@DisplayName("Retirar los ausentes deja solo los que vienen por id")
 	@Test
 	void retirarLosAusentesDejaSoloLosQueVienenPorId() {
 		PeriodoMatricula p = periodo(doc("Ficha"), doc("DNI"));
@@ -232,6 +253,7 @@ class PeriodoMatriculaTests {
 		assertThat(p.getDocumentos()).extracting(DocumentoRequerido::getNombre).containsExactly("Ficha");
 	}
 
+	@DisplayName("Un documento que no es del período se rechaza")
 	@Test
 	void unDocumentoQueNoEsDelPeriodoSeRechaza() {
 		PeriodoMatricula p = periodo(doc("Ficha"));
@@ -240,6 +262,7 @@ class PeriodoMatriculaTests {
 				() -> p.editar(INICIO, CIERRE, List.of(new DatosDocumento(UUID.randomUUID(), "Otro", null)), AHORA));
 	}
 
+	@DisplayName("Editar con datos invalidos no cambia nada")
 	@Test
 	void editarConDatosInvalidosNoCambiaNada() {
 		PeriodoMatricula p = periodo(doc("Ficha"));
@@ -251,6 +274,7 @@ class PeriodoMatriculaTests {
 		assertThat(p.getDocumentos()).extracting(DocumentoRequerido::getNombre).containsExactly("Ficha");
 	}
 
+	@DisplayName("Un período abierto no se edita ni se elimina")
 	@Test
 	void unPeriodoAbiertoNoSeEditaNiSeElimina() {
 		PeriodoMatricula p = periodo();
@@ -263,6 +287,7 @@ class PeriodoMatriculaTests {
 		rechazaEstado("Solo se puede eliminar un periodo de matrícula programado.", () -> p.exigirEliminable(abierto));
 	}
 
+	@DisplayName("Un período cerrado no se edita ni se elimina")
 	@Test
 	void unPeriodoCerradoNoSeEditaNiSeElimina() {
 		PeriodoMatricula p = periodo();
@@ -272,6 +297,7 @@ class PeriodoMatriculaTests {
 		rechazaEstado("Solo se puede eliminar un periodo de matrícula programado.", () -> p.exigirEliminable(cerrado));
 	}
 
+	@DisplayName("Un período programado se edita y se elimina")
 	@Test
 	void unPeriodoProgramadoSeEditaYSeElimina() {
 		PeriodoMatricula p = periodo();

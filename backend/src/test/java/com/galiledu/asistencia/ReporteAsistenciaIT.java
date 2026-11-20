@@ -18,6 +18,7 @@ import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -66,6 +67,7 @@ class ReporteAsistenciaIT extends PruebaIntegracionConfiguracion {
 		registrar("2026-09-15", m, "TARDANZA", "FALTA", "TARDANZA");
 	}
 
+	@DisplayName("Consolida el mes por apellidos con las justificadas aparte")
 	@Test
 	void consolidaElMesPorApellidosConLasJustificadasAparte() throws Exception {
 		mvc.perform(conToken(get(reporte()).param("tipo", "MES").param("valor", "2026-09"), token))
@@ -83,6 +85,7 @@ class ReporteAsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.totales.tardanzas").value(3));
 	}
 
+	@DisplayName("Por período cuenta todo el bimestre")
 	@Test
 	void porPeriodoCuentaTodoElBimestre() throws Exception {
 		mvc.perform(conToken(get(reporte()).param("tipo", "PERIODO").param("valor", "3"), token))
@@ -94,6 +97,7 @@ class ReporteAsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.opciones.meses[0].valor").value("2026-09"));
 	}
 
+	@DisplayName("Un mes sin registros sale en cero")
 	@Test
 	void unMesSinRegistrosSaleEnCero() throws Exception {
 		mvc.perform(conToken(get(reporte()).param("tipo", "MES").param("valor", "2026-08"), token))
@@ -103,6 +107,7 @@ class ReporteAsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.filas", hasSize(3)));
 	}
 
+	@DisplayName("Sin parametros es el mes actual")
 	@Test
 	void sinParametrosEsElMesActual() throws Exception {
 		mvc.perform(conToken(get(reporte()), token))
@@ -111,6 +116,7 @@ class ReporteAsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.valor").value("2026-09"));
 	}
 
+	@DisplayName("Un mes fuera del año se rechaza")
 	@Test
 	void unMesFueraDelAnioSeRechaza() throws Exception {
 		mvc.perform(conToken(get(reporte()).param("tipo", "MES").param("valor", "2025-12"), token))
@@ -118,6 +124,7 @@ class ReporteAsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El mes no es parte del año escolar 2026."));
 	}
 
+	@DisplayName("Exporta el reporte en pdf")
 	@Test
 	void exportaElReporteEnPdf() throws Exception {
 		byte[] archivo = mvc.perform(conToken(get(reporte() + "/pdf").param("tipo", "MES").param("valor", "2026-09"),
@@ -134,6 +141,7 @@ class ReporteAsistenciaIT extends PruebaIntegracionConfiguracion {
 		}
 	}
 
+	@DisplayName("Una sección ajena no se ve")
 	@Test
 	void unaSeccionAjenaNoSeVe() throws Exception {
 		mvc.perform(conToken(get("/asistencia/secciones/{id}/reporte", "30000000-0000-0000-0000-000000000099"),

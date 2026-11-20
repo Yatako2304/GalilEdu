@@ -1,3 +1,4 @@
+// @catalogo: Reglas de validación de la inscripción
 import { EdicionEstudiante } from '@/types/api';
 
 import {

@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.HexFormat;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** Verificación de la firma de los webhooks de Stripe y conversión de soles a céntimos. */
@@ -21,11 +22,13 @@ class FirmaStripeTests {
 		return "t=" + marca + ",v1=" + HexFormat.of().formatHex(FirmaStripe.hmac(secreto, marca + "." + cuerpo));
 	}
 
+	@DisplayName("Acepta una firma válida")
 	@Test
 	void aceptaUnaFirmaValida() {
 		assertThat(FirmaStripe.esValida(CUERPO, firma(AHORA, SECRETO, CUERPO), SECRETO, reloj)).isTrue();
 	}
 
+	@DisplayName("Rechaza otro secreto otro cuerpo y firma vieja")
 	@Test
 	void rechazaOtroSecretoOtroCuerpoYFirmaVieja() {
 		assertThat(FirmaStripe.esValida(CUERPO, firma(AHORA, "whsec_otro", CUERPO), SECRETO, reloj)).isFalse();
@@ -35,6 +38,7 @@ class FirmaStripeTests {
 		assertThat(FirmaStripe.esValida(CUERPO, firma(AHORA, SECRETO, CUERPO), "", reloj)).isFalse();
 	}
 
+	@DisplayName("Convierte soles a centimos")
 	@Test
 	void convierteSolesACentimos() {
 		assertThat(PasarelaStripe.centimos(new BigDecimal("612.00"))).isEqualTo(61_200L);

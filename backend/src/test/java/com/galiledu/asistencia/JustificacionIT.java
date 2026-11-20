@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -62,6 +63,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 				matriculas.get(2)))).andExpect(status().isOk());
 	}
 
+	@DisplayName("Justifica una falta con motivo detalle y sustento")
 	@Test
 	void justificaUnaFaltaConMotivoDetalleYSustento() throws Exception {
 		mvc.perform(justificar(HOY, matriculas.get(2), "CITA_MEDICA", "Reposo médico por indicación del pediatra.",
@@ -83,6 +85,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 		assertThat(descargado).isEqualTo(PDF);
 	}
 
+	@DisplayName("Una tardanza se justifica sin sustento")
 	@Test
 	void unaTardanzaSeJustificaSinSustento() throws Exception {
 		mvc.perform(justificar(HOY, matriculas.get(1), "TRAMITE_OFICIAL", null, null))
@@ -93,6 +96,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Un presente no se justifica")
 	@Test
 	void unPresenteNoSeJustifica() throws Exception {
 		mvc.perform(justificar(HOY, matriculas.get(0), "ENFERMEDAD", null, null))
@@ -100,6 +104,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Solo se justifica una falta o una tardanza."));
 	}
 
+	@DisplayName("El motivo es obligatorio y otro pide detalle")
 	@Test
 	void elMotivoEsObligatorioYOtroPideDetalle() throws Exception {
 		mvc.perform(justificar(HOY, matriculas.get(2), null, "Sin motivo", null))
@@ -110,6 +115,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Describe el motivo en el detalle."));
 	}
 
+	@DisplayName("El sustento debe ser pdf o imagen de hasta5 mb")
 	@Test
 	void elSustentoDebeSerPdfOImagenDeHasta5Mb() throws Exception {
 		mvc.perform(justificar(HOY, matriculas.get(2), "ENFERMEDAD", null,
@@ -122,6 +128,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El sustento no puede pesar más de 5 MB."));
 	}
 
+	@DisplayName("No se justifica dos veces")
 	@Test
 	void noSeJustificaDosVeces() throws Exception {
 		mvc.perform(justificar(HOY, matriculas.get(2), "ENFERMEDAD", null, null)).andExpect(status().isOk());
@@ -130,6 +137,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Esta falta o tardanza ya está justificada."));
 	}
 
+	@DisplayName("Se justifica un día pasado")
 	@Test
 	void seJustificaUnDiaPasado() throws Exception {
 		reloj.fijarEn(LocalDate.of(2026, 9, 22));
@@ -139,6 +147,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.estudiantes[2].justificacion.motivo").value("ENFERMEDAD"));
 	}
 
+	@DisplayName("Una falta justificada ya no se corrige")
 	@Test
 	void unaFaltaJustificadaYaNoSeCorrige() throws Exception {
 		mvc.perform(justificar(HOY, matriculas.get(2), "ENFERMEDAD", null, null)).andExpect(status().isOk());
@@ -152,6 +161,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 						.value("No puedes corregir una falta o tardanza que ya está justificada."));
 	}
 
+	@DisplayName("Un día sin registro no tiene nada que justificar")
 	@Test
 	void unDiaSinRegistroNoTieneNadaQueJustificar() throws Exception {
 		mvc.perform(justificar("2026-09-14", matriculas.get(2), "ENFERMEDAD", null, null))
@@ -159,6 +169,7 @@ class JustificacionIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("No hay asistencia registrada ese día."));
 	}
 
+	@DisplayName("Otro rol no justifica")
 	@Test
 	void otroRolNoJustifica() throws Exception {
 		MockMultipartHttpServletRequestBuilder peticion = multipart(dia(HOY) + "/justificaciones");

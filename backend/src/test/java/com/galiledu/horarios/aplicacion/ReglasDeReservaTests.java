@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -103,16 +104,19 @@ class ReglasDeReservaTests {
 
 	// ---------- Regla 1: el ambiente ----------
 
+	@DisplayName("Un espacio especial activo se puede reservar")
 	@Test
 	void unEspacioEspecialActivoSePuedeReservar() {
 		assertThatCode(() -> reglas.validarAmbiente(ambiente("ESPACIO_ESPECIAL", 30))).doesNotThrowAnyException();
 	}
 
+	@DisplayName("Un ambiente inexistente o inactivo se rechaza con un400")
 	@Test
 	void unAmbienteInexistenteOInactivoSeRechazaConUn400() {
 		assertRechaza(() -> reglas.validarAmbiente(null), HttpStatus.BAD_REQUEST, "Elige un espacio especial activo.");
 	}
 
+	@DisplayName("Un aula regular se rechaza con un400")
 	@Test
 	void unAulaRegularSeRechazaConUn400() {
 		assertRechaza(() -> reglas.validarAmbiente(ambiente("AULA_REGULAR", 30)), HttpStatus.BAD_REQUEST,
@@ -121,6 +125,7 @@ class ReglasDeReservaTests {
 
 	// ---------- Regla 2: año y aforo ----------
 
+	@DisplayName("Con el año cerrado no se reserva y se responde409")
 	@Test
 	void conElAnioCerradoNoSeReservaYSeResponde409() {
 		var cerrado = new AnioConPeriodos(UUID.randomUUID(), 2025, "CERRADO", LocalDate.of(2025, 3, 3),
@@ -130,6 +135,7 @@ class ReglasDeReservaTests {
 				"No se puede reservar un espacio en un año cerrado.");
 	}
 
+	@DisplayName("Un año planificado o activo se acepta")
 	@Test
 	void unAnioPlanificadoOActivoSeAcepta() {
 		var planificado = new AnioConPeriodos(UUID.randomUUID(), 2027, "PLANIFICADO", LocalDate.of(2027, 3, 1),
@@ -141,12 +147,14 @@ class ReglasDeReservaTests {
 		}).doesNotThrowAnyException();
 	}
 
+	@DisplayName("Más alumnos que el aforo se rechaza con un400")
 	@Test
 	void masAlumnosQueElAforoSeRechazaConUn400() {
 		assertRechaza(() -> reglas.validarAforo(ambiente("ESPACIO_ESPECIAL", 30), 31), HttpStatus.BAD_REQUEST,
 				"Laboratorio de ciencias admite hasta 30 personas y la sección tiene 31 matriculados.");
 	}
 
+	@DisplayName("Tantos alumnos como el aforo se acepta")
 	@Test
 	void tantosAlumnosComoElAforoSeAcepta() {
 		assertThatCode(() -> reglas.validarAforo(ambiente("ESPACIO_ESPECIAL", 30), 30)).doesNotThrowAnyException();
@@ -158,11 +166,13 @@ class ReglasDeReservaTests {
 		reglas.validarFechaYHora(datos, AHORA, ANIO_2026, JORNADA);
 	}
 
+	@DisplayName("Una reserva dentro del año el período el día lectivo y la jornada se acepta")
 	@Test
 	void unaReservaDentroDelAnioElPeriodoElDiaLectivoYLaJornadaSeAcepta() {
 		assertThatCode(() -> validarFecha(datos("08:00", "10:15"))).doesNotThrowAnyException();
 	}
 
+	@DisplayName("La hora de fin debe ser posterior a la de inicio")
 	@Test
 	void laHoraDeFinDebeSerPosteriorALaDeInicio() {
 		assertRechaza(() -> validarFecha(datos("09:00", "09:00")), HttpStatus.BAD_REQUEST,
@@ -171,6 +181,7 @@ class ReglasDeReservaTests {
 				"La hora de fin debe ser posterior a la de inicio.");
 	}
 
+	@DisplayName("Una fecha y hora pasada se rechaza con un400")
 	@Test
 	void unaFechaYHoraPasadaSeRechazaConUn400() {
 		var despues = LocalDateTime.of(LUNES, hora("08:30"));
@@ -179,6 +190,7 @@ class ReglasDeReservaTests {
 				HttpStatus.BAD_REQUEST, "No se puede reservar en una fecha u hora que ya pasó.");
 	}
 
+	@DisplayName("Iniciar justo ahora no es pasado")
 	@Test
 	void iniciarJustoAhoraNoEsPasado() {
 		var ahora = LocalDateTime.of(LUNES, hora("08:00"));
@@ -187,6 +199,7 @@ class ReglasDeReservaTests {
 				.doesNotThrowAnyException();
 	}
 
+	@DisplayName("Una fecha fuera del año se rechaza con un400")
 	@Test
 	void unaFechaFueraDelAnioSeRechazaConUn400() {
 		// Lunes dentro de la jornada, antes del inicio del año y después de su fin ("ahora" es anterior a las dos).
@@ -202,6 +215,7 @@ class ReglasDeReservaTests {
 				HttpStatus.BAD_REQUEST, "La fecha debe estar dentro del año escolar 2026.");
 	}
 
+	@DisplayName("Una fecha entre dos períodos se rechaza con un400")
 	@Test
 	void unaFechaEntreDosPeriodosSeRechazaConUn400() {
 		// Lunes 27 de julio: vacaciones entre el II y el III bimestre.
@@ -209,6 +223,7 @@ class ReglasDeReservaTests {
 				"La fecha no está dentro de ningún periodo académico del año.");
 	}
 
+	@DisplayName("Los días limite de un período se aceptan")
 	@Test
 	void losDiasLimiteDeUnPeriodoSeAceptan() {
 		assertThatCode(() -> {
@@ -217,6 +232,7 @@ class ReglasDeReservaTests {
 		}).doesNotThrowAnyException();
 	}
 
+	@DisplayName("Un día que no es lectivo se rechaza con un400")
 	@Test
 	void unDiaQueNoEsLectivoSeRechazaConUn400() {
 		assertRechaza(() -> validarFecha(datosEn(LocalDate.of(2026, 11, 28), "08:00", "09:00")),
@@ -225,6 +241,7 @@ class ReglasDeReservaTests {
 				HttpStatus.BAD_REQUEST, "El domingo no es un día de clases de esta sección.");
 	}
 
+	@DisplayName("Una reserva fuera de la jornada se rechaza con un400")
 	@Test
 	void unaReservaFueraDeLaJornadaSeRechazaConUn400() {
 		var mensaje = "La reserva debe estar dentro de la jornada de la sección, de 8:00 a 10:15.";
@@ -240,6 +257,7 @@ class ReglasDeReservaTests {
 				UUID.randomUUID());
 	}
 
+	@DisplayName("Una reserva pendiente se puede editar")
 	@Test
 	void unaReservaPendienteSePuedeEditar() {
 		var antes = LocalDateTime.of(LUNES, hora("08:00"));
@@ -247,6 +265,7 @@ class ReglasDeReservaTests {
 		assertThatCode(() -> reglas.validarEditable(reservaGuardada(), antes)).doesNotThrowAnyException();
 	}
 
+	@DisplayName("Una reserva finalizada no se edita y se responde409")
 	@Test
 	void unaReservaFinalizadaNoSeEditaYSeResponde409() {
 		var alFinalizar = LocalDateTime.of(LUNES, hora("09:30"));
@@ -255,6 +274,7 @@ class ReglasDeReservaTests {
 				"La reserva ya finalizó y no se puede modificar.");
 	}
 
+	@DisplayName("Una reserva cancelada no se edita y se responde409")
 	@Test
 	void unaReservaCanceladaNoSeEditaYSeResponde409() {
 		var reserva = reservaGuardada();
@@ -266,11 +286,13 @@ class ReglasDeReservaTests {
 
 	// ---------- Regla 4: otra reserva del mismo ambiente ----------
 
+	@DisplayName("Sin reservas ni bloques no hay cruces")
 	@Test
 	void sinReservasNiBloquesNoHayCruces() {
 		assertThat(cruces(datos("08:00", "09:30"), null, List.of(), List.of())).isEmpty();
 	}
 
+	@DisplayName("Otra reserva del mismo ambiente superpuesta es un cruce de ambiente")
 	@Test
 	void otraReservaDelMismoAmbienteSuperpuestaEsUnCruceDeAmbiente() {
 		var otra = reserva(UUID.randomUUID(), LAB, OTRA_SECCION, OTRO_RESPONSABLE, LUNES, "09:00", "10:00");
@@ -285,6 +307,7 @@ class ReglasDeReservaTests {
 		});
 	}
 
+	@DisplayName("Dos reservas contiguas no se cruzan")
 	@Test
 	void dosReservasContiguasNoSeCruzan() {
 		var otra = reserva(UUID.randomUUID(), LAB, OTRA_SECCION, OTRO_RESPONSABLE, LUNES, "09:30", "10:15");
@@ -292,6 +315,7 @@ class ReglasDeReservaTests {
 		assertThat(cruces(datos("08:00", "09:30"), null, List.of(otra), List.of())).isEmpty();
 	}
 
+	@DisplayName("Otro ambiente otra fecha o ninguna reserva del mismo ambiente no se cruzan")
 	@Test
 	void otroAmbienteOtraFechaONingunaReservaDelMismoAmbienteNoSeCruzan() {
 		var otroAmbiente = reserva(UUID.randomUUID(), OTRO_LAB, OTRA_SECCION, OTRO_RESPONSABLE, LUNES, "08:00",
@@ -304,6 +328,7 @@ class ReglasDeReservaTests {
 
 	// ---------- Regla 5a: otra sección tiene el ambiente en su horario ----------
 
+	@DisplayName("Otra sección con el ambiente en su horario es un cruce de ambiente")
 	@Test
 	void otraSeccionConElAmbienteEnSuHorarioEsUnCruceDeAmbiente() {
 		var ocupado = bloque(OTRA_SECCION, DiaSemana.LUN, "08:00", "08:45", OTRO_RESPONSABLE, LAB, "LAB-01");
@@ -318,6 +343,7 @@ class ReglasDeReservaTests {
 		});
 	}
 
+	@DisplayName("Otra sección con el ambiente justo antes o después o en otro día no se cruza")
 	@Test
 	void otraSeccionConElAmbienteJustoAntesODespuesOEnOtroDiaNoSeCruza() {
 		var contiguo = bloque(OTRA_SECCION, DiaSemana.LUN, "07:15", "08:00", null, LAB, "LAB-01");
@@ -330,6 +356,7 @@ class ReglasDeReservaTests {
 
 	// ---------- Regla 5b: la propia sección en su horario ----------
 
+	@DisplayName("La clase de la propia sección en un aula regular se permite")
 	@Test
 	void laClaseDeLaPropiaSeccionEnUnAulaRegularSePermite() {
 		var clase = bloque(SECCION, DiaSemana.LUN, "08:00", "08:45", null, AULA, "A-101");
@@ -337,6 +364,7 @@ class ReglasDeReservaTests {
 		assertThat(cruces(datos("08:00", "09:30"), null, List.of(), List.of(clase))).isEmpty();
 	}
 
+	@DisplayName("El mismo ambiente en el horario de la propia sección se rechaza con un400 sin título")
 	@Test
 	void elMismoAmbienteEnElHorarioDeLaPropiaSeccionSeRechazaConUn400SinTitulo() {
 		var clase = bloque(SECCION, DiaSemana.LUN, "08:00", "08:45", null, LAB, "LAB-01");
@@ -351,6 +379,7 @@ class ReglasDeReservaTests {
 		});
 	}
 
+	@DisplayName("Otro espacio especial en el horario de la propia sección se rechaza con un409")
 	@Test
 	void otroEspacioEspecialEnElHorarioDeLaPropiaSeccionSeRechazaConUn409() {
 		var clase = bloque(SECCION, DiaSemana.LUN, "08:45", "09:30", null, OTRO_LAB, "LAB-02");
@@ -365,6 +394,7 @@ class ReglasDeReservaTests {
 		});
 	}
 
+	@DisplayName("Un ambiente desconocido en el horario de la propia sección no se trata como espacio especial")
 	@Test
 	void unAmbienteDesconocidoEnElHorarioDeLaPropiaSeccionNoSeTrataComoEspacioEspecial() {
 		var clase = bloque(SECCION, DiaSemana.LUN, "08:00", "08:45", null, UUID.randomUUID(), "A-205");
@@ -372,6 +402,7 @@ class ReglasDeReservaTests {
 		assertThat(cruces(datos("08:00", "09:30"), null, List.of(), List.of(clase))).isEmpty();
 	}
 
+	@DisplayName("La clase de la propia sección fuera de la franja no importa")
 	@Test
 	void laClaseDeLaPropiaSeccionFueraDeLaFranjaNoImporta() {
 		var clase = bloque(SECCION, DiaSemana.LUN, "09:30", "10:15", null, LAB, "LAB-01");
@@ -381,6 +412,7 @@ class ReglasDeReservaTests {
 
 	// ---------- Regla 7a: el responsable dicta clase a otra sección ----------
 
+	@DisplayName("Un responsable con clase en otra sección es un cruce con el título responsable no disponible")
 	@Test
 	void unResponsableConClaseEnOtraSeccionEsUnCruceConElTituloResponsableNoDisponible() {
 		var clase = bloque(OTRA_SECCION, DiaSemana.LUN, "08:00", "08:45", RESPONSABLE, AULA, "A-102");
@@ -396,6 +428,7 @@ class ReglasDeReservaTests {
 		});
 	}
 
+	@DisplayName("Las clases del responsable con la propia sección se ignoran")
 	@Test
 	void lasClasesDelResponsableConLaPropiaSeccionSeIgnoran() {
 		var clase = bloque(SECCION, DiaSemana.LUN, "08:00", "08:45", RESPONSABLE, AULA, "A-101");
@@ -403,6 +436,7 @@ class ReglasDeReservaTests {
 		assertThat(cruces(datos("08:00", "09:30"), null, List.of(), List.of(clase))).isEmpty();
 	}
 
+	@DisplayName("La clase de otro docente o contigua o en otro día no cruza al responsable")
 	@Test
 	void laClaseDeOtroDocenteOContiguaOEnOtroDiaNoCruzaAlResponsable() {
 		var otroDocente = bloque(OTRA_SECCION, DiaSemana.LUN, "08:00", "08:45", OTRO_RESPONSABLE, AULA, "A-102");
@@ -415,6 +449,7 @@ class ReglasDeReservaTests {
 
 	// ---------- Regla 7b: el responsable de otra reserva ----------
 
+	@DisplayName("Un responsable de otra reserva superpuesta es un cruce")
 	@Test
 	void unResponsableDeOtraReservaSuperpuestaEsUnCruce() {
 		var otra = reserva(UUID.randomUUID(), OTRO_LAB, OTRA_SECCION, RESPONSABLE, LUNES, "09:00", "10:00");
@@ -430,6 +465,7 @@ class ReglasDeReservaTests {
 
 	// ---------- Regla 8: la sección con otra reserva ----------
 
+	@DisplayName("Una sección con otra reserva superpuesta es un cruce")
 	@Test
 	void unaSeccionConOtraReservaSuperpuestaEsUnCruce() {
 		var otra = reserva(UUID.randomUUID(), OTRO_LAB, SECCION, OTRO_RESPONSABLE, LUNES, "09:00", "10:00");
@@ -445,6 +481,7 @@ class ReglasDeReservaTests {
 
 	// ---------- Al editar: la propia reserva no cuenta (4, 7b y 8) ----------
 
+	@DisplayName("Al editar la reserva no se cruza con si misma")
 	@Test
 	void alEditarLaReservaNoSeCruzaConSiMisma() {
 		UUID propia = UUID.randomUUID();
@@ -457,6 +494,7 @@ class ReglasDeReservaTests {
 						TipoCruceReserva.SECCION_CON_RESERVA);
 	}
 
+	@DisplayName("Al editar si se cruza con las demas reservas")
 	@Test
 	void alEditarSiSeCruzaConLasDemasReservas() {
 		UUID propia = UUID.randomUUID();
@@ -469,6 +507,7 @@ class ReglasDeReservaTests {
 
 	// ---------- Orden ----------
 
+	@DisplayName("Los cruces salen en el orden de las reglas")
 	@Test
 	void losCrucesSalenEnElOrdenDeLasReglas() {
 		var reservaDelLab = reserva(UUID.randomUUID(), LAB, OTRA_SECCION, OTRO_RESPONSABLE, LUNES, "08:00", "09:30");
@@ -490,6 +529,7 @@ class ReglasDeReservaTests {
 				TipoCruceReserva.SECCION_CON_RESERVA);
 	}
 
+	@DisplayName("Cada tipo de cruce tiene su código y su título")
 	@Test
 	void cadaTipoDeCruceTieneSuCodigoYSuTitulo() {
 		assertThat(TipoCruceReserva.values()).extracting(TipoCruceReserva::estado, TipoCruceReserva::titulo)

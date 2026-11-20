@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -31,6 +32,7 @@ class HorarioApoderadoIT extends PruebaHorarios {
 				WHERE id = :m""").param("s", seccionId).param("m", MATRICULA_MATEO_2027).update();
 	}
 
+	@DisplayName("Lista solo los hijos matriculados")
 	@Test
 	void listaSoloLosHijosMatriculados() throws Exception {
 		// Mateo solo tiene la sección reservada: no aparece.
@@ -44,6 +46,7 @@ class HorarioApoderadoIT extends PruebaHorarios {
 				.andExpect(jsonPath("$[0].matriculas[0].seccion").value("A"));
 	}
 
+	@DisplayName("Muestra el horario de la sección del hijo con su tutor")
 	@Test
 	void muestraElHorarioDeLaSeccionDelHijoConSuTutor() throws Exception {
 		UUID eh = estructura("EH-AP-27", "SECUNDARIA", true, 6);
@@ -81,6 +84,7 @@ class HorarioApoderadoIT extends PruebaHorarios {
 		pedir("/horarios/apoderado/estudiantes", APODERADO).andExpect(jsonPath("$", hasSize(2)));
 	}
 
+	@DisplayName("Sin año usa el más reciente y sin horario guardado no está disponible")
 	@Test
 	void sinAnioUsaElMasRecienteYSinHorarioGuardadoNoEstaDisponible() throws Exception {
 		pedir("/horarios/apoderado/estudiantes/" + SOFIA + "/horario", APODERADO).andExpect(status().isOk())
@@ -91,6 +95,7 @@ class HorarioApoderadoIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.clases", empty()));
 	}
 
+	@DisplayName("No muestra el horario de quien no es su hijo")
 	@Test
 	void noMuestraElHorarioDeQuienNoEsSuHijo() throws Exception {
 		pedir("/horarios/apoderado/estudiantes/" + HIJO_DE_OTRA_FAMILIA + "/horario", APODERADO)
@@ -98,6 +103,7 @@ class HorarioApoderadoIT extends PruebaHorarios {
 				.andExpect(jsonPath("$.message").value("No encontramos el horario de este estudiante."));
 	}
 
+	@DisplayName("No muestra un año en que no está matriculado")
 	@Test
 	void noMuestraUnAnioEnQueNoEstaMatriculado() throws Exception {
 		pedir("/horarios/apoderado/estudiantes/" + SOFIA + "/horario?anio=2027", APODERADO)
@@ -107,6 +113,7 @@ class HorarioApoderadoIT extends PruebaHorarios {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Solo el apoderado puede consultarlo")
 	@Test
 	void soloElApoderadoPuedeConsultarlo() throws Exception {
 		pedir("/horarios/apoderado/estudiantes", DOCENTE).andExpect(status().isForbidden());

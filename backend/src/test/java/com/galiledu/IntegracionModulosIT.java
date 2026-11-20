@@ -2,6 +2,7 @@ package com.galiledu;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -15,6 +16,7 @@ class IntegracionModulosIT extends PruebaIntegracion {
 	@Autowired
 	private JdbcClient jdbc;
 
+	@DisplayName("El usuario estudiante llega a su matrícula sección y estructura horaria")
 	@Test
 	void elUsuarioEstudianteLlegaASuMatriculaSeccionYEstructuraHoraria() {
 		// La cuenta y la estudiante son la misma persona; la sección usa la estructura principal de su nivel.
@@ -34,6 +36,7 @@ class IntegracionModulosIT extends PruebaIntegracion {
 				.containsEntry("horario", "EH-SEC-26");
 	}
 
+	@DisplayName("El grado del estudiante es del catálogo y ya no hay inicial")
 	@Test
 	void elGradoDelEstudianteEsDelCatalogoYYaNoHayInicial() {
 		rechazaPor("estudiante_grado_codigo_fkey",
@@ -41,6 +44,7 @@ class IntegracionModulosIT extends PruebaIntegracion {
 						.param(MATEO).update());
 	}
 
+	@DisplayName("Hay una sola estructura principal por nivel y año")
 	@Test
 	void hayUnaSolaEstructuraPrincipalPorNivelYAnio() {
 		rechazaPor("ux_estructura_horaria_principal", () -> jdbc.sql("""
@@ -50,6 +54,7 @@ class IntegracionModulosIT extends PruebaIntegracion {
 				.update());
 	}
 
+	@DisplayName("Una estructura no principal si se puede agregar")
 	@Test
 	void unaEstructuraNoPrincipalSiSePuedeAgregar() {
 		// P. ej. "Secundaria · talleres de tarde" (Modal - Nueva estructura horaria).
@@ -60,6 +65,7 @@ class IntegracionModulosIT extends PruebaIntegracion {
 				.update();
 	}
 
+	@DisplayName("El código de matrícula tiene el formato mat año número")
 	@Test
 	void elCodigoDeMatriculaTieneElFormatoMatAnioNumero() {
 		rechazaPor("ck_matricula_formato_codigo", () -> jdbc.sql("""

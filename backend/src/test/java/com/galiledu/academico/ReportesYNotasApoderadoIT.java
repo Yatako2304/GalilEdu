@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -59,6 +60,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 
 	// ---------- HU-63 ----------
 
+	@DisplayName("El reporte del grado resume la nota oficial por sección y grado")
 	@Test
 	void elReporteDelGradoResumeLaNotaOficialPorSeccionYGrado() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/reportes/grado").param("anioEscolarId", DatosNotasPrueba.ANIO_2026)
@@ -76,6 +78,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath(fila("general.pendientes")).value(contains(1)));
 	}
 
+	@DisplayName("Con un curso muestra lo que ese curso aporta")
 	@Test
 	void conUnCursoMuestraLoQueEseCursoAporta() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/reportes/grado").param("anioEscolarId", DatosNotasPrueba.ANIO_2026)
@@ -87,6 +90,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath(fila("general.promedio")).value(contains("13")));
 	}
 
+	@DisplayName("Sin período usa la nota final y se descarga en pdf")
 	@Test
 	void sinPeriodoUsaLaNotaFinalYSeDescargaEnPdf() throws Exception {
 		String coordinador = token(COORDINADOR);
@@ -103,6 +107,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 		assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
 	}
 
+	@DisplayName("El curso debe ser del grado")
 	@Test
 	void elCursoDebeSerDelGrado() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/reportes/grado").param("anioEscolarId", DatosNotasPrueba.ANIO_2026)
@@ -110,6 +115,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 				.andExpect(status().is4xxClientError());
 	}
 
+	@DisplayName("El coordinador ve la nota de cada estudiante de una sección y su libreta")
 	@Test
 	void elCoordinadorVeLaNotaDeCadaEstudianteDeUnaSeccionYSuLibreta() throws Exception {
 		String coordinador = token(COORDINADOR);
@@ -135,6 +141,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 		assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
 	}
 
+	@DisplayName("Solo el coordinador ve el detalle de una sección")
 	@Test
 	void elCoordinadorVeLosItemsQueCalificoElDocenteSinPoderModificarlos() throws Exception {
 		String ana = datos.matriculaDe("Ana Lucía");
@@ -151,6 +158,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 				token(COORDINADOR))).andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Solo el coordinador ve el detalle de una sección")
 	@Test
 	void soloElCoordinadorVeElDetalleDeUnaSeccion() throws Exception {
 		String seccion = "/calificaciones/reportes/secciones/" + datos.seccionA() + "/notas";
@@ -167,6 +175,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 
 	// ---------- HU-64 ----------
 
+	@DisplayName("El reporte institucional cuenta cada nota de competencia una vez")
 	@Test
 	void elReporteInstitucionalCuentaCadaNotaDeCompetenciaUnaVez() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -195,6 +204,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 				.andExpect(content().contentType(MediaType.APPLICATION_PDF));
 	}
 
+	@DisplayName("Permisos de los reportes")
 	@Test
 	void unaCompetenciaConPesosIncompletosNoEntraEnElReporteInstitucionalYSeInforma() throws Exception {
 		jdbc.sql("UPDATE academico.plan_competencia SET peso_curso = NULL WHERE plan_curso_id = ?::uuid")
@@ -209,6 +219,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.areas[*].area", hasItem("Matemática")));
 	}
 
+	@DisplayName("Permisos de los reportes")
 	@Test
 	void permisosDeLosReportes() throws Exception {
 		// HU-64 es del Personal administrativo (y el Coordinador); el reporte por curso y grado, solo del Coordinador.
@@ -241,6 +252,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 		return token(APODERADO);
 	}
 
+	@DisplayName("El apoderado ve las notas de su hijo por curso y competencia")
 	@Test
 	void elApoderadoVeLasNotasDeSuHijoPorCursoYCompetencia() throws Exception {
 		String apoderado = apoderadoDeAna();
@@ -273,6 +285,7 @@ class ReportesYNotasApoderadoIT extends PruebaIntegracion {
 		assertThat(new String(pdf, 0, 5, StandardCharsets.US_ASCII)).isEqualTo("%PDF-");
 	}
 
+	@DisplayName("El apoderado no ve a estudiantes que no son suyos")
 	@Test
 	void elApoderadoNoVeAEstudiantesQueNoSonSuyos() throws Exception {
 		String apoderado = apoderadoDeAna();

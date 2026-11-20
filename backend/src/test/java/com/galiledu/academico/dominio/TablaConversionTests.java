@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** HU-55: los rangos de la tabla de conversión cubren de 0 a 20 sin vacíos ni cruces. */
@@ -17,23 +18,27 @@ class TablaConversionTests {
 				new RangoNivel(NivelLogro.C, cDesde, cHasta));
 	}
 
+	@DisplayName("Acepta la tabla de figma")
 	@Test
 	void aceptaLaTablaDeFigma() {
 		assertThatCode(() -> TablaConversion.validarRangos(rangos(0, 10, 13, 17, 20))).doesNotThrowAnyException();
 	}
 
+	@DisplayName("C debe empezar en cero")
 	@Test
 	void cDebeEmpezarEnCero() {
 		assertThatThrownBy(() -> TablaConversion.validarRangos(rangos(1, 10, 13, 17, 20)))
 				.hasMessage("Falta cubrir de 0 a 0 antes de C.");
 	}
 
+	@DisplayName("Ad debe terminar en veinte")
 	@Test
 	void adDebeTerminarEnVeinte() {
 		assertThatThrownBy(() -> TablaConversion.validarRangos(rangos(0, 10, 13, 17, 19)))
 				.hasMessage("El nivel AD debe terminar en 20.");
 	}
 
+	@DisplayName("Detecta un vacio entre niveles")
 	@Test
 	void detectaUnVacioEntreNiveles() {
 		var conVacio = List.of(
@@ -45,6 +50,7 @@ class TablaConversionTests {
 				.hasMessage("Falta cubrir de 14 a 14 antes de A.");
 	}
 
+	@DisplayName("Detecta un cruce entre niveles")
 	@Test
 	void detectaUnCruceEntreNiveles() {
 		var conCruce = List.of(
@@ -56,6 +62,7 @@ class TablaConversionTests {
 				.hasMessage("El rango de A se cruza con el nivel anterior.");
 	}
 
+	@DisplayName("Exige los cuatro niveles sin repetir")
 	@Test
 	void exigeLosCuatroNivelesSinRepetir() {
 		var sinC = List.of(
@@ -67,6 +74,7 @@ class TablaConversionTests {
 				.hasMessage("Define un rango para cada nivel: AD, A, B y C.");
 	}
 
+	@DisplayName("Desde no puede ser mayor que hasta")
 	@Test
 	void desdeNoPuedeSerMayorQueHasta() {
 		var invertido = List.of(

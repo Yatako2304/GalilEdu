@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
@@ -83,6 +84,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 		return JsonPath.read(r, "$.data[0].estado");
 	}
 
+	@DisplayName("La edición trae los datos con la forma de la inscripción")
 	@Test
 	void laEdicionTraeLosDatosConLaFormaDeLaInscripcion() throws Exception {
 		String id = inscribir();
@@ -100,6 +102,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.conCuenta[0]").value("MADRE"));
 	}
 
+	@DisplayName("Edita los datos del mismo estudiante y de sus familiares")
 	@Test
 	void editaLosDatosDelMismoEstudianteYDeSusFamiliares() throws Exception {
 		String id = inscribir();
@@ -115,6 +118,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.datos.madre.persona.profesion").value("Arquitecta"));
 	}
 
+	@DisplayName("Aplica las mismas validaciones que la inscripción")
 	@Test
 	void aplicaLasMismasValidacionesQueLaInscripcion() throws Exception {
 		String id = inscribir();
@@ -126,6 +130,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Madre: Ingresa el celular"));
 	}
 
+	@DisplayName("No se puede usar el documento de otra persona")
 	@Test
 	void noSePuedeUsarElDocumentoDeOtraPersona() throws Exception {
 		String id = inscribir();
@@ -134,6 +139,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Un estudiante matriculado no cambia de grado ni de año")
 	@Test
 	void unEstudianteMatriculadoNoCambiaDeGradoNiDeAnio() throws Exception {
 		editar(SOFIA_MATRICULADA, d -> d.set("$.estudiante.gradoCodigo", "SEC-5"))
@@ -143,6 +149,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 	}
 
 	/** Validación de la iteración 1 con el PO: cada familiar presente tiene cuenta, sea o no el responsable. */
+	@DisplayName("Al cambiar el responsable ambos conservan su cuenta")
 	@Test
 	void alCambiarElResponsableAmbosConservanSuCuenta() throws Exception {
 		String id = inscribir();
@@ -160,6 +167,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 		assertThat(estadoCuenta(CORREO_MADRE)).isEqualTo("ACTIVO");
 	}
 
+	@DisplayName("Quien deja de ser familiar presente queda inactivo y si vuelve se reactiva")
 	@Test
 	void quienDejaDeSerFamiliarPresenteQuedaInactivoYSiVuelveSeReactiva() throws Exception {
 		String id = inscribir();
@@ -180,6 +188,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 		assertThat(estadoCuenta(CORREO_MADRE)).isEqualTo("ACTIVO");
 	}
 
+	@DisplayName("Si se marca fallecida su cuenta queda inactiva y deja de ser responsable")
 	@Test
 	void siSeMarcaFallecidaSuCuentaQuedaInactivaYDejaDeSerResponsable() throws Exception {
 		String id = inscribir();
@@ -200,6 +209,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.familia[?(@.parentesco == 'MADRE')].viveConEstudiante").value(false));
 	}
 
+	@DisplayName("Al cambiar el correo de un familiar conserva su usuario y su contraseña")
 	@Test
 	void alCambiarElCorreoDeUnFamiliarConservaSuUsuarioYSuContrasena() throws Exception {
 		String id = inscribir();
@@ -222,6 +232,7 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.disponible").value(true));
 	}
 
+	@DisplayName("Conserva el documento del apoderado si es la misma persona")
 	@Test
 	void conservaElDocumentoDelApoderadoSiEsLaMismaPersona() throws Exception {
 		String id = inscribir();

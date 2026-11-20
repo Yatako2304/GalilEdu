@@ -6,6 +6,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -37,6 +38,7 @@ class ConversorDeBloquesIT extends PruebaIntegracion {
 				.param("anio", ANIO_2027).param("horas", horas).param("curso", curso).query(UUID.class).single();
 	}
 
+	@DisplayName("Calcula las horas reales y omite la celda sin docente")
 	@Test
 	void calculaLasHorasRealesYOmiteLaCeldaSinDocente() {
 		UUID estructura = jdbc.sql("""
@@ -79,6 +81,7 @@ class ConversorDeBloquesIT extends PruebaIntegracion {
 						ambiente));
 	}
 
+	@DisplayName("Sin celdas devuelve vacio")
 	@Test
 	void sinCeldasDevuelveVacio() {
 		assertThat(conversor.aBloquesSolicitados(UUID.randomUUID(), List.of())).isEmpty();

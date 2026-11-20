@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.PruebaIntegracion;
@@ -25,6 +26,7 @@ class DescuentoHastaFinEscolaridadIT extends PruebaIntegracion {
 				.formatted(BECA, vigenciaHasta == null ? "null" : "\"" + vigenciaHasta + "\"", hastaFin);
 	}
 
+	@DisplayName("Se aplica sin fecha de fin hasta que termine el colegio")
 	@Test
 	void seAplicaSinFechaDeFinHastaQueTermineElColegio() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -40,6 +42,7 @@ class DescuentoHastaFinEscolaridadIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.historial[0].hastaFinEscolaridad").value(true));
 	}
 
+	@DisplayName("Con fecha de fin la fecha es obligatoria")
 	@Test
 	void conFechaDeFinLaFechaEsObligatoria() throws Exception {
 		mvc.perform(conToken(post("/pagos/compromisos/{id}/descuentos", COMPROMISO_SOFIA),
@@ -48,6 +51,7 @@ class DescuentoHastaFinEscolaridadIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message", containsString("hasta cuándo")));
 	}
 
+	@DisplayName("Hasta fin de escolaridad no admite fecha de fin")
 	@Test
 	void hastaFinDeEscolaridadNoAdmiteFechaDeFin() throws Exception {
 		mvc.perform(conToken(post("/pagos/compromisos/{id}/descuentos", COMPROMISO_SOFIA),
@@ -56,6 +60,7 @@ class DescuentoHastaFinEscolaridadIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message", containsString("no indiques la fecha de fin")));
 	}
 
+	@DisplayName("Con fecha de fin guarda la fecha")
 	@Test
 	void conFechaDeFinGuardaLaFecha() throws Exception {
 		mvc.perform(conToken(post("/pagos/compromisos/{id}/descuentos", COMPROMISO_SOFIA),
@@ -65,6 +70,7 @@ class DescuentoHastaFinEscolaridadIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.descuento.vigenciaHasta").value("2026-12-31"));
 	}
 
+	@DisplayName("Sin el indicador una fecha vacia sigue siendo sin fin")
 	@Test
 	void sinElIndicadorUnaFechaVaciaSigueSiendoSinFin() throws Exception {
 		mvc.perform(conToken(post("/pagos/compromisos/{id}/descuentos", COMPROMISO_SOFIA),

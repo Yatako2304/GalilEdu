@@ -9,6 +9,7 @@ import java.sql.SQLException;
 import java.util.UUID;
 import javax.sql.DataSource;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -91,16 +92,19 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Sin secciones ----------
 
+	@DisplayName("Un aula sin secciones no tiene sección ocupada")
 	@Test
 	void unAulaSinSeccionesNoTieneSeccionOcupada() {
 		assertThat(consultas.seccionMasOcupada(ambiente("A-901"))).isEmpty();
 	}
 
+	@DisplayName("Un ambiente que no existe no tiene sección ocupada")
 	@Test
 	void unAmbienteQueNoExisteNoTieneSeccionOcupada() {
 		assertThat(consultas.seccionMasOcupada(UUID.randomUUID())).isEmpty();
 	}
 
+	@DisplayName("Una sección sin aula no cuenta para ningún ambiente")
 	@Test
 	void unaSeccionSinAulaNoCuentaParaNingunAmbiente() {
 		UUID aula = ambiente("A-901");
@@ -112,6 +116,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Qué matrículas cuentan ----------
 
+	@DisplayName("Una sección sin matrículas cuenta cero y es el resultado")
 	@Test
 	void unaSeccionSinMatriculasCuentaCeroYEsElResultado() {
 		UUID aula = ambiente("A-901");
@@ -121,6 +126,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 				.contains(new SeccionOcupada("1.° de secundaria", "T1", 0));
 	}
 
+	@DisplayName("Retirado y anulada no cuentan")
 	@Test
 	void retiradoYAnuladaNoCuentan() {
 		UUID aula = ambiente("A-901");
@@ -130,6 +136,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 		assertThat(consultas.seccionMasOcupada(aula)).contains(new SeccionOcupada("1.° de secundaria", "T1", 1));
 	}
 
+	@DisplayName("Una sección solo con retirados y anulados cuenta cero")
 	@Test
 	void unaSeccionSoloConRetiradosYAnuladosCuentaCero() {
 		UUID aula = ambiente("A-901");
@@ -139,6 +146,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 		assertThat(consultas.seccionMasOcupada(aula)).contains(new SeccionOcupada("1.° de secundaria", "T1", 0));
 	}
 
+	@DisplayName("Todos los demas estados ocupan vacante")
 	@Test
 	void todosLosDemasEstadosOcupanVacante() {
 		// La misma definición que Seccion.SQL_OCUPA_VACANTE: una reserva o un pago pendiente ya ocupa lugar.
@@ -151,6 +159,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 				.hasValueSatisfying(o -> assertThat(o.matriculados()).isEqualTo(4));
 	}
 
+	@DisplayName("Las matrículas de otra sección no se mezclan")
 	@Test
 	void lasMatriculasDeOtraSeccionNoSeMezclan() {
 		UUID aula = ambiente("A-901");
@@ -166,6 +175,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Qué secciones cuentan ----------
 
+	@DisplayName("Una sección inactiva no cuenta")
 	@Test
 	void unaSeccionInactivaNoCuenta() {
 		UUID aula = ambiente("A-901");
@@ -175,6 +185,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 		assertThat(consultas.seccionMasOcupada(aula)).isEmpty();
 	}
 
+	@DisplayName("Con una inactiva muy llena gana la activa aunque tenga menos")
 	@Test
 	void conUnaInactivaMuyLlenaGanaLaActivaAunqueTengaMenos() {
 		UUID aula = ambiente("A-901");
@@ -186,6 +197,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 		assertThat(consultas.seccionMasOcupada(aula)).contains(new SeccionOcupada("1.° de secundaria", "T2", 1));
 	}
 
+	@DisplayName("Una sección de un año cerrado no cuenta")
 	@Test
 	void unaSeccionDeUnAnioCerradoNoCuenta() {
 		UUID aula = ambiente("A-901");
@@ -196,6 +208,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 		assertThat(consultas.seccionMasOcupada(aula)).isEmpty();
 	}
 
+	@DisplayName("Con un año cerrado muy lleno gana la sección del año vigente")
 	@Test
 	void conUnAnioCerradoMuyLlenoGanaLaSeccionDelAnioVigente() {
 		UUID aula = ambiente("A-901");
@@ -208,6 +221,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 		assertThat(consultas.seccionMasOcupada(aula)).contains(new SeccionOcupada("1.° de secundaria", "T2", 1));
 	}
 
+	@DisplayName("Un año planificado y uno activo si cuentan")
 	@Test
 	void unAnioPlanificadoYUnoActivoSiCuentan() {
 		UUID aula = ambiente("A-901");
@@ -221,6 +235,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Varias secciones en la misma aula ----------
 
+	@DisplayName("Con varias secciones devuelve la de más matriculados y no la suma")
 	@Test
 	void conVariasSeccionesDevuelveLaDeMasMatriculadosYNoLaSuma() {
 		UUID aula = ambiente("A-901");
@@ -236,6 +251,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 		assertThat(consultas.seccionMasOcupada(aula)).contains(new SeccionOcupada("2.° de secundaria", "T2", 5));
 	}
 
+	@DisplayName("Un empate se resuelve siempre igual por año grado y nombre")
 	@Test
 	void unEmpateSeResuelveSiempreIgualPorAnioGradoYNombre() {
 		UUID aula = ambiente("A-901");
@@ -254,6 +270,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Confirmado o no ----------
 
+	@DisplayName("Las filas de la prueba solo las ve la transacción que las escribio")
 	@Test
 	void lasFilasDeLaPruebaSoloLasVeLaTransaccionQueLasEscribio() throws SQLException {
 		UUID aula = ambiente("A-901");
@@ -280,6 +297,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 
 	// ---------- Datos de prueba ----------
 
+	@DisplayName("Con los datos de prueba el aula a101 es de la1 a secundaria")
 	@Test
 	void conLosDatosDePruebaElAulaA101EsDeLa1ASecundaria() {
 		UUID a101 = jdbc.sql("SELECT id FROM configuracion.ambiente WHERE codigo = 'A-101'").query(UUID.class)
@@ -296,6 +314,7 @@ class ConsultasAmbientesIT extends PruebaIntegracion {
 		assertThat(ocupada).contains(new SeccionOcupada("1.° de secundaria", "A", esperados));
 	}
 
+	@DisplayName("Un aula inactiva sin secciones de los datos de prueba no tiene sección ocupada")
 	@Test
 	void unAulaInactivaSinSeccionesDeLosDatosDePruebaNoTieneSeccionOcupada() {
 		UUID a205 = jdbc.sql("SELECT id FROM configuracion.ambiente WHERE codigo = 'A-205'").query(UUID.class)

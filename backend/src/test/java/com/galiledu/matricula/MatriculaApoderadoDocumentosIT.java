@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -63,6 +64,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 		return ultimo;
 	}
 
+	@DisplayName("Lista los documentos con su plantilla y lo ya subido")
 	@Test
 	void listaLosDocumentosConSuPlantillaYLoYaSubido() throws Exception {
 		abrirPeriodo2027();
@@ -75,6 +77,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[0].archivo").doesNotExist());
 	}
 
+	@DisplayName("Con el período cerrado no puede subir")
 	@Test
 	void conElPeriodoCerradoNoPuedeSubir() throws Exception {
 		mvc.perform(conToken(get(BASE + "/documentos", MATEO), token(APODERADO)))
@@ -83,6 +86,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Descarga la plantilla del documento")
 	@Test
 	void descargaLaPlantillaDelDocumento() throws Exception {
 		abrirPeriodo2027();
@@ -102,6 +106,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[0].tienePlantilla").value(true));
 	}
 
+	@DisplayName("Sube y luego ve su documento y rechaza otros formatos")
 	@Test
 	void subeYLuegoVeSuDocumentoYRechazaOtrosFormatos() throws Exception {
 		abrirPeriodo2027();
@@ -118,6 +123,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Con un documento observado solo reemplaza ese y los aprobados quedan bloqueados")
 	@Test
 	void conUnDocumentoObservadoSoloReemplazaEseYLosAprobadosQuedanBloqueados() throws Exception {
 		abrirPeriodo2027();
@@ -136,6 +142,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[1].archivo.observacion").doesNotExist());
 	}
 
+	@DisplayName("No puede enviar a validación sin todos los documentos")
 	@Test
 	void noPuedeEnviarAValidacionSinTodosLosDocumentos() throws Exception {
 		abrirPeriodo2027();
@@ -146,6 +153,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Faltan 3 documento(s) firmado(s) por subir."));
 	}
 
+	@DisplayName("Con todos los documentos la envia a validación y ya no se puede editar")
 	@Test
 	void conTodosLosDocumentosLaEnviaAValidacionYYaNoSePuedeEditar() throws Exception {
 		abrirPeriodo2027();
@@ -163,6 +171,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("No toca los documentos de un estudiante que no está a su cargo")
 	@Test
 	void noTocaLosDocumentosDeUnEstudianteQueNoEstaASuCargo() throws Exception {
 		abrirPeriodo2027();
@@ -173,6 +182,7 @@ class MatriculaApoderadoDocumentosIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Solo el apoderado usa estos endpoints")
 	@Test
 	void soloElApoderadoUsaEstosEndpoints() throws Exception {
 		mvc.perform(conToken(get(BASE + "/documentos", MATEO), token(PERSONAL_ADMINISTRATIVO)))

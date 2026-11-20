@@ -2,6 +2,7 @@ package com.galiledu.academico;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -19,6 +20,7 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 	@Autowired
 	private JdbcClient jdbc;
 
+	@DisplayName("El docente llega a sus cursos secciones competencias y aula")
 	@Test
 	void elDocenteLlegaASusCursosSeccionesCompetenciasYAula() {
 		var clases = jdbc.sql("""
@@ -43,6 +45,7 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 		assertThat(((Number) algebra.get("competencias")).intValue()).isEqualTo(1);
 	}
 
+	@DisplayName("El plan de1ro de secundaria tiene16 cursos")
 	@Test
 	void elPlanDe1roDeSecundariaTiene16Cursos() {
 		assertThat(jdbc.sql("""
@@ -50,6 +53,7 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 				.param(ANIO_2026).query(Integer.class).single()).isEqualTo(16);
 	}
 
+	@DisplayName("No se planifica un curso en un grado donde no se dicta")
 	@Test
 	void noSePlanificaUnCursoEnUnGradoDondeNoSeDicta() {
 		rechazaPor("fk_plan_curso_grado", () -> jdbc.sql("""
@@ -58,6 +62,7 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 				.update());
 	}
 
+	@DisplayName("Una competencia cualitativa no usa reglas numericas")
 	@Test
 	void unaCompetenciaCualitativaNoUsaReglasNumericas() {
 		rechazaPor("ck_plan_competencia_regla", () -> jdbc.sql("""
@@ -65,18 +70,21 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 				WHERE regla_nota = 'PROMEDIO_PONDERADO'""").update());
 	}
 
+	@DisplayName("El peso de un curso en una competencia va de0 a100")
 	@Test
 	void elPesoDeUnCursoEnUnaCompetenciaVaDe0A100() {
 		rechazaPor("ck_plan_competencia_peso_curso", () -> jdbc.sql("""
 				UPDATE academico.plan_competencia SET peso_curso = 101""").update());
 	}
 
+	@DisplayName("Los rangos de la tabla de conversión van de0 a20")
 	@Test
 	void losRangosDeLaTablaDeConversionVanDe0A20() {
 		rechazaPor("ck_tabla_conversion_rango", () -> jdbc.sql("""
 				UPDATE academico.tabla_conversion_nivel SET nota_hasta = 21 WHERE nivel = 'AD'""").update());
 	}
 
+	@DisplayName("Un aula regular admite como maximo45")
 	@Test
 	void unAulaRegularAdmiteComoMaximo45() {
 		rechazaPor("ck_ambiente_aforo", () -> jdbc.sql("""
@@ -84,6 +92,7 @@ class EsquemaAcademicoIT extends PruebaIntegracion {
 				VALUES ('A-999', 'Aula grande', 'AULA_REGULAR', 46)""").update());
 	}
 
+	@DisplayName("El código de un ambiente no se repite")
 	@Test
 	void elCodigoDeUnAmbienteNoSeRepite() {
 		rechazaPor("ambiente_codigo_key", () -> jdbc.sql("""

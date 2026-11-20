@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -80,6 +81,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 
 	// ---------- Consultas ----------
 
+	@DisplayName("El plan de1ro trae sus tarjetas y cursos")
 	@Test
 	void elPlanDe1roTraeSusTarjetasYCursos() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion").param("anioEscolarId", ANIO_2026).param("grado", "SEC-1"),
@@ -98,6 +100,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 						(Object) null)));
 	}
 
+	@DisplayName("Un plan vacio no tiene cursos")
 	@Test
 	void unPlanVacioNoTieneCursos() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion").param("anioEscolarId", ANIO_2027).param("grado", "SEC-3"),
@@ -107,6 +110,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cursos.length()").value(0));
 	}
 
+	@DisplayName("El detalle trae las competencias del área y cuales evalua")
 	@Test
 	void elDetalleTraeLasCompetenciasDelAreaYCualesEvalua() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion/" + idPlan("Aritmética")), personal))
@@ -118,6 +122,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.competencias[1].seleccionada").value(false));
 	}
 
+	@DisplayName("Los cursos disponibles excluyen los que ya están en el plan")
 	@Test
 	void losCursosDisponiblesExcluyenLosQueYaEstanEnElPlan() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion/cursos-disponibles").param("anioEscolarId", ANIO_2026)
@@ -133,6 +138,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 
 	// ---------- Agregar y configurar ----------
 
+	@DisplayName("Agrega un curso con sus competencias")
 	@Test
 	void agregaUnCursoConSusCompetencias() throws Exception {
 		mvc.perform(conToken(post("/planes-evaluacion"), personal, """
@@ -145,6 +151,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.competencias[0].seleccionada").value(true));
 	}
 
+	@DisplayName("Rechaza cursos repetidos de otra área o que no se dictan en el grado")
 	@Test
 	void rechazaCursosRepetidosDeOtraAreaOQueNoSeDictanEnElGrado() throws Exception {
 		mvc.perform(conToken(post("/planes-evaluacion"), personal, """
@@ -166,6 +173,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("La competencia no es del área de Álgebra."));
 	}
 
+	@DisplayName("Configura horas y competencias")
 	@Test
 	void configuraHorasYCompetencias() throws Exception {
 		// Este caso configura el curso antes de registrar evaluaciones; la demo ya trae dos ítems.
@@ -186,6 +194,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 						org.hamcrest.Matchers.contains("VIGESIMAL")));
 	}
 
+	@DisplayName("Agrega una competencia a algebra sin eliminar la que ya usa un item")
 	@Test
 	void agregaUnaCompetenciaAAlgebraSinEliminarLaQueYaUsaUnItem() throws Exception {
 		crearItemDeAlgebra();
@@ -203,6 +212,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 						.value(org.hamcrest.Matchers.contains(true)));
 	}
 
+	@DisplayName("No quita una competencia que ya tiene items de evaluación")
 	@Test
 	void noQuitaUnaCompetenciaQueYaTieneItemsDeEvaluacion() throws Exception {
 		crearItemDeAlgebra();
@@ -216,6 +226,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 						"No se puede quitar la competencia \"Resuelve problemas de regularidad, equivalencia y cambio\" porque ya tiene ítems de evaluación."));
 	}
 
+	@DisplayName("Las horas no superan los bloques de la estructura")
 	@Test
 	void lasHorasNoSuperanLosBloquesDeLaEstructura() throws Exception {
 		// 35 horas; Comunicación pasa de 4 a 15 → 46 > 45.
@@ -226,6 +237,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 						"El grado tendría 46 horas semanales y la estructura horaria solo tiene 45 bloques."));
 	}
 
+	@DisplayName("Quita un curso del plan")
 	@Test
 	void quitaUnCursoDelPlan() throws Exception {
 		mvc.perform(conToken(delete("/planes-evaluacion/" + idPlan("Computación")), personal))
@@ -235,6 +247,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cursos.length()").value(15));
 	}
 
+	@DisplayName("Un año cerrado no se modifica")
 	@Test
 	void unAnioCerradoNoSeModifica() throws Exception {
 		jdbc.sql("UPDATE configuracion.anio_escolar SET estado = 'CERRADO' WHERE id = ?::uuid").param(ANIO_2026)
@@ -247,6 +260,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 
 	// ---------- Docentes ----------
 
+	@DisplayName("Asigna docentes por sección")
 	@Test
 	void asignaDocentesPorSeccion() throws Exception {
 		String plan = idPlan("Geometría");
@@ -267,6 +281,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[1].docenteId").doesNotExist());
 	}
 
+	@DisplayName("Solo se asignan docentes activos a secciones del grado")
 	@Test
 	void soloSeAsignanDocentesActivosASeccionesDelGrado() throws Exception {
 		String plan = idPlan("Geometría");
@@ -289,6 +304,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 
 	// ---------- Copiar plan ----------
 
+	@DisplayName("Copia el plan a un grado vacio sin docentes")
 	@Test
 	void copiaElPlanAUnGradoVacioSinDocentes() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion/origenes").param("anioEscolarId", ANIO_2027)
@@ -306,6 +322,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.docentesAsignados").value(0));
 	}
 
+	@DisplayName("Solo copia a un plan vacio y salta cursos inactivos")
 	@Test
 	void soloCopiaAUnPlanVacioYSaltaCursosInactivos() throws Exception {
 		mvc.perform(conToken(post("/planes-evaluacion/copias"), personal, """
@@ -323,6 +340,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cursos.length()").value(15));
 	}
 
+	@DisplayName("El coordinador también gestiona el plan")
 	@Test
 	void elCoordinadorTambienGestionaElPlan() throws Exception {
 		String coordinador = token(COORDINADOR);
@@ -334,6 +352,7 @@ class PlanEvaluacionIT extends PruebaIntegracion {
 				.andExpect(status().isNoContent());
 	}
 
+	@DisplayName("Otros roles reciben403")
 	@Test
 	void otrosRolesReciben403() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion/anios"), token(DOCENTE))).andExpect(status().isForbidden());

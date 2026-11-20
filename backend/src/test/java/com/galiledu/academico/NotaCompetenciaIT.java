@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -110,6 +111,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 
 	// ---------- Plan de evaluación: pesos ----------
 
+	@DisplayName("El plan muestra los cursos de cada competencia con su peso")
 	@Test
 	void elPlanMuestraLosCursosDeCadaCompetenciaConSuPeso() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion/pesos-competencias").param("anioEscolarId", ANIO_2026)
@@ -128,6 +130,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.pesosIncompletos").value(0));
 	}
 
+	@DisplayName("Guarda los pesos de todos los cursos si suman100")
 	@Test
 	void guardaLosPesosDeTodosLosCursosSiSuman100() throws Exception {
 		mvc.perform(conToken(put("/planes-evaluacion/pesos-competencias/" + competencia(CANTIDAD)), personal, """
@@ -139,6 +142,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cursos[?(@.curso == 'Geometría')].pesoCurso").value(contains(30.0)));
 	}
 
+	@DisplayName("Rechaza pesos que no suman100 o que olvidan un curso")
 	@Test
 	void rechazaPesosQueNoSuman100OQueOlvidanUnCurso() throws Exception {
 		String url = "/planes-evaluacion/pesos-competencias/" + competencia(CANTIDAD);
@@ -162,6 +166,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Un curso nuevo en una competencia deja los pesos incompletos hasta ajustarlos")
 	@Test
 	void unCursoNuevoEnUnaCompetenciaDejaLosPesosIncompletosHastaAjustarlos() throws Exception {
 		mvc.perform(conToken(put("/planes-evaluacion/" + plan("Álgebra")), personal, """
@@ -180,6 +185,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 						+ ".completo").value(contains(true)));
 	}
 
+	@DisplayName("Al quitar una competencia de un curso el que queda solo aporta el100")
 	@Test
 	void alQuitarUnaCompetenciaDeUnCursoElQueQuedaSoloAportaEl100() throws Exception {
 		// Geometría deja de evaluar "cantidad" (sus ítems de la demo apuntan a ella; se quitan para poder hacerlo).
@@ -196,6 +202,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 						.value(contains(100.0)));
 	}
 
+	@DisplayName("El docente no edita los pesos")
 	@Test
 	void elDocenteNoEditaLosPesos() throws Exception {
 		mvc.perform(conToken(get("/planes-evaluacion/pesos-competencias").param("anioEscolarId", ANIO_2026)
@@ -205,6 +212,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 
 	// ---------- Nota de la competencia ----------
 
+	@DisplayName("La nota de la competencia combina los cursos con su peso")
 	@Test
 	void laNotaDeLaCompetenciaCombinaLosCursosConSuPeso() throws Exception {
 		String cantidad = competencia(CANTIDAD);
@@ -255,6 +263,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("El resumen del año muestra el aporte final del curso y la nota de la competencia")
 	@Test
 	void elResumenDelAnoMuestraElAporteFinalDelCursoYLaNotaDeLaCompetencia() throws Exception {
 		String cantidad = competencia(CANTIDAD);
@@ -290,6 +299,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("En escala de letras cada curso vota con su peso")
 	@Test
 	void enEscalaDeLetrasCadaCursoVotaConSuPeso() throws Exception {
 		jdbc.sql("""
@@ -314,6 +324,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 				.andExpect(jsonPath(filaAna + ".notaFinal.nivel").value(contains("B")));
 	}
 
+	@DisplayName("Con pesos incompletos no se calcula la nota de la competencia")
 	@Test
 	void conPesosIncompletosNoSeCalculaLaNotaDeLaCompetencia() throws Exception {
 		String cantidad = competencia(CANTIDAD);
@@ -330,6 +341,7 @@ class NotaCompetenciaIT extends PruebaIntegracion {
 						.formatted(ana)).value(contains("—")));
 	}
 
+	@DisplayName("El docente solo ve las competencias de su curso")
 	@Test
 	void elDocenteSoloVeLasCompetenciasDeSuCurso() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/docente/cursos/%s/secciones/%s/notas-competencia"

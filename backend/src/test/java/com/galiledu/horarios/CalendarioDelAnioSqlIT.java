@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.LocalDate;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -17,6 +18,7 @@ class CalendarioDelAnioSqlIT extends PruebaReservas {
 	@Autowired
 	private CalendarioDelAnio calendario;
 
+	@DisplayName("Trae el año activo con sus cuatro bimestres en orden")
 	@Test
 	void traeElAnioActivoConSusCuatroBimestresEnOrden() {
 		AnioConPeriodos anio = calendario.deAnio(ANIO_2026).orElseThrow();
@@ -37,6 +39,7 @@ class CalendarioDelAnioSqlIT extends PruebaReservas {
 								LocalDate.of(2026, 12, 18)));
 	}
 
+	@DisplayName("Trae el año planificado con sus tres trimestres")
 	@Test
 	void traeElAnioPlanificadoConSusTresTrimestres() {
 		AnioConPeriodos anio = calendario.deAnio(ANIO_2027).orElseThrow();
@@ -46,6 +49,7 @@ class CalendarioDelAnioSqlIT extends PruebaReservas {
 				"III Trimestre");
 	}
 
+	@DisplayName("Los días limite del año y de un período son inclusivos y el hueco no cuenta")
 	@Test
 	void losDiasLimiteDelAnioYDeUnPeriodoSonInclusivosYElHuecoNoCuenta() {
 		AnioConPeriodos anio = calendario.deAnio(ANIO_2026).orElseThrow();
@@ -59,6 +63,7 @@ class CalendarioDelAnioSqlIT extends PruebaReservas {
 		assertThat(anio.periodos().stream().anyMatch(p -> p.contiene(LocalDate.of(2026, 7, 27)))).isFalse();
 	}
 
+	@DisplayName("Un año inexistente no devuelve nada")
 	@Test
 	void unAnioInexistenteNoDevuelveNada() {
 		assertThat(calendario.deAnio(UUID.randomUUID())).isEmpty();

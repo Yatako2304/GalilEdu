@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.math.BigDecimal;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -32,6 +33,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 	@Autowired
 	private JdbcClient jdbc;
 
+	@DisplayName("El apoderado llega a sus hijos sus matrículas y su deuda vencida")
 	@Test
 	void elApoderadoLlegaASusHijosSusMatriculasYSuDeudaVencida() {
 		// Usuario → persona → vínculo de responsable → estudiante → matrícula/sección y compromiso → cuotas.
@@ -64,6 +66,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 		assertThat(deuda).isEqualByComparingTo("600");
 	}
 
+	@DisplayName("El compromiso tiene la matrícula diez pensiones y una constancia por pago")
 	@Test
 	void elCompromisoTieneLaMatriculaDiezPensionesYUnaConstanciaPorPago() {
 		assertThat(contar("SELECT count(*) FROM pagos.cuota WHERE compromiso_id = ?::uuid", COMPROMISO_SOFIA))
@@ -75,6 +78,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 				WHERE c.compromiso_id = ?::uuid""", COMPROMISO_SOFIA)).isEqualTo(7);
 	}
 
+	@DisplayName("Un estudiante tiene una sola matrícula por año")
 	@Test
 	void unEstudianteTieneUnaSolaMatriculaPorAnio() {
 		// Matrícula completa y válida (con sección); solo falla porque Sofía ya está matriculada en 2026.
@@ -87,6 +91,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 						.param(SOFIA).param(ANIO_2026).param("SEC-4").update());
 	}
 
+	@DisplayName("Una matrícula matriculada necesita su código")
 	@Test
 	void unaMatriculaMatriculadaNecesitaSuCodigo() {
 		// Mateo no tiene matrícula en 2026: el único problema es que está MATRICULADO sin código.
@@ -100,6 +105,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 						.param(MATEO).param(ANIO_2026).param("SEC-1").update());
 	}
 
+	@DisplayName("Una matrícula con su código si se registra")
 	@Test
 	void unaMatriculaConSuCodigoSiSeRegistra() {
 		// Contraprueba: el mismo dato con código se acepta (la regla anterior no rechaza todo).
@@ -113,6 +119,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 		assertThat(filas).isEqualTo(1);
 	}
 
+	@DisplayName("No se genera dos veces la cuota de matrícula")
 	@Test
 	void noSeGeneraDosVecesLaCuotaDeMatricula() {
 		rechazaPor("ux_cuota_una_matricula", () -> jdbc.sql("""
@@ -121,6 +128,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 				.update());
 	}
 
+	@DisplayName("Un descuento de varios años rebaja las cuotas y el monto final se calcula solo")
 	@Test
 	void unDescuentoDeVariosAniosRebajaLasCuotasYElMontoFinalSeCalculaSolo() {
 		// V7: el descuento es del estudiante, con vigencia de julio 2026 a diciembre 2028 ("por 3 años" en Figma).
@@ -132,6 +140,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 				.param(COMPROMISO_SOFIA).query(BigDecimal.class).single()).isEqualByComparingTo("540");
 	}
 
+	@DisplayName("Una cuota rebajada dice que descuento la rebajo")
 	@Test
 	void unaCuotaRebajadaDiceQueDescuentoLaRebajo() {
 		rechazaPor("ck_cuota_descuento", () -> jdbc.sql("""
@@ -139,12 +148,14 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 				.param(COMPROMISO_SOFIA).update());
 	}
 
+	@DisplayName("Solo hay un descuento activo por estudiante")
 	@Test
 	void soloHayUnDescuentoActivoPorEstudiante() {
 		aplicarDescuento(DESCUENTO_BECA, null);
 		rechazaPor("ux_descuento_aplicado_activo", () -> aplicarDescuento(DESCUENTO_ACUERDO, null));
 	}
 
+	@DisplayName("Una transacción de la pasarela no se registra dos veces")
 	@Test
 	void unaTransaccionDeLaPasarelaNoSeRegistraDosVeces() {
 		String orden = """
@@ -156,6 +167,7 @@ class EsquemaMatriculaPagosIT extends PruebaIntegracion {
 				() -> jdbc.sql(orden).param("OP-2").param(LUIS_PAREDES).update());
 	}
 
+	@DisplayName("Un documento de matrícula no puede pesar más de10 mb")
 	@Test
 	void unDocumentoDeMatriculaNoPuedePesarMasDe10Mb() {
 		rechazaPor("ck_documento_matricula_tamano", () -> jdbc.sql("""

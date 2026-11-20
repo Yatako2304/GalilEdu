@@ -12,6 +12,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -84,6 +85,7 @@ class MatriculaExtemporaneaIT extends PruebaIntegracion {
 		return mvc.perform(conToken(peticion, token(PERSONAL_ADMINISTRATIVO)));
 	}
 
+	@DisplayName("Con el período cerrado registra la matrícula extemporanea con su motivo")
 	@Test
 	void conElPeriodoCerradoRegistraLaMatriculaExtemporaneaConSuMotivo() throws Exception {
 		UUID lucia = candidato("SEC-3");
@@ -109,6 +111,7 @@ class MatriculaExtemporaneaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.meta.total").value(1));
 	}
 
+	@DisplayName("El motivo y la sección son obligatorios")
 	@Test
 	void elMotivoYLaSeccionSonObligatorios() throws Exception {
 		UUID lucia = candidato("SEC-3");
@@ -122,6 +125,7 @@ class MatriculaExtemporaneaIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("La sección debe ser del grado y tener cupo")
 	@Test
 	void laSeccionDebeSerDelGradoYTenerCupo() throws Exception {
 		UUID lucia = candidato("SEC-1");
@@ -136,6 +140,7 @@ class MatriculaExtemporaneaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("La sección 1.° A no tiene vacantes."));
 	}
 
+	@DisplayName("Con el período abierto no se registra extemporanea")
 	@Test
 	void conElPeriodoAbiertoNoSeRegistraExtemporanea() throws Exception {
 		jdbc.sql("UPDATE matricula.periodo_matricula SET cierre = now() + interval '30 days' WHERE id = ?")
@@ -146,6 +151,7 @@ class MatriculaExtemporaneaIT extends PruebaIntegracion {
 						jsonPath("$.message").value("La matrícula extemporánea se habilita cuando el periodo cierre."));
 	}
 
+	@DisplayName("Si el período no la permite se rechaza")
 	@Test
 	void siElPeriodoNoLaPermiteSeRechaza() throws Exception {
 		jdbc.sql("UPDATE matricula.periodo_matricula SET permitir_extemporanea = FALSE WHERE id = ?")
@@ -156,12 +162,14 @@ class MatriculaExtemporaneaIT extends PruebaIntegracion {
 						.value("El periodo de matrícula 2027 no permite matrículas extemporáneas."));
 	}
 
+	@DisplayName("No duplica la matrícula del año")
 	@Test
 	void noDuplicaLaMatriculaDelAnio() throws Exception {
 		registrar(UUID.fromString(MATEO), seccion("SEC-1", "B"), MOTIVO)
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("El apoderado completa una extemporanea aunque el período este cerrado")
 	@Test
 	void elApoderadoCompletaUnaExtemporaneaAunqueElPeriodoEsteCerrado() throws Exception {
 		jdbc.sql("""
@@ -178,6 +186,7 @@ class MatriculaExtemporaneaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.puedeSubir").value(true));
 	}
 
+	@DisplayName("Una matrícula regular con el período cerrado sigue bloqueada")
 	@Test
 	void unaMatriculaRegularConElPeriodoCerradoSigueBloqueada() throws Exception {
 		mvc.perform(conToken(get("/matricula/apoderado/estudiantes/{id}/estado", MATEO), token(APODERADO)))
@@ -189,6 +198,7 @@ class MatriculaExtemporaneaIT extends PruebaIntegracion {
 				.param(MATEO).query(Boolean.class).single());
 	}
 
+	@DisplayName("Otro rol no registra extemporaneas")
 	@Test
 	void otroRolNoRegistraExtemporaneas() throws Exception {
 		mvc.perform(conToken(multipart("/matricula/periodos/{id}/matriculas-extemporaneas", periodo2027())

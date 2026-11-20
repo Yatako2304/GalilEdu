@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -35,6 +36,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 	@Autowired
 	private JdbcClient jdbc;
 
+	@DisplayName("Lista los hijos con su saldo ordenados por apellido")
 	@Test
 	void listaLosHijosConSuSaldoOrdenadosPorApellido() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/estudiantes"), token(APODERADO)))
@@ -51,6 +53,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[1].cuotasVencidas").value(greaterThanOrEqualTo(1)));
 	}
 
+	@DisplayName("Muestra el cronograma con el recargo de la cuota vencida")
 	@Test
 	void muestraElCronogramaConElRecargoDeLaCuotaVencida() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/compromisos/{id}", COMPROMISO_SOFIA), token(APODERADO)))
@@ -60,6 +63,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.cuotas[?(@.nombre == 'Pensión de marzo')].recargo").value(0));
 	}
 
+	@DisplayName("Muestra el historial de pagos del más reciente al más antiguo")
 	@Test
 	void muestraElHistorialDePagosDelMasRecienteAlMasAntiguo() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/compromisos/{id}/pagos", COMPROMISO_SOFIA), token(APODERADO)))
@@ -71,6 +75,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[6].monto").value(420.0));
 	}
 
+	@DisplayName("Lista los compromisos de su hija")
 	@Test
 	void listaLosCompromisosDeSuHija() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/estudiantes/{id}/compromisos", SOFIA), token(APODERADO)))
@@ -78,6 +83,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[0].anio").value(2026));
 	}
 
+	@DisplayName("No ve la deuda de un estudiante ajeno")
 	@Test
 	void noVeLaDeudaDeUnEstudianteAjeno() throws Exception {
 		String apoderado = token(APODERADO);
@@ -85,6 +91,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Un compromiso inexistente devuelve404")
 	@Test
 	void unCompromisoInexistenteDevuelve404() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/compromisos/{id}", VALERIA), token(APODERADO)))
@@ -92,6 +99,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 	}
 
 	/** HU-42 · RF-107/108: el apoderado descarga la constancia de un pago de su hija en PDF. */
+	@DisplayName("Descarga la constancia de un pago en pdf")
 	@Test
 	void descargaLaConstanciaDeUnPagoEnPdf() throws Exception {
 		byte[] archivo = mvc.perform(conToken(get("/pagos/apoderado/pagos/{id}/constancia", pago("C-2026-00007")),
@@ -108,6 +116,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("No descarga la constancia de otra familia")
 	@Test
 	void noDescargaLaConstanciaDeOtraFamilia() throws Exception {
 		jdbc.sql("""
@@ -119,12 +128,14 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Un pago inexistente devuelve404")
 	@Test
 	void unPagoInexistenteDevuelve404() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/pagos/{id}/constancia", VALERIA), token(APODERADO)))
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("El personal no descarga constancias desde la vista del apoderado")
 	@Test
 	void elPersonalNoDescargaConstanciasDesdeLaVistaDelApoderado() throws Exception {
 		mvc.perform(conToken(get("/pagos/apoderado/pagos/{id}/constancia", pago("C-2026-00007")),
@@ -137,6 +148,7 @@ class DeudaApoderadoIT extends PruebaIntegracion {
 				.query(String.class).single();
 	}
 
+	@DisplayName("El personal usa su propia vista")
 	@Test
 	void elPersonalUsaSuPropiaVista() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);

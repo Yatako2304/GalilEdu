@@ -18,6 +18,7 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.pagos.aplicacion.DtosPagos.ConstanciaPago;
@@ -29,6 +30,7 @@ class ArchivoConstanciaPagoTests {
 	private static final OffsetDateTime PAGO = OffsetDateTime.of(2026, 9, 25, 15, 0, 0, 0, ZoneOffset.UTC);
 	private static final OffsetDateTime GENERADO = OffsetDateTime.of(2026, 11, 19, 17, 30, 0, 0, ZoneOffset.UTC);
 
+	@DisplayName("Incluye los datos del pago las cuotas el recargo y el total")
 	@Test
 	void incluyeLosDatosDelPagoLasCuotasElRecargoYElTotal() throws Exception {
 		List<CuotaConstancia> cuotas = List.of(
@@ -54,6 +56,7 @@ class ArchivoConstanciaPagoTests {
 		}
 	}
 
+	@DisplayName("Un pago observado muestra el estado y su observación")
 	@Test
 	void unPagoObservadoMuestraElEstadoYSuObservacion() throws Exception {
 		byte[] archivo = ArchivoConstanciaPago.pdf(constancia("OBSERVADO", "La pasarela confirmó S/ 10.00 menos.",
@@ -66,6 +69,7 @@ class ArchivoConstanciaPagoTests {
 		}
 	}
 
+	@DisplayName("Muchas cuotas continuan en otra página y el total va al final")
 	@Test
 	void muchasCuotasContinuanEnOtraPaginaYElTotalVaAlFinal() throws Exception {
 		List<CuotaConstancia> cuotas = IntStream.rangeClosed(1, 40)

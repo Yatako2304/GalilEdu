@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.academico.dominio.CalculoNotas.Aporte;
@@ -46,6 +47,7 @@ class CalculoNotasTests {
 		return r.periodos().get(periodo).nota().map(CalculoNotas::texto).orElse("—");
 	}
 
+	@DisplayName("Combina los cursos con su peso en cada período y promedia los períodos")
 	@Test
 	void combinaLosCursosConSuPesoEnCadaPeriodoYPromediaLosPeriodos() {
 		// Ejemplo de la ficha: P1 16 y 12 → 13,6; P2 18 y 14 → 15,6; final 14,6.
@@ -61,6 +63,7 @@ class CalculoNotasTests {
 		assertThat(r.periodos().get(0).aportes().get(ALGEBRA).nota().map(CalculoNotas::texto)).contains("16");
 	}
 
+	@DisplayName("Dentro de cada curso usa el peso de los items")
 	@Test
 	void dentroDeCadaCursoUsaElPesoDeLosItems() {
 		// Álgebra: 20 (30 %) y 10 (70 %) = 13. Con Aritmética 13 → la competencia es 13.
@@ -71,6 +74,7 @@ class CalculoNotasTests {
 		assertThat(texto(r, 0)).isEqualTo("13");
 	}
 
+	@DisplayName("Un curso sin items que cuenten no participa en el período")
 	@Test
 	void unCursoSinItemsQueCuentenNoParticipaEnElPeriodo() {
 		// Álgebra no tiene ítems registrados en el periodo: no participa y la nota no queda pendiente.
@@ -82,6 +86,7 @@ class CalculoNotasTests {
 		assertThat(r.periodos().get(0).aportes().get(ALGEBRA).conteo()).isEqualTo(Avance.VACIO);
 	}
 
+	@DisplayName("Un registro faltante deja la nota pendiente sin número")
 	@Test
 	void unRegistroFaltanteDejaLaNotaPendienteSinNumero() {
 		// A Aritmética le falta un ítem: su avance cuenta lo que falta como 0 (12 × 50 % + 0 × 50 % = 6) y no es
@@ -99,6 +104,7 @@ class CalculoNotasTests {
 		assertThat(aritmetica.nota()).isEmpty();
 	}
 
+	@DisplayName("Un registro faltante en un período deja la final pendiente")
 	@Test
 	void unRegistroFaltanteEnUnPeriodoDejaLaFinalPendiente() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60,
@@ -112,6 +118,7 @@ class CalculoNotasTests {
 		assertThat(r.avance()).isEqualTo(new Avance(3, 4));
 	}
 
+	@DisplayName("El aporte final del curso espera que todos sus períodos esten completos")
 	@Test
 	void elAporteFinalDelCursoEsperaQueTodosSusPeriodosEstenCompletos() {
 		ResultadoCompetencia completo = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60,
@@ -130,6 +137,7 @@ class CalculoNotasTests {
 		assertThat(faltante.pendiente()).isTrue();
 	}
 
+	@DisplayName("Con pesos incompletos no hay nota de competencia pero si aportes")
 	@Test
 	void conPesosIncompletosNoHayNotaDeCompetenciaPeroSiAportes() {
 		List<CursoPeso> incompletos = List.of(new CursoPeso(ALGEBRA, new BigDecimal("40")),
@@ -143,6 +151,7 @@ class CalculoNotasTests {
 		assertThat(r.periodos().get(0).aportes().get(ARITMETICA).nota().map(CalculoNotas::texto)).contains("12");
 	}
 
+	@DisplayName("Con promedio simple los cursos pesan igual")
 	@Test
 	void conPromedioSimpleLosCursosPesanIgual() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
@@ -151,6 +160,7 @@ class CalculoNotasTests {
 		assertThat(texto(r, 0)).isEqualTo("14");
 	}
 
+	@DisplayName("Con último período la final es el último período con nota")
 	@Test
 	void conUltimoPeriodoLaFinalEsElUltimoPeriodoConNota() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60,
@@ -161,6 +171,7 @@ class CalculoNotasTests {
 		assertThat(r.pendiente()).isFalse();
 	}
 
+	@DisplayName("Un período sin items no cuenta para la final")
 	@Test
 	void unPeriodoSinItemsNoCuentaParaLaFinal() {
 		// El II periodo aún no tiene ítems: no deja la final pendiente; la final usa los periodos con nota.
@@ -173,6 +184,7 @@ class CalculoNotasTests {
 		assertThat(r.periodos().get(1).nota()).isEmpty();
 	}
 
+	@DisplayName("En la escala cualitativa cada curso vota con su peso")
 	@Test
 	void enLaEscalaCualitativaCadaCursoVotaConSuPeso() {
 		// Álgebra (40 %) B y Aritmética (60 %) A: gana A con 60.
@@ -190,6 +202,7 @@ class CalculoNotasTests {
 		assertThat(texto(b, 0)).isEqualTo("B");
 	}
 
+	@DisplayName("Con último nivel los cursos también votan con su peso")
 	@Test
 	void conUltimoNivelLosCursosTambienVotanConSuPeso() {
 		// Dentro de cada curso manda el último ítem; entre cursos decide el peso, no quién calificó al último.
@@ -202,6 +215,7 @@ class CalculoNotasTests {
 		assertThat(texto(r, 0)).isEqualTo("A");
 	}
 
+	@DisplayName("Un empate de votos lo gana el nivel mayor")
 	@Test
 	void unEmpateDeVotosLoGanaElNivelMayor() {
 		List<CursoPeso> mitades = List.of(new CursoPeso(ALGEBRA, new BigDecimal("50")),
@@ -213,6 +227,7 @@ class CalculoNotasTests {
 		assertThat(texto(r, 0)).isEqualTo("A");
 	}
 
+	@DisplayName("En la escala cualitativa con pesos incompletos no hay nota")
 	@Test
 	void enLaEscalaCualitativaConPesosIncompletosNoHayNota() {
 		List<CursoPeso> incompletos = List.of(new CursoPeso(ALGEBRA, new BigDecimal("40")),
@@ -225,6 +240,7 @@ class CalculoNotasTests {
 		assertThat(r.periodos().get(0).aportes().get(ARITMETICA).nota().map(CalculoNotas::texto)).contains("B");
 	}
 
+	@DisplayName("Un curso sin items no vota")
 	@Test
 	void unCursoSinItemsNoVota() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
@@ -233,6 +249,7 @@ class CalculoNotasTests {
 		assertThat(r.periodos().get(0).pendiente()).isFalse();
 	}
 
+	@DisplayName("En la escala cualitativa un nivel faltante deja la nota pendiente")
 	@Test
 	void enLaEscalaCualitativaUnNivelFaltanteDejaLaNotaPendiente() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(List.of(P1), CURSOS_40_60,
@@ -243,6 +260,7 @@ class CalculoNotasTests {
 		assertThat(r.periodos().get(0).pendiente()).isTrue();
 	}
 
+	@DisplayName("Sin notas no hay nota ni es pendiente")
 	@Test
 	void sinNotasNoHayNotaNiEsPendiente() {
 		ResultadoCompetencia r = CalculoNotas.notaCompetencia(PERIODOS, CURSOS_40_60, List.of(),
@@ -252,6 +270,7 @@ class CalculoNotasTests {
 		assertThat(r.pendiente()).isFalse();
 	}
 
+	@DisplayName("Los pesos son completos solo si todos tienen peso y suman100")
 	@Test
 	void losPesosSonCompletosSoloSiTodosTienenPesoYSuman100() {
 		assertThat(CalculoNotas.pesosCompletos(List.of(new BigDecimal("40"), new BigDecimal("60")))).isTrue();
@@ -269,6 +288,7 @@ class CalculoNotasTests {
 		assertThat(CalculoNotas.nivel(valor, CalculoNotas.RANGOS_POR_DEFECTO)).isEqualTo(nivel);
 	}
 
+	@DisplayName("El logro es el significado del nivel sin aprobado ni desaprobado")
 	@Test
 	void elLogroEsElSignificadoDelNivelSinAprobadoNiDesaprobado() {
 		var rangos = CalculoNotas.RANGOS_POR_DEFECTO;
@@ -284,6 +304,7 @@ class CalculoNotasTests {
 		return new CalculoNotas.Nota(BigDecimal.ONE, new BigDecimal(nota), null, null);
 	}
 
+	@DisplayName("Usa los rangos de la versión de la tabla y en la cualitativa ya es un nivel")
 	@Test
 	void usaLosRangosDeLaVersionDeLaTablaYEnLaCualitativaYaEsUnNivel() {
 		// Versión programada para 2027: A empieza en 15.
@@ -296,6 +317,7 @@ class CalculoNotasTests {
 				.isEqualTo("AD");
 	}
 
+	@DisplayName("El nivel se decide con la nota que se muestra")
 	@Test
 	void elNivelSeDecideConLaNotaQueSeMuestra() {
 		var nota = new CalculoNotas.Nota(BigDecimal.ONE, new BigDecimal("13.995"), null, null);

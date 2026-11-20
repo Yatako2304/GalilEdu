@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -25,6 +26,7 @@ class UsoDeEstructuraSqlIT extends PruebaHorarios {
 		plan = plan("Álgebra", 5);
 	}
 
+	@DisplayName("Devuelve el mayor bloque de cada día sumando todas las secciones que usan la estructura")
 	@Test
 	void devuelveElMayorBloqueDeCadaDiaSumandoTodasLasSeccionesQueUsanLaEstructura() {
 		escenarioBase();
@@ -46,6 +48,7 @@ class UsoDeEstructuraSqlIT extends PruebaHorarios {
 		assertThat(uso.tieneHorarios(e1)).isTrue();
 	}
 
+	@DisplayName("Ignora los horarios de otras estructuras")
 	@Test
 	void ignoraLosHorariosDeOtrasEstructuras() {
 		escenarioBase();
@@ -58,6 +61,7 @@ class UsoDeEstructuraSqlIT extends PruebaHorarios {
 		assertThat(uso.usoPorDia(e2)).containsOnly(Map.entry(DiaSemana.VIE, 6));
 	}
 
+	@DisplayName("Una cabecera sin bloques cuenta como horario pero no como uso de días")
 	@Test
 	void unaCabeceraSinBloquesCuentaComoHorarioPeroNoComoUsoDeDias() {
 		escenarioBase();

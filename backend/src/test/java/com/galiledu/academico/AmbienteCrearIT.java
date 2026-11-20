@@ -14,6 +14,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -75,6 +76,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 
 	// ---------- Crear ----------
 
+	@DisplayName("Crea un aula con el código generado y los datos normalizados")
 	@Test
 	void creaUnAulaConElCodigoGeneradoYLosDatosNormalizados() throws Exception {
 		mvc.perform(conToken(post("/ambientes"), personal, """
@@ -90,6 +92,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("ACTIVO"));
 	}
 
+	@DisplayName("El alta queda confirmada y aparec en el listado y en las tarjetas")
 	@Test
 	void elAltaQuedaConfirmadaYAparecEnElListadoYEnLasTarjetas() throws Exception {
 		String antes = mvc.perform(conToken(get("/ambientes/resumen"), personal)).andReturn().getResponse()
@@ -111,6 +114,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.aforoTotal").value(aforoAntes + 25));
 	}
 
+	@DisplayName("El código que envie el cliente se ignora porque lo genera el sistema")
 	@Test
 	void elCodigoQueEnvieElClienteSeIgnoraPorqueLoGeneraElSistema() throws Exception {
 		mvc.perform(conToken(post("/ambientes"), personal,
@@ -123,6 +127,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 				.query(Integer.class).single()).isZero();
 	}
 
+	@DisplayName("Cada tipo lleva su propio prefijo y correlativo")
 	@Test
 	void cadaTipoLlevaSuPropioPrefijoYCorrelativo() throws Exception {
 		mvc.perform(
@@ -137,6 +142,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.codigo").value("A-207"));
 	}
 
+	@DisplayName("Un espacio especial admite más de45 y un aula regular exactamente45")
 	@Test
 	void unEspacioEspecialAdmiteMasDe45YUnAulaRegularExactamente45() throws Exception {
 		mvc.perform(conToken(post("/ambientes"), personal, solicitud("ESPACIO_ESPECIAL", PREFIJO + "Losa", 180, "[]")))
@@ -148,6 +154,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 
 	// ---------- Rechazos ----------
 
+	@DisplayName("Un nombre repetido da409 sin distinguir mayúsculas ni espacios y no crea nada")
 	@Test
 	void unNombreRepetidoDa409SinDistinguirMayusculasNiEspaciosYNoCreaNada() throws Exception {
 		int antes = contarAmbientes();
@@ -165,6 +172,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 		assertThat(contarAmbientes()).isEqualTo(antes);
 	}
 
+	@DisplayName("Un aula de46 da400 con el texto de figma y no crea nada")
 	@Test
 	void unAulaDe46Da400ConElTextoDeFigmaYNoCreaNada() throws Exception {
 		int antes = contarAmbientes();
@@ -176,6 +184,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 		assertThat(contarAmbientes()).isEqualTo(antes);
 	}
 
+	@DisplayName("Los datos invalidos dan400 con su mensaje y no crean nada")
 	@Test
 	void losDatosInvalidosDan400ConSuMensajeYNoCreanNada() throws Exception {
 		int antes = contarAmbientes();
@@ -214,6 +223,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 
 	// ---------- Permisos ----------
 
+	@DisplayName("Sin sesión da401 y no crea nada")
 	@Test
 	void sinSesionDa401YNoCreaNada() throws Exception {
 		int antes = contarAmbientes();
@@ -225,6 +235,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 		assertThat(contarAmbientes()).isEqualTo(antes);
 	}
 
+	@DisplayName("Otros roles reciben403 y no crean nada")
 	@Test
 	void otrosRolesReciben403YNoCreanNada() throws Exception {
 		int antes = contarAmbientes();

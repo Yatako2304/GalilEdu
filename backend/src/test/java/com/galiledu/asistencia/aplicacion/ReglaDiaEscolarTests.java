@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.asistencia.aplicacion.CalendarioEscolar.CalendarioDelNivel;
@@ -24,23 +25,27 @@ class ReglaDiaEscolarTests {
 				LUN_A_VIE);
 	}
 
+	@DisplayName("Un martes de bimestre es día escolar")
 	@Test
 	void unMartesDeBimestreEsDiaEscolar() {
 		assertThat(ReglaDiaEscolar.motivoNoEscolar(calendario("ACTIVO"), LocalDate.of(2026, 5, 5))).isEmpty();
 	}
 
+	@DisplayName("El primer y último día del período cuentan")
 	@Test
 	void elPrimerYUltimoDiaDelPeriodoCuentan() {
 		assertThat(ReglaDiaEscolar.motivoNoEscolar(calendario("ACTIVO"), LocalDate.of(2026, 3, 2))).isEmpty();
 		assertThat(ReglaDiaEscolar.motivoNoEscolar(calendario("ACTIVO"), LocalDate.of(2026, 5, 8))).isEmpty();
 	}
 
+	@DisplayName("Un año que no está activo no tiene días escolares")
 	@Test
 	void unAnioQueNoEstaActivoNoTieneDiasEscolares() {
 		assertThat(ReglaDiaEscolar.motivoNoEscolar(calendario("CERRADO"), LocalDate.of(2026, 5, 5)))
 				.contains("El año escolar 2026 no está activo.");
 	}
 
+	@DisplayName("Fuera del año entre bimestres y sábado no son días escolares")
 	@Test
 	void fueraDelAnioEntreBimestresYSabadoNoSonDiasEscolares() {
 		assertThat(ReglaDiaEscolar.motivoNoEscolar(calendario("ACTIVO"), LocalDate.of(2026, 2, 27)))

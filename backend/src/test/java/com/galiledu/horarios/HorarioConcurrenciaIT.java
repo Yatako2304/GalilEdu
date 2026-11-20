@@ -16,6 +16,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.test.web.servlet.MvcResult;
@@ -104,6 +105,7 @@ class HorarioConcurrenciaIT extends PruebaHorarios {
 		}
 	}
 
+	@DisplayName("Dos put con la misma versión uno gana y el otro recibe409")
 	@Test
 	void dosPutConLaMismaVersionUnoGanaYElOtroRecibe409() throws Exception {
 		assertThat(enviar(null, new Celda("LUN", 1, algebra, aula)).getResponse().getStatus()).isEqualTo(200);
@@ -122,6 +124,7 @@ class HorarioConcurrenciaIT extends PruebaHorarios {
 		assertThat(bloquesGuardados()).isEqualTo(2);
 	}
 
+	@DisplayName("Dos primeros guardados a la vez uno crea la cabecera y el otro recibe409 sin error interno")
 	@Test
 	void dosPrimerosGuardadosALaVezUnoCreaLaCabeceraYElOtroRecibe409SinErrorInterno() throws Exception {
 		List<MvcResult> resultados = enParalelo(List.of(() -> enviar(null, new Celda("LUN", 1, algebra, aula)),

@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -42,6 +43,7 @@ class ServicioCrucesHorarioTests {
 				null);
 	}
 
+	@DisplayName("Sin sección responde404 sin consultar nada")
 	@Test
 	void sinSeccionResponde404SinConsultarNada() {
 		when(secciones.buscar(SECCION)).thenReturn(Optional.empty());
@@ -54,6 +56,7 @@ class ServicioCrucesHorarioTests {
 		verifyNoInteractions(conversor, validador);
 	}
 
+	@DisplayName("Busca los cruces con el año y la sección correctos y devuelve lo del validador")
 	@Test
 	void buscaLosCrucesConElAnioYLaSeccionCorrectosYDevuelveLoDelValidador() {
 		var solicitados = List.of(new BloqueSolicitado(DiaSemana.LUN, 1, LocalTime.of(8, 0), LocalTime.of(8, 45),
@@ -69,6 +72,7 @@ class ServicioCrucesHorarioTests {
 		verify(validador).buscarCruces(ANIO, SECCION, solicitados);
 	}
 
+	@DisplayName("Si el conversor omite todo devuelve lo que dice el validador sin fallar")
 	@Test
 	void siElConversorOmiteTodoDevuelveLoQueDiceElValidadorSinFallar() {
 		when(secciones.buscar(SECCION)).thenReturn(Optional.of(seccion()));

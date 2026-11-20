@@ -16,6 +16,7 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.rendering.PDFRenderer;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.asistencia.aplicacion.DtosAsistencia.SeccionAsistencia;
@@ -29,6 +30,7 @@ import com.galiledu.asistencia.aplicacion.RangoReporte.Tipo;
 class ArchivoReporteAsistenciaTests {
 	private static final OffsetDateTime GENERADO = OffsetDateTime.of(2026, 11, 19, 20, 0, 0, 0, ZoneOffset.UTC);
 
+	@DisplayName("Incluye la sección el rango las filas y los totales")
 	@Test
 	void incluyeLaSeccionElRangoLasFilasYLosTotales() throws Exception {
 		byte[] archivo = ArchivoReporteAsistencia.pdf(reporte(List.of(
@@ -47,6 +49,7 @@ class ArchivoReporteAsistenciaTests {
 		}
 	}
 
+	@DisplayName("Una sección grande continua en otra página con el total al final")
 	@Test
 	void unaSeccionGrandeContinuaEnOtraPaginaConElTotalAlFinal() throws Exception {
 		List<FilaReporte> filas = IntStream.rangeClosed(1, 45)

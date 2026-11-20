@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,7 @@ class ServicioEstructurasHorariasTests {
 				.thenThrow(new DataIntegrityViolationException(detalleDeLaBase));
 	}
 
+	@DisplayName("El indice de la principal da el mensaje de otra persona")
 	@Test
 	void elIndiceDeLaPrincipalDaElMensajeDeOtraPersona() {
 		laBaseRechazaElGuardadoCon(
@@ -74,6 +76,7 @@ class ServicioEstructurasHorariasTests {
 				});
 	}
 
+	@DisplayName("La restricción del código da el mensaje de código repetido")
 	@Test
 	void laRestriccionDelCodigoDaElMensajeDeCodigoRepetido() {
 		laBaseRechazaElGuardadoCon(
@@ -86,6 +89,7 @@ class ServicioEstructurasHorariasTests {
 				});
 	}
 
+	@DisplayName("Cualquier otra restricción da un mensaje generico sin nombres internos")
 	@Test
 	void cualquierOtraRestriccionDaUnMensajeGenericoSinNombresInternos() {
 		for (String detalle : List.of(

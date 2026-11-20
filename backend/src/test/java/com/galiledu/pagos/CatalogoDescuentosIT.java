@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.PruebaIntegracion;
@@ -19,6 +20,7 @@ import com.jayway.jsonpath.JsonPath;
 class CatalogoDescuentosIT extends PruebaIntegracion {
 	private static final String HERMANOS = "52000000-0000-0000-0000-000000000001";
 
+	@DisplayName("Lista el catálogo ordenado por denominación")
 	@Test
 	void listaElCatalogoOrdenadoPorDenominacion() throws Exception {
 		mvc.perform(conToken(get("/pagos/descuentos"), token(PERSONAL_ADMINISTRATIVO)))
@@ -34,6 +36,7 @@ class CatalogoDescuentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[3].tramos[1].hermanosHasta").isEmpty());
 	}
 
+	@DisplayName("Registra un descuento de porcentaje único")
 	@Test
 	void registraUnDescuentoDePorcentajeUnico() throws Exception {
 		mvc.perform(conToken(post("/pagos/descuentos"), token(PERSONAL_ADMINISTRATIVO), """
@@ -45,6 +48,7 @@ class CatalogoDescuentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.conceptos", hasSize(2)));
 	}
 
+	@DisplayName("Rechaza un descuento sin conceptos o sobre el limite")
 	@Test
 	void rechazaUnDescuentoSinConceptosOSobreElLimite() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -61,6 +65,7 @@ class CatalogoDescuentosIT extends PruebaIntegracion {
 						.value("El porcentaje debe estar entre 1 % y 50 % (límite de la institución)."));
 	}
 
+	@DisplayName("No repite la denominación")
 	@Test
 	void noRepiteLaDenominacion() throws Exception {
 		mvc.perform(conToken(post("/pagos/descuentos"), token(PERSONAL_ADMINISTRATIVO), """
@@ -69,6 +74,7 @@ class CatalogoDescuentosIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("El descuento por hermanos exige dos tramos que no se superpongan")
 	@Test
 	void elDescuentoPorHermanosExigeDosTramosQueNoSeSuperpongan() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -85,6 +91,7 @@ class CatalogoDescuentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Los tramos de 2 y 3 hermanos se superponen."));
 	}
 
+	@DisplayName("Edita los tramos del descuento por hermanos")
 	@Test
 	void editaLosTramosDelDescuentoPorHermanos() throws Exception {
 		mvc.perform(conToken(put("/pagos/descuentos/{id}", HERMANOS), token(PERSONAL_ADMINISTRATIVO), """
@@ -98,6 +105,7 @@ class CatalogoDescuentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.tramos[1].porcentaje").value(18));
 	}
 
+	@DisplayName("Desactiva y reactiva un descuento")
 	@Test
 	void desactivaYReactivaUnDescuento() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -115,6 +123,7 @@ class CatalogoDescuentosIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("ACTIVO"));
 	}
 
+	@DisplayName("El limite de la institución se puede cambiar")
 	@Test
 	void elLimiteDeLaInstitucionSePuedeCambiar() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -134,6 +143,7 @@ class CatalogoDescuentosIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Otro rol no puede ver el catálogo")
 	@Test
 	void otroRolNoPuedeVerElCatalogo() throws Exception {
 		mvc.perform(conToken(get("/pagos/descuentos"), token("U20260003")))

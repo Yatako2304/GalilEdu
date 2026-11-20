@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import jakarta.mail.Session;
 import jakarta.mail.internet.MimeMessage;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.ObjectProvider;
@@ -33,6 +34,7 @@ class NotificadorCredencialesTests {
 				"https://galiledu.example/");
 	}
 
+	@DisplayName("La plantilla lleva el código el nombre escapado y ningún marcador sin reemplazar")
 	@Test
 	void laPlantillaLlevaElCodigoElNombreEscapadoYNingunMarcadorSinReemplazar() {
 		String html = NotificadorCredenciales.htmlCodigo("<b>Ana</b>", "482913", 10);
@@ -41,6 +43,7 @@ class NotificadorCredencialesTests {
 				.doesNotContain("{{", "<b>Ana</b>");
 	}
 
+	@DisplayName("Envia un correo html con el logo incrustado y la versión de texto")
 	@Test
 	void enviaUnCorreoHtmlConElLogoIncrustadoYLaVersionDeTexto() throws Exception {
 		assertThat(notificador("smtp.gmail.com").enviarCodigoRecuperacion("selene@correo.com", "Selene", "482913", 10))
@@ -58,12 +61,14 @@ class NotificadorCredencialesTests {
 		assertThat(contenido).contains("text/html", "text/plain", "Content-ID: <logo-galiledu>", "image/png");
 	}
 
+	@DisplayName("Sin smtp no envia nada y el código va al log")
 	@Test
 	void sinSmtpNoEnviaNadaYElCodigoVaAlLog() {
 		assertThat(notificador("").enviarCodigoRecuperacion("selene@correo.com", "Selene", "482913", 10)).isTrue();
 		verify(emisor, never()).send(any(MimeMessage.class));
 	}
 
+	@DisplayName("Si el servidor rechaza el correo avisa con false")
 	@Test
 	void siElServidorRechazaElCorreoAvisaConFalse() {
 		NotificadorCredenciales conSmtp = notificador("smtp.gmail.com");
@@ -72,6 +77,7 @@ class NotificadorCredencialesTests {
 		assertThat(conSmtp.enviarCodigoRecuperacion("selene@correo.com", "Selene", "482913", 10)).isFalse();
 	}
 
+	@DisplayName("La plantilla de credenciales lleva usuario contraseña y enlace sin marcadores")
 	@Test
 	void laPlantillaDeCredencialesLlevaUsuarioContrasenaYEnlaceSinMarcadores() {
 		String html = NotificadorCredenciales.htmlCredenciales("<b>Ana</b>", "U20260010", "Xy7&kq2#",
@@ -81,6 +87,7 @@ class NotificadorCredencialesTests {
 				"href=\"https://x/auth/login\"", "Cambiar contraseña").doesNotContain("{{", "<b>Ana</b>");
 	}
 
+	@DisplayName("Envia las credenciales en un correo html con el logo y el enlace al login")
 	@Test
 	void enviaLasCredencialesEnUnCorreoHtmlConElLogoYElEnlaceAlLogin() throws Exception {
 		notificador("smtp.gmail.com").enviar("ana@correo.com", "Ana", "U20260010", "Xy7kq2#a");
@@ -114,6 +121,7 @@ class NotificadorCredencialesTests {
 		return "";
 	}
 
+	@DisplayName("Sin smtp las credenciales solo van al log")
 	@Test
 	void sinSmtpLasCredencialesSoloVanAlLog() {
 		notificador("").enviar("ana@correo.com", "Ana", "U20260010", "Xy7kq2#a");

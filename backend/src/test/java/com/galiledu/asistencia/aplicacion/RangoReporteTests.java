@@ -8,6 +8,7 @@ import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.asistencia.aplicacion.CalendarioEscolar.CalendarioDelNivel;
@@ -27,6 +28,7 @@ class RangoReporteTests {
 			EnumSet.range(DayOfWeek.MONDAY, DayOfWeek.FRIDAY));
 	private static final LocalDate HOY = LocalDate.of(2026, 9, 15);
 
+	@DisplayName("Sin parametros es el mes de hoy")
 	@Test
 	void sinParametrosEsElMesDeHoy() {
 		Rango rango = RangoReporte.resolver(null, null, ANIO, HOY);
@@ -35,6 +37,7 @@ class RangoReporteTests {
 		assertThat(rango.hasta()).isEqualTo(LocalDate.of(2026, 9, 30));
 	}
 
+	@DisplayName("El primer y último mes se recortan al año escolar")
 	@Test
 	void elPrimerYUltimoMesSeRecortanAlAnioEscolar() {
 		assertThat(RangoReporte.resolver(Tipo.MES, "2026-03", ANIO, HOY).desde()).isEqualTo(LocalDate.of(2026, 3, 2));
@@ -42,6 +45,7 @@ class RangoReporteTests {
 				.isEqualTo(LocalDate.of(2026, 12, 18));
 	}
 
+	@DisplayName("Un período usa sus fechas")
 	@Test
 	void unPeriodoUsaSusFechas() {
 		Rango rango = RangoReporte.resolver(Tipo.PERIODO, "3", ANIO, HOY);
@@ -50,6 +54,7 @@ class RangoReporteTests {
 		assertThat(rango.hasta()).isEqualTo(LocalDate.of(2026, 10, 9));
 	}
 
+	@DisplayName("Un mes o período ajeno al año se rechaza")
 	@Test
 	void unMesOPeriodoAjenoAlAnioSeRechaza() {
 		assertThatThrownBy(() -> RangoReporte.resolver(Tipo.MES, "2025-12", ANIO, HOY))
@@ -60,6 +65,7 @@ class RangoReporteTests {
 				.hasMessage("El periodo no es parte del año escolar.");
 	}
 
+	@DisplayName("Solo se ofrecen los meses y períodos que ya empezaron")
 	@Test
 	void soloSeOfrecenLosMesesYPeriodosQueYaEmpezaron() {
 		assertThat(RangoReporte.meses(ANIO, HOY)).extracting(Opcion::valor).containsExactly("2026-09", "2026-08",

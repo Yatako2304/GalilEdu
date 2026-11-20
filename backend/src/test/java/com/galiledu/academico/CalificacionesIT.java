@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -111,6 +112,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.params(item, seccion, item, seccion).update();
 	}
 
+	@DisplayName("Lista solo los cursos asignados al docente")
 	@Test
 	void listaSoloLosCursosAsignadosAlDocente() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/docente/cursos"), docente))
@@ -124,6 +126,7 @@ class CalificacionesIT extends PruebaIntegracion {
 						jsonPath("$[?(@.seccion == 'B')].periodos[3].items").value(org.hamcrest.Matchers.contains(1)));
 	}
 
+	@DisplayName("Registra un item con la competencia configurada para algebra")
 	@Test
 	void registraUnItemConLaCompetenciaConfiguradaParaAlgebra() throws Exception {
 		jdbc.sql("UPDATE academico.item_competencia SET peso_porcentaje = 50 WHERE item_evaluacion_id = ?::uuid")
@@ -148,6 +151,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.competencias[0].pesoPorcentaje").value(50));
 	}
 
+	@DisplayName("Rechaza un item cuando la competencia ya tiene cien por ciento")
 	@Test
 	void rechazaUnItemCuandoLaCompetenciaYaTieneCienPorCiento() throws Exception {
 		String competencia = jdbc
@@ -163,6 +167,7 @@ class CalificacionesIT extends PruebaIntegracion {
 						jsonPath("$.message").value(org.hamcrest.Matchers.containsString("no puede superar el 100 %")));
 	}
 
+	@DisplayName("Editar no duplica el peso del propio item")
 	@Test
 	void editarNoDuplicaElPesoDelPropioItem() throws Exception {
 		String competencia = jdbc
@@ -176,6 +181,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.competencias[0].pesoPorcentaje").value(100));
 	}
 
+	@DisplayName("Registra más items sin peso en los años que no son ponderados")
 	@ParameterizedTest
 	@ValueSource(strings = {"PROMEDIO_SIMPLE", "NIVEL_MAS_FRECUENTE", "ULTIMO_NIVEL"})
 	void registraMasItemsSinPesoEnLosAniosQueNoSonPonderados(String regla) throws Exception {
@@ -198,6 +204,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.params(plan, seccion, periodo).query(Integer.class).single()).isEqualTo(3);
 	}
 
+	@DisplayName("Edita un item simple sin conservar un porcentaje sin uso")
 	@Test
 	void editaUnItemSimpleSinConservarUnPorcentajeSinUso() throws Exception {
 		usarRegla("PROMEDIO_SIMPLE");
@@ -211,6 +218,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.param(item).query(Integer.class).single()).isEqualTo(2);
 	}
 
+	@DisplayName("Exige un peso válido cuando el año es ponderado")
 	@ParameterizedTest
 	@ValueSource(strings = {"null", "0", "-1", "100.01", "0.001"})
 	void exigeUnPesoValidoCuandoElAnioEsPonderado(String peso) throws Exception {
@@ -222,6 +230,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Ingresa un peso entre 0,01 y 100 % para cada competencia."));
 	}
 
+	@DisplayName("La base permite peso nulo y conserva el rango de los porcentajes")
 	@Test
 	void laBasePermitePesoNuloYConservaElRangoDeLosPorcentajes() {
 		jdbc.sql("UPDATE academico.item_competencia SET peso_porcentaje = NULL WHERE item_evaluacion_id = ?::uuid")
@@ -235,6 +244,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.param(item).update());
 	}
 
+	@DisplayName("El promedio simple y el pdf funcionan con items compartidos sin peso")
 	@Test
 	void elPromedioSimpleYElPdfFuncionanConItemsCompartidosSinPeso() throws Exception {
 		usarRegla("PROMEDIO_SIMPLE");
@@ -264,6 +274,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.params(regla, regla.startsWith("PROMEDIO") ? "VIGESIMAL" : "CUALITATIVA", plan).update();
 	}
 
+	@DisplayName("Consolida los items seleccionados con promedio opcional")
 	@Test
 	void consolidaLosItemsSeleccionadosConPromedioOpcional() throws Exception {
 		String competencia = jdbc
@@ -284,6 +295,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.filas[0].valores.resultado").doesNotExist());
 	}
 
+	@DisplayName("Consulta el item las notas y el reporte")
 	@Test
 	void consultaElItemLasNotasYElReporte() throws Exception {
 		String base = "/calificaciones/docente/cursos/" + plan + "/secciones/" + seccion + "/periodos/" + periodo;
@@ -306,6 +318,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.filas.length()").value(2));
 	}
 
+	@DisplayName("Consolida varias competencias y exporta los mismos promedios")
 	@Test
 	void consolidaVariasCompetenciasYExportaLosMismosPromedios() throws Exception {
 		String competencias = asociarSegundaCompetencia();
@@ -330,6 +343,7 @@ class CalificacionesIT extends PruebaIntegracion {
 						content().string(org.hamcrest.Matchers.containsString(",\"17\",\"17\",\"17\",\"17\",\"17\"")));
 	}
 
+	@DisplayName("Varias competencias sin promedio muestran solo los items")
 	@Test
 	void variasCompetenciasSinPromedioMuestranSoloLosItems() throws Exception {
 		String competencias = asociarSegundaCompetencia();
@@ -341,6 +355,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.filas[0].valores.resultado_general").doesNotExist());
 	}
 
+	@DisplayName("Rechaza listas invalidas y datos ajenos en el consolidado multiple")
 	@Test
 	void rechazaListasInvalidasYDatosAjenosEnElConsolidadoMultiple() throws Exception {
 		String competencias = asociarSegundaCompetencia();
@@ -375,6 +390,7 @@ class CalificacionesIT extends PruebaIntegracion {
 		return primera + "," + segunda;
 	}
 
+	@DisplayName("Exporta el mismo reporte en csv")
 	@Test
 	void exportaElMismoReporteEnCsv() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/docente/reportes/exportar").param("tipo", "ITEM")
@@ -385,12 +401,14 @@ class CalificacionesIT extends PruebaIntegracion {
 				.andExpect(content().string(org.hamcrest.Matchers.containsString("Ana Lucía")));
 	}
 
+	@DisplayName("Un rol administrativo no puede usar el flujo del docente")
 	@Test
 	void unRolAdministrativoNoPuedeUsarElFlujoDelDocente() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/docente/cursos"), token(PERSONAL_ADMINISTRATIVO)))
 				.andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Descarga el consolidado como pdf con los mismos resultados")
 	@Test
 	void descargaElConsolidadoComoPdfConLosMismosResultados() throws Exception {
 		String competencias = asociarSegundaCompetencia();
@@ -408,6 +426,7 @@ class CalificacionesIT extends PruebaIntegracion {
 		}
 	}
 
+	@DisplayName("El pdf válida el rol y las competencias antes de generarse")
 	@Test
 	void elPdfValidaElRolYLasCompetenciasAntesDeGenerarse() throws Exception {
 		mvc.perform(conToken(get("/calificaciones/docente/reportes/exportar-pdf").param("tipo", "COMPETENCIA")
@@ -420,6 +439,7 @@ class CalificacionesIT extends PruebaIntegracion {
 				.andExpect(status().isForbidden());
 	}
 
+	@DisplayName("La base impide calificar una matrícula de otra sección")
 	@Test
 	void laBaseImpideCalificarUnaMatriculaDeOtraSeccion() {
 		String matriculaOtraSeccion = "50000000-0000-0000-0000-000000000001";

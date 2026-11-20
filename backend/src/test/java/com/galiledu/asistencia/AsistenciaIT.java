@@ -12,6 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -53,6 +54,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 		assertThat(matriculas).hasSize(3);
 	}
 
+	@DisplayName("La tutora ve su sección")
 	@Test
 	void laTutoraVeSuSeccion() throws Exception {
 		mvc.perform(conToken(get("/asistencia/secciones"), token(TUTORA)))
@@ -63,6 +65,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$[0].cargo").value("TUTOR"));
 	}
 
+	@DisplayName("Sin registrar todos están sin marcar y se puede editar")
 	@Test
 	void sinRegistrarTodosEstanSinMarcarYSePuedeEditar() throws Exception {
 		mvc.perform(conToken(get(dia(HOY)), token(TUTORA)))
@@ -74,6 +77,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.estudiantes[0].estado").value(nullValue()));
 	}
 
+	@DisplayName("Registra la asistencia con la hora de la tardanza")
 	@Test
 	void registraLaAsistenciaConLaHoraDeLaTardanza() throws Exception {
 		mvc.perform(conToken(put(dia(HOY)), token(TUTORA), cuerpo(null, "PRESENTE", "TARDANZA", "FALTA")))
@@ -89,6 +93,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.estudiantes[0].modificado").value(false));
 	}
 
+	@DisplayName("No guarda si falta marcar a un estudiante")
 	@Test
 	void noGuardaSiFaltaMarcarAUnEstudiante() throws Exception {
 		String cuerpo = """
@@ -99,6 +104,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Falta 1 estudiante por marcar."));
 	}
 
+	@DisplayName("La tardanza exige la hora de llegada")
 	@Test
 	void laTardanzaExigeLaHoraDeLlegada() throws Exception {
 		String cuerpo = """
@@ -110,6 +116,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Indica la hora de llegada de cada tardanza."));
 	}
 
+	@DisplayName("Rechaza estudiantes de otra sección")
 	@Test
 	void rechazaEstudiantesDeOtraSeccion() throws Exception {
 		String cuerpo = """
@@ -121,6 +128,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Uno de los estudiantes no pertenece a la sección."));
 	}
 
+	@DisplayName("Solo se registra la asistencia de hoy")
 	@Test
 	void soloSeRegistraLaAsistenciaDeHoy() throws Exception {
 		mvc.perform(conToken(put(dia("2026-09-14")), token(TUTORA), cuerpo(null, "PRESENTE", "PRESENTE", "FALTA")))
@@ -129,6 +137,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 						jsonPath("$.message").value("Solo puedes registrar o corregir la asistencia del día de hoy."));
 	}
 
+	@DisplayName("Un sábado no es día de clases")
 	@Test
 	void unSabadoNoEsDiaDeClases() throws Exception {
 		reloj.fijarEn(LocalDate.of(2026, 9, 19));
@@ -140,6 +149,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Entre bimestres son vacaciones")
 	@Test
 	void entreBimestresSonVacaciones() throws Exception {
 		reloj.fijarEn(LocalDate.of(2026, 10, 13));
@@ -150,6 +160,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 						.value("La fecha cae entre dos periodos académicos (vacaciones)."));
 	}
 
+	@DisplayName("Corrige el mismo día y deja historial")
 	@Test
 	void corrigeElMismoDiaYDejaHistorial() throws Exception {
 		String tutora = token(TUTORA);
@@ -167,6 +178,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.query(String.class).list()).containsExactly("FALTA>TARDANZA 08:10:00");
 	}
 
+	@DisplayName("Una corrección con una versión vieja se rechaza")
 	@Test
 	void unaCorreccionConUnaVersionViejaSeRechaza() throws Exception {
 		String tutora = token(TUTORA);
@@ -180,6 +192,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 						jsonPath("$.message").value("La asistencia cambió mientras la editabas. Vuelve a cargarla."));
 	}
 
+	@DisplayName("Registrar dos veces sin versión se rechaza")
 	@Test
 	void registrarDosVecesSinVersionSeRechaza() throws Exception {
 		String tutora = token(TUTORA);
@@ -189,6 +202,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Una corrección sin cambios no se guarda")
 	@Test
 	void unaCorreccionSinCambiosNoSeGuarda() throws Exception {
 		String tutora = token(TUTORA);
@@ -199,6 +213,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("No hay cambios que guardar."));
 	}
 
+	@DisplayName("Al día siguiente ya no se puede corregir")
 	@Test
 	void alDiaSiguienteYaNoSePuedeCorregir() throws Exception {
 		String tutora = token(TUTORA);
@@ -213,6 +228,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Una sección ajena no se ve")
 	@Test
 	void unaSeccionAjenaNoSeVe() throws Exception {
 		mvc.perform(conToken(get("/asistencia/secciones/{id}/dias/{fecha}", "30000000-0000-0000-0000-000000000099",
@@ -220,6 +236,7 @@ class AsistenciaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Solo el tutor usa asistencia")
 	@Test
 	void soloElTutorUsaAsistencia() throws Exception {
 		mvc.perform(conToken(get("/asistencia/secciones"), token(PERSONAL_ADMINISTRATIVO)))

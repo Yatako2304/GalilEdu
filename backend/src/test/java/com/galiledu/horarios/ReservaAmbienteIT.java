@@ -13,6 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.web.servlet.ResultActions;
@@ -95,6 +96,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Crear ----------
 
+	@DisplayName("Crea la reserva con sus datos y el usuario que la registra")
 	@Test
 	void creaLaReservaConSusDatosYElUsuarioQueLaRegistra() throws Exception {
 		preparar();
@@ -118,6 +120,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.isEqualTo(coordinador());
 	}
 
+	@DisplayName("Una reserva contigua a otra del mismo ambiente se permite")
 	@Test
 	void unaReservaContiguaAOtraDelMismoAmbienteSePermite() throws Exception {
 		preparar();
@@ -128,6 +131,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Regla 1: el ambiente ----------
 
+	@DisplayName("Un aula regular se rechaza con un400")
 	@Test
 	void unAulaRegularSeRechazaConUn400() throws Exception {
 		preparar();
@@ -136,6 +140,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"Elige un espacio especial activo.");
 	}
 
+	@DisplayName("Un espacio especial inactivo se rechaza con un400")
 	@Test
 	void unEspacioEspecialInactivoSeRechazaConUn400() throws Exception {
 		preparar();
@@ -145,6 +150,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"Elige un espacio especial activo.");
 	}
 
+	@DisplayName("Un ambiente inexistente se rechaza con un400")
 	@Test
 	void unAmbienteInexistenteSeRechazaConUn400() throws Exception {
 		preparar();
@@ -157,6 +163,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Regla 2: año y aforo ----------
 
+	@DisplayName("Más alumnos que el aforo se rechaza con un400")
 	@Test
 	void masAlumnosQueElAforoSeRechazaConUn400() throws Exception {
 		preparar();
@@ -167,6 +174,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"Espacio TMP-PEQ admite hasta 2 personas y la sección tiene 3 matriculados.");
 	}
 
+	@DisplayName("Tantos alumnos como el aforo se acepta")
 	@Test
 	void tantosAlumnosComoElAforoSeAcepta() throws Exception {
 		preparar();
@@ -177,6 +185,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.andExpect(status().isCreated());
 	}
 
+	@DisplayName("Con el año cerrado se responde409")
 	@Test
 	void conElAnioCerradoSeResponde409() throws Exception {
 		preparar();
@@ -186,6 +195,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		rechaza409(reservar("08:00", "09:00"), "No se puede reservar un espacio en un año cerrado.");
 	}
 
+	@DisplayName("Un responsable que no es docente ni tutor se rechaza con un400")
 	@Test
 	void unResponsableQueNoEsDocenteNiTutorSeRechazaConUn400() throws Exception {
 		preparar();
@@ -196,6 +206,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Regla 3: fecha y hora ----------
 
+	@DisplayName("Una fecha y hora pasada se rechaza con un400")
 	@Test
 	void unaFechaYHoraPasadaSeRechazaConUn400() throws Exception {
 		preparar();
@@ -205,6 +216,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"No se puede reservar en una fecha u hora que ya pasó.");
 	}
 
+	@DisplayName("Una fecha fuera del año se rechaza con un400")
 	@Test
 	void unaFechaFueraDelAnioSeRechazaConUn400() throws Exception {
 		preparar();
@@ -213,6 +225,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"La fecha debe estar dentro del año escolar 2027.");
 	}
 
+	@DisplayName("Una fecha entre dos períodos se rechaza con un400")
 	@Test
 	void unaFechaEntreDosPeriodosSeRechazaConUn400() throws Exception {
 		preparar();
@@ -222,6 +235,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"La fecha no está dentro de ningún periodo académico del año.");
 	}
 
+	@DisplayName("Un día que no es lectivo se rechaza con un400")
 	@Test
 	void unDiaQueNoEsLectivoSeRechazaConUn400() throws Exception {
 		preparar();
@@ -230,6 +244,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"El sábado no es un día de clases de esta sección.");
 	}
 
+	@DisplayName("Una reserva fuera de la jornada se rechaza con un400")
 	@Test
 	void unaReservaFueraDeLaJornadaSeRechazaConUn400() throws Exception {
 		preparar();
@@ -238,6 +253,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"La reserva debe estar dentro de la jornada de la sección, de 8:00 a 12:50.");
 	}
 
+	@DisplayName("La hora de fin debe ser posterior a la de inicio con un400")
 	@Test
 	void laHoraDeFinDebeSerPosteriorALaDeInicioConUn400() throws Exception {
 		preparar();
@@ -247,6 +263,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Regla 4: otra reserva del mismo ambiente ----------
 
+	@DisplayName("Otra reserva del mismo ambiente superpuesta se rechaza con un409")
 	@Test
 	void otraReservaDelMismoAmbienteSuperpuestaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -256,6 +273,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				+ "para Experimento el lunes 08/03/2027 de 8:00 a 9:30.");
 	}
 
+	@DisplayName("Una reserva cancelada no cuenta para los cruces")
 	@Test
 	void unaReservaCanceladaNoCuentaParaLosCruces() throws Exception {
 		preparar();
@@ -266,6 +284,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Regla 5: el ambiente frente a los horarios semanales ----------
 
+	@DisplayName("Otra sección con el ambiente en su horario se rechaza con un409")
 	@Test
 	void otraSeccionConElAmbienteEnSuHorarioSeRechazaConUn409() throws Exception {
 		preparar();
@@ -275,6 +294,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"Ambiente no disponible: 1.° R2 ya usa TMP-LAB para Álgebra el lunes de 8:00 a 8:45.");
 	}
 
+	@DisplayName("La propia sección con un aula regular en su horario se permite")
 	@Test
 	void laPropiaSeccionConUnAulaRegularEnSuHorarioSePermite() throws Exception {
 		preparar();
@@ -283,6 +303,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		reservar("08:00", "09:00").andExpect(status().isCreated());
 	}
 
+	@DisplayName("La propia sección con el mismo ambiente en su horario se rechaza con un400")
 	@Test
 	void laPropiaSeccionConElMismoAmbienteEnSuHorarioSeRechazaConUn400() throws Exception {
 		preparar();
@@ -292,6 +313,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"1.° R1 ya tiene TMP-LAB en su horario el lunes de 8:00 a 8:45; no necesita reserva.");
 	}
 
+	@DisplayName("La propia sección con otro espacio especial en su horario se rechaza con un409")
 	@Test
 	void laPropiaSeccionConOtroEspacioEspecialEnSuHorarioSeRechazaConUn409() throws Exception {
 		preparar();
@@ -302,6 +324,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Regla 7: el responsable ----------
 
+	@DisplayName("Un responsable con clase en otra sección se rechaza con un409")
 	@Test
 	void unResponsableConClaseEnOtraSeccionSeRechazaConUn409() throws Exception {
 		preparar();
@@ -312,6 +335,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				+ "con 1.° R2 el lunes de 8:00 a 8:45.");
 	}
 
+	@DisplayName("Un responsable con clase en la propia sección se permite")
 	@Test
 	void unResponsableConClaseEnLaPropiaSeccionSePermite() throws Exception {
 		preparar();
@@ -321,6 +345,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		reservar("08:00", "09:00").andExpect(status().isCreated());
 	}
 
+	@DisplayName("Un responsable de otra reserva superpuesta se rechaza con un409")
 	@Test
 	void unResponsableDeOtraReservaSuperpuestaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -332,6 +357,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Regla 8: la sección ----------
 
+	@DisplayName("Una sección con otra reserva superpuesta se rechaza con un409")
 	@Test
 	void unaSeccionConOtraReservaSuperpuestaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -343,6 +369,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Editar ----------
 
+	@DisplayName("Edita la reserva y sube la versión")
 	@Test
 	void editaLaReservaYSubeLaVersion() throws Exception {
 		preparar();
@@ -354,6 +381,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.andExpect(jsonPath("$.version").value(1));
 	}
 
+	@DisplayName("Editar con una versión vieja se rechaza con un409")
 	@Test
 	void editarConUnaVersionViejaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -365,6 +393,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"La reserva cambió mientras la editabas. Vuelve a cargarla.");
 	}
 
+	@DisplayName("Editar contra otra reserva superpuesta se rechaza con un409")
 	@Test
 	void editarContraOtraReservaSuperpuestaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -376,6 +405,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 						"Ambiente no disponible: Espacio TMP-LAB ya está reservado por 1.° R2")));
 	}
 
+	@DisplayName("Editar una reserva finalizada se rechaza con un409")
 	@Test
 	void editarUnaReservaFinalizadaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -385,6 +415,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"La reserva ya finalizó y no se puede modificar.");
 	}
 
+	@DisplayName("Editar una reserva cancelada se rechaza con un409")
 	@Test
 	void editarUnaReservaCanceladaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -394,6 +425,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"La reserva ya fue cancelada.");
 	}
 
+	@DisplayName("Editar una reserva inexistente responde404")
 	@Test
 	void editarUnaReservaInexistenteResponde404() throws Exception {
 		preparar();
@@ -405,6 +437,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Cancelar ----------
 
+	@DisplayName("Cancelar responde204 y la reserva desaparece del listado y de la lectura")
 	@Test
 	void cancelarResponde204YLaReservaDesapareceDelListadoYDeLaLectura() throws Exception {
 		preparar();
@@ -419,6 +452,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.param("id", UUID.fromString(id)).query(String.class).single()).isEqualTo("CANCELADA");
 	}
 
+	@DisplayName("Una reserva cancelada libera el ambiente")
 	@Test
 	void unaReservaCanceladaLiberaElAmbiente() throws Exception {
 		preparar();
@@ -429,6 +463,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"08:00", "09:00")).andExpect(status().isCreated());
 	}
 
+	@DisplayName("Cancelar otra vez o una finalizada se rechaza con un409")
 	@Test
 	void cancelarOtraVezOUnaFinalizadaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -440,6 +475,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		rechaza409(eliminar(RUTA + "/" + finalizada), "La reserva ya finalizó y no se puede modificar.");
 	}
 
+	@DisplayName("Cancelar con una versión vieja se rechaza con un409")
 	@Test
 	void cancelarConUnaVersionViejaSeRechazaConUn409() throws Exception {
 		preparar();
@@ -450,6 +486,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		eliminar(RUTA + "/" + id + "?version=0").andExpect(status().isNoContent());
 	}
 
+	@DisplayName("Cancelar una reserva inexistente responde404")
 	@Test
 	void cancelarUnaReservaInexistenteResponde404() throws Exception {
 		preparar();
@@ -470,6 +507,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		reserva(lab, seccionA, responsable, "2027-03-02", "08:00", "09:00", "CANCELADA");
 	}
 
+	@DisplayName("Sin filtro lista la semana de hoy de la más reciente a la más antigua")
 	@Test
 	void sinFiltroListaLaSemanaDeHoyDeLaMasRecienteALaMasAntigua() throws Exception {
 		preparar();
@@ -485,6 +523,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.andExpect(jsonPath("$.data[1].editable").value(false));
 	}
 
+	@DisplayName("El filtro semana es lo mismo que no poner filtro")
 	@Test
 	void elFiltroSemanaEsLoMismoQueNoPonerFiltro() throws Exception {
 		preparar();
@@ -493,6 +532,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		leer(RUTA + "?filtro=SEMANA").andExpect(jsonPath("$.meta.total").value(2));
 	}
 
+	@DisplayName("El filtro mes lista el mes calendario")
 	@Test
 	void elFiltroMesListaElMesCalendario() throws Exception {
 		preparar();
@@ -504,6 +544,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"2027-03-01");
 	}
 
+	@DisplayName("El filtro año lista el año calendario sin las canceladas ni las de otro año")
 	@Test
 	void elFiltroAnioListaElAnioCalendarioSinLasCanceladasNiLasDeOtroAnio() throws Exception {
 		preparar();
@@ -515,6 +556,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				"2027-03-08", "2027-03-07", "2027-03-01");
 	}
 
+	@DisplayName("La paginación divide el listado y da los totales")
 	@Test
 	void laPaginacionDivideElListadoYDaLosTotales() throws Exception {
 		preparar();
@@ -531,6 +573,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		leer(RUTA + "?filtro=ANIO&page=9&size=2").andExpect(jsonPath("$.data.length()").value(0));
 	}
 
+	@DisplayName("Un filtro desconocido se rechaza con un400")
 	@Test
 	void unFiltroDesconocidoSeRechazaConUn400() throws Exception {
 		preparar();
@@ -538,6 +581,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		leer(RUTA + "?filtro=SIEMPRE").andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Obtener devuelve la reserva y una inexistente responde404")
 	@Test
 	void obtenerDevuelveLaReservaYUnaInexistenteResponde404() throws Exception {
 		preparar();
@@ -551,6 +595,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Opciones ----------
 
+	@DisplayName("Las opciones solo traen espacios especiales activos por código y responsables docentes o tutores")
 	@Test
 	void lasOpcionesSoloTraenEspaciosEspecialesActivosPorCodigoYResponsablesDocentesOTutores() throws Exception {
 		preparar();
@@ -573,6 +618,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Cuerpo ----------
 
+	@DisplayName("Un cuerpo vacio se rechaza con un400 con un mensaje por campo")
 	@Test
 	void unCuerpoVacioSeRechazaConUn400ConUnMensajePorCampo() throws Exception {
 		preparar();
@@ -587,6 +633,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.andExpect(jsonPath("$.errores.horaFin").value("Elige la hora de fin."));
 	}
 
+	@DisplayName("La actividad en blanco o muy larga se rechaza con un400")
 	@Test
 	void laActividadEnBlancoOMuyLargaSeRechazaConUn400() throws Exception {
 		preparar();
@@ -599,6 +646,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.andExpect(jsonPath("$.errores.actividad").value("La actividad admite hasta 120 caracteres."));
 	}
 
+	@DisplayName("Una hora o una fecha mal escrita se rechaza con un400")
 	@Test
 	void unaHoraOUnaFechaMalEscritaSeRechazaConUn400() throws Exception {
 		preparar();
@@ -609,6 +657,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Editar sin la versión se rechaza con un400")
 	@Test
 	void editarSinLaVersionSeRechazaConUn400() throws Exception {
 		preparar();
@@ -619,6 +668,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 				.andExpect(jsonPath("$.errores.version").value("Falta la versión de la reserva."));
 	}
 
+	@DisplayName("Una sección inexistente responde404")
 	@Test
 	void unaSeccionInexistenteResponde404() throws Exception {
 		preparar();
@@ -629,6 +679,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 
 	// ---------- Accesos ----------
 
+	@DisplayName("Sin token cada endpoint responde401")
 	@Test
 	void sinTokenCadaEndpointResponde401() throws Exception {
 		UUID id = UUID.randomUUID();
@@ -644,6 +695,7 @@ class ReservaAmbienteIT extends PruebaReservas {
 		mvc.perform(delete(RUTA + "/" + id)).andExpect(status().isUnauthorized());
 	}
 
+	@DisplayName("Solo el coordinador entra cada otro rol recibe403 en cada endpoint")
 	@Test
 	void soloElCoordinadorEntraCadaOtroRolRecibe403EnCadaEndpoint() throws Exception {
 		UUID id = UUID.randomUUID();

@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -36,6 +37,7 @@ class CuotaMatriculaIT extends PruebaIntegracion {
 		entityManager.flush();
 	}
 
+	@DisplayName("Genera la cuota de matrícula con el tarifario y no la duplica")
 	@Test
 	void generaLaCuotaDeMatriculaConElTarifarioYNoLaDuplica() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -62,6 +64,7 @@ class CuotaMatriculaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("PENDIENTE"));
 	}
 
+	@DisplayName("No genera la cuota si el tarifario no está confirmado")
 	@Test
 	void noGeneraLaCuotaSiElTarifarioNoEstaConfirmado() throws Exception {
 		String personal = token(PERSONAL_ADMINISTRATIVO);
@@ -72,6 +75,7 @@ class CuotaMatriculaIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound());
 	}
 
+	@DisplayName("Consulta una cuota de matrícula pagada")
 	@Test
 	void consultaUnaCuotaDeMatriculaPagada() throws Exception {
 		mvc.perform(conToken(get("/pagos/matriculas/{id}/cuota-matricula", MATRICULA_SOFIA),
@@ -82,6 +86,7 @@ class CuotaMatriculaIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.fechaPago").value("2026-02-12"));
 	}
 
+	@DisplayName("No genera cuota si la matrícula ya está formalizada")
 	@Test
 	void noGeneraCuotaSiLaMatriculaYaEstaFormalizada() throws Exception {
 		mvc.perform(conToken(post("/pagos/matriculas/{id}/cuota-matricula", MATRICULA_VALERIA),
@@ -89,6 +94,7 @@ class CuotaMatriculaIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Otro rol no puede generar la cuota")
 	@Test
 	void otroRolNoPuedeGenerarLaCuota() throws Exception {
 		mvc.perform(conToken(post("/pagos/matriculas/{id}/cuota-matricula", MATRICULA_MATEO), token(APODERADO)))

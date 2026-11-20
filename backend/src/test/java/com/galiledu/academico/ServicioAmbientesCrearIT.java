@@ -19,6 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -123,6 +124,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 
 	// ---------- Altas ----------
 
+	@DisplayName("Crea un aula con el siguiente código y los datos normalizados")
 	@Test
 	void creaUnAulaConElSiguienteCodigoYLosDatosNormalizados() {
 		var creada = servicio
@@ -137,6 +139,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		assertThat(creada.estado()).isEqualTo(EstadoAmbiente.ACTIVO);
 	}
 
+	@DisplayName("El alta queda confirmada en la base")
 	@Test
 	void elAltaQuedaConfirmadaEnLaBase() {
 		var creada = servicio.crear(aula(PREFIJO + "Confirmada", 25));
@@ -150,6 +153,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 				.containsEntry("estado", "ACTIVO");
 	}
 
+	@DisplayName("Cada tipo lleva su propio prefijo y correlativo")
 	@Test
 	void cadaTipoLlevaSuPropioPrefijoYCorrelativo() {
 		assertThat(servicio.crear(espacio(PREFIJO + "Auditorio nuevo", 200)).codigo()).isEqualTo("E-001");
@@ -158,12 +162,14 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		assertThat(servicio.crear(aula(PREFIJO + "Aula 2", 30)).codigo()).isEqualTo("A-207");
 	}
 
+	@DisplayName("Un espacio especial admite más de45 y un aula regular solo hasta45")
 	@Test
 	void unEspacioEspecialAdmiteMasDe45YUnAulaRegularSoloHasta45() {
 		assertThat(servicio.crear(espacio(PREFIJO + "Losa", 180)).aforoMaximo()).isEqualTo(180);
 		assertThat(servicio.crear(aula(PREFIJO + "Aula de 45", 45)).aforoMaximo()).isEqualTo(45);
 	}
 
+	@DisplayName("El código no depende de lo que escriba el usuario")
 	@Test
 	void elCodigoNoDependeDeLoQueEscribaElUsuario() {
 		// El contrato no tiene campo "codigo": lo único que decide el código es el tipo y lo que ya existe.
@@ -173,6 +179,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 
 	// ---------- Nombre repetido ----------
 
+	@DisplayName("Rechaza un nombre repetido sin distinguir mayúsculas ni espacios sobrantes")
 	@Test
 	void rechazaUnNombreRepetidoSinDistinguirMayusculasNiEspaciosSobrantes() {
 		int antes = contarAmbientes();
@@ -185,6 +192,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		assertThat(contarAmbientes()).isEqualTo(antes);
 	}
 
+	@DisplayName("El nombre repetido incluye los inactivos y los de otro tipo")
 	@Test
 	void elNombreRepetidoIncluyeLosInactivosYLosDeOtroTipo() {
 		int antes = contarAmbientes();
@@ -196,6 +204,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		assertThat(contarAmbientes()).isEqualTo(antes);
 	}
 
+	@DisplayName("Un nombre repetido no se reintenta")
 	@Test
 	void unNombreRepetidoNoSeReintenta() {
 		rechazaCon(HttpStatus.CONFLICT, "Ya existe un ambiente llamado \"Biblioteca\".",
@@ -205,6 +214,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		verify(repositorio, times(0)).saveAndFlush(any());
 	}
 
+	@DisplayName("También rechaza el nombre de un ambiente creado antes")
 	@Test
 	void tambienRechazaElNombreDeUnAmbienteCreadoAntes() {
 		servicio.crear(aula(PREFIJO + "Única", 30));
@@ -215,6 +225,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 
 	// ---------- Datos inválidos (nunca llegan a la base) ----------
 
+	@DisplayName("Los datos invalidos dan400 sin abrir transacción ni crear nada")
 	@Test
 	void losDatosInvalidosDan400SinAbrirTransaccionNiCrearNada() {
 		int antes = contarAmbientes();
@@ -244,6 +255,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 
 	// ---------- Choque de código y reintento ----------
 
+	@DisplayName("Si otra petición se lleva el código reintenta con una transacción nueva y obtiene el siguiente")
 	@Test
 	void siOtraPeticionSeLlevaElCodigoReintentaConUnaTransaccionNuevaYObtieneElSiguiente() {
 		// 1.er intento: lista vieja -> A-101 (ya existe) -> el INSERT falla de verdad -> se deshace ese intento.
@@ -262,6 +274,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		assertThat(contarAmbientes()).isEqualTo(CODIGOS_SEMILLA.size() + 1);
 	}
 
+	@DisplayName("También reintenta con un espacio especial")
 	@Test
 	void tambienReintentaConUnEspacioEspecial() {
 		servicio.crear(espacio(PREFIJO + "Primero", 20)); // E-001, ya confirmado
@@ -273,6 +286,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		assertThat(creada.codigo()).isEqualTo("E-002");
 	}
 
+	@DisplayName("Con tres choques seguidos da409 sin crear nada")
 	@Test
 	void conTresChoquesSeguidosDa409SinCrearNada() {
 		int antes = contarAmbientes();
@@ -285,6 +299,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		assertThat(contarAmbientes()).isEqualTo(antes);
 	}
 
+	@DisplayName("Con dos choques y un tercero limpio alcanza el tercer intento")
 	@Test
 	void conDosChoquesYUnTerceroLimpioAlcanzaElTercerIntento() {
 		codigosViejosEnLosPrimerosIntentos("A", 2, CODIGOS_VIEJOS_DE_AULAS);
@@ -295,6 +310,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		verify(repositorio, times(3)).saveAndFlush(any(Ambiente.class));
 	}
 
+	@DisplayName("Otra violación de la base da409 sin reintentar")
 	@Test
 	void otraViolacionDeLaBaseDa409SinReintentar() {
 		int antes = contarAmbientes();
@@ -309,6 +325,7 @@ class ServicioAmbientesCrearIT extends PruebaIntegracion {
 		assertThat(contarAmbientes()).isEqualTo(antes);
 	}
 
+	@DisplayName("Una excepción que no es de la base no se traga")
 	@Test
 	void unaExcepcionQueNoEsDeLaBaseNoSeTraga() {
 		doThrow(new IllegalStateException("falla inesperada")).when(repositorio).saveAndFlush(any(Ambiente.class));

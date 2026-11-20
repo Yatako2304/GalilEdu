@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -39,6 +40,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 
 	// ---------- Consultas ----------
 
+	@DisplayName("Resumen cuenta activos de los registrados")
 	@Test
 	void resumenCuentaActivosDeLosRegistrados() throws Exception {
 		mvc.perform(conToken(get("/areas/resumen"), personal))
@@ -49,6 +51,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.anioActivo").value(2026));
 	}
 
+	@DisplayName("Lista las áreas en orden con sus conteos")
 	@Test
 	void listaLasAreasEnOrdenConSusConteos() throws Exception {
 		mvc.perform(conToken(get("/areas"), personal))
@@ -60,6 +63,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[11].estado").value("INACTIVA"));
 	}
 
+	@DisplayName("Detalle trae competencias y cursos con sus grados")
 	@Test
 	void detalleTraeCompetenciasYCursosConSusGrados() throws Exception {
 		mvc.perform(conToken(get("/areas/" + idArea("Matemática")), personal))
@@ -74,6 +78,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 
 	// ---------- Áreas (HU-52) ----------
 
+	@DisplayName("Crea área al final y sin descripción")
 	@Test
 	void creaAreaAlFinalYSinDescripcion() throws Exception {
 		mvc.perform(conToken(post("/areas"), personal, """
@@ -86,6 +91,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$[12].nombre").value("Tutoría"));
 	}
 
+	@DisplayName("Rechaza área con nombre repetido sin importar mayúsculas")
 	@Test
 	void rechazaAreaConNombreRepetidoSinImportarMayusculas() throws Exception {
 		mvc.perform(conToken(post("/areas"), personal, """
@@ -94,6 +100,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Ya existe un área con el nombre \"MATEMÁTICA\"."));
 	}
 
+	@DisplayName("Exige nombre del área")
 	@Test
 	void exigeNombreDelArea() throws Exception {
 		mvc.perform(conToken(post("/areas"), personal, """
@@ -102,6 +109,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("Ingresa el nombre del área."));
 	}
 
+	@DisplayName("Edita área pero no con el nombre de otra")
 	@Test
 	void editaAreaPeroNoConElNombreDeOtra() throws Exception {
 		String id = idArea("Comunicación");
@@ -114,6 +122,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Desactiva y reactiva área")
 	@Test
 	void desactivaYReactivaArea() throws Exception {
 		String id = idArea("Arte y Cultura");
@@ -126,6 +135,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("ACTIVA"));
 	}
 
+	@DisplayName("Área inexistente da404")
 	@Test
 	void areaInexistenteDa404() throws Exception {
 		mvc.perform(conToken(get("/areas/00000000-0000-0000-0000-000000000000"), personal))
@@ -135,6 +145,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 
 	// ---------- Competencias (HU-53) ----------
 
+	@DisplayName("Agrega competencia al final del área")
 	@Test
 	void agregaCompetenciaAlFinalDelArea() throws Exception {
 		String area = idArea("Matemática");
@@ -145,6 +156,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("ACTIVA"));
 	}
 
+	@DisplayName("El nombre de la competencia no se repite en el área")
 	@Test
 	void elNombreDeLaCompetenciaNoSeRepiteEnElArea() throws Exception {
 		mvc.perform(conToken(post("/areas/" + idArea("Matemática") + "/competencias"), personal, """
@@ -157,6 +169,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(status().isCreated());
 	}
 
+	@DisplayName("No agrega competencias ni cursos a un área inactiva")
 	@Test
 	void noAgregaCompetenciasNiCursosAUnAreaInactiva() throws Exception {
 		String area = idArea("Formación complementaria");
@@ -170,6 +183,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(status().isConflict());
 	}
 
+	@DisplayName("Edita y desactiva competencia")
 	@Test
 	void editaYDesactivaCompetencia() throws Exception {
 		String r = mvc.perform(conToken(get("/areas/" + idArea("Matemática")), personal))
@@ -187,6 +201,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 
 	// ---------- Cursos (HU-54) ----------
 
+	@DisplayName("Crea curso con sus grados en orden del catálogo")
 	@Test
 	void creaCursoConSusGradosEnOrdenDelCatalogo() throws Exception {
 		mvc.perform(conToken(post("/areas/" + idArea("Matemática") + "/cursos"), personal, """
@@ -198,6 +213,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.grados[2]").value("SEC-2"));
 	}
 
+	@DisplayName("Válida nombre y grados del curso")
 	@Test
 	void validaNombreYGradosDelCurso() throws Exception {
 		String area = idArea("Matemática");
@@ -215,6 +231,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.message").value("El grado \"INI-3\" no existe."));
 	}
 
+	@DisplayName("No quita un grado en el que el curso ya está planificado")
 	@Test
 	void noQuitaUnGradoEnElQueElCursoYaEstaPlanificado() throws Exception {
 		// Álgebra está en el plan 2026 de 1.° de secundaria (datos de prueba).
@@ -229,6 +246,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.grados.length()").value(2));
 	}
 
+	@DisplayName("Desactiva y reactiva curso")
 	@Test
 	void desactivaYReactivaCurso() throws Exception {
 		String id = idCurso("Computación");
@@ -241,6 +259,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 
 	// ---------- Permisos ----------
 
+	@DisplayName("Otros roles reciben403")
 	@Test
 	void elCoordinadorTambienGestionaElPlanCurricular() throws Exception {
 		String coordinador = token(COORDINADOR);
@@ -260,6 +279,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("INACTIVO"));
 	}
 
+	@DisplayName("Otros roles reciben403")
 	@Test
 	void otrosRolesReciben403() throws Exception {
 		String admin = token(ADMIN);
@@ -271,6 +291,7 @@ class PlanCurricularIT extends PruebaIntegracion {
 				.andExpect(status().isForbidden());
 	}
 
+	@DisplayName("Sin sesión da401")
 	@Test
 	void sinSesionDa401() throws Exception {
 		mvc.perform(get("/areas")).andExpect(status().isUnauthorized());

@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -48,6 +49,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.param(anio).query(UUID.class).single();
 	}
 
+	@DisplayName("El período trae su estado y los indicadores")
 	@Test
 	void elPeriodoTraeSuEstadoYLosIndicadores() throws Exception {
 		mvc.perform(conToken(get("/matricula/periodos/{id}", periodoDe(2027)), token(PERSONAL_ADMINISTRATIVO)))
@@ -61,6 +63,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.indicadores.requierenAccion").value(1));
 	}
 
+	@DisplayName("El listado muestra solo a quienes tienen matrícula")
 	@Test
 	void elListadoMuestraSoloAQuienesTienenMatricula() throws Exception {
 		mvc.perform(conToken(get("/matricula/periodos/{id}/matriculas", periodoDe(2027)),
@@ -74,6 +77,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.meta.total").value(1));
 	}
 
+	@DisplayName("Un estudiante inscrito sin matrícula no aparece ni cuenta")
 	@Test
 	void unEstudianteInscritoSinMatriculaNoApareceNiCuenta() throws Exception {
 		// Cualquier estudiante sin fila en matricula.matricula (por ejemplo, el de otro año) no se lista.
@@ -86,6 +90,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 						.value(hasItem("MAT-2026-0001")));
 	}
 
+	@DisplayName("Filtra por texto grado y estado")
 	@Test
 	void filtraPorTextoGradoYEstado() throws Exception {
 		UUID periodo = periodoDe(2027);
@@ -103,6 +108,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.meta.total").value(0));
 	}
 
+	@DisplayName("Ordena y página con una lista cerrada de columnas")
 	@Test
 	void ordenaYPaginaConUnaListaCerradaDeColumnas() throws Exception {
 		String token = token(PERSONAL_ADMINISTRATIVO);
@@ -118,6 +124,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.data[*].id", everyItem(notNullValue())));
 	}
 
+	@DisplayName("Ordena por actividad reciente y muestra la fecha de la última actividad")
 	@Test
 	void ordenaPorActividadRecienteYMuestraLaFechaDeLaUltimaActividad() throws Exception {
 		UUID periodo = periodoDe(2026);
@@ -144,6 +151,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.data[-1:].id").value(tocada.toString()));
 	}
 
+	@DisplayName("Subir un documento cuenta como actividad de la matrícula")
 	@Test
 	void subirUnDocumentoCuentaComoActividadDeLaMatricula() throws Exception {
 		UUID matricula = jdbc.sql("SELECT id FROM matricula.matricula LIMIT 1").query(UUID.class).single();
@@ -161,6 +169,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 		org.junit.jupiter.api.Assertions.assertTrue(tocada);
 	}
 
+	@DisplayName("Un período que no existe es404")
 	@Test
 	void unPeriodoQueNoExisteEs404() throws Exception {
 		mvc.perform(conToken(get("/matricula/periodos/{id}", UUID.randomUUID()), token(PERSONAL_ADMINISTRATIVO)))
@@ -211,6 +220,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 		return mvc.perform(conToken(peticion, token(PERSONAL_ADMINISTRATIVO)));
 	}
 
+	@DisplayName("El buscador muestra solo a inscritos sin matrícula")
 	@Test
 	void elBuscadorMuestraSoloAInscritosSinMatricula() throws Exception {
 		candidato("SEC-3", "Camila");
@@ -227,6 +237,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$", empty()));
 	}
 
+	@DisplayName("Al elegir al alumno muestra sus datos la sección y los documentos")
 	@Test
 	void alElegirAlAlumnoMuestraSusDatosLaSeccionYLosDocumentos() throws Exception {
 		UUID camila = candidato("SEC-3", "Camila");
@@ -241,6 +252,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[0].nombre").value("Ficha de matrícula firmada"));
 	}
 
+	@DisplayName("El personal administrativo descarga la plantilla de un documento")
 	@Test
 	void elPersonalAdministrativoDescargaLaPlantillaDeUnDocumento() throws Exception {
 		UUID documento = primerDocumento();
@@ -258,6 +270,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 						.bytes(new byte[]{'%', 'P', 'D', 'F'}));
 	}
 
+	@DisplayName("Con todos los documentos la matrícula nace en validación")
 	@Test
 	void conTodosLosDocumentosLaMatriculaNaceEnValidacion() throws Exception {
 		abrirPeriodo2027();
@@ -273,6 +286,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentosSubidos").value(documentos.size()));
 	}
 
+	@DisplayName("Guarda la matrícula con sección reservada y sus documentos")
 	@Test
 	void guardaLaMatriculaConSeccionReservadaYSusDocumentos() throws Exception {
 		abrirPeriodo2027();
@@ -300,6 +314,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$", empty()));
 	}
 
+	@DisplayName("Sin documentos también se guarda")
 	@Test
 	void sinDocumentosTambienSeGuarda() throws Exception {
 		abrirPeriodo2027();
@@ -307,6 +322,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentosSubidos").value(0));
 	}
 
+	@DisplayName("Sin cupo en la sección lo asigna a la siguiente del grado")
 	@Test
 	void sinCupoEnLaSeccionLoAsignaALaSiguienteDelGrado() throws Exception {
 		abrirPeriodo2027();
@@ -322,6 +338,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.seccion").doesNotExist());
 	}
 
+	@DisplayName("Respeta la sección elegida y si está llena la reasigna")
 	@Test
 	void respetaLaSeccionElegidaYSiEstaLlenaLaReasigna() throws Exception {
 		abrirPeriodo2027();
@@ -352,12 +369,14 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.secciones[0].etiqueta").value("3.° A"));
 	}
 
+	@DisplayName("Con el período cerrado no se asignan secciones")
 	@Test
 	void conElPeriodoCerradoNoSeAsignanSecciones() throws Exception {
 		// Los datos de prueba tienen el periodo 2027 ya vencido.
 		guardar(candidato("SEC-3", "Camila")).andExpect(status().isConflict());
 	}
 
+	@DisplayName("No se matrícula dos veces ni a un estudiante de otro año")
 	@Test
 	void noSeMatriculaDosVecesNiAUnEstudianteDeOtroAnio() throws Exception {
 		abrirPeriodo2027();
@@ -370,6 +389,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Rechaza archivos que no son pdf ni imagen o que no son del período")
 	@Test
 	void rechazaArchivosQueNoSonPdfNiImagenOQueNoSonDelPeriodo() throws Exception {
 		abrirPeriodo2027();
@@ -384,6 +404,7 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$", not(empty())));
 	}
 
+	@DisplayName("Solo el personal administrativo lo ve")
 	@Test
 	void soloElPersonalAdministrativoLoVe() throws Exception {
 		UUID periodo = periodoDe(2027);

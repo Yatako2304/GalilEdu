@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -22,6 +23,7 @@ class DirectorioDocentesSqlIT extends PruebaIntegracion {
 	@Autowired
 	private DirectorioDocentes directorioDocentes;
 
+	@DisplayName("Los elegibles son los usuarios activos con rol docente o tutor sin repetir a los que tienen ambos")
 	@Test
 	void losElegiblesSonLosUsuariosActivosConRolDocenteOTutorSinRepetirALosQueTienenAmbos() {
 		List<Docente> elegibles = directorioDocentes.elegiblesParaTutoria();
@@ -30,6 +32,7 @@ class DirectorioDocentesSqlIT extends PruebaIntegracion {
 		assertThat(elegibles).containsExactly(new Docente(MARIA_FERNANDEZ, "María Fernández Ríos"));
 	}
 
+	@DisplayName("Devuelve el nombre completo de cada usuario pedido sea cual sea su estado")
 	@Test
 	void devuelveElNombreCompletoDeCadaUsuarioPedidoSeaCualSeaSuEstado() {
 		Map<UUID, String> nombres = directorioDocentes
@@ -42,6 +45,7 @@ class DirectorioDocentesSqlIT extends PruebaIntegracion {
 				Map.entry(LEONARDO_MONTOYA_INACTIVO, "Leonardo Montoya Spray"));
 	}
 
+	@DisplayName("Ignora los ids que no existen y una lista vacia da un mapa vacio")
 	@Test
 	void ignoraLosIdsQueNoExistenYUnaListaVaciaDaUnMapaVacio() {
 		assertThat(directorioDocentes.nombresDe(List.of(UUID.randomUUID()))).isEmpty();

@@ -14,6 +14,7 @@ import java.time.LocalDate;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -50,6 +51,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				 "consolidacionPeriodos":"PROMEDIO_PERIODOS"}""".formatted(anio, inicio, fin, regimen);
 	}
 
+	@DisplayName("Crea un año bimestral planificado con cuatro períodos")
 	@Test
 	void creaUnAnioBimestralPlanificadoConCuatroPeriodos() throws Exception {
 		mvc.perform(conToken(post(RUTA), personal, solicitud(2028, "2028-03-01", "2028-12-15", "BIMESTRAL")))
@@ -67,6 +69,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos[3].fechaLimiteNotas").value("2028-12-20"));
 	}
 
+	@DisplayName("Crea un año trimestral con tres períodos")
 	@Test
 	void creaUnAnioTrimestralConTresPeriodos() throws Exception {
 		mvc.perform(conToken(post(RUTA), personal, solicitud(2029, "2029-03-01", "2029-12-14", "TRIMESTRAL")))
@@ -76,6 +79,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos[2].fechaFin").value("2029-12-14"));
 	}
 
+	@DisplayName("El año creado aparece en el listado y en el detalle")
 	@Test
 	void elAnioCreadoApareceEnElListadoYEnElDetalle() throws Exception {
 		String creado = mvc.perform(conToken(post(RUTA), personal,
@@ -95,6 +99,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos.length()").value(4));
 	}
 
+	@DisplayName("Lista los años de los datos de prueba del más reciente al más antiguo")
 	@Test
 	void listaLosAniosDeLosDatosDePruebaDelMasRecienteAlMasAntiguo() throws Exception {
 		mvc.perform(conToken(get(RUTA), personal))
@@ -107,6 +112,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$[1].cantidadPeriodos").value(4));
 	}
 
+	@DisplayName("El detalle trae los períodos ordenados por número")
 	@Test
 	void elDetalleTraeLosPeriodosOrdenadosPorNumero() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/" + ID_2026), personal))
@@ -117,6 +123,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos[2].estado").value("EN_CURSO"));
 	}
 
+	@DisplayName("El detalle trae los parametros comunes y bloquea los del año que ya empezo")
 	@Test
 	void elDetalleTraeLosParametrosComunesYBloqueaLosDelAnioQueYaEmpezo() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/" + ID_2026), personal))
@@ -127,6 +134,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.parametrosEvaluacion.editable").value(false));
 	}
 
+	@DisplayName("Configura los parametros antes de que empiece el año")
 	@Test
 	void configuraLosParametrosAntesDeQueEmpieceElAnio() throws Exception {
 		String parametros = """
@@ -140,6 +148,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.editable").value(true));
 	}
 
+	@DisplayName("No modifica los parametros cuando el año ya empezo")
 	@Test
 	void noModificaLosParametrosCuandoElAnioYaEmpezo() throws Exception {
 		String parametros = """
@@ -151,6 +160,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 						"Los parámetros de evaluación no se pueden modificar porque el año escolar ya empezó."));
 	}
 
+	@DisplayName("Rechaza una regla que no corresponde a la escala del año")
 	@Test
 	void rechazaUnaReglaQueNoCorrespondeALaEscalaDelAnio() throws Exception {
 		String parametros = """
@@ -161,6 +171,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("La regla de cálculo no corresponde a la escala elegida."));
 	}
 
+	@DisplayName("El estado del período se calcula con las fechas y el reloj de hoy")
 	@Test
 	void elEstadoDelPeriodoSeCalculaConLasFechasYElRelojDeHoy() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/" + ID_2026), personal))
@@ -170,6 +181,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.periodos[3].estado").value("PLANIFICADO"));
 	}
 
+	@DisplayName("Detalle de un año que no existe da404")
 	@Test
 	void detalleDeUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/00000000-0000-0000-0000-000000000000"), personal))
@@ -177,6 +189,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
 	}
 
+	@DisplayName("Rechaza un año duplicado")
 	@Test
 	void rechazaUnAnioDuplicado() throws Exception {
 		mvc.perform(conToken(post(RUTA), personal, solicitud(2027, "2027-03-01", "2027-12-17", "BIMESTRAL")))
@@ -184,6 +197,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Ya existe un año escolar 2027."));
 	}
 
+	@DisplayName("Rechaza fecha de fin no posterior a la de inicio")
 	@Test
 	void rechazaFechaDeFinNoPosteriorALaDeInicio() throws Exception {
 		mvc.perform(conToken(post(RUTA), personal, solicitud(2028, "2028-12-15", "2028-03-01", "BIMESTRAL")))
@@ -193,6 +207,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Rechaza un año muy corto para el regimen")
 	@Test
 	void rechazaUnAnioMuyCortoParaElRegimen() throws Exception {
 		mvc.perform(conToken(post(RUTA), personal, solicitud(2028, "2028-03-01", "2028-03-05", "BIMESTRAL")))
@@ -200,6 +215,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value(containsString("4 periodos")));
 	}
 
+	@DisplayName("Válida el rango del año y los campos obligatorios")
 	@Test
 	void validaElRangoDelAnioYLosCamposObligatorios() throws Exception {
 		mvc.perform(conToken(post(RUTA), personal, solicitud(1999, "2028-03-01", "2028-12-15", "BIMESTRAL")))
@@ -213,6 +229,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Solo el personal administrativo puede usar la configuración")
 	@Test
 	void soloElPersonalAdministrativoPuedeUsarLaConfiguracion() throws Exception {
 		String cuerpo = solicitud(2028, "2028-03-01", "2028-12-15", "BIMESTRAL");
@@ -236,6 +253,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 
 	// --- GET /actual (CI-01) ---
 
+	@DisplayName("El año actual trae el período en curso los conteos y el avance")
 	@Test
 	void elAnioActualTraeElPeriodoEnCursoLosConteosYElAvance() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/actual"), personal))
@@ -254,6 +272,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.avance").value(67));
 	}
 
+	@DisplayName("Entre dos períodos la card muestra el plazo de notas y el próximo período")
 	@Test
 	void entreDosPeriodosLaCardMuestraElPlazoDeNotasYElProximoPeriodo() throws Exception {
 		reloj.fijarEn(LocalDate.of(2026, 10, 12));
@@ -267,6 +286,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.proximoPeriodo.nombre").value("IV Bimestre"));
 	}
 
+	@DisplayName("Sin año activo no hay año actual")
 	@Test
 	void sinAnioActivoNoHayAnioActual() throws Exception {
 		jdbc.sql("UPDATE configuracion.anio_escolar SET estado = 'CERRADO' WHERE anio = 2026").update();
@@ -278,6 +298,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 
 	// --- PUT /{id} (CI-06 · Editar) ---
 
+	@DisplayName("Edita las fechas de un año planificado y regenera sus períodos")
 	@Test
 	void editaLasFechasDeUnAnioPlanificadoYRegeneraSusPeriodos() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/" + ID_2027), personal, fechas("2027-03-08", "2027-12-10")))
@@ -292,6 +313,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.param(ID_2027).query(Integer.class).single()).isEqualTo(3);
 	}
 
+	@DisplayName("Editar el año válida las fechas")
 	@Test
 	void editarElAnioValidaLasFechas() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/" + ID_2027), personal, fechas("2027-12-10", "2027-03-08")))
@@ -305,6 +327,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Ingresa la fecha de inicio."));
 	}
 
+	@DisplayName("Solo se edita un año planificado")
 	@Test
 	void soloSeEditaUnAnioPlanificado() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/" + ID_2026), personal, fechas("2026-03-02", "2026-12-18")))
@@ -314,6 +337,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.param(ID_2026).query(Integer.class).single()).isEqualTo(4);
 	}
 
+	@DisplayName("Editar un año que no existe da404")
 	@Test
 	void editarUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/00000000-0000-0000-0000-000000000000"), personal,
@@ -324,6 +348,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 
 	// --- PUT /{id}/regimen (CI-06 · Cambiar régimen) ---
 
+	@DisplayName("Cambia el regimen de un año planificado y regenera los períodos con fechas sugeridas")
 	@Test
 	void cambiaElRegimenDeUnAnioPlanificadoYRegeneraLosPeriodosConFechasSugeridas() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/" + ID_2027 + "/regimen"), personal, regimen("BIMESTRAL")))
@@ -338,6 +363,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.param(ID_2027).query(Integer.class).single()).isEqualTo(4);
 	}
 
+	@DisplayName("Solo se cambia el regimen de un año planificado")
 	@Test
 	void soloSeCambiaElRegimenDeUnAnioPlanificado() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/" + ID_2026 + "/regimen"), personal, regimen("TRIMESTRAL")))
@@ -345,6 +371,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Solo se puede modificar un año planificado."));
 	}
 
+	@DisplayName("El regimen es obligatorio y debe ser válido")
 	@Test
 	void elRegimenEsObligatorioYDebeSerValido() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/" + ID_2027 + "/regimen"), personal, "{}"))
@@ -354,6 +381,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(status().isBadRequest());
 	}
 
+	@DisplayName("Cambiar el regimen de un año que no existe da404")
 	@Test
 	void cambiarElRegimenDeUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/00000000-0000-0000-0000-000000000000/regimen"), personal,
@@ -364,6 +392,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 
 	// --- GET /{id}/requisitos (CI-06 · Antes de activar el año) ---
 
+	@DisplayName("Los requisitos del año planificado muestran los obligatorios y los recomendados")
 	@Test
 	void losRequisitosDelAnioPlanificadoMuestranLosObligatoriosYLosRecomendados() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/" + ID_2027 + "/requisitos"), personal))
@@ -380,6 +409,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.recomendados[1].detalle").value("0 de 5 grados con cursos asignados"));
 	}
 
+	@DisplayName("Un año con sus requisitos obligatorios puede activarse")
 	@Test
 	void unAnioConSusRequisitosObligatoriosPuedeActivarse() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/" + ID_2026 + "/requisitos"), personal))
@@ -388,6 +418,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.obligatorios[2].detalle").value("EH-PRI-26 · EH-SEC-26"));
 	}
 
+	@DisplayName("Los requisitos de un año que no existe dan404")
 	@Test
 	void losRequisitosDeUnAnioQueNoExisteDan404() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/00000000-0000-0000-0000-000000000000/requisitos"), personal))
@@ -397,6 +428,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 
 	// --- Listado y detalle ampliados ---
 
+	@DisplayName("El listado y el detalle traen las cantidades de secciones y estructuras")
 	@Test
 	void elListadoYElDetalleTraenLasCantidadesDeSeccionesYEstructuras() throws Exception {
 		mvc.perform(conToken(get(RUTA), personal))
@@ -429,6 +461,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.param("id", ID_2027).update();
 	}
 
+	@DisplayName("Activa un año planificado con sus requisitos y sin otro activo")
 	@Test
 	void activaUnAnioPlanificadoConSusRequisitosYSinOtroActivo() throws Exception {
 		cerrarElAnio2026PorSql();
@@ -443,6 +476,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.anio").value(2027));
 	}
 
+	@DisplayName("No activa un año mientras otro sigue activo")
 	@Test
 	void noActivaUnAnioMientrasOtroSigueActivo() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/activar"), personal))
@@ -450,6 +484,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El año 2026 sigue activo. Ciérralo antes de activar este."));
 	}
 
+	@DisplayName("No activa un año sin sus requisitos obligatorios")
 	@Test
 	void noActivaUnAnioSinSusRequisitosObligatorios() throws Exception {
 		cerrarElAnio2026PorSql();
@@ -460,6 +495,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 						jsonPath("$.message").value("Faltan requisitos obligatorios: Estructura horaria registrada."));
 	}
 
+	@DisplayName("Solo activa un año planificado")
 	@Test
 	void soloActivaUnAnioPlanificado() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/" + ID_2026 + "/activar"), personal))
@@ -467,6 +503,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Solo se puede activar un año planificado."));
 	}
 
+	@DisplayName("Activar un año que no existe da404")
 	@Test
 	void activarUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/00000000-0000-0000-0000-000000000000/activar"), personal))
@@ -474,6 +511,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
 	}
 
+	@DisplayName("Cierra el año cuando ya vencio el plazo de notas del último período")
 	@Test
 	void cierraElAnioCuandoYaVencioElPlazoDeNotasDelUltimoPeriodo() throws Exception {
 		reloj.fijarEn(LocalDate.of(2026, 12, 24)); // el límite del IV Bimestre es el 23/12
@@ -485,6 +523,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 		mvc.perform(conToken(get(RUTA + "/actual"), personal)).andExpect(status().isNotFound());
 	}
 
+	@DisplayName("No cierra el año antes de que venza el plazo de notas")
 	@Test
 	void noCierraElAnioAntesDeQueVenzaElPlazoDeNotas() throws Exception {
 		reloj.fijarEn(LocalDate.of(2026, 12, 23)); // el último día todavía se registran notas
@@ -494,6 +533,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Los docentes pueden registrar notas hasta el 23/12/2026."));
 	}
 
+	@DisplayName("Solo cierra un año activo")
 	@Test
 	void soloCierraUnAnioActivo() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/" + ID_2027 + "/cerrar"), personal))
@@ -501,6 +541,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("Solo se puede cerrar un año activo."));
 	}
 
+	@DisplayName("Cerrar un año que no existe da404")
 	@Test
 	void cerrarUnAnioQueNoExisteDa404() throws Exception {
 		mvc.perform(conToken(post(RUTA + "/00000000-0000-0000-0000-000000000000/cerrar"), personal))
@@ -508,6 +549,7 @@ class AnioEscolarIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
 	}
 
+	@DisplayName("Activar y cerrar solo lo hace el personal administrativo")
 	@Test
 	void activarYCerrarSoloLoHaceElPersonalAdministrativo() throws Exception {
 		for (String usuario : new String[]{DOCENTE, ADMIN}) {

@@ -19,6 +19,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -142,6 +143,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// --- GET listado, vigente, años disponibles ---
 
+	@DisplayName("El listado trae los períodos del más reciente al más antiguo con su estado")
 	@Test
 	void elListadoTraeLosPeriodosDelMasRecienteAlMasAntiguoConSuEstado() throws Exception {
 		mvc.perform(conToken(get(RUTA), personal))
@@ -159,6 +161,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.data[1].vigente").value(false));
 	}
 
+	@DisplayName("El listado se filtra por año y por estado y se página")
 	@Test
 	void elListadoSeFiltraPorAnioYPorEstadoYSePagina() throws Exception {
 		mvc.perform(conToken(get(RUTA).param("anio", "2026"), personal))
@@ -176,6 +179,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.meta.totalPages").value(2));
 	}
 
+	@DisplayName("Vigente es el período abierto y da404 si no hay ninguno")
 	@Test
 	void vigenteEsElPeriodoAbiertoYDa404SiNoHayNinguno() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/vigente"), personal))
@@ -197,6 +201,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("No hay un periodo de matrícula vigente."));
 	}
 
+	@DisplayName("Los años disponibles son los que aún no tienen período")
 	@Test
 	void losAniosDisponiblesSonLosQueAunNoTienenPeriodo() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/anios-disponibles"), personal))
@@ -212,6 +217,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// --- GET /nuevo y GET /{id} ---
 
+	@DisplayName("El formulario nuevo trae las secciones del año")
 	@Test
 	void elFormularioNuevoTraeLasSeccionesDelAnio() throws Exception {
 		String id2028 = anioConSecciones(2028);
@@ -231,6 +237,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.documentos.length()").value(0));
 	}
 
+	@DisplayName("El formulario nuevo pide el año y rechaza uno que ya tiene período")
 	@Test
 	void elFormularioNuevoPideElAnioYRechazaUnoQueYaTienePeriodo() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/nuevo"), personal))
@@ -244,6 +251,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El año escolar no existe."));
 	}
 
+	@DisplayName("Un período abierto se ve en solo lectura con el resumen del modal")
 	@Test
 	void unPeriodoAbiertoSeVeEnSoloLecturaConElResumenDelModal() throws Exception {
 		mvc.perform(conToken(get(RUTA + "/" + periodoDe(ID_2027)), personal))
@@ -275,6 +283,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// --- POST ---
 
+	@DisplayName("Crea el período con sus vacantes y documentos")
 	@Test
 	void creaElPeriodoConSusVacantesYDocumentos() throws Exception {
 		String id2028 = anio2028ListoParaCrear();
@@ -307,6 +316,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.data[0].anio").value(2028));
 	}
 
+	@DisplayName("Sin tarifario confirmado no se habilita la matrícula")
 	@Test
 	void sinTarifarioConfirmadoNoSeHabilitaLaMatricula() throws Exception {
 		reloj.fijarEn(fecha(2026, 11, 15));
@@ -318,6 +328,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(periodosDelAnio(id2028)).isZero();
 	}
 
+	@DisplayName("No se crea un período mientras otro sigue sin cerrar")
 	@Test
 	void noSeCreaUnPeriodoMientrasOtroSigueSinCerrar() throws Exception {
 		String id2028 = anioConSecciones(2028);
@@ -329,6 +340,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(periodosDelAnio(id2028)).isZero();
 	}
 
+	@DisplayName("Una vacante inválida da400 y no cambia nada")
 	@Test
 	void unaVacanteInvalidaDa400YNoCambiaNada() throws Exception {
 		String id2028 = anio2028ListoParaCrear();
@@ -348,6 +360,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.secciones[1].capacidad").value(30));
 	}
 
+	@DisplayName("Los datos invalidos dan400")
 	@Test
 	void losDatosInvalidosDan400() throws Exception {
 		String id2028 = anio2028ListoParaCrear();
@@ -372,6 +385,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// --- PUT /{id} ---
 
+	@DisplayName("Edita un período programado")
 	@Test
 	void editaUnPeriodoProgramado() throws Exception {
 		reloj.fijarEn(fecha(2026, 9, 1)); // el 2027 está PROGRAMADO
@@ -400,6 +414,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.documentos[4].nombre").value("Ficha nueva"));
 	}
 
+	@DisplayName("Un período abierto o cerrado no se edita")
 	@Test
 	void unPeriodoAbiertoOCerradoNoSeEdita() throws Exception {
 		mvc.perform(conToken(put(RUTA + "/" + periodoDe(ID_2027)), personal,
@@ -418,6 +433,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// --- DELETE /{id} ---
 
+	@DisplayName("Elimina un período programado sin matrículas")
 	@Test
 	void eliminaUnPeriodoProgramadoSinMatriculas() throws Exception {
 		String id2028 = anio2028ListoParaCrear();
@@ -429,6 +445,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(periodosDelAnio(id2028)).isZero();
 	}
 
+	@DisplayName("No se elimina un período programado si el año ya tiene matrículas")
 	@Test
 	void noSeEliminaUnPeriodoProgramadoSiElAnioYaTieneMatriculas() throws Exception {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -440,6 +457,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		assertThat(periodosDelAnio(ID_2027)).isEqualTo(1);
 	}
 
+	@DisplayName("Un período abierto no se elimina y uno inexistente da404")
 	@Test
 	void unPeriodoAbiertoNoSeEliminaYUnoInexistenteDa404() throws Exception {
 		mvc.perform(conToken(delete(RUTA + "/" + periodoDe(ID_2027)), personal))
@@ -450,6 +468,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// --- Plantillas ---
 
+	@DisplayName("Sube descarga y quita la plantilla de un documento")
 	@Test
 	void subeDescargaYQuitaLaPlantillaDeUnDocumento() throws Exception {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -480,6 +499,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.message").value("El documento no tiene plantilla."));
 	}
 
+	@DisplayName("Una plantilla inválida da400 y no se guarda")
 	@Test
 	void unaPlantillaInvalidaDa400YNoSeGuarda() throws Exception {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -503,6 +523,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.documentos[0].tienePlantilla").value(false));
 	}
 
+	@DisplayName("La plantilla de un período abierto solo se descarga")
 	@Test
 	void laPlantillaDeUnPeriodoAbiertoSoloSeDescarga() throws Exception {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -521,6 +542,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 				.andExpect(content().bytes(PDF));
 	}
 
+	@DisplayName("La plantilla de un documento ajeno o inexistente da404")
 	@Test
 	void laPlantillaDeUnDocumentoAjenoOInexistenteDa404() throws Exception {
 		reloj.fijarEn(fecha(2026, 9, 1));
@@ -539,6 +561,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 
 	// --- Permisos ---
 
+	@DisplayName("Solo el personal administrativo configura la matrícula")
 	@Test
 	void soloElPersonalAdministrativoConfiguraLaMatricula() throws Exception {
 		String periodo = periodoDe(ID_2027);
@@ -565,6 +588,7 @@ class PeriodoMatriculaIT extends PruebaIntegracionConfiguracion {
 		}
 	}
 
+	@DisplayName("Sin token todo da401")
 	@Test
 	void sinTokenTodoDa401() throws Exception {
 		String periodo = periodoDe(ID_2027);

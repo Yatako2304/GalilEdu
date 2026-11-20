@@ -2,6 +2,7 @@ package com.galiledu.configuracion;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -20,6 +21,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 	@Autowired
 	private JdbcClient jdbc;
 
+	@DisplayName("Los datos de prueba traen el año activo con sus períodos y secciones")
 	@Test
 	void losDatosDePruebaTraenElAnioActivoConSusPeriodosYSecciones() {
 		assertThat(jdbc.sql("SELECT anio FROM configuracion.anio_escolar WHERE estado = 'ACTIVO'")
@@ -33,6 +35,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				.isEqualTo(10);
 	}
 
+	@DisplayName("El período no guarda su estado porque se calcula con las fechas")
 	@Test
 	void elPeriodoNoGuardaSuEstadoPorqueSeCalculaConLasFechas() {
 		assertThat(
@@ -45,6 +48,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				WHERE constraint_name = 'ck_periodo_academico_estado'""")).isZero();
 	}
 
+	@DisplayName("Solo un año puede estar activo")
 	@Test
 	void soloUnAnioPuedeEstarActivo() {
 		// 2030 es un año válido; solo falla porque 2026 ya está activo.
@@ -53,6 +57,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				VALUES (2030, '2030-03-01', '2030-12-15', 'BIMESTRAL', 'ACTIVO')""").update());
 	}
 
+	@DisplayName("Acepta una configuración cualitativa compatible para todo el año")
 	@Test
 	void aceptaUnaConfiguracionCualitativaCompatibleParaTodoElAnio() {
 		jdbc.sql("""
@@ -67,6 +72,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				.isEqualTo("CUALITATIVA|ULTIMO_NIVEL|ULTIMO_PERIODO");
 	}
 
+	@DisplayName("La escala del año solo acepta valores conocidos")
 	@Test
 	void laEscalaDelAnioSoloAceptaValoresConocidos() {
 		rechazaPor("ck_anio_escala_evaluacion", () -> jdbc.sql("""
@@ -74,6 +80,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				.param(ANIO_2027).update());
 	}
 
+	@DisplayName("La regla de nota debe corresponder a la escala del año")
 	@Test
 	void laReglaDeNotaDebeCorresponderALaEscalaDelAnio() {
 		rechazaPor("ck_anio_regla_nota", () -> jdbc.sql("""
@@ -82,6 +89,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				WHERE id = ?::uuid""").param(ANIO_2027).update());
 	}
 
+	@DisplayName("La consolidación del año solo acepta valores conocidos")
 	@Test
 	void laConsolidacionDelAnioSoloAceptaValoresConocidos() {
 		rechazaPor("ck_anio_consolidacion_periodos", () -> jdbc.sql("""
@@ -89,6 +97,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				WHERE id = ?::uuid""").param(ANIO_2027).update());
 	}
 
+	@DisplayName("No se repite el nombre de una sección en el mismo grado")
 	@Test
 	void noSeRepiteElNombreDeUnaSeccionEnElMismoGrado() {
 		rechazaPor("uq_seccion_nombre", () -> jdbc.sql("""
@@ -96,6 +105,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				VALUES (?::uuid, 'SEC-1', 'A', 30)""").param(ANIO_2026).update());
 	}
 
+	@DisplayName("La capacidad de una sección va de1 a45")
 	@Test
 	void laCapacidadDeUnaSeccionVaDe1A45() {
 		rechazaPor("ck_seccion_capacidad", () -> jdbc.sql("""
@@ -103,6 +113,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				VALUES (?::uuid, 'SEC-1', 'Z', 46)""").param(ANIO_2026).update());
 	}
 
+	@DisplayName("Dos cuotas del tarifario no pueden vencer el mismo día")
 	@Test
 	void dosCuotasDelTarifarioNoPuedenVencerElMismoDia() {
 		// La cuota 11 no existe; solo falla porque el 31/03/2027 ya lo usa la pensión de marzo.
@@ -111,6 +122,7 @@ class EsquemaConfiguracionIT extends PruebaIntegracion {
 				VALUES (?::uuid, 11, 'Cuota repetida', '2027-03-31')""").param(TARIFARIO_2027).update());
 	}
 
+	@DisplayName("Los días lectivos solo aceptan lunes a sábado")
 	@Test
 	void losDiasLectivosSoloAceptanLunesASabado() {
 		rechazaPor("ck_estructura_horaria_dias", () -> jdbc.sql("""

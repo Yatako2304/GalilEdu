@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -57,12 +58,14 @@ class ServicioSeccionesIT extends PruebaIntegracion {
 
 	// ---------- Alumnos que ocupan vacante (@Formula) ----------
 
+	@DisplayName("El conteo incluye la matrícula de Sofía")
 	@Test
 	void elConteoIncluyeLaMatriculaDeSofia() {
 		assertThat(seccion(ANIO_2026, "SEC-4", "A").getAlumnosOcupanVacante()).isEqualTo(1);
 		assertThat(seccion(ANIO_2026, "SEC-4", "B").getAlumnosOcupanVacante()).isZero();
 	}
 
+	@DisplayName("Una matrícula retirada o anulada no ocupa vacante")
 	@ParameterizedTest
 	@ValueSource(strings = {"RETIRADO", "ANULADA"})
 	void unaMatriculaRetiradaOAnuladaNoOcupaVacante(String estado) {
@@ -71,6 +74,7 @@ class ServicioSeccionesIT extends PruebaIntegracion {
 		assertThat(seccion(ANIO_2026, "SEC-4", "A").getAlumnosOcupanVacante()).isZero();
 	}
 
+	@DisplayName("Una matrícula en proceso ocupa vacante desde que se reserva la sección")
 	@ParameterizedTest
 	@ValueSource(strings = {"SECCION_RESERVADA", "EN_VALIDACION", "PENDIENTE_PAGO"})
 	void unaMatriculaEnProcesoOcupaVacanteDesdeQueSeReservaLaSeccion(String estado) {
@@ -81,6 +85,7 @@ class ServicioSeccionesIT extends PruebaIntegracion {
 
 	// ---------- listarSeccionesActivasConVacantes (HU-23) ----------
 
+	@DisplayName("Lista las secciones activas por grado y nombre con su tutor capacidad y alumnos")
 	@Test
 	void listaLasSeccionesActivasPorGradoYNombreConSuTutorCapacidadYAlumnos() {
 		List<SeccionConVacantes> secciones = servicio.listarSeccionesActivasConVacantes(ANIO_2026);
@@ -102,6 +107,7 @@ class ServicioSeccionesIT extends PruebaIntegracion {
 				.isSortedAccordingTo((a, b) -> a.compareTo(b));
 	}
 
+	@DisplayName("No incluye las secciones inactivas")
 	@Test
 	void noIncluyeLasSeccionesInactivas() {
 		UUID segundoB = seccion(ANIO_2026, "SEC-2", "B").getId();
@@ -113,6 +119,7 @@ class ServicioSeccionesIT extends PruebaIntegracion {
 		assertThat(secciones).extracting(SeccionConVacantes::id).doesNotContain(segundoB);
 	}
 
+	@DisplayName("Una matrícula reservada cuenta como alumno que ocupa vacante")
 	@Test
 	void unaMatriculaReservadaCuentaComoAlumnoQueOcupaVacante() {
 		List<SeccionConVacantes> secciones = servicio.listarSeccionesActivasConVacantes(ANIO_2027);
@@ -123,6 +130,7 @@ class ServicioSeccionesIT extends PruebaIntegracion {
 		assertThat(secciones.get(0).tutor()).isNull();
 	}
 
+	@DisplayName("Listar secciones de un año que no existe da404")
 	@Test
 	void listarSeccionesDeUnAnioQueNoExisteDa404() {
 		assertThatThrownBy(() -> servicio.listarSeccionesActivasConVacantes(UUID.randomUUID()))

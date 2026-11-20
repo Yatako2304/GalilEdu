@@ -9,6 +9,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /** HU-65: reglas de la marca y de la corrección del registro diario. */
@@ -18,6 +19,7 @@ class RegistroAsistenciaTests {
 	private static final UUID LUIS = UUID.randomUUID();
 	private static final OffsetDateTime AHORA = OffsetDateTime.parse("2026-09-15T08:05:00-05:00");
 
+	@DisplayName("La tardanza exige hora y los demas estados la descartan")
 	@Test
 	void laTardanzaExigeHoraYLosDemasEstadosLaDescartan() {
 		assertThatThrownBy(() -> new MarcaAsistencia(ANA, EstadoAsistencia.TARDANZA, null))
@@ -28,6 +30,7 @@ class RegistroAsistenciaTests {
 				.isEqualTo(LocalTime.of(8, 10));
 	}
 
+	@DisplayName("Sin estado no se puede marcar")
 	@Test
 	void sinEstadoNoSePuedeMarcar() {
 		assertThatThrownBy(() -> new MarcaAsistencia(ANA, null, null))
@@ -35,6 +38,7 @@ class RegistroAsistenciaTests {
 				.hasMessage("Marca a cada estudiante como presente, tardanza o falta.");
 	}
 
+	@DisplayName("Corregir solo registra los cambios y quien los hizo")
 	@Test
 	void corregirSoloRegistraLosCambiosYQuienLosHizo() {
 		RegistroAsistencia registro = RegistroAsistencia.registrar(UUID.randomUUID(), LocalDate.of(2026, 9, 15),
@@ -56,6 +60,7 @@ class RegistroAsistenciaTests {
 		assertThat(registro.getCorregidoEn()).isEqualTo(AHORA.plusHours(1));
 	}
 
+	@DisplayName("Cambiar solo la hora de la tardanza también es una corrección")
 	@Test
 	void cambiarSoloLaHoraDeLaTardanzaTambienEsUnaCorreccion() {
 		RegistroAsistencia registro = RegistroAsistencia.registrar(UUID.randomUUID(), LocalDate.of(2026, 9, 15),
@@ -65,6 +70,7 @@ class RegistroAsistenciaTests {
 				TUTORA, AHORA)).hasSize(1);
 	}
 
+	@DisplayName("Sin cambios no se marca como corregido")
 	@Test
 	void sinCambiosNoSeMarcaComoCorregido() {
 		RegistroAsistencia registro = RegistroAsistencia.registrar(UUID.randomUUID(), LocalDate.of(2026, 9, 15),

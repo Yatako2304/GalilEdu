@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpMethod;
@@ -69,6 +70,7 @@ class MatriculaIniciadaPorApoderadoIT extends PruebaIntegracion {
 				.query(Integer.class).single();
 	}
 
+	@DisplayName("Sin matrícula puede empezar en el paso1")
 	@Test
 	void sinMatriculaPuedeEmpezarEnElPaso1() throws Exception {
 		mvc.perform(conToken(get(BASE + "/estado", MATEO), token(APODERADO)))
@@ -85,6 +87,7 @@ class MatriculaIniciadaPorApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.documentos[0].archivo").doesNotExist());
 	}
 
+	@DisplayName("Al enviar todos los documentos se crea la matrícula en validación")
 	@Test
 	void alEnviarTodosLosDocumentosSeCreaLaMatriculaEnValidacion() throws Exception {
 		enviar(MATEO, documentos())
@@ -112,6 +115,7 @@ class MatriculaIniciadaPorApoderadoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.data[*].estado", hasItem("EN_VALIDACION")));
 	}
 
+	@DisplayName("Sin todos los documentos no se crea nada")
 	@Test
 	void sinTodosLosDocumentosNoSeCreaNada() throws Exception {
 		enviar(MATEO, documentos().subList(0, 3))
@@ -121,6 +125,7 @@ class MatriculaIniciadaPorApoderadoIT extends PruebaIntegracion {
 		assertThat(matriculasDeMateo()).isZero();
 	}
 
+	@DisplayName("No se inicia dos veces")
 	@Test
 	void noSeIniciaDosVeces() throws Exception {
 		enviar(MATEO, documentos()).andExpect(status().isOk());
@@ -128,6 +133,7 @@ class MatriculaIniciadaPorApoderadoIT extends PruebaIntegracion {
 		assertThat(matriculasDeMateo()).isEqualTo(1);
 	}
 
+	@DisplayName("Sin matrícula no se sube uno por uno ni se envia por separado")
 	@Test
 	void sinMatriculaNoSeSubeUnoPorUnoNiSeEnviaPorSeparado() throws Exception {
 		mvc.perform(conToken(post(BASE + "/enviar-validacion", MATEO), token(APODERADO)))
@@ -140,6 +146,7 @@ class MatriculaIniciadaPorApoderadoIT extends PruebaIntegracion {
 		assertThat(matriculasDeMateo()).isZero();
 	}
 
+	@DisplayName("Con el período cerrado no puede iniciar")
 	@Test
 	void conElPeriodoCerradoNoPuedeIniciar() throws Exception {
 		jdbc.sql("UPDATE matricula.periodo_matricula SET cierre = now() - interval '1 day' WHERE id = " + PERIODO_2027)
@@ -153,6 +160,7 @@ class MatriculaIniciadaPorApoderadoIT extends PruebaIntegracion {
 		assertThat(matriculasDeMateo()).isZero();
 	}
 
+	@DisplayName("Un hijo inscrito para otro año no puede iniciar")
 	@Test
 	void unHijoInscritoParaOtroAnioNoPuedeIniciar() throws Exception {
 		mvc.perform(conToken(get(BASE + "/estado", SOFIA), token(APODERADO)))
@@ -161,6 +169,7 @@ class MatriculaIniciadaPorApoderadoIT extends PruebaIntegracion {
 		enviar(SOFIA, documentos()).andExpect(status().isConflict());
 	}
 
+	@DisplayName("No inicia la matrícula de un estudiante que no está a su cargo")
 	@Test
 	void noIniciaLaMatriculaDeUnEstudianteQueNoEstaASuCargo() throws Exception {
 		enviar(VALERIA, documentos()).andExpect(status().isNotFound());

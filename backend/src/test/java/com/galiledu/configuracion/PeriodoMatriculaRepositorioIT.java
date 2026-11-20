@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import jakarta.persistence.EntityManager;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.simple.JdbcClient;
@@ -73,6 +74,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 
 	// --- Mapeo ---
 
+	@DisplayName("Lee el periodo2027 habilitado con sus cuatro documentos")
 	@Test
 	void leeElPeriodo2027HabilitadoConSusCuatroDocumentos() {
 		PeriodoMatricula p = periodo(ANIO_2027);
@@ -91,6 +93,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 		assertThat(p.getDocumentos()).noneMatch(DocumentoRequerido::tienePlantilla);
 	}
 
+	@DisplayName("El periodo2026 está guardado como cerrado")
 	@Test
 	void elPeriodo2026EstaGuardadoComoCerrado() {
 		assertThat(periodo(ANIO_2026).getEstado()).isEqualTo(EstadoPeriodoMatricula.CERRADO);
@@ -101,6 +104,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 				.containsExactly(ANIO_2027, ANIO_2026);
 	}
 
+	@DisplayName("Guarda un período con sus documentos y lo edita sin chocar con los unique")
 	@Test
 	void guardaUnPeriodoConSusDocumentosYLoEditaSinChocarConLosUnique() {
 		UUID anio = anioPorSql(2028, "PLANIFICADO");
@@ -127,6 +131,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 		assertThat(leido.getCierre()).isEqualTo(Instant.parse("2028-02-20T15:00:00Z"));
 	}
 
+	@DisplayName("Un período sin documentos se guarda y se elimina con sus documentos")
 	@Test
 	void unPeriodoSinDocumentosSeGuardaYSeEliminaConSusDocumentos() {
 		UUID anio = anioPorSql(2028, "PLANIFICADO");
@@ -142,6 +147,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 
 	// --- Plantillas ---
 
+	@DisplayName("Guarda lee reemplaza y quita la plantilla de un documento")
 	@Test
 	void guardaLeeReemplazaYQuitaLaPlantillaDeUnDocumento() {
 		UUID documento = primerDocumento(ANIO_2027);
@@ -170,12 +176,14 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 		assertThat(periodo(ANIO_2027).getDocumentos().getFirst().tienePlantilla()).isFalse();
 	}
 
+	@DisplayName("Guardar la plantilla de un documento que no existe devuelve false")
 	@Test
 	void guardarLaPlantillaDeUnDocumentoQueNoExisteDevuelveFalse() {
 		assertThat(consultas.guardarPlantilla(UUID.randomUUID(), "ficha.pdf", "application/pdf", new byte[]{1}))
 				.isFalse();
 	}
 
+	@DisplayName("Editar un período no borra la plantilla de los documentos que se conservan")
 	@Test
 	void editarUnPeriodoNoBorraLaPlantillaDeLosDocumentosQueSeConservan() {
 		UUID anio = anioPorSql(2028, "PLANIFICADO");
@@ -201,6 +209,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 
 	// --- Consultas ---
 
+	@DisplayName("Cuenta las matrículas que ocupan vacante de cada año")
 	@Test
 	void cuentaLasMatriculasQueOcupanVacanteDeCadaAnio() {
 		assertThat(consultas.matriculasDelAnio(ANIO_2026)).isEqualTo(contar(ANIO_2026));
@@ -215,6 +224,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 				.param(anio).query(Integer.class).single();
 	}
 
+	@DisplayName("Las matrículas anuladas no ocupan vacante pero si impiden eliminar")
 	@Test
 	void lasMatriculasAnuladasNoOcupanVacantePeroSiImpidenEliminar() {
 		jdbc.sql("UPDATE matricula.matricula SET estado = 'ANULADA' WHERE id = ?").param(MATRICULA_2027).update();
@@ -224,12 +234,14 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 		assertThat(consultas.tieneMatriculas(ANIO_2027)).isTrue();
 	}
 
+	@DisplayName("Un año sin matrículas no las tiene")
 	@Test
 	void unAnioSinMatriculasNoLasTiene() {
 		assertThat(consultas.tieneMatriculas(anioPorSql(2028, "PLANIFICADO"))).isFalse();
 		assertThat(consultas.tieneMatriculas(ANIO_2026)).isTrue();
 	}
 
+	@DisplayName("Detecta las entregas de documentos de un período")
 	@Test
 	void detectaLasEntregasDeDocumentosDeUnPeriodo() {
 		PeriodoMatricula p2026 = periodo(ANIO_2026);
@@ -249,6 +261,7 @@ class PeriodoMatriculaRepositorioIT extends PruebaIntegracion {
 		assertThat(consultas.tieneEntregas(p2027.getId())).isFalse();
 	}
 
+	@DisplayName("Lista los años planificados o activos que aún no tienen período")
 	@Test
 	void listaLosAniosPlanificadosOActivosQueAunNoTienenPeriodo() {
 		assertThat(consultas.aniosSinPeriodo()).isEmpty(); // 2026 y 2027 ya tienen el suyo

@@ -11,6 +11,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 
@@ -51,6 +52,7 @@ class ServicioHorarioDocenteTests {
 				List.of(new RecesoDeJornada(1, entrada.plusMinutes(45), entrada.plusMinutes(65)))));
 	}
 
+	@DisplayName("Agrupa las clases por estructura con la jornada de cada una")
 	@Test
 	void agrupaLasClasesPorEstructuraConLaJornadaDeCadaUna() {
 		var anio = new AnioConClases(ANIO_2027, 2027, "ACTIVO");
@@ -77,6 +79,7 @@ class ServicioHorarioDocenteTests {
 		assertThat(h.horarios().get(0).clases().get(0).ambiente()).isEqualTo("Aula 1");
 	}
 
+	@DisplayName("Primaria va antes que secundaria aunque la primera clase sea de secundaria")
 	@Test
 	void primariaVaAntesQueSecundariaAunqueLaPrimeraClaseSeaDeSecundaria() {
 		when(clases.aniosDe(DOCENTE)).thenReturn(List.of(new AnioConClases(ANIO_2027, 2027, "ACTIVO")));
@@ -90,6 +93,7 @@ class ServicioHorarioDocenteTests {
 				.containsExactly("PRIMARIA", "SECUNDARIA");
 	}
 
+	@DisplayName("Con dos estructuras del mismo nivel el título lleva el código")
 	@Test
 	void conDosEstructurasDelMismoNivelElTituloLlevaElCodigo() {
 		when(clases.aniosDe(DOCENTE)).thenReturn(List.of(new AnioConClases(ANIO_2027, 2027, "ACTIVO")));
@@ -105,6 +109,7 @@ class ServicioHorarioDocenteTests {
 				.containsExactly("Primaria", "Secundaria · EH-SEC-26", "Secundaria · EH-SEC-27");
 	}
 
+	@DisplayName("Sin año usa el activo si tiene clases aunque haya uno más reciente")
 	@Test
 	void sinAnioUsaElActivoSiTieneClasesAunqueHayaUnoMasReciente() {
 		var planificado = new AnioConClases(UUID.randomUUID(), 2028, "PLANIFICADO");
@@ -117,6 +122,7 @@ class ServicioHorarioDocenteTests {
 		verify(clases).clasesDe(DOCENTE, ANIO_2027);
 	}
 
+	@DisplayName("Sin año y sin activo con clases usa el más reciente")
 	@Test
 	void sinAnioYSinActivoConClasesUsaElMasReciente() {
 		var reciente = new AnioConClases(ANIO_2027, 2027, "CERRADO");
@@ -125,6 +131,7 @@ class ServicioHorarioDocenteTests {
 		assertThat(servicio.horarioDelDocente(DOCENTE, null).anio().anio()).isEqualTo(2027);
 	}
 
+	@DisplayName("Sin clases en ningún año responder año null y horarios vacio")
 	@Test
 	void sinClasesEnNingunAnioResponderAnioNullYHorariosVacio() {
 		when(clases.aniosDe(DOCENTE)).thenReturn(List.of());
@@ -136,6 +143,7 @@ class ServicioHorarioDocenteTests {
 		verifyNoInteractions(jornadas);
 	}
 
+	@DisplayName("Un año inexistente responde404")
 	@Test
 	void unAnioInexistenteResponde404() {
 		when(anios.anios()).thenReturn(List.of(new AnioLeido(ANIO_2027, 2027, "ACTIVO")));
@@ -147,6 +155,7 @@ class ServicioHorarioDocenteTests {
 				});
 	}
 
+	@DisplayName("Un año sin clases devuelve horarios vacio con los datos del año")
 	@Test
 	void unAnioSinClasesDevuelveHorariosVacioConLosDatosDelAnio() {
 		when(anios.anios()).thenReturn(List.of(new AnioLeido(ANIO_2026, 2026, "CERRADO")));
@@ -160,6 +169,7 @@ class ServicioHorarioDocenteTests {
 		assertThat(h.horarios()).isEmpty();
 	}
 
+	@DisplayName("Dos clases en la misma celda se conservan")
 	@Test
 	void dosClasesEnLaMismaCeldaSeConservan() {
 		when(clases.aniosDe(DOCENTE)).thenReturn(List.of(new AnioConClases(ANIO_2027, 2027, "ACTIVO")));
@@ -174,6 +184,7 @@ class ServicioHorarioDocenteTests {
 		assertThat(cl).extracting(c -> c.numeroBloque()).containsOnly(1);
 	}
 
+	@DisplayName("Años del docente delega en el puerto")
 	@Test
 	void aniosDelDocenteDelegaEnElPuerto() {
 		when(clases.aniosDe(DOCENTE)).thenReturn(List.of(new AnioConClases(ANIO_2027, 2027, "ACTIVO")));

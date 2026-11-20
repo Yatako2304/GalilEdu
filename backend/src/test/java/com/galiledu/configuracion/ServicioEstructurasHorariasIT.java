@@ -12,6 +12,7 @@ import java.util.UUID;
 import jakarta.persistence.EntityManager;
 
 import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -156,6 +157,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 
 	// ---------- Listar y detalle ----------
 
+	@DisplayName("Lista las estructuras de un año con sus indicadores")
 	@Test
 	void listaLasEstructurasDeUnAnioConSusIndicadores() {
 		EstructurasHorariasDelAnio lista = servicio.listarPorAnioEscolar(ANIO_2026);
@@ -178,6 +180,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(lista.estructuras().get(1).horaSalida()).isEqualTo("14:50");
 	}
 
+	@DisplayName("Un año planificado sin estructuras se marca modificable")
 	@Test
 	void unAnioPlanificadoSinEstructurasSeMarcaModificable() {
 		EstructurasHorariasDelAnio lista = servicio.listarPorAnioEscolar(ANIO_2027);
@@ -186,12 +189,14 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(lista.estructuras()).isEmpty();
 	}
 
+	@DisplayName("Listar de un año que no existe da404")
 	@Test
 	void listarDeUnAnioQueNoExisteDa404() {
 		assertRechazo(() -> servicio.listarPorAnioEscolar(UUID.randomUUID()), HttpStatus.NOT_FOUND,
 				"El año escolar no existe.");
 	}
 
+	@DisplayName("El detalle trae la jornada calculada fila por fila")
 	@Test
 	void elDetalleTraeLaJornadaCalculadaFilaPorFila() {
 		DetalleEstructuraHoraria detalle = servicio.detalleEstructuraHoraria(EH_PRI_26);
@@ -213,6 +218,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(detalle.jornada().get(9).fin()).isEqualTo("14:20");
 	}
 
+	@DisplayName("El detalle de una estructura que no existe da404")
 	@Test
 	void elDetalleDeUnaEstructuraQueNoExisteDa404() {
 		assertRechazo(() -> servicio.detalleEstructuraHoraria(UUID.randomUUID()), HttpStatus.NOT_FOUND,
@@ -221,6 +227,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 
 	// ---------- Crear ----------
 
+	@DisplayName("La primera estructura de un nivel nace como principal aunque no se marque")
 	@Test
 	void laPrimeraEstructuraDeUnNivelNaceComoPrincipalAunqueNoSeMarque() {
 		EstructuraGuardada guardada = servicio.crearEstructuraHoraria(ANIO_2027,
@@ -234,6 +241,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(deLaLista("EH-PRI-27").bloquesPorSemana()).isEqualTo(30);
 	}
 
+	@DisplayName("La segunda del nivel no es principal salvo que se marque")
 	@Test
 	void laSegundaDelNivelNoEsPrincipalSalvoQueSeMarque() {
 		crear("EH-A", "PRIMARIA", null);
@@ -245,6 +253,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(deLaLista("EH-A").esPrincipal()).isTrue();
 	}
 
+	@DisplayName("Marcar como principal al crear baja la anterior en la misma transacción y avisa")
 	@Test
 	void marcarComoPrincipalAlCrearBajaLaAnteriorEnLaMismaTransaccionYAvisa() {
 		crear("EH-A", "PRIMARIA", null);
@@ -259,6 +268,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 						+ " deja de serlo.");
 	}
 
+	@DisplayName("Cada nivel tiene su propia principal")
 	@Test
 	void cadaNivelTieneSuPropiaPrincipal() {
 		crear("EH-PRI", "PRIMARIA", null);
@@ -268,6 +278,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(deLaLista("EH-SEC").esPrincipal()).isTrue();
 	}
 
+	@DisplayName("Guarda los recesos y calcula la salida")
 	@Test
 	void guardaLosRecesosYCalculaLaSalida() {
 		EstructuraGuardada guardada = servicio.crearEstructuraHoraria(ANIO_2027,
@@ -279,12 +290,14 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(guardada.estructura().horaSalida()).isEqualTo("13:00");
 	}
 
+	@DisplayName("El código lo genera el backend con la sigla del nivel y el año")
 	@Test
 	void elCodigoLoGeneraElBackendConLaSiglaDelNivelYElAnio() {
 		assertThat(guardar("A", "PRIMARIA", null).estructura().codigo()).isEqualTo("EH-PRI-27");
 		assertThat(guardar("B", "SECUNDARIA", null).estructura().codigo()).isEqualTo("EH-SEC-27");
 	}
 
+	@DisplayName("Si el código ya existe en el año agrega el sufijo2 y3")
 	@Test
 	void siElCodigoYaExisteEnElAnioAgregaElSufijo2Y3() {
 		assertThat(guardar("A", "PRIMARIA", null).estructura().codigo()).isEqualTo("EH-PRI-27");
@@ -293,6 +306,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(guardar("D", "SECUNDARIA", null).estructura().codigo()).isEqualTo("EH-SEC-27");
 	}
 
+	@DisplayName("Un código que llega en la solicitud de crear se ignora")
 	@Test
 	void unCodigoQueLlegaEnLaSolicitudDeCrearSeIgnora() {
 		EstructuraGuardada guardada = servicio.crearEstructuraHoraria(ANIO_2027,
@@ -301,6 +315,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(guardada.estructura().codigo()).isEqualTo("EH-PRI-27");
 	}
 
+	@DisplayName("Dos años distintos pueden repetir el código base")
 	@Test
 	void dosAniosDistintosPuedenRepetirElCodigoBase() {
 		// 2000 y 2100 terminan en «00»: el código base es el mismo en los dos años y no choca porque es único por año.
@@ -313,6 +328,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(primero).isEqualTo("EH-PRI-00").isEqualTo(segundo);
 	}
 
+	@DisplayName("Rechaza con mensaje los días lectivos invalidos")
 	@Test
 	void rechazaConMensajeLosDiasLectivosInvalidos() {
 		assertRechazo(() -> servicio.crearEstructuraHoraria(ANIO_2027, nueva("EH-A", "PRIMARIA", null, 6, List.of())),
@@ -325,6 +341,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 				"Día lectivo no válido: DOM.");
 	}
 
+	@DisplayName("Rechaza con mensaje los bloques y la duración fuera de rango")
 	@Test
 	void rechazaConMensajeLosBloquesYLaDuracionFueraDeRango() {
 		assertRechazo(() -> servicio.crearEstructuraHoraria(ANIO_2027, nueva("EH-A", "PRIMARIA", null, 13, LUN_A_VIE)),
@@ -335,6 +352,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 				"La duración del bloque va de 20 a 120 minutos.");
 	}
 
+	@DisplayName("Rechaza con mensaje los recesos invalidos")
 	@Test
 	void rechazaConMensajeLosRecesosInvalidos() {
 		assertRechazo(
@@ -349,6 +367,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 				"No puede haber dos recesos después del mismo bloque.");
 	}
 
+	@DisplayName("La jornada puede terminar a las1800 exactas pero no un minuto después")
 	@Test
 	void laJornadaPuedeTerminarALas1800ExactasPeroNoUnMinutoDespues() {
 		SolicitudEstructuraHoraria limite = new SolicitudEstructuraHoraria("EH-TAR-26", null, "SECUNDARIA", false,
@@ -364,18 +383,21 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 				"La jornada debe terminar como máximo a las 18:00.");
 	}
 
+	@DisplayName("Rechaza un nivel que no existe")
 	@Test
 	void rechazaUnNivelQueNoExiste() {
 		assertRechazo(() -> servicio.crearEstructuraHoraria(ANIO_2027, nueva("EH-A", "INICIAL", null)),
 				HttpStatus.BAD_REQUEST, "Elige el nivel: primaria o secundaria.");
 	}
 
+	@DisplayName("Crear en un año que no existe da404")
 	@Test
 	void crearEnUnAnioQueNoExisteDa404() {
 		assertRechazo(() -> servicio.crearEstructuraHoraria(UUID.randomUUID(), nueva("EH-A", "PRIMARIA", null)),
 				HttpStatus.NOT_FOUND, "El año escolar no existe.");
 	}
 
+	@DisplayName("Un año activo rechaza crear editar y eliminar")
 	@Test
 	void unAnioActivoRechazaCrearEditarYEliminar() {
 		assertRechazo(() -> servicio.crearEstructuraHoraria(ANIO_2026, nueva("EH-NUEVA", "PRIMARIA", null)),
@@ -391,6 +413,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 
 	// ---------- Editar ----------
 
+	@DisplayName("Edita los datos y regenera los recesos sin cambiar el nivel")
 	@Test
 	void editaLosDatosYRegeneraLosRecesosSinCambiarElNivel() {
 		UUID id = servicio.crearEstructuraHoraria(ANIO_2027,
@@ -412,6 +435,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(editada.advertencias()).isEmpty();
 	}
 
+	@DisplayName("Editar conserva el código aunque la solicitud traiga otro")
 	@Test
 	void editarConservaElCodigoAunqueLaSolicitudTraigaOtro() {
 		UUID a = crear("EH-A", "PRIMARIA", null);
@@ -422,6 +446,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(deLaLista("EH-A").codigo()).isEqualTo("EH-PRI-27");
 	}
 
+	@DisplayName("Editar con datos invalidos da400 y no cambia nada")
 	@Test
 	void editarConDatosInvalidosDa400YNoCambiaNada() {
 		UUID id = crear("EH-A", "PRIMARIA", null);
@@ -432,12 +457,14 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(servicio.detalleEstructuraHoraria(id).bloquesPorDia()).isEqualTo(6);
 	}
 
+	@DisplayName("Editar una estructura que no existe da404")
 	@Test
 	void editarUnaEstructuraQueNoExisteDa404() {
 		assertRechazo(() -> servicio.editarEstructuraHoraria(UUID.randomUUID(), edicion("EH-A", true, 6, LUN_A_VIE)),
 				HttpStatus.NOT_FOUND, "La estructura horaria no existe.");
 	}
 
+	@DisplayName("No se puede desmarcar la principal hay que marcar otra")
 	@Test
 	void noSePuedeDesmarcarLaPrincipalHayQueMarcarOtra() {
 		UUID principal = crear("EH-A", "PRIMARIA", null);
@@ -450,6 +477,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(deLaLista("EH-A").esPrincipal()).isTrue();
 	}
 
+	@DisplayName("Marcar otra como principal baja la anterior y avisa que la actual pasa a serlo")
 	@Test
 	void marcarOtraComoPrincipalBajaLaAnteriorYAvisaQueLaActualPasaASerlo() {
 		crear("EH-A", "PRIMARIA", null);
@@ -467,6 +495,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 
 	// ---------- Planes de evaluación ----------
 
+	@DisplayName("Reducir la principal por debajo de las horas planificadas da409")
 	@Test
 	void reducirLaPrincipalPorDebajoDeLasHorasPlanificadasDa409() {
 		UUID principal = crear("EH-SEC", "SECUNDARIA", null);
@@ -480,6 +509,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(servicio.detalleEstructuraHoraria(principal).bloquesPorSemana()).isEqualTo(30);
 	}
 
+	@DisplayName("Con varios grados pasados el mensaje nombra al de más horas")
 	@Test
 	void conVariosGradosPasadosElMensajeNombraAlDeMasHoras() {
 		UUID principal = crear("EH-SEC", "SECUNDARIA", null);
@@ -494,6 +524,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 						+ "cursos planificadas. Reduce las horas del plan de evaluación o conserva al menos 27 bloques.");
 	}
 
+	@DisplayName("Reducir hasta las horas planificadas se acepta y avisa")
 	@Test
 	void reducirHastaLasHorasPlanificadasSeAceptaYAvisa() {
 		UUID principal = crear("EH-SEC", "SECUNDARIA", null);
@@ -508,6 +539,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 				+ "semana. Revisa el plan de evaluación: 1.° de secundaria tiene 28 horas planificadas.");
 	}
 
+	@DisplayName("Aumentar los bloques nunca se rechaza pero avisa si el nivel tiene planes")
 	@Test
 	void aumentarLosBloquesNuncaSeRechazaPeroAvisaSiElNivelTienePlanes() {
 		UUID principal = crear("EH-SEC", "SECUNDARIA", null);
@@ -520,6 +552,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 				+ "semana. Revisa el plan de evaluación: 1.° de secundaria tiene 28 horas planificadas.");
 	}
 
+	@DisplayName("Sin planes en el nivel no hay advertencias ni rechazos")
 	@Test
 	void sinPlanesEnElNivelNoHayAdvertenciasNiRechazos() {
 		UUID principal = crear("EH-PRI", "PRIMARIA", null);
@@ -535,6 +568,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(aumentada.advertencias()).isEmpty();
 	}
 
+	@DisplayName("Cambiar entrada duración o recesos no avisa porque no mueven los bloques")
 	@Test
 	void cambiarEntradaDuracionORecesosNoAvisaPorqueNoMuevenLosBloques() {
 		UUID principal = crear("EH-SEC", "SECUNDARIA", null);
@@ -546,6 +580,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(editada.advertencias()).isEmpty();
 	}
 
+	@DisplayName("Una estructura que no es principal no se válida contra los planes")
 	@Test
 	void unaEstructuraQueNoEsPrincipalNoSeValidaContraLosPlanes() {
 		crear("EH-SEC", "SECUNDARIA", null);
@@ -559,6 +594,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(editada.advertencias()).isEmpty();
 	}
 
+	@DisplayName("Marcar como principal una con menos bloques que los planes da409 y no cambia nada")
 	@Test
 	void marcarComoPrincipalUnaConMenosBloquesQueLosPlanesDa409YNoCambiaNada() {
 		crear("EH-SEC", "SECUNDARIA", null);
@@ -575,6 +611,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(deLaLista("EH-TAR").esPrincipal()).isFalse();
 	}
 
+	@DisplayName("Marcar como principal una con más bloques avisa que cambia la planificación")
 	@Test
 	void marcarComoPrincipalUnaConMasBloquesAvisaQueCambiaLaPlanificacion() {
 		crear("EH-SEC", "SECUNDARIA", null);
@@ -590,6 +627,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 						+ "1.° de secundaria tiene 28 horas planificadas.");
 	}
 
+	@DisplayName("Crear una principal con menos bloques que los planes da409 y no cambia nada")
 	@Test
 	void crearUnaPrincipalConMenosBloquesQueLosPlanesDa409YNoCambiaNada() {
 		crear("EH-SEC", "SECUNDARIA", null);
@@ -605,6 +643,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(deLaLista("EH-SEC").esPrincipal()).isTrue();
 	}
 
+	@DisplayName("La primera principal de un nivel tampoco puede quedar por debajo de los planes")
 	@Test
 	void laPrimeraPrincipalDeUnNivelTampocoPuedeQuedarPorDebajoDeLosPlanes() {
 		planificar28HorasEnPrimeroDeSecundaria();
@@ -617,6 +656,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 
 	// ---------- Eliminar ----------
 
+	@DisplayName("Elimina una estructura que no es principal con sus recesos")
 	@Test
 	void eliminaUnaEstructuraQueNoEsPrincipalConSusRecesos() {
 		crear("EH-A", "PRIMARIA", null);
@@ -631,6 +671,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(recesosEnLaBase(otra)).isZero();
 	}
 
+	@DisplayName("La principal con otras del nivel no se elimina hay que marcar otra")
 	@Test
 	void laPrincipalConOtrasDelNivelNoSeEliminaHayQueMarcarOtra() {
 		UUID principal = crear("EH-A", "PRIMARIA", null);
@@ -643,6 +684,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(servicio.listarPorAnioEscolar(ANIO_2027).estructuras()).hasSize(2);
 	}
 
+	@DisplayName("La única del nivel sin planes se puede eliminar")
 	@Test
 	void laUnicaDelNivelSinPlanesSePuedeEliminar() {
 		UUID unica = crear("EH-A", "PRIMARIA", null);
@@ -652,6 +694,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(servicio.listarPorAnioEscolar(ANIO_2027).estructuras()).isEmpty();
 	}
 
+	@DisplayName("La única del nivel con planes no se puede eliminar")
 	@Test
 	void laUnicaDelNivelConPlanesNoSePuedeEliminar() {
 		UUID unica = crear("EH-SEC", "SECUNDARIA", null);
@@ -664,6 +707,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(servicio.listarPorAnioEscolar(ANIO_2027).estructuras()).hasSize(1);
 	}
 
+	@DisplayName("Eliminar una estructura que no existe da404")
 	@Test
 	void eliminarUnaEstructuraQueNoExisteDa404() {
 		assertRechazo(() -> servicio.eliminarEstructuraHoraria(UUID.randomUUID()), HttpStatus.NOT_FOUND,
@@ -672,6 +716,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 
 	// ---------- Vista previa ----------
 
+	@DisplayName("La vista previa del modal de figma calcula la jornada y no guarda nada")
 	@Test
 	void laVistaPreviaDelModalDeFigmaCalculaLaJornadaYNoGuardaNada() {
 		SolicitudEstructuraHoraria modal = new SolicitudEstructuraHoraria("EH-TAR-26", "Secundaria · talleres de tarde",
@@ -691,6 +736,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(servicio.listarPorAnioEscolar(ANIO_2027).estructuras()).isEmpty();
 	}
 
+	@DisplayName("La vista previa pasada las1800 muestra la salida real y el error")
 	@Test
 	void laVistaPreviaPasadaLas1800MuestraLaSalidaRealYElError() {
 		SolicitudEstructuraHoraria tarde = new SolicitudEstructuraHoraria("EH-TAR-26", null, "SECUNDARIA", false,
@@ -703,6 +749,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(vistaPrevia.jornada().horaSalida()).isEqualTo("18:01");
 	}
 
+	@DisplayName("La vista previa de un formulario vacio lista los errores sin fallar")
 	@Test
 	void laVistaPreviaDeUnFormularioVacioListaLosErroresSinFallar() {
 		SolicitudEstructuraHoraria vacia = new SolicitudEstructuraHoraria(null, null, null, null, null, null, null,
@@ -720,6 +767,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 				"Elige el nivel: primaria o secundaria.");
 	}
 
+	@DisplayName("La vista previa no pide ni válida el código y solo avisa del nivel inválido")
 	@Test
 	void laVistaPreviaNoPideNiValidaElCodigoYSoloAvisaDelNivelInvalido() {
 		crear("EH-A", "PRIMARIA", null);
@@ -732,6 +780,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(vistaPrevia.jornada()).isNotNull();
 	}
 
+	@DisplayName("La vista previa no mira el estado del año ni los planes")
 	@Test
 	void laVistaPreviaNoMiraElEstadoDelAnioNiLosPlanes() {
 		crear("EH-SEC", "SECUNDARIA", null);
@@ -748,6 +797,7 @@ class ServicioEstructurasHorariasIT extends PruebaIntegracion {
 		assertThat(enAnioActivo.valida()).isTrue();
 	}
 
+	@DisplayName("La vista previa de un año que no existe da404")
 	@Test
 	void laVistaPreviaDeUnAnioQueNoExisteDa404() {
 		assertRechazo(() -> servicio.vistaPreviaEstructuraHoraria(UUID.randomUUID(), nueva("EH-A", "PRIMARIA", null)),

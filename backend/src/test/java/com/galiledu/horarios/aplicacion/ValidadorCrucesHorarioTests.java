@@ -11,6 +11,7 @@ import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.configuracion.dominio.DiaSemana;
@@ -38,6 +39,7 @@ class ValidadorCrucesHorarioTests {
 				ambiente, "5.° B", "Álgebra", "Rosa Quispe", "Aula 12");
 	}
 
+	@DisplayName("Sin ocupados no hay cruces")
 	@Test
 	void sinOcupadosNoHayCruces() {
 		var solicitados = List.of(solicitado(DiaSemana.LUN, 1, "08:00", "08:45", DOCENTE, AMBIENTE));
@@ -45,6 +47,7 @@ class ValidadorCrucesHorarioTests {
 		assertThat(validador.compararCruces(solicitados, List.of())).isEmpty();
 	}
 
+	@DisplayName("El cruce de docente dice con quien choca y cuando")
 	@Test
 	void elCruceDeDocenteDiceConQuienChocaYCuando() {
 		var solicitados = List.of(solicitado(DiaSemana.LUN, 1, "08:00", "08:45", DOCENTE, AMBIENTE));
@@ -64,6 +67,7 @@ class ValidadorCrucesHorarioTests {
 		});
 	}
 
+	@DisplayName("El cruce de ambiente dice quien lo ocupa y cuando")
 	@Test
 	void elCruceDeAmbienteDiceQuienLoOcupaYCuando() {
 		var solicitados = List.of(solicitado(DiaSemana.MIE, 3, "10:00", "10:45", DOCENTE, AMBIENTE));
@@ -79,6 +83,7 @@ class ValidadorCrucesHorarioTests {
 		});
 	}
 
+	@DisplayName("Un mismo par puede cruzarse en docente y en ambiente")
 	@Test
 	void unMismoParPuedeCruzarseEnDocenteYEnAmbiente() {
 		var solicitados = List.of(solicitado(DiaSemana.LUN, 1, "08:00", "08:45", DOCENTE, AMBIENTE));
@@ -88,6 +93,7 @@ class ValidadorCrucesHorarioTests {
 				.containsExactly(TipoCruce.DOCENTE, TipoCruce.AMBIENTE);
 	}
 
+	@DisplayName("Los bloques contiguos no se cruzan")
 	@Test
 	void losBloquesContiguosNoSeCruzan() {
 		var solicitados = List.of(solicitado(DiaSemana.LUN, 2, "08:45", "09:30", DOCENTE, AMBIENTE));
@@ -97,6 +103,7 @@ class ValidadorCrucesHorarioTests {
 		assertThat(validador.compararCruces(solicitados, ocupados)).isEmpty();
 	}
 
+	@DisplayName("El mismo recurso en otro día no se cruza")
 	@Test
 	void elMismoRecursoEnOtroDiaNoSeCruza() {
 		var solicitados = List.of(solicitado(DiaSemana.LUN, 1, "08:00", "08:45", DOCENTE, AMBIENTE));
@@ -105,6 +112,7 @@ class ValidadorCrucesHorarioTests {
 		assertThat(validador.compararCruces(solicitados, ocupados)).isEmpty();
 	}
 
+	@DisplayName("Jornadas distintas que se superponen se cruzan")
 	@Test
 	void jornadasDistintasQueSeSuperponenSeCruzan() {
 		var solicitados = List.of(solicitado(DiaSemana.JUE, 1, "08:00", "08:45", DOCENTE, AMBIENTE));
@@ -116,6 +124,7 @@ class ValidadorCrucesHorarioTests {
 		});
 	}
 
+	@DisplayName("Sin docente en algún lado no hay cruce de docente")
 	@Test
 	void sinDocenteEnAlgunLadoNoHayCruceDeDocente() {
 		var sinDocente = List.of(solicitado(DiaSemana.LUN, 1, "08:00", "08:45", null, AMBIENTE));
@@ -129,6 +138,7 @@ class ValidadorCrucesHorarioTests {
 				List.of(ocupadoSinDocente))).isEmpty();
 	}
 
+	@DisplayName("Sin ambiente en algún lado no hay cruce de ambiente")
 	@Test
 	void sinAmbienteEnAlgunLadoNoHayCruceDeAmbiente() {
 		var sinAmbiente = List.of(solicitado(DiaSemana.LUN, 1, "08:00", "08:45", DOCENTE, null));
@@ -142,6 +152,7 @@ class ValidadorCrucesHorarioTests {
 				List.of(ocupadoSinAmbiente))).isEmpty();
 	}
 
+	@DisplayName("Un solicitado que choca con varios ocupados da un cruce por cada uno")
 	@Test
 	void unSolicitadoQueChocaConVariosOcupadosDaUnCrucePorCadaUno() {
 		var solicitados = List.of(solicitado(DiaSemana.LUN, 1, "08:00", "09:00", DOCENTE, AMBIENTE));
@@ -158,6 +169,7 @@ class ValidadorCrucesHorarioTests {
 						tuple(TipoCruce.AMBIENTE, "4.° C", "Química"));
 	}
 
+	@DisplayName("Los cruces salen por día luego por bloque y con el docente antes que el ambiente")
 	@Test
 	void losCrucesSalenPorDiaLuegoPorBloqueYConElDocenteAntesQueElAmbiente() {
 		var solicitados = List.of(solicitado(DiaSemana.VIE, 1, "08:00", "08:45", DOCENTE, AMBIENTE),
@@ -177,6 +189,7 @@ class ValidadorCrucesHorarioTests {
 						tuple(DiaSemana.VIE, 1, TipoCruce.AMBIENTE));
 	}
 
+	@DisplayName("Buscar cruces pide los ocupados del año excluyendo la sección")
 	@Test
 	void buscarCrucesPideLosOcupadosDelAnioExcluyendoLaSeccion() {
 		var solicitados = List.of(solicitado(DiaSemana.LUN, 1, "08:00", "08:45", DOCENTE, AMBIENTE));
@@ -189,6 +202,7 @@ class ValidadorCrucesHorarioTests {
 		assertThat(cruces).extracting(CruceDetectado::tipo).containsExactly(TipoCruce.DOCENTE);
 	}
 
+	@DisplayName("Buscar cruces sin solicitados no consulta nada")
 	@Test
 	void buscarCrucesSinSolicitadosNoConsultaNada() {
 		assertThat(validador.buscarCruces(ANIO, SECCION, List.of())).isEmpty();
