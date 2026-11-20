@@ -24,7 +24,17 @@ public final class DtosMatricula {
 			boolean puedeContinuar,
 			List<Impedimento> impedimentos,
 			DeudaFamiliar deuda,
-			PagoMatricula pagoMatricula) {
+			PagoMatricula pagoMatricula,
+			DatosEstudianteApoderado datos) {
+	}
+
+	/**
+	 * HU-32 · Figma "HU-32 Confirmación de matrícula" › "Datos del estudiante y apoderado": DNI, sección con su tutor
+	 * (solo con la matrícula MATRICULADO; antes, null), apoderado responsable, su contacto, el contacto de emergencia y
+	 * el resumen médico. Son los mismos datos del detalle que ve el personal.
+	 */
+	public record DatosEstudianteApoderado(String documento, String seccion, String tutor, String apoderado,
+			String contacto, String contactoEmergencia, String informacionMedica) {
 	}
 
 	/**

@@ -288,6 +288,26 @@ public class ConsultasMatricula {
 	public record ApoderadoFila(String nombre, String celular, String correo) {
 	}
 
+	/** HU-32: documento del estudiante y tutor de la sección ({@code tutor} null sin sección o sin tutor). */
+	public record DocumentoYTutorFila(String documento, String tutor) {
+	}
+
+	public Optional<DocumentoYTutorFila> documentoYTutor(UUID estudianteId, UUID seccionId) {
+		return jdbc.sql("""
+				SELECT p.numero_documento,
+				       (SELECT concat_ws(' ', tp.nombres, tp.apellido_paterno, tp.apellido_materno)
+				        FROM configuracion.seccion s
+				        JOIN seguridad.usuario u ON u.id = s.tutor_id
+				        JOIN personas.persona tp ON tp.id = u.persona_id
+				        WHERE s.id = :seccion)
+				FROM estudiantes.estudiante e JOIN personas.persona p ON p.id = e.persona_id
+				WHERE e.id = :estudiante""")
+				.param("seccion", seccionId)
+				.param("estudiante", estudianteId)
+				.query((rs, i) -> new DocumentoYTutorFila(rs.getString(1), rs.getString(2)))
+				.optional();
+	}
+
 	/** El responsable de la matrícula (el apoderado de Figma): quien paga y firma. */
 	public Optional<ApoderadoFila> responsableDe(UUID estudianteId) {
 		return jdbc.sql("""

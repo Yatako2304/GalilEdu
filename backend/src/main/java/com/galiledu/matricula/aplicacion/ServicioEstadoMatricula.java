@@ -15,6 +15,7 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.configuracion.aplicacion.ServicioPeriodoMatricula;
 import com.galiledu.configuracion.dominio.EstadoVisiblePeriodoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.CuotaDeuda;
+import com.galiledu.matricula.aplicacion.DtosMatricula.DatosEstudianteApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DeudaFamiliar;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstadoMatriculaApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstudianteMatricula;
@@ -123,7 +124,26 @@ public class ServicioEstadoMatricula {
 						.map(c -> pagoMatricula(c, matricula, periodo, deuda, hijo))
 						.orElse(null);
 		return new EstadoMatriculaApoderado(new EstudianteMatricula(hijo.estudianteId(), hijo.nombre(), hijo.grado()),
-				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago);
+				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago, datos(hijo, matricula));
+	}
+
+	/**
+	 * HU-32: la tarjeta "Datos del estudiante y apoderado"; la sección y su tutor, solo con la matrícula formalizada.
+	 */
+	private DatosEstudianteApoderado datos(HijoFila hijo, MatriculaActual matricula) {
+		SeccionMatricula seccion = matricula == null ? null : matricula.seccionAsignada();
+		var documentoYTutor = consultas.documentoYTutor(hijo.estudianteId(), seccion == null ? null : seccion.id());
+		var apoderado = consultas.responsableDe(hijo.estudianteId());
+		var emergencia = consultas.contactoDeEmergencia(hijo.estudianteId());
+		return new DatosEstudianteApoderado(
+				documentoYTutor.map(d -> d.documento()).orElse(null),
+				seccion == null ? null : seccion.etiqueta(),
+				seccion == null ? null : documentoYTutor.map(d -> d.tutor()).orElse(null),
+				apoderado.map(a -> a.nombre()).orElse(null),
+				apoderado.map(a -> PresentacionMatricula.unir(a.celular(), a.correo())).orElse(null),
+				emergencia.map(c -> c.nombre() + " (" + c.parentesco() + ")"
+						+ (c.celular() == null ? "" : " · " + c.celular())).orElse(null),
+				PresentacionMatricula.resumenMedico(consultas.fichaMedica(hijo.estudianteId())));
 	}
 
 	/**
