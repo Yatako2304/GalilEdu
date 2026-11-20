@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -266,6 +267,15 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.content("{\"observacion\":\"" + observacion + "\"}"), token(PERSONAL_ADMINISTRATIVO)));
 	}
 
+	/** HU-34: la cuota de matrícula sale del tarifario, que en los datos de prueba aún no está confirmado. */
+	private void confirmarTarifario2027() throws Exception {
+		mvc.perform(conToken(post("/configuracion/tarifarios/{id}/confirmar", "30000000-0000-0000-0000-000000002027"),
+				token(PERSONAL_ADMINISTRATIVO),
+				"""
+						{"montoCuotaIngreso":500,"montoMatricula":450,"montoPension":620,"diasGracia":5,\n				"recargoPorcentaje":2,"topeRecargoPorcentaje":10}"""))
+				.andExpect(status().isOk());
+	}
+
 	private ResultActions validar() throws Exception {
 		return mvc.perform(conToken(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 				.post("/matricula/matriculas/{id}/validar", matriculaDeMateo()), token(PERSONAL_ADMINISTRATIVO)));
@@ -305,12 +315,17 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 
 	@Test
 	void validarApruebaLosDocumentosYDejaLaMatriculaPendienteDePago() throws Exception {
+		confirmarTarifario2027();
 		dejarEnValidacion();
 		validar().andExpect(status().isOk())
 				.andExpect(jsonPath("$.estado").value("PENDIENTE_PAGO"))
 				.andExpect(jsonPath("$.pasoActual").value(3))
 				.andExpect(jsonPath("$.documentos[0].archivo.estado").value("APROBADO"))
 				.andExpect(jsonPath("$.documentos[3].archivo.estado").value("APROBADO"));
+		// La cuota de matrícula se genera sola al validar: nadie tiene que acordarse de crearla.
+		mvc.perform(conToken(get("/pagos/matriculas/{id}/cuota-matricula", matriculaDeMateo()),
+				token(PERSONAL_ADMINISTRATIVO))).andExpect(status().isOk())
+				.andExpect(jsonPath("$.estado").value("PENDIENTE"));
 		validar().andExpect(status().isConflict());
 	}
 
@@ -324,7 +339,18 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 	}
 
 	@Test
+	void sinTarifarioConfirmadoNoSeValidaYSeExplicaElMotivo() throws Exception {
+		dejarEnValidacion();
+		validar().andExpect(status().isConflict())
+				.andExpect(jsonPath("$.message").value("El tarifario 2027 aún no está confirmado."));
+		// Nada quedó a medias: la matrícula sigue en validación y puede validarse al confirmar el tarifario.
+		mvc.perform(conToken(get("/matricula/matriculas/{id}", matriculaDeMateo()), token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(jsonPath("$.estado").value("EN_VALIDACION"));
+	}
+
+	@Test
 	void unDocumentoAprobadoNoSeReemplaza() throws Exception {
+		confirmarTarifario2027();
 		dejarEnValidacion();
 		validar().andExpect(status().isOk());
 		subir(new MockMultipartFile("archivo", "otro.pdf", "application/pdf", new byte[]{5}))
@@ -338,6 +364,26 @@ class MatriculaDetalleIT extends PruebaIntegracion {
 				.andExpect(status().isNotFound());
 		subir(new MockMultipartFile("archivo", "nota.txt", "text/plain", new byte[]{1}))
 				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void laFichaDelEstudianteUbicaSuMatriculaVigente() throws Exception {
+		UUID estudiante = jdbc.sql("SELECT estudiante_id FROM matricula.matricula WHERE id = ?")
+				.param(matriculaDeMateo()).query(UUID.class).single();
+		mvc.perform(conToken(get("/matricula/matriculas/de-estudiante/{id}", estudiante),
+				token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.matriculaId").value(matriculaDeMateo().toString()));
+	}
+
+	@Test
+	void unEstudianteSinMatriculaDevuelveMatriculaIdNulo() throws Exception {
+		mvc.perform(conToken(get("/matricula/matriculas/de-estudiante/{id}", UUID.randomUUID()),
+				token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.matriculaId").doesNotExist());
+		mvc.perform(conToken(get("/matricula/matriculas/de-estudiante/{id}", UUID.randomUUID()), token("U20260003")))
+				.andExpect(status().isForbidden());
 	}
 
 	@Test

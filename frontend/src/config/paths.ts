@@ -61,10 +61,12 @@ export const paths = {
       getHref: (inicioDelRol: string) => `${inicioDelRol}/mis-datos`,
     },
 
-    // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios). «Configuración de acceso» (HU-2) no está en Figma.
+    // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios). Calificaciones: reporte institucional (HU-64), sin frame.
+    // «Configuración de acceso» (HU-2) no está en Figma.
     admin: {
       root: roleRoot(ADMIN),
       usuarios: route(ADMIN, 'usuarios'),
+      calificaciones: route(ADMIN, 'calificaciones'),
       configuracionAcceso: route(ADMIN, 'configuracion-acceso'),
     },
 

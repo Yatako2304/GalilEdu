@@ -23,7 +23,8 @@ import com.galiledu.pagos.infraestructura.ConsultasPagos.DescuentoActivo;
 import com.galiledu.pagos.infraestructura.ConsultasPagos.MatriculaParaPagos;
 
 /**
- * HU-36: genera (RF-78, RF-79) y consulta (RF-80) la cuota de matrícula. Matrícula debe llamar a
+ * HU-36: genera (RF-78, RF-79) y consulta (RF-80) la cuota de matrícula; a un estudiante NUEVO le genera además la
+ * cuota de ingreso del tarifario (corrección 4 de la iteración 1). Matrícula debe llamar a
  * {@link #generar} cuando el colegio aprueba la documentación (HU-29/HU-72) y usar {@link #consultar} para saber si
  * ya se pagó (HU-31).
  */
@@ -78,8 +79,30 @@ public class ServicioCuotaMatricula {
 		compromiso.agregarCuota(Cuota.matricula(compromiso, "Matrícula " + m.anio(), tarifario.montoMatricula(),
 				tarifario.vencimientoMatricula(), rebaja, descuento.map(DescuentoActivo::id).orElse(null),
 				usuarioId));
+		agregarCuotaIngreso(compromiso, m, tarifario, usuarioId);
 		compromisos.saveAndFlush(compromiso);
 		return consultar(matriculaId);
+	}
+
+	/**
+	 * Corrección 4 de la iteración 1: la cuota de ingreso se cobra una sola vez, al estudiante NUEVO, junto con la de
+	 * matrícula y con su mismo vencimiento. No se genera si el tarifario no tiene monto de ingreso (o es 0) ni si el
+	 * estudiante ya tiene una. No condiciona la confirmación de la matrícula: se paga como cualquier otra cuota.
+	 */
+	private void agregarCuotaIngreso(CompromisoPago compromiso, MatriculaParaPagos m, TarifarioVigente tarifario,
+			UUID usuarioId) {
+		BigDecimal monto = tarifario.montoCuotaIngreso();
+		if (!"NUEVO".equals(m.tipoEstudiante()) || monto == null || monto.signum() <= 0
+				|| consultas.tieneCuotaIngreso(m.estudianteId())) {
+			return;
+		}
+		Optional<DescuentoActivo> descuento = consultas.descuentoPara(m.estudianteId(), Cuota.CONCEPTO_CUOTA_INGRESO)
+				.filter(d -> d.vigenteEn(tarifario.vencimientoMatricula()));
+		BigDecimal rebaja = descuento
+				.map(d -> monto.multiply(d.porcentaje()).divide(CIEN, 2, RoundingMode.HALF_UP))
+				.orElse(BigDecimal.ZERO);
+		compromiso.agregarCuota(Cuota.ingreso(compromiso, "Cuota de ingreso", monto, tarifario.vencimientoMatricula(),
+				rebaja, descuento.map(DescuentoActivo::id).orElse(null), usuarioId));
 	}
 
 	/** RF-80: estado de la cuota de matrícula; 404 si todavía no se generó. */

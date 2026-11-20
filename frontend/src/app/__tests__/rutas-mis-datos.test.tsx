@@ -7,6 +7,7 @@ import {
   loginAsUser,
   rtlRender,
   screen,
+  waitFor,
 } from '@/testing/test-utils';
 
 import { AppProvider } from '../provider';
@@ -67,16 +68,11 @@ test('«Mis datos» conserva el menú lateral del rol activo', async () => {
 test('no se entra a «Mis datos» bajo un rol que el usuario no tiene', async () => {
   const router = await abrir('/app/admin/mis-datos', [ROLES.DOCENTE]);
 
-  expect(
-    (
-      await screen.findAllByRole(
-        'link',
-        { name: 'Calificaciones' },
-        { timeout: CARGA_DE_RUTAS },
-      )
-    ).length,
-  ).toBeGreaterThan(0);
-  expect(router.state.location.pathname).toBe('/app/docente');
+  // El RoleGuard lo devuelve al inicio de su propio rol.
+  await waitFor(
+    () => expect(router.state.location.pathname).toBe('/app/docente'),
+    { timeout: CARGA_DE_RUTAS },
+  );
 });
 
 test('el apoderado ve «Familia» en el menú y abre «Datos de la Familia»', async () => {

@@ -57,7 +57,8 @@ public class MatriculaAdministrativoController {
 
 	/**
 	 * GET /api/matricula/periodos/{periodoId}/matriculas?texto=&grado=&estado=&orden=&direccion=&page=&size= · tabla:
-	 * solo quienes ya tienen matrícula. {@code orden}: estudiante, grado, seccion o estado; {@code direccion}: asc o
+	 * solo quienes ya tienen matrícula. {@code orden}: estudiante, grado, seccion, estado o reciente (última
+	 * actividad); {@code direccion}: asc o
 	 * desc.
 	 */
 	@GetMapping("/{periodoId}/matriculas")

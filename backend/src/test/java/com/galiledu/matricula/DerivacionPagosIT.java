@@ -87,7 +87,35 @@ class DerivacionPagosIT extends PruebaIntegracionConfiguracion {
 				.andExpect(jsonPath("$.pagoMatricula.concepto").value("Matrícula 2027"))
 				.andExpect(jsonPath("$.pagoMatricula.monto").value(450.0))
 				.andExpect(jsonPath("$.pagoMatricula.estado").value("PENDIENTE"))
-				.andExpect(jsonPath("$.pagoMatricula.puedePagar").value(true));
+				.andExpect(jsonPath("$.pagoMatricula.montoDescuento").value(0))
+				.andExpect(jsonPath("$.pagoMatricula.fechaVencimiento").isNotEmpty())
+				.andExpect(jsonPath("$.pagoMatricula.fechaPago").doesNotExist())
+				.andExpect(jsonPath("$.pagoMatricula.puedePagar").value(true))
+				// Mientras la sección está "Por definir" para el apoderado, tampoco se le muestran sus cambios.
+				.andExpect(jsonPath("$.cambiosSeccion").isEmpty());
+	}
+
+	@Test
+	void conLaMatriculaConfirmadaElApoderadoVeLosCambiosDeSeccionSinQuienLosHizo() throws Exception {
+		jdbc.sql("UPDATE matricula.matricula SET estado = 'MATRICULADO', codigo = 'MAT-2027-0099' WHERE id = ?")
+				.param(MATRICULA_MATEO).update();
+		jdbc.sql(
+				"""
+						INSERT INTO matricula.cambio_seccion (matricula_id, seccion_origen_id, seccion_destino_id, realizado_por)
+						SELECT m.id, m.seccion_id, o.id, ?
+						FROM matricula.matricula m
+						JOIN configuracion.seccion s ON s.id = m.seccion_id
+						JOIN configuracion.seccion o ON o.anio_escolar_id = s.anio_escolar_id AND o.grado_codigo = s.grado_codigo
+						  AND o.id <> s.id
+						WHERE m.id = ? LIMIT 1""")
+				.param(PERSONAL).param(MATRICULA_MATEO).update();
+		em.clear();
+		mvc.perform(conToken(get(estado()), token))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.cambiosSeccion.length()").value(1))
+				.andExpect(jsonPath("$.cambiosSeccion[0].origen").isNotEmpty())
+				.andExpect(jsonPath("$.cambiosSeccion[0].destino").isNotEmpty())
+				.andExpect(jsonPath("$.cambiosSeccion[0].realizadoPor").doesNotExist());
 	}
 
 	@Test

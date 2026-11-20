@@ -45,7 +45,7 @@ Inicio de sesión de todos los roles y gestión de cuentas por el Administrador.
 
 ## Base de datos
 
-- **Esquemas:** `personas`, `seguridad` · **Migraciones:** `V1__personas_y_seguridad.sql`, `V19__recuperacion_contrasena.sql`, `V20__sesiones_desde_cambio_contrasena.sql`, `V23__configuracion_acceso.sql` (V21 y V22 quedan para la rama de asistencia)
+- **Esquemas:** `personas`, `seguridad` · **Migraciones:** `V1__personas_y_seguridad.sql`, `V19__recuperacion_contrasena.sql`, `V20__sesiones_desde_cambio_contrasena.sql`, `V24__configuracion_acceso.sql`
 
 | Tabla | Para qué |
 | --- | --- |

@@ -16,7 +16,7 @@
 - `backend/src/main/java/com/galiledu/usuarios/aplicacion/ServicioAccesoGoogle.java`, `CuentasGoogle.java`
 - `backend/src/main/java/com/galiledu/usuarios/infraestructura/CuentasGoogleOAuth.java`, `ConfiguracionAcceso.java`
 - `backend/src/main/java/com/galiledu/usuarios/web/ConfiguracionAccesoController.java`, `AutenticacionController.java`
-- `backend/src/main/resources/db/migration/V23__configuracion_acceso.sql`
+- `backend/src/main/resources/db/migration/V24__configuracion_acceso.sql`
 - `frontend/src/features/auth/components/ingreso-google.tsx`, `frontend/src/lib/google.ts`, `frontend/src/lib/auth.tsx`
 - `frontend/src/features/usuarios/components/configuracion-acceso.tsx`, `frontend/src/components/ui/logo-google/`
 
@@ -38,8 +38,8 @@
   **Alternativas descartadas:** el botón oficial «Sign in with Google» (no coincide con Figma); recibir un token de acceso en el frontend.
 - **Decisión:** el botón aparece solo si el administrador lo activó **y** el servidor tiene `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET`. Sin las llaves no se puede activar (409) y el interruptor queda bloqueado con un aviso.
   **Por qué:** evita un botón que no funciona.
-- **Decisión:** la migración es **V23**, no V21.
-  **Por qué:** la rama `feat/asistencia-registro` usa V19 y V20, que ya están en `main` (HU-4 y HU-5), y debe renumerarlas a V21 y V22.
+- **Decisión:** la migración es **V24**.
+  **Por qué:** al unir con `main`, V21, V22 y V23 ya estaban ocupadas (pagos y calificaciones). Flyway no acepta dos migraciones con el mismo número: con la V23 original el backend no arrancaba.
 
 ## Librerías o herramientas nuevas
 

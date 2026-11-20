@@ -70,11 +70,17 @@ public final class DtosDescuentos {
 
 	/**
 	 * RF-86: descuento ACTIVO del catálogo con el porcentaje que le corresponde al estudiante. Un POR_HERMANOS sin
-	 * tramo
-	 * para sus hermanos matriculados llega con {@code aplicable = false} y el motivo.
+	 * tramo para sus hermanos matriculados, o para un estudiante que no es el hermano menor, llega con
+	 * {@code aplicable = false} y el motivo. Solo en POR_HERMANOS: {@code cantidadHermanosMatriculados} (contándolo a
+	 * él) y {@code beneficiarios}, el hermano menor (los dos si son gemelos); en PORCENTAJE_UNICO son null y vacío.
 	 */
 	public record DescuentoAplicable(UUID id, String nombre, TipoDescuento tipo, AplicacionDescuento aplicacion,
-			BigDecimal porcentaje, List<String> conceptos, String condicion, boolean aplicable, String motivo) {
+			BigDecimal porcentaje, List<String> conceptos, String condicion, boolean aplicable, String motivo,
+			Integer cantidadHermanosMatriculados, List<BeneficiarioHermanos> beneficiarios) {
+	}
+
+	/** Corrección del PO: el descuento por hermanos beneficia al hermano menor matriculado del año. */
+	public record BeneficiarioHermanos(UUID estudianteId, String nombre) {
 	}
 
 	/** Respuesta de GET /pagos/compromisos/{id}/descuentos-aplicables. */
@@ -87,14 +93,18 @@ public final class DtosDescuentos {
 	}
 
 	/**
-	 * Cuerpo de POST /pagos/compromisos/{id}/descuentos. Sin {@code vigenciaDesde} rige desde hoy; sin
-	 * {@code vigenciaHasta}, hasta fin de año. {@code reemplazar} confirma el reemplazo del descuento vigente (RF-87).
+	 * Cuerpo de POST /pagos/compromisos/{id}/descuentos. Sin {@code vigenciaDesde} rige desde hoy.
+	 * {@code hastaFinEscolaridad}: true = sin fecha de fin, hasta que el estudiante termine el colegio
+	 * ({@code vigenciaHasta} debe ir vacía); false = {@code vigenciaHasta} es obligatoria. Si no se envía, se deduce de
+	 * {@code vigenciaHasta} (vacía = hasta fin de escolaridad), como antes de la corrección. {@code reemplazar}
+	 * confirma el reemplazo del descuento vigente (RF-87).
 	 */
 	public record SolicitudAplicarDescuento(
 			@NotNull(message = "Elige un descuento del catálogo.") UUID descuentoId,
 			@NotBlank(message = "Ingresa el motivo del descuento.") @Size(max = 500, message = "El motivo admite hasta 500 caracteres.") String motivo,
 			LocalDate vigenciaDesde,
 			LocalDate vigenciaHasta,
+			Boolean hastaFinEscolaridad,
 			boolean reemplazar) {
 	}
 
@@ -103,7 +113,10 @@ public final class DtosDescuentos {
 			@NotBlank(message = "Ingresa el motivo de la revocación.") @Size(max = 500, message = "El motivo admite hasta 500 caracteres.") String motivo) {
 	}
 
-	/** Un descuento aplicado al estudiante (P10): nombre, porcentaje, vigencia, fecha, motivo y quién lo aplicó. */
+	/**
+	 * Un descuento aplicado al estudiante (P10): nombre, porcentaje, vigencia, fecha, motivo y quién lo aplicó. Con
+	 * {@code hastaFinEscolaridad} el frontend muestra "Hasta que termine el colegio" en lugar de la fecha de fin.
+	 */
 	public record DescuentoAplicadoVista(
 			UUID id,
 			UUID descuentoId,
@@ -111,6 +124,7 @@ public final class DtosDescuentos {
 			BigDecimal porcentaje,
 			LocalDate vigenciaDesde,
 			LocalDate vigenciaHasta,
+			boolean hastaFinEscolaridad,
 			String motivo,
 			EstadoDescuentoAplicado estado,
 			String aplicadoPor,

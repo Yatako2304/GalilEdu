@@ -26,7 +26,7 @@ import { GRADOS_POR_NIVEL, nombreGrado } from '@/config/catalogos';
 import { paths } from '@/config/paths';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { EstadoMatricula, FilaMatriculaPeriodo } from '@/types/api';
-import { formatFechaLima } from '@/utils/format';
+import { formatFechaHoraLima, formatFechaLima } from '@/utils/format';
 
 import {
   OrdenMatriculas,
@@ -70,6 +70,7 @@ const COLUMNA_POR_ORDEN: Record<OrdenMatriculas, keyof FilaMatriculaPeriodo> = {
   grado: 'grado',
   seccion: 'seccion',
   estado: 'estado',
+  reciente: 'actualizadoEn',
 };
 
 const ordenDeColumna = (campo: keyof FilaMatriculaPeriodo) =>
@@ -142,8 +143,9 @@ export const MatriculasPeriodo = ({ periodoId }: { periodoId: string }) => {
   const [busqueda, setBusqueda] = React.useState('');
   const [grado, setGrado] = React.useState('');
   const [estado, setEstado] = React.useState('');
-  const [orden, setOrden] = React.useState<OrdenMatriculas>('estudiante');
-  const [direccion, setDireccion] = React.useState<'asc' | 'desc'>('asc');
+  const [orden, setOrden] = React.useState<OrdenMatriculas>('reciente');
+  // Por defecto, lo último que se tocó va primero.
+  const [direccion, setDireccion] = React.useState<'asc' | 'desc'>('desc');
   const [page, setPage] = React.useState(1);
   const texto = useDebouncedValue(busqueda.trim());
 
@@ -244,7 +246,7 @@ export const MatriculasPeriodo = ({ periodoId }: { periodoId: string }) => {
                 setDireccion(direccion === 'asc' ? 'desc' : 'asc');
               } else {
                 setOrden(nuevo);
-                setDireccion('asc');
+                setDireccion(nuevo === 'reciente' ? 'desc' : 'asc');
               }
             },
           }}
@@ -287,6 +289,16 @@ export const MatriculasPeriodo = ({ periodoId }: { periodoId: string }) => {
                   </SelectableTag>
                 );
               },
+            },
+            {
+              title: 'Última actividad',
+              field: 'actualizadoEn',
+              sortable: true,
+              Cell: ({ entry }) => (
+                <span className="text-content-secondary">
+                  {formatFechaHoraLima(entry.actualizadoEn)}
+                </span>
+              ),
             },
             {
               title: '',

@@ -116,7 +116,7 @@ export const useEdicionEstudiante = (id: string) =>
 
 export type AccionEstudiante = 'retirar' | 'reactivar' | 'eliminar';
 
-// POST /estudiantes/{id}/retirar ("Inactivar") · POST /estudiantes/{id}/reactivar · DELETE /estudiantes/{id}
+// POST /estudiantes/{id}/retirar ("Retirar") · POST /estudiantes/{id}/reactivar · DELETE /estudiantes/{id}
 export const useCambiarEstadoEstudiante = (onSuccess?: () => void) => {
   const queryClient = useQueryClient();
   return useMutation({

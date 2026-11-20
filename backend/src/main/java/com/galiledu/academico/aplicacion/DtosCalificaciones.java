@@ -26,7 +26,8 @@ public final class DtosCalificaciones {
 	}
 
 	public record PeriodoCurso(UUID id, int numero, String nombre, LocalDate fechaInicio, LocalDate fechaFin,
-			LocalDate fechaLimiteNotas, String estado, boolean registroNotasAbierto, int competencias, int items) {
+			LocalDate fechaLimiteNotas, String estado, boolean registroNotasAbierto, boolean modificacionHabilitada,
+			int competencias, int items) {
 	}
 
 	public record CompetenciaOpcion(UUID id, String nombre) {
@@ -51,13 +52,38 @@ public final class DtosCalificaciones {
 	public record EvidenciaResumen(String nombreArchivo, String tipoMime, int tamanoBytes, Instant subidoEn) {
 	}
 
+	/**
+	 * Una celda de «Calificar alumnos». estado: PENDIENTE (falta registrar), CALIFICADO o NO_EVALUADO (resuelta sin
+	 * nota, con motivo: ese ítem no cuenta para el estudiante).
+	 */
 	public record FilaCalificacion(UUID id, UUID matriculaId, UUID estudianteId, String estudiante,
-			BigDecimal notaNumerica, String nivelLogro, EvidenciaResumen evidencia, String estado) {
+			BigDecimal notaNumerica, String nivelLogro, EvidenciaResumen evidencia, String estado,
+			int modificaciones, boolean noEvaluado, String motivoNoEvaluado) {
 	}
 
 	public record RegistroCalificacion(@NotNull UUID matriculaId,
 			@DecimalMin("0.00") @DecimalMax("20.00") BigDecimal notaNumerica,
 			@Pattern(regexp = "AD|A|B|C") String nivelLogro) {
+	}
+
+	/**
+	 * HU-60: cambiar una nota ya registrada. Un solo valor según la escala del año y un motivo obligatorio que queda en
+	 * el historial.
+	 */
+	public record SolicitudModificacion(@DecimalMin("0.00") @DecimalMax("20.00") BigDecimal notaNumerica,
+			@Pattern(regexp = "AD|A|B|C") String nivelLogro, Boolean noEvaluado, @Size(max = 500) String motivo) {
+		public boolean marcaNoEvaluado() {
+			return Boolean.TRUE.equals(noEvaluado);
+		}
+	}
+
+	/**
+	 * Un cambio del historial de una nota (HU-60). Anterior vacío y sin «No evaluado» = se registró fuera de plazo;
+	 * nuevo vacío y sin «No evaluado» = la nota se quitó en el registro.
+	 */
+	public record ModificacionCalificacion(BigDecimal notaAnterior, String nivelAnterior, boolean noEvaluadoAnterior,
+			BigDecimal notaNueva, String nivelNuevo, boolean noEvaluadoNuevo, String motivo, String modificadoPor,
+			Instant modificadoEn) {
 	}
 
 	public record SolicitudCalificaciones(@NotEmpty List<@Valid RegistroCalificacion> calificaciones) {
@@ -101,17 +127,23 @@ public final class DtosCalificaciones {
 	/**
 	 * nota es "—" si todavía no hay; nivel: AD, A, B o C (null sin nota), en la escala vigesimal sale de redondear la
 	 * nota al entero y ubicarla en la tabla de conversión; logro: significado del nivel («Logro destacado», «Logro
-	 * esperado», «En proceso», «En inicio») o «Pendiente» sin nota; parcial: faltan notas que influyen.
+	 * esperado», «En proceso», «En inicio») o «Pendiente» sin nota; pendiente: falta
+	 * registrar algún ítem que cuenta, y entonces no hay nota (calificadas de total). Una nota oficial existe solo
+	 * cuando está completa.
 	 */
-	public record NotaResultado(String nota, String nivel, String logro, boolean parcial) {
+	public record NotaResultado(String nota, String nivel, String logro, boolean pendiente, int calificadas,
+			int total) {
 	}
 
-	/** Lo que aporta un curso a la competencia en un periodo ("—" si aún no tiene notas). */
-	public record AporteCurso(UUID planCursoId, String nota) {
+	/**
+	 * Lo que aporta un curso a la competencia en un periodo. nota: el promedio de lo registrado ("—" sin notas);
+	 * pendiente: falta registrar algún ítem, y entonces no es oficial todavía.
+	 */
+	public record AporteCurso(UUID planCursoId, String nota, boolean pendiente, int calificadas, int total) {
 	}
 
-	public record NotaPeriodoCompetencia(UUID periodoId, String nota, String nivel, String logro, boolean parcial,
-			List<AporteCurso> aportes) {
+	public record NotaPeriodoCompetencia(UUID periodoId, String nota, String nivel, String logro, boolean pendiente,
+			int calificadas, int total, List<AporteCurso> aportes) {
 	}
 
 	public record NotasEstudianteCompetencia(UUID competenciaId, List<NotaPeriodoCompetencia> periodos,

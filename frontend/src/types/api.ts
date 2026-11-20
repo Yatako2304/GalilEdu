@@ -759,6 +759,8 @@ export type EstadoMatriculaApoderado = {
   deuda: { total: number; cuotas: CuotaDeudaFamiliar[] };
   /** HU-31: cuota de matrícula y si se puede pagar ya. Null mientras no exista. */
   pagoMatricula?: PagoMatricula | null;
+  /** Cambios de sección de la matrícula confirmada (vacío antes), sin el nombre de quien los hizo. */
+  cambiosSeccion?: CambioSeccionRegistrado[];
 };
 
 /** HU-31 · Igual a DtosMatricula.PagoMatricula. `motivo` explica por qué no se puede pagar. */
@@ -766,8 +768,10 @@ export type PagoMatricula = {
   cuotaId: string;
   concepto: string;
   monto: number;
+  montoDescuento: number;
   fechaVencimiento: string;
   estado: EstadoCuota;
+  fechaPago: string | null;
   responsable: string;
   puedePagar: boolean;
   motivo: string | null;
@@ -1593,7 +1597,7 @@ export type OrdenPagoDetalle = {
   }[];
 };
 
-// ---------- Calificaciones del docente (HU-57, HU-59 y HU-62) ----------
+// ---------- Calificaciones del docente (HU-57, HU-59, HU-60 y HU-62) ----------
 
 export type EscalaEvaluacion = 'VIGESIMAL' | 'CUALITATIVA';
 export type EstadoPeriodoCalificacion = 'PLANIFICADO' | 'EN_CURSO' | 'CERRADO';
@@ -1607,6 +1611,8 @@ export type PeriodoCursoDocente = {
   fechaLimiteNotas: string;
   estado: EstadoPeriodoCalificacion;
   registroNotasAbierto: boolean;
+  /** HU-60: una nota ya registrada se puede modificar con motivo (año ACTIVO y periodo iniciado). */
+  modificacionHabilitada: boolean;
   competencias: number;
   items: number;
 };
@@ -1677,9 +1683,30 @@ export type FilaCalificacion = {
   estudianteId: string;
   estudiante: string;
   notaNumerica: number | null;
-  nivelLogro: 'AD' | 'A' | 'B' | 'C' | null;
+  nivelLogro: NivelLogro | null;
   evidencia: EvidenciaCalificacion | null;
-  estado: 'PENDIENTE' | 'CALIFICADO';
+  /** NO_EVALUADO: la celda está resuelta sin nota (con motivo) y el ítem no cuenta para el estudiante. */
+  estado: 'PENDIENTE' | 'CALIFICADO' | 'NO_EVALUADO';
+  /** Veces que la nota cambió después de registrarse (HU-60). */
+  modificaciones: number;
+  noEvaluado: boolean;
+  motivoNoEvaluado: string | null;
+};
+
+/**
+ * HU-60: un cambio del historial de una nota. Anterior vacío (sin «No evaluado») = se registró fuera de plazo; nuevo
+ * vacío = la nota se quitó.
+ */
+export type ModificacionCalificacion = {
+  notaAnterior: number | null;
+  nivelAnterior: NivelLogro | null;
+  noEvaluadoAnterior: boolean;
+  notaNueva: number | null;
+  nivelNuevo: NivelLogro | null;
+  noEvaluadoNuevo: boolean;
+  motivo: string;
+  modificadoPor: string;
+  modificadoEn: string;
 };
 
 export type TipoReporteCalificaciones = 'ITEM' | 'COMPETENCIA' | 'PERIODO';
@@ -1706,7 +1733,8 @@ export type ReporteCalificaciones = {
 
 /**
  * nota es "—" si todavía no hay; nivel = AD, A, B o C (null sin nota): en vigesimal se redondea la nota al entero
- * (0,5 sube) y se ubica en la tabla de conversión. parcial = faltan notas que influyen en ella.
+ * (0,5 sube) y se ubica en la tabla de conversión. pendiente = falta registrar algún ítem: entonces no hay nota ni
+ * letra (una nota oficial existe solo cuando está completa); calificadas de total dice cuánto falta.
  */
 export type NotaResultado = {
   nota: string;
@@ -1718,13 +1746,24 @@ export type NotaResultado = {
     | 'En proceso'
     | 'En inicio'
     | 'Pendiente';
-  parcial: boolean;
+  pendiente: boolean;
+  calificadas: number;
+  total: number;
 };
 
 export type NotaPeriodoCompetencia = NotaResultado & {
   periodoId: string;
-  /** Lo que aporta cada curso a la competencia en el periodo ("—" si aún no tiene notas). */
-  aportes: { planCursoId: string; nota: string }[];
+  /**
+   * Lo que aporta cada curso en el periodo: el promedio de lo registrado ("—" sin notas). pendiente: falta registrar
+   * algún ítem del curso, y entonces aún no es oficial.
+   */
+  aportes: {
+    planCursoId: string;
+    nota: string;
+    pendiente: boolean;
+    calificadas: number;
+    total: number;
+  }[];
 };
 
 export type CompetenciaNotas = {
@@ -1750,6 +1789,157 @@ export type NotasCompetencias = {
       periodos: NotaPeriodoCompetencia[];
       notaFinal: NotaResultado;
     }[];
+  }[];
+};
+
+// ---------- Calificaciones · Reportes (HU-63, HU-64) y consulta del apoderado (HU-69) ----------
+// Backend: academico/aplicacion/DtosReportesNotas.java.
+
+export type AnioReporte = {
+  id: string;
+  anio: number;
+  estado: 'ACTIVO' | 'CERRADO';
+  escala: EscalaEvaluacion;
+  reglaNota: ReglaNota;
+  consolidacion: Consolidacion;
+  periodos: { id: string; numero: number; nombre: string }[];
+  grados: {
+    codigo: string;
+    nombre: string;
+    cursos: { planCursoId: string; curso: string }[];
+  }[];
+};
+
+/**
+ * Resumen de un grupo en una competencia: promedio en vigesimal ("14.2") o nivel más frecuente en la cualitativa;
+ * "—" sin notas. porcentajeLogro: estudiantes con A o AD sobre los que tienen nota (null sin notas).
+ */
+export type CeldaResumen = {
+  promedio: string;
+  nivel: NivelLogro | null;
+  logro: NotaResultado['logro'];
+  conNota: number;
+  logroEsperado: number;
+  porcentajeLogro: number | null;
+  /** Estudiantes con la nota pendiente porque falta registrar algún ítem (no entran al promedio). */
+  pendientes: number;
+};
+
+export type ReporteGrado = {
+  anio: number;
+  grado: string;
+  /** null: nota oficial de la competencia; con curso, lo que ese curso aporta. */
+  curso: string | null;
+  periodo: string;
+  escala: EscalaEvaluacion;
+  reglaNota: ReglaNota;
+  secciones: { id: string; nombre: string; estudiantes: number }[];
+  filas: {
+    competenciaId: string;
+    competencia: string;
+    area: string;
+    calculable: boolean;
+    secciones: CeldaResumen[];
+    general: CeldaResumen;
+  }[];
+};
+
+/** Detalle de una sección para el Coordinador: la nota oficial de cada competencia por estudiante. */
+export type NotasSeccion = {
+  seccionId: string;
+  anio: number;
+  grado: string;
+  seccion: string;
+  notas: NotasCompetencias;
+};
+
+/** pendientes: falta registrar algún ítem; sinNotas: todavía no hay ítems que cuenten. */
+export type DistribucionNiveles = {
+  ad: number;
+  a: number;
+  b: number;
+  c: number;
+  pendientes: number;
+  sinNotas: number;
+  porcentajeLogro: number | null;
+};
+
+export type ReporteInstitucional = {
+  anio: number;
+  periodo: string;
+  escala: EscalaEvaluacion;
+  estudiantes: number;
+  /** Una fila por sección y, con seccion null, el total del grado. */
+  filas: {
+    gradoCodigo: string;
+    grado: string;
+    seccion: string | null;
+    estudiantes: number;
+    distribucion: DistribucionNiveles;
+  }[];
+  areas: { area: string; distribucion: DistribucionNiveles }[];
+  total: DistribucionNiveles;
+};
+
+export type HijoCalificaciones = {
+  estudianteId: string;
+  estudiante: string;
+  matriculas: { anio: number; grado: string; seccion: string }[];
+};
+
+export type ItemApoderado = {
+  itemId: string;
+  item: string;
+  tipo: TipoItemEvaluacion;
+  nota: string;
+  nivel: NivelLogro | null;
+};
+
+export type NotasApoderado = {
+  estudianteId: string;
+  estudiante: string;
+  anio: number;
+  estadoAnio: 'PLANIFICADO' | 'ACTIVO' | 'CERRADO';
+  /** El año está cerrado o terminó su último periodo: vista «Resultado final». */
+  finalizado: boolean;
+  grado: string;
+  seccion: string;
+  escala: EscalaEvaluacion;
+  reglaNota: ReglaNota;
+  consolidacion: Consolidacion;
+  periodos: {
+    id: string;
+    numero: number;
+    nombre: string;
+    fechaInicio: string;
+    fechaFin: string;
+    estado: EstadoPeriodoCalificacion;
+  }[];
+  cursos: {
+    planCursoId: string;
+    curso: string;
+    area: string;
+    docente: string | null;
+    /** Resumen referencial del curso en cada periodo; la nota oficial es la de cada competencia. */
+    periodos: { periodoId: string; resultado: NotaResultado }[];
+    competencias: {
+      competenciaId: string;
+      competencia: string;
+      periodos: {
+        periodoId: string;
+        aporte: NotaResultado;
+        items: ItemApoderado[];
+      }[];
+    }[];
+  }[];
+  competencias: {
+    competenciaId: string;
+    competencia: string;
+    area: string;
+    cursos: string[];
+    calculable: boolean;
+    periodos: NotaPeriodoCompetencia[];
+    notaFinal: NotaResultado;
   }[];
 };
 
@@ -1786,6 +1976,8 @@ export type FilaMatriculaPeriodo = {
   estado: EstadoMatricula;
   codigo: string | null;
   tipo: 'NUEVO' | 'CONTINUADOR';
+  /** Última vez que se tocó la matrícula (documentos, validación, sección, pago). */
+  actualizadoEn: string;
 };
 
 // ---------- Matrícula · Nueva matrícula del Personal administrativo (HU-24, A6) ----------

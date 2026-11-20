@@ -19,6 +19,15 @@ export const useDetalleMatricula = (matriculaId?: string) =>
     enabled: Boolean(matriculaId),
   });
 
+// GET /matricula/matriculas/de-estudiante/{estudianteId} · matrícula vigente del estudiante (matriculaId es null si no tiene)
+export const useMatriculaDeEstudiante = (estudianteId: string) =>
+  useQuery({
+    queryKey: ['matricula', 'de-estudiante', estudianteId],
+    queryFn: (): Promise<{ matriculaId: string | null }> =>
+      api.get(`/matricula/matriculas/de-estudiante/${estudianteId}`),
+    enabled: Boolean(estudianteId),
+  });
+
 // GET /matricula/matriculas/{id}/secciones · secciones del grado con su ocupación
 export const useSeccionesDeMatricula = (
   matriculaId: string,
@@ -29,8 +38,9 @@ export const useSeccionesDeMatricula = (
     queryFn: (): Promise<SeccionesDelGrado> =>
       api.get(`/matricula/matriculas/${matriculaId}/secciones`),
     enabled: habilitado,
-    // Las vacantes cambian: se piden de nuevo cada vez que se abre el modal.
+    // Las vacantes y la sección actual cambian: se piden de nuevo cada vez que se abre el modal.
     gcTime: 0,
+    staleTime: 0,
   });
 
 const useRefrescarDetalle = (matriculaId: string) => {
@@ -69,6 +79,10 @@ export const useCambiarSeccion = (matriculaId: string) => {
       await refrescar(detalle);
       await queryClient.invalidateQueries({
         queryKey: ['matricula', 'detalle', matriculaId, 'cambios-seccion'],
+      });
+      // La lista del modal marca la sección actual: sin esto seguía mostrando la anterior.
+      await queryClient.invalidateQueries({
+        queryKey: ['matricula', 'detalle', matriculaId, 'secciones'],
       });
     },
   });
@@ -132,9 +146,16 @@ export const useObservarDocumento = (matriculaId: string) => {
 // POST /matricula/matriculas/{id}/validar · "¿Aprobar documentación?"
 export const useValidarMatricula = (matriculaId: string) => {
   const refrescar = useRefrescarDetalle(matriculaId);
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (): Promise<DetalleMatricula> =>
       api.post(`/matricula/matriculas/${matriculaId}/validar`),
-    onSuccess: refrescar,
+    onSuccess: async (detalle) => {
+      await refrescar(detalle);
+      // Al validar, el backend genera solo la cuota de matrícula: la tarjeta de pago debe verla.
+      await queryClient.invalidateQueries({
+        queryKey: ['pagos', 'cuota-matricula', matriculaId],
+      });
+    },
   });
 };

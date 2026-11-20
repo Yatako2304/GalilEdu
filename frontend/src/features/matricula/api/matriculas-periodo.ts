@@ -18,7 +18,8 @@ import {
 
 // Endpoints de backend/matricula/web/MatriculaAdministrativoController.java (HU-24).
 
-export type OrdenMatriculas = 'estudiante' | 'grado' | 'seccion' | 'estado';
+export type OrdenMatriculas =
+  'estudiante' | 'grado' | 'seccion' | 'estado' | 'reciente';
 
 export type FiltrosMatriculasPeriodo = {
   texto?: string;
@@ -81,6 +82,10 @@ export const usePreparacionMatricula = (
         `/matricula/periodos/${periodoId}/estudiantes/${estudianteId}/preparacion`,
       ),
     enabled: Boolean(estudianteId),
+    // La sección propuesta depende de las secciones y vacantes del momento (se crean o se llenan en otra
+    // pantalla): se pide de nuevo cada vez que se abre, si no seguía mostrando "no hay vacantes" por 60 s.
+    gcTime: 0,
+    staleTime: 0,
   });
 
 // GET /matricula/periodos/{id}/estudiantes/{estudianteId}/secciones · para "Cambiar sección"
@@ -96,6 +101,8 @@ export const useSeccionesDelAlumno = (
         `/matricula/periodos/${periodoId}/estudiantes/${estudianteId}/secciones`,
       ),
     enabled: Boolean(estudianteId) && habilitado,
+    gcTime: 0,
+    staleTime: 0,
   });
 
 export type SolicitudNuevaMatricula = {

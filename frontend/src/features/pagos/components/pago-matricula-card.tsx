@@ -12,10 +12,7 @@ import {
   useGenerarCuotaMatricula,
 } from '../api/cuota-matricula';
 
-import { soles } from './formato';
-
-const fecha = (valor: string) =>
-  new Intl.DateTimeFormat('es-PE').format(new Date(`${valor}T12:00:00`));
+import { fechaDia as fecha, soles } from './formato';
 
 const etiquetas = {
   PENDIENTE: 'Pendiente de pago',
@@ -40,9 +37,7 @@ export const PagoMatriculaCard = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-label-1 font-semibold">
-          Pago de matrícula
-        </CardTitle>
+        <CardTitle>Pago de matrícula</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {consulta.isLoading ? (

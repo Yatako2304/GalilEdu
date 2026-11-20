@@ -1,6 +1,6 @@
 -- HU-2 y HU-3: el administrador activa o desactiva el inicio de sesión con Google para toda la institución.
 -- Una sola fila (id = 1). Usuario y contraseña siempre siguen funcionando.
--- V21 y V22 quedan libres para la rama de asistencia (feat/asistencia-registro), que debe renumerar sus V19 y V20.
+-- Es V24 porque main ya ocupa hasta V23 (V21 a V23 son de pagos y calificaciones).
 CREATE TABLE seguridad.configuracion_acceso (
     id                SMALLINT    PRIMARY KEY DEFAULT 1,
     google_habilitado BOOLEAN     NOT NULL DEFAULT false,
