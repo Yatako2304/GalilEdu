@@ -26,6 +26,7 @@ import org.hibernate.annotations.Formula;
 public class Cuota {
 	public static final String CONCEPTO_PENSION = "PENSION";
 	public static final String CONCEPTO_MATRICULA = "MATRICULA";
+	public static final String CONCEPTO_CUOTA_INGRESO = "CUOTA_INGRESO";
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.UUID)
@@ -102,6 +103,17 @@ public class Cuota {
 				creadoPor);
 		q.conceptoCodigo = CONCEPTO_MATRICULA;
 		q.numero = null;
+		return q;
+	}
+
+	/**
+	 * Corrección 4 de la iteración 1: cuota de ingreso PENDIENTE (pago único del estudiante NUEVO) con el monto del
+	 * tarifario. Como la de matrícula, guarda la rebaja si un descuento activo cubre CUOTA_INGRESO.
+	 */
+	public static Cuota ingreso(CompromisoPago compromiso, String nombre, BigDecimal monto, LocalDate vencimiento,
+			BigDecimal descuento, UUID descuentoAplicadoId, UUID creadoPor) {
+		Cuota q = matricula(compromiso, nombre, monto, vencimiento, descuento, descuentoAplicadoId, creadoPor);
+		q.conceptoCodigo = CONCEPTO_CUOTA_INGRESO;
 		return q;
 	}
 

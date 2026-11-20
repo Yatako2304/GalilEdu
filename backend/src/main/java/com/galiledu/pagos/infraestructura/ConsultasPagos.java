@@ -24,8 +24,9 @@ public class ConsultasPagos {
 		this.jdbc = jdbc;
 	}
 
+	/** {@code tipoEstudiante}: NUEVO o CONTINUADOR (el NUEVO paga la cuota de ingreso). */
 	public record MatriculaParaPagos(UUID estudianteId, UUID anioEscolarId, int anio, String estado,
-			OffsetDateTime confirmadoEn) {
+			OffsetDateTime confirmadoEn, String tipoEstudiante) {
 	}
 
 	public record DescuentoActivo(UUID id, BigDecimal porcentaje, LocalDate vigenciaDesde, LocalDate vigenciaHasta) {
@@ -36,13 +37,24 @@ public class ConsultasPagos {
 
 	public Optional<MatriculaParaPagos> matricula(UUID matriculaId) {
 		return jdbc.sql("""
-				SELECT m.estudiante_id, m.anio_escolar_id, a.anio, m.estado, m.confirmado_en
+				SELECT m.estudiante_id, m.anio_escolar_id, a.anio, m.estado, m.confirmado_en, m.tipo_estudiante
 				FROM matricula.matricula m JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
 				WHERE m.id = ?""")
 				.param(matriculaId)
 				.query((rs, i) -> new MatriculaParaPagos(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
-						rs.getInt(3), rs.getString(4), rs.getObject(5, OffsetDateTime.class)))
+						rs.getInt(3), rs.getString(4), rs.getObject(5, OffsetDateTime.class), rs.getString(6)))
 				.optional();
+	}
+
+	/** ¿El estudiante ya tiene una cuota de ingreso (no anulada) en algún año? Se cobra una sola vez. */
+	public boolean tieneCuotaIngreso(UUID estudianteId) {
+		return jdbc.sql("""
+				SELECT EXISTS (SELECT 1 FROM pagos.cuota q JOIN pagos.compromiso_pago c ON c.id = q.compromiso_id
+				               WHERE c.estudiante_id = ? AND q.concepto_codigo = 'CUOTA_INGRESO'
+				                 AND q.estado <> 'ANULADA')""")
+				.param(estudianteId)
+				.query(Boolean.class)
+				.single();
 	}
 
 	/** Descuento ACTIVO del estudiante que aplica al concepto indicado (HU-38 lo registra; aquí solo se usa). */
