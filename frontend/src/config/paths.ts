@@ -46,10 +46,27 @@ export const paths = {
       getHref: () => '/app',
     },
 
-    // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios)
+    // HU-5 · Figma > 🌟 Autenticación > Cambiar contraseña (pantalla completa, sin el menú lateral).
+    cambiarContrasena: {
+      path: '/app/cambiar-contrasena',
+      getHref: () => '/app/cambiar-contrasena',
+    },
+
+    // «Mis datos»: cualquier usuario edita sus propios datos personales (no está en Figma). Se abre desde
+    // la tarjeta de usuario (antes abría «Cambiar contraseña» directamente). Cuelga del rol activo
+    // (/app/docente/mis-datos…) para que el menú lateral siga mostrando ese rol: roleRoutes la agrega a
+    // cada rol.
+    misDatos: {
+      path: 'mis-datos',
+      getHref: (inicioDelRol: string) => `${inicioDelRol}/mis-datos`,
+    },
+
+    // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios). Calificaciones: reporte institucional (HU-64), sin frame.
+    // «Configuración de acceso» (HU-2) no está en Figma.
     admin: {
       root: roleRoot(ADMIN),
       usuarios: route(ADMIN, 'usuarios'),
+      configuracionAcceso: route(ADMIN, 'configuracion-acceso'),
     },
 
     // Figma: 🌟 Personal Administrativo
@@ -114,6 +131,8 @@ export const paths = {
       },
       competencias: route(ADMINISTRATIVO, 'competencias'),
       ambientes: route(ADMINISTRATIVO, 'ambientes'),
+      // HU-64: reporte institucional de notas.
+      calificaciones: route(ADMINISTRATIVO, 'calificaciones'),
     },
 
     // Figma: 🌟 Coordinador
@@ -122,6 +141,9 @@ export const paths = {
       horarios: route(COORDINADOR, 'horarios'),
       calificaciones: route(COORDINADOR, 'calificaciones'),
       planEvaluacion: route(COORDINADOR, 'plan-evaluacion'),
+      // HU-52 a HU-55: las mismas pantallas que el Personal administrativo ve como pestañas de "Competencias".
+      planCurricular: route(COORDINADOR, 'plan-curricular'),
+      escalaCalificacion: route(COORDINADOR, 'escala-calificacion'),
       ambientes: route(COORDINADOR, 'ambientes'),
     },
 
@@ -145,6 +167,8 @@ export const paths = {
     apoderado: {
       root: roleRoot(APODERADO),
       datosAlumno: route(APODERADO, 'datos-alumno'),
+      // «Datos de la Familia» (solo vista). Es el ítem «Familia» del menú lateral.
+      familia: route(APODERADO, 'familia'),
       horarios: route(APODERADO, 'horarios'),
       calificaciones: route(APODERADO, 'calificaciones'),
       matricula: route(APODERADO, 'matricula'),

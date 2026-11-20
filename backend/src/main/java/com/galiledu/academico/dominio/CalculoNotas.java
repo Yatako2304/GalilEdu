@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
  *
  * <ol>
  * <li><b>Ítems → aporte del curso en el periodo:</b> la regla de nota del año sobre los ítems del curso que apuntan a
- * la competencia (es el «Promedio final» del consolidado del docente).</li>
+ * la competencia (es el «Promedio del periodo» del consolidado del docente).</li>
  * <li><b>Aportes → nota de la competencia en el periodo:</b> con PROMEDIO_PONDERADO se usa el peso de cada curso del
  * plan de evaluación; con PROMEDIO_SIMPLE los cursos pesan igual; en la escala cualitativa cada curso vota por su
  * nivel con su peso del plan (gana el nivel con más peso; si empatan, el mayor).</li>
@@ -51,24 +51,75 @@ public final class CalculoNotas {
 	public record CursoPeso(UUID planCursoId, BigDecimal peso) {
 	}
 
-	/** Un ítem de un curso y periodo para un estudiante. Sin nota numérica ni nivel, aún no está calificado. */
+	/**
+	 * Un ítem de un curso y periodo para un estudiante. Sin nota numérica ni nivel es un <b>registro faltante</b>.
+	 * Quien
+	 * llama ya excluyó los ítems «No evaluado» de este estudiante y los ítems que nadie de la sección tiene
+	 * registrados:
+	 * esos no cuentan.
+	 */
 	public record Calificacion(UUID planCursoId, UUID periodoId, BigDecimal pesoItem, BigDecimal numerica,
 			String nivel, Instant orden) {
+		public boolean registrada() {
+			return numerica != null || nivel != null;
+		}
 	}
 
-	/** Resultado de un periodo: la nota de la competencia y el aporte de cada curso. */
-	public record ResultadoPeriodo(UUID periodoId, Optional<Nota> nota, boolean parcial,
-			Map<UUID, Optional<Nota>> aportes) {
-	}
+	/** Cuántos ítems que cuentan ya tienen nota. Con alguno sin nota, la nota oficial queda pendiente. */
+	public record Avance(int calificadas, int total) {
+		public static final Avance VACIO = new Avance(0, 0);
 
-	/** Resultado de un estudiante en una competencia. */
-	public record ResultadoCompetencia(List<ResultadoPeriodo> periodos, Optional<Nota> notaFinal, boolean parcial) {
+		public boolean pendiente() {
+			return calificadas < total;
+		}
+
+		public Avance mas(Avance otro) {
+			return new Avance(calificadas + otro.calificadas, total + otro.total);
+		}
 	}
 
 	/**
-	 * Calcula la nota de una competencia para un estudiante. Cuando la regla usa el peso de los cursos (promedio
-	 * ponderado o escala cualitativa) y los pesos están incompletos, no hay nota de competencia (solo aportes):
-	 * normalizar pesos que el colegio no terminó de definir inventaría la nota.
+	 * Lo que aporta un curso a la competencia en un periodo. avance: el promedio de lo registrado, para la vista de
+	 * trabajo del docente; solo es oficial (nota()) cuando no falta ningún registro.
+	 */
+	public record Aporte(Optional<Nota> avance, Avance conteo) {
+		public Optional<Nota> nota() {
+			return conteo.pendiente() ? Optional.empty() : avance;
+		}
+	}
+
+	/**
+	 * Resultado de un periodo: la nota oficial de la competencia (vacía si falta algún registro, si ningún curso tiene
+	 * notas o si los pesos están incompletos) y el aporte de cada curso.
+	 */
+	public record ResultadoPeriodo(UUID periodoId, Optional<Nota> nota, Avance avance, Map<UUID, Aporte> aportes) {
+		public boolean pendiente() {
+			return avance.pendiente();
+		}
+	}
+
+	/**
+	 * Resultado de un estudiante en una competencia. La nota final está vacía mientras algún periodo esté pendiente.
+	 */
+	public record ResultadoCompetencia(List<ResultadoPeriodo> periodos, Optional<Nota> notaFinal, Avance avance) {
+		public boolean pendiente() {
+			return avance.pendiente();
+		}
+	}
+
+	/** Aporte final de un curso: consolida sus aportes de periodo; vacío mientras algún periodo esté pendiente. */
+	public record AporteFinal(Optional<Nota> nota, Avance avance) {
+		public boolean pendiente() {
+			return avance.pendiente();
+		}
+	}
+
+	/**
+	 * Calcula la nota de una competencia para un estudiante. Una nota oficial existe solo cuando está completa: si
+	 * falta
+	 * registrar algún ítem que cuenta, la nota del periodo (y la final) queda pendiente. Cuando la regla usa el peso de
+	 * los cursos (promedio ponderado o escala cualitativa) y los pesos están incompletos, tampoco hay nota de
+	 * competencia: normalizar pesos que el colegio no terminó de definir inventaría la nota.
 	 *
 	 * @param periodos
 	 *            ids de los periodos del año, en orden
@@ -80,30 +131,61 @@ public final class CalculoNotas {
 		boolean calculable = !usaPesosDeCurso(regla) || pesosCompletos(cursos.stream().map(CursoPeso::peso).toList());
 		List<ResultadoPeriodo> resultados = new ArrayList<>();
 		for (UUID periodoId : periodos) {
-			Map<UUID, Optional<Nota>> aportes = new LinkedHashMap<>();
-			boolean parcial = false;
+			Map<UUID, Aporte> aportes = new LinkedHashMap<>();
+			Avance avance = Avance.VACIO;
 			List<Nota> paraCombinar = new ArrayList<>();
 			for (CursoPeso curso : cursos) {
 				List<Calificacion> items = calificaciones.stream()
 						.filter(c -> c.planCursoId().equals(curso.planCursoId()) && c.periodoId().equals(periodoId))
 						.toList();
-				Optional<Nota> aporte = combinar(items.stream()
-						.map(c -> new Nota(ponderado ? c.pesoItem() : BigDecimal.ONE, c.numerica(), c.nivel(),
-								c.orden()))
-						.toList(), regla);
+				Aporte aporte = aporte(items, regla, ponderado);
 				aportes.put(curso.planCursoId(), aporte);
-				// Un ítem del curso sin calificar, o un curso sin ninguna nota, deja la nota a medias.
-				parcial |= items.stream().anyMatch(c -> c.numerica() == null && c.nivel() == null) || aporte.isEmpty();
-				aporte.ifPresent(
+				avance = avance.mas(aporte.conteo());
+				// Un curso sin ítems que cuenten no participa en el periodo.
+				aporte.nota().ifPresent(
 						a -> paraCombinar.add(new Nota(ponderado || cualitativa ? curso.peso() : BigDecimal.ONE,
 								a.numerica(), a.nivel(), a.orden())));
 			}
-			Optional<Nota> nota = !calculable
+			Optional<Nota> nota = !calculable || avance.pendiente()
 					? Optional.empty()
 					: cualitativa ? votoPonderado(paraCombinar) : combinar(paraCombinar, regla);
-			resultados.add(new ResultadoPeriodo(periodoId, nota, nota.isPresent() && parcial, aportes));
+			resultados.add(new ResultadoPeriodo(periodoId, nota, avance, aportes));
 		}
-		return consolidarCompetencia(resultados, consolidacion, regla);
+		Avance total = resultados.stream().map(ResultadoPeriodo::avance).reduce(Avance.VACIO, Avance::mas);
+		Optional<Nota> notaFinal = total.pendiente()
+				? Optional.empty()
+				: consolidar(resultados.stream().map(r -> r.nota().orElse(SIN_NOTA)).toList(), consolidacion, regla);
+		return new ResultadoCompetencia(resultados, notaFinal, total);
+	}
+
+	private static final Nota SIN_NOTA = new Nota(BigDecimal.ONE, null, null, null);
+
+	/**
+	 * Ítems → aporte del curso: la regla del año y cuántos ítems faltan. El avance (vista de trabajo del docente)
+	 * cuenta
+	 * como 0 lo que falta en la escala vigesimal, igual que el promedio del periodo del consolidado; en la escala de
+	 * letras usa solo lo registrado. La nota oficial (nota()) solo existe sin faltantes, así que no cambia.
+	 */
+	public static Aporte aporte(List<Calificacion> items, String regla, boolean ponderado) {
+		boolean vigesimal = items.stream().anyMatch(c -> c.numerica() != null);
+		Optional<Nota> avance = combinar(items.stream()
+				.map(c -> new Nota(ponderado ? c.pesoItem() : BigDecimal.ONE,
+						vigesimal && !c.registrada() ? BigDecimal.ZERO : c.numerica(), c.nivel(), c.orden()))
+				.toList(), regla);
+		return new Aporte(avance, new Avance((int) items.stream().filter(Calificacion::registrada).count(),
+				items.size()));
+	}
+
+	/**
+	 * Aporte final de un curso a la competencia: sus aportes de periodo completos, consolidados con la regla del año.
+	 */
+	public static AporteFinal aporteFinal(List<Aporte> porPeriodo, String consolidacion, String regla) {
+		Avance avance = porPeriodo.stream().map(Aporte::conteo).reduce(Avance.VACIO, Avance::mas);
+		if (avance.pendiente()) {
+			return new AporteFinal(Optional.empty(), avance);
+		}
+		return new AporteFinal(consolidar(porPeriodo.stream().map(a -> a.nota().orElse(SIN_NOTA)).toList(),
+				consolidacion, regla), avance);
 	}
 
 	/** Regla de la escala cualitativa (AD, A, B, C): nivel más frecuente o último nivel. */
@@ -139,25 +221,6 @@ public final class CalculoNotas {
 		Instant orden = conNivel.stream().map(Nota::orden).filter(Objects::nonNull).max(Comparator.naturalOrder())
 				.orElse(null);
 		return Optional.of(new Nota(BigDecimal.ONE, null, ganador, orden));
-	}
-
-	private static ResultadoCompetencia consolidarCompetencia(List<ResultadoPeriodo> periodos, String consolidacion,
-			String regla) {
-		List<Nota> notas = periodos.stream().map(p -> p.nota().orElse(new Nota(BigDecimal.ONE, null, null, null)))
-				.toList();
-		Optional<Nota> notaFinal = consolidar(notas, consolidacion, regla);
-		if (notaFinal.isEmpty()) {
-			return new ResultadoCompetencia(periodos, notaFinal, false);
-		}
-		boolean parcial;
-		if (ULTIMO_PERIODO.equals(consolidacion)) {
-			// Solo cuenta el último periodo del año: es parcial mientras ese periodo no tenga su nota completa.
-			ResultadoPeriodo ultimo = periodos.get(periodos.size() - 1);
-			parcial = ultimo.nota().isEmpty() || ultimo.parcial();
-		} else {
-			parcial = periodos.stream().anyMatch(p -> p.nota().isEmpty() || p.parcial());
-		}
-		return new ResultadoCompetencia(periodos, notaFinal, parcial);
 	}
 
 	/**

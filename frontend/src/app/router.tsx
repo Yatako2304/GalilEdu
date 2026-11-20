@@ -41,6 +41,11 @@ const roleRoutes = (
   ),
   children: [
     { index: true, lazy: () => inicio().then(convert(queryClient)) },
+    // «Mis datos» es de cualquier rol: va bajo cada prefijo de rol para conservar su menú lateral.
+    {
+      path: paths.app.misDatos.path,
+      lazy: () => import('./routes/app/mis-datos').then(convert(queryClient)),
+    },
     ...children.map(([childPath, lazy]) => ({
       path: childPath,
       lazy: () => lazy().then(convert(queryClient)),
@@ -70,6 +75,24 @@ export const createAppRouter = (
         import('./routes/auth/recuperar-contrasena').then(convert(queryClient)),
     },
     {
+      // HU-5: fuera de AppRoot porque en Figma no lleva el menú lateral.
+      path: paths.app.cambiarContrasena.path,
+      element: (
+        <ProtectedRoute>
+          <Outlet />
+        </ProtectedRoute>
+      ),
+      children: [
+        {
+          index: true,
+          lazy: () =>
+            import('./routes/app/cambiar-contrasena').then(
+              convert(queryClient),
+            ),
+        },
+      ],
+    },
+    {
       path: paths.app.root.path,
       element: (
         <ProtectedRoute>
@@ -93,6 +116,10 @@ export const createAppRouter = (
             [
               paths.app.admin.usuarios.path,
               () => import('./routes/app/admin/usuarios'),
+            ],
+            [
+              paths.app.admin.configuracionAcceso.path,
+              () => import('./routes/app/admin/configuracion-acceso'),
             ],
           ],
         ),
@@ -174,6 +201,10 @@ export const createAppRouter = (
               paths.app.administrativo.ambientes.path,
               () => import('./routes/app/administrativo/ambientes'),
             ],
+            [
+              paths.app.administrativo.calificaciones.path,
+              () => import('./routes/app/administrativo/calificaciones'),
+            ],
           ],
         ),
 
@@ -192,8 +223,16 @@ export const createAppRouter = (
               () => import('./routes/app/coordinador/calificaciones'),
             ],
             [
+              paths.app.coordinador.planCurricular.path,
+              () => import('./routes/app/coordinador/plan-curricular'),
+            ],
+            [
               paths.app.coordinador.planEvaluacion.path,
               () => import('./routes/app/coordinador/plan-evaluacion'),
+            ],
+            [
+              paths.app.coordinador.escalaCalificacion.path,
+              () => import('./routes/app/coordinador/escala-calificacion'),
             ],
             [
               paths.app.coordinador.ambientes.path,
@@ -253,6 +292,10 @@ export const createAppRouter = (
             [
               paths.app.apoderado.datosAlumno.path,
               () => import('./routes/app/apoderado/datos-alumno'),
+            ],
+            [
+              paths.app.apoderado.familia.path,
+              () => import('./routes/app/apoderado/familia'),
             ],
             [
               paths.app.apoderado.horarios.path,

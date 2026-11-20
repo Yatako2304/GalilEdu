@@ -12,11 +12,15 @@ import {
 import { FiltrosReporte } from '../../api/calificaciones';
 import { ReporteCalificacionesVista } from '../reporte-calificaciones';
 
-const { consultar, exportar, notas } = vi.hoisted(() => ({
-  consultar: vi.fn(),
-  exportar: vi.fn(),
-  notas: vi.fn(),
-}));
+const { consultar, exportar, notas, resumen, exportarResumen } = vi.hoisted(
+  () => ({
+    consultar: vi.fn(),
+    exportar: vi.fn(),
+    notas: vi.fn(),
+    resumen: vi.fn(),
+    exportarResumen: vi.fn(),
+  }),
+);
 
 vi.mock('../../api/calificaciones', () => ({
   useReporteCalificaciones: (filtros: FiltrosReporte | null) =>
@@ -24,6 +28,8 @@ vi.mock('../../api/calificaciones', () => ({
   useNotasCompetencia: (seleccion: unknown, competenciaIds: string[]) =>
     notas(seleccion, competenciaIds),
   exportarReporte: exportar,
+  useResumenAnual: (filtros: unknown) => resumen(filtros),
+  exportarResumenAnual: exportarResumen,
 }));
 
 const periodo = {
@@ -35,6 +41,7 @@ const periodo = {
   fechaLimiteNotas: '2026-12-23',
   estado: 'EN_CURSO' as const,
   registroNotasAbierto: true,
+  modificacionHabilitada: true,
   competencias: 2,
   items: 2,
 };
@@ -96,7 +103,7 @@ const reporte: ReporteCalificaciones = {
     },
     {
       clave: 'c1:resultado',
-      titulo: 'Promedio final',
+      titulo: 'Promedio del periodo',
       competenciaId: 'c1',
       competencia: 'Cantidad',
       promedio: true,
@@ -117,7 +124,7 @@ const reporte: ReporteCalificaciones = {
     },
     {
       clave: 'c2:resultado',
-      titulo: 'Promedio final',
+      titulo: 'Promedio del periodo',
       competenciaId: 'c2',
       competencia: 'Regularidad',
       promedio: true,
@@ -142,6 +149,46 @@ const reporte: ReporteCalificaciones = {
     },
   ],
 };
+
+// Resumen del año: por competencia, el aporte del curso y la nota de la competencia (dos grupos de columnas).
+const resumenAnual: ReporteCalificaciones = {
+  titulo: 'Resumen del año',
+  detalle: 'Aporte del curso y nota de la competencia',
+  columnas: [
+    ['aporte:p4', 'IV Bimestre', 'Aporte de Álgebra · Cantidad', false],
+    ['aporte:final', 'Aporte final', 'Aporte de Álgebra · Cantidad', true],
+    ['oficial:p4', 'IV Bimestre', 'Nota de la competencia · Cantidad', false],
+    ['oficial:final', 'Nota final', 'Nota de la competencia · Cantidad', true],
+  ].map(([clave, titulo, competencia, promedio]) => ({
+    clave: `c1:${clave}`,
+    titulo: titulo as string,
+    competenciaId: 'c1',
+    competencia: competencia as string,
+    promedio: promedio as boolean,
+  })),
+  filas: [
+    {
+      matriculaId: 'm1',
+      estudiante: 'Ana Lucía García López',
+      valores: {
+        'c1:aporte:p4': '17',
+        'c1:aporte:final': '17',
+        'c1:aporte:final_estado': 'A · Logro esperado',
+        'c1:oficial:p4': '14.6',
+        'c1:oficial:final': '14.6',
+        'c1:oficial:final_estado': 'A · Logro esperado',
+      },
+    },
+  ],
+};
+
+const aporte = (planCursoId: string, nota: string) => ({
+  planCursoId,
+  nota,
+  pendiente: false,
+  calificadas: 1,
+  total: 1,
+});
 
 const mostrar = () =>
   render(
@@ -168,6 +215,11 @@ const mostrar = () =>
 describe('Consolidado con varias competencias', () => {
   beforeEach(() => {
     exportar.mockReset();
+    exportarResumen.mockReset();
+    resumen.mockReset().mockImplementation((filtros: unknown) => ({
+      isLoading: false,
+      data: filtros ? resumenAnual : undefined,
+    }));
     notas.mockReset().mockReturnValue({ isLoading: true, data: undefined });
     consultar
       .mockReset()
@@ -218,7 +270,9 @@ describe('Consolidado con varias competencias', () => {
       within(tabla).getByRole('columnheader', { name: 'Regularidad' }),
     ).toHaveAttribute('colspan', '3');
     expect(
-      within(tabla).getAllByRole('columnheader', { name: 'Promedio final' }),
+      within(tabla).getAllByRole('columnheader', {
+        name: 'Promedio del periodo',
+      }),
     ).toHaveLength(2);
     expect(
       within(tabla).getByRole('columnheader', { name: 'Promedio general' }),
@@ -240,11 +294,60 @@ describe('Consolidado con varias competencias', () => {
     });
   });
 
+  it('un promedio con registros faltantes va en gris, sin letra, con el peso calificado', async () => {
+    const usuario = userEvent.setup();
+    consultar.mockImplementation((filtros: FiltrosReporte | null) => ({
+      isLoading: false,
+      data: filtros
+        ? {
+            ...reporte,
+            filas: [
+              {
+                matriculaId: 'm2',
+                estudiante: 'Diego Quispe',
+                valores: {
+                  'c1:i1': '15',
+                  'c1:resultado': '15',
+                  'c1:resultado_estado': 'A · Logro esperado',
+                  'c2:i1': '12',
+                  'c2:i2': 'Por registrar',
+                  'c2:resultado': '12',
+                  'c2:resultado_estado':
+                    'Faltan registros (cuentan como 0) · 50 % del peso calificado',
+                  resultado_general: '14',
+                  resultado_general_estado:
+                    'Faltan registros · 70 % del peso calificado',
+                },
+              },
+            ],
+          }
+        : undefined,
+    }));
+    mostrar();
+    await usuario.click(
+      screen.getByRole('button', { name: 'Generar consolidado' }),
+    );
+
+    const tabla = within(screen.getByRole('table'));
+    const aviso = tabla.getByText(
+      'Faltan registros (cuentan como 0) · 50 % del peso calificado',
+    );
+    expect(aviso).toHaveClass('text-content-quartiary');
+    // El promedio de lo registrado se ve, pero en gris y sin negrita: no es una nota.
+    const promedio = tabla.getAllByText('12/20').at(-1)!;
+    expect(promedio).toHaveClass('text-content-quartiary');
+    expect(promedio).not.toHaveClass('font-semibold');
+    expect(tabla.getByText('Por registrar')).toHaveClass(
+      'text-content-quartiary',
+    );
+    expect(tabla.queryByText(/B · En proceso/)).not.toBeInTheDocument();
+  });
+
   it('permite omitir los promedios y limpiar la selección', async () => {
     const usuario = userEvent.setup();
     mostrar();
     await usuario.click(
-      screen.getByRole('switch', { name: 'Incluir promedio final' }),
+      screen.getByRole('switch', { name: 'Incluir promedio del periodo' }),
     );
     await usuario.click(
       screen.getByRole('button', { name: 'Generar consolidado' }),
@@ -318,29 +421,29 @@ describe('Nota de la competencia', () => {
                 nota: '13.6',
                 nivel: 'A',
                 logro: 'Logro esperado',
-                parcial: false,
-                aportes: [
-                  { planCursoId: 'plan-1', nota: '16' },
-                  { planCursoId: 'plan-2', nota: '12' },
-                ],
+                pendiente: false,
+                calificadas: 2,
+                total: 2,
+                aportes: [aporte('plan-1', '16'), aporte('plan-2', '12')],
               },
               {
                 periodoId: 'periodo-4',
                 nota: '15.6',
                 nivel: 'AD',
                 logro: 'Logro esperado',
-                parcial: true,
-                aportes: [
-                  { planCursoId: 'plan-1', nota: '18' },
-                  { planCursoId: 'plan-2', nota: '14' },
-                ],
+                pendiente: false,
+                calificadas: 2,
+                total: 2,
+                aportes: [aporte('plan-1', '18'), aporte('plan-2', '14')],
               },
             ],
             notaFinal: {
               nota: '14.6',
               nivel: 'A',
               logro: 'Logro esperado',
-              parcial: true,
+              pendiente: false,
+              calificadas: 4,
+              total: 4,
             },
           },
         ],
@@ -353,6 +456,68 @@ describe('Nota de la competencia', () => {
     notas
       .mockReset()
       .mockReturnValue({ isLoading: false, data: notasCantidad });
+  });
+
+  it('con un registro faltante la nota oficial queda pendiente, sin número ni letra', async () => {
+    const usuario = userEvent.setup();
+    const filas = notasCantidad.filas.map((fila) => ({
+      ...fila,
+      competencias: fila.competencias.map((c) => ({
+        ...c,
+        periodos: c.periodos.map((p) =>
+          p.periodoId === 'periodo-4'
+            ? {
+                ...p,
+                nota: '—',
+                nivel: null,
+                logro: 'Pendiente' as const,
+                pendiente: true,
+                calificadas: 1,
+                total: 2,
+                aportes: [
+                  aporte('plan-1', '18'),
+                  {
+                    ...aporte('plan-2', '14'),
+                    pendiente: true,
+                    calificadas: 0,
+                  },
+                ],
+              }
+            : p,
+        ),
+        notaFinal: {
+          nota: '—',
+          nivel: null,
+          logro: 'Pendiente' as const,
+          pendiente: true,
+          calificadas: 3,
+          total: 4,
+        },
+      })),
+    }));
+    notas.mockReturnValue({
+      isLoading: false,
+      data: { ...notasCantidad, filas },
+    });
+    mostrar();
+    await usuario.click(
+      screen.getByRole('button', { name: 'Generar consolidado' }),
+    );
+
+    const tabla = within(
+      screen.getByRole('table', { name: 'Nota de la competencia Cantidad' }),
+    );
+    expect(tabla.getAllByText('Pendiente')).toHaveLength(2);
+    expect(tabla.getByText('1 de 2 ítems registrados')).toBeVisible();
+    expect(tabla.getByText('3 de 4 ítems registrados')).toBeVisible();
+    expect(tabla.queryByText('15,6/20')).not.toBeInTheDocument();
+    expect(tabla.queryByLabelText(/Nivel de logro/)).not.toBeInTheDocument();
+    await usuario.click(
+      screen.getByRole('switch', { name: 'Ver el aporte de cada curso' }),
+    );
+    expect(
+      tabla.getByText('Aritmética: 14/20 (faltan 1 de 1, cuentan como 0)'),
+    ).toBeVisible();
   });
 
   it('muestra la nota oficial por periodo y la final, con el aporte de cada curso', async () => {
@@ -383,7 +548,7 @@ describe('Nota de la competencia', () => {
     // La nota final va en letra, con el número como referencia.
     expect(tabla.getByLabelText('Nivel de logro A')).toHaveTextContent('A');
     expect(tabla.getByText('14,6/20')).toBeVisible();
-    expect(tabla.getAllByText(/Parcial/)).toHaveLength(2);
+    expect(tabla.queryByText(/Parcial|Pendiente/)).not.toBeInTheDocument();
     expect(screen.getByText('Álgebra 40 % · Aritmética 60 %')).toBeVisible();
     expect(tabla.queryByText('Álgebra: 16/20')).not.toBeInTheDocument();
 
@@ -413,5 +578,53 @@ describe('Nota de la competencia', () => {
     expect(
       screen.getByText('Los pesos de los cursos no suman 100 %.'),
     ).toBeVisible();
+  });
+
+  it('«Todo el año» genera el resumen con el aporte final del curso y la nota de la competencia', async () => {
+    const usuario = userEvent.setup();
+    mostrar();
+    await usuario.selectOptions(
+      screen.getByRole('combobox', { name: 'Periodo lectivo' }),
+      'ANIO',
+    );
+    expect(
+      screen.queryByRole('combobox', { name: 'Ítems de calificación' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('switch', { name: 'Incluir promedio del periodo' }),
+    ).not.toBeInTheDocument();
+
+    await usuario.click(
+      screen.getByRole('button', { name: 'Generar resumen del año' }),
+    );
+    expect(resumen).toHaveBeenLastCalledWith({
+      planCursoId: 'plan-1',
+      seccionId: 'seccion-1',
+      competenciaIds: 'c1',
+    });
+    const tabla = screen.getByRole('table');
+    expect(
+      within(tabla).getByRole('columnheader', {
+        name: 'Aporte de Álgebra · Cantidad',
+      }),
+    ).toHaveAttribute('colspan', '2');
+    expect(
+      within(tabla).getByRole('columnheader', {
+        name: 'Nota de la competencia · Cantidad',
+      }),
+    ).toHaveAttribute('colspan', '2');
+    expect(within(tabla).getAllByText('17/20')).toHaveLength(2);
+    expect(
+      screen.getByText(/no es el promedio de los aportes finales/),
+    ).toBeVisible();
+    // El consolidado del periodo y su tarjeta no se mezclan con el año.
+    expect(consultar).toHaveBeenLastCalledWith(null);
+
+    await usuario.click(screen.getByRole('button', { name: 'Descargar PDF' }));
+    expect(exportarResumen).toHaveBeenCalledWith({
+      planCursoId: 'plan-1',
+      seccionId: 'seccion-1',
+      competenciaIds: 'c1',
+    });
   });
 });

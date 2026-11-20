@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
+import com.galiledu.pagos.aplicacion.DtosDescuentos.BeneficiarioHermanos;
 import com.galiledu.pagos.aplicacion.DtosDescuentos.DescuentoActual;
 import com.galiledu.pagos.aplicacion.DtosDescuentos.DescuentoAplicable;
 import com.galiledu.pagos.aplicacion.DtosDescuentos.DescuentoAplicadoVista;
@@ -25,8 +27,10 @@ import com.galiledu.pagos.dominio.DescuentoAplicado;
 import com.galiledu.pagos.dominio.EstadoCompromiso;
 import com.galiledu.pagos.dominio.EstadoDescuento;
 import com.galiledu.pagos.dominio.EstadoDescuentoAplicado;
+import com.galiledu.pagos.dominio.TipoDescuento;
 import com.galiledu.pagos.infraestructura.CompromisoPagoRepositorio;
 import com.galiledu.pagos.infraestructura.ConsultasPagos;
+import com.galiledu.pagos.infraestructura.ConsultasPagos.HermanoMatriculado;
 import com.galiledu.pagos.infraestructura.DescuentoAplicadoRepositorio;
 import com.galiledu.pagos.infraestructura.DescuentoRepositorio;
 
@@ -56,14 +60,23 @@ public class ServicioDescuentosAplicados {
 	@Transactional(readOnly = true)
 	public DescuentosAplicables aplicables(UUID compromisoId) {
 		CompromisoPago c = buscarCompromiso(compromisoId);
-		int hermanos = consultas.hermanosMatriculados(c.getEstudianteId(), c.getAnioEscolarId());
+		List<HermanoMatriculado> familia = consultas.hermanosMatriculados(c.getEstudianteId(), c.getAnioEscolarId());
+		int hermanos = familia.size();
+		List<BeneficiarioHermanos> beneficiarios = menores(familia).stream()
+				.map(h -> new BeneficiarioHermanos(h.estudianteId(), h.nombre()))
+				.toList();
+		boolean esMenor = esMenor(familia, c.getEstudianteId());
 		List<DescuentoAplicable> lista = catalogo.findByEstadoOrderByNombreAsc(EstadoDescuento.ACTIVO).stream()
 				.map(d -> {
 					Optional<BigDecimal> porcentaje = d.porcentajePara(hermanos);
+					boolean porHermanos = d.getTipo() == TipoDescuento.POR_HERMANOS;
+					String motivo = porcentaje.isEmpty()
+							? sinTramo(hermanos)
+							: porHermanos && !esMenor ? noEsElMenor(familia) : null;
 					return new DescuentoAplicable(d.getId(), d.getNombre(), d.getTipo(), d.getAplicacion(),
 							porcentaje.orElse(null), d.getConceptos().stream().sorted().toList(), d.getCondicion(),
-							porcentaje.isPresent(),
-							porcentaje.isPresent() ? null : sinTramo(hermanos));
+							motivo == null, motivo, porHermanos ? hermanos : null,
+							porHermanos ? beneficiarios : List.of());
 				})
 				.toList();
 		DescuentoActual actual = aplicados
@@ -97,11 +110,17 @@ public class ServicioDescuentosAplicados {
 		if (!d.estaActivo()) {
 			throw ExcepcionNegocio.conflicto("El descuento \"" + d.getNombre() + "\" está inactivo.");
 		}
-		int hermanos = consultas.hermanosMatriculados(c.getEstudianteId(), c.getAnioEscolarId());
+		List<HermanoMatriculado> familia = consultas.hermanosMatriculados(c.getEstudianteId(), c.getAnioEscolarId());
+		int hermanos = familia.size();
 		BigDecimal porcentaje = d.porcentajePara(hermanos)
 				.orElseThrow(() -> ExcepcionNegocio.conflicto(sinTramo(hermanos)));
+		// Corrección del PO: el descuento por hermanos solo se aplica al hermano menor (a ambos si son gemelos).
+		if (d.getTipo() == TipoDescuento.POR_HERMANOS && !esMenor(familia, c.getEstudianteId())) {
+			throw ExcepcionNegocio.conflicto(noEsElMenor(familia));
+		}
 
 		LocalDate desde = s.vigenciaDesde() != null ? s.vigenciaDesde() : LocalDate.now(LIMA);
+		boolean hastaFinEscolaridad = hastaFinEscolaridad(s);
 		if (s.vigenciaHasta() != null && s.vigenciaHasta().isBefore(desde)) {
 			throw ExcepcionNegocio.invalido("La vigencia termina antes de empezar.");
 		}
@@ -123,7 +142,7 @@ public class ServicioDescuentosAplicados {
 		}
 
 		DescuentoAplicado nuevo = aplicados.saveAndFlush(DescuentoAplicado.nuevo(c.getEstudianteId(), d, porcentaje,
-				desde, s.vigenciaHasta(), s.motivo().trim(), usuarioId));
+				desde, s.vigenciaHasta(), hastaFinEscolaridad, s.motivo().trim(), usuarioId));
 		// RF-88: el porcentaje se aplica sobre el monto original de las cuotas pendientes de los conceptos cubiertos.
 		int recalculadas = 0;
 		for (CompromisoPago compromiso : compromisos.findByEstudianteId(c.getEstudianteId())) {
@@ -168,9 +187,52 @@ public class ServicioDescuentosAplicados {
 		return restituidas;
 	}
 
+	/**
+	 * Corrección del PO: "hasta que termine el colegio" no lleva fecha de fin; con una fecha de fin, la fecha es
+	 * obligatoria. Sin el indicador (frontend anterior) se deduce de la fecha: vacía = sin fin.
+	 */
+	private static boolean hastaFinEscolaridad(SolicitudAplicarDescuento s) {
+		if (s.hastaFinEscolaridad() == null) {
+			return s.vigenciaHasta() == null;
+		}
+		if (s.hastaFinEscolaridad() && s.vigenciaHasta() != null) {
+			throw ExcepcionNegocio.invalido(
+					"Si el descuento rige hasta que el estudiante termine el colegio, no indiques la fecha de fin.");
+		}
+		if (!s.hastaFinEscolaridad() && s.vigenciaHasta() == null) {
+			throw ExcepcionNegocio.invalido(
+					"Indica hasta cuándo rige el descuento o marca «Hasta que termine el colegio».");
+		}
+		return s.hastaFinEscolaridad();
+	}
+
 	private CompromisoPago buscarCompromiso(UUID id) {
 		return compromisos.findById(id)
 				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No existe el compromiso de pago."));
+	}
+
+	/**
+	 * Los hermanos de menor edad: los de fecha de nacimiento más reciente (la lista ya viene del menor al mayor). Si
+	 * dos comparten la fecha (gemelos), lo son ambos. Si nadie tiene la fecha registrada, no se puede distinguir y lo
+	 * son todos.
+	 */
+	private static List<HermanoMatriculado> menores(List<HermanoMatriculado> familia) {
+		if (familia.isEmpty()) {
+			return List.of();
+		}
+		LocalDate menor = familia.getFirst().fechaNacimiento();
+		return familia.stream().filter(h -> Objects.equals(h.fechaNacimiento(), menor)).toList();
+	}
+
+	private static boolean esMenor(List<HermanoMatriculado> familia, UUID estudianteId) {
+		return menores(familia).stream().anyMatch(h -> h.estudianteId().equals(estudianteId));
+	}
+
+	private static String noEsElMenor(List<HermanoMatriculado> familia) {
+		List<String> nombres = menores(familia).stream().map(HermanoMatriculado::nombre).toList();
+		return nombres.size() == 1
+				? "El descuento por hermanos corresponde al hermano menor: " + nombres.getFirst() + "."
+				: "El descuento por hermanos corresponde a los hermanos menores: " + String.join(" y ", nombres) + ".";
 	}
 
 	private static String sinTramo(int hermanos) {
@@ -184,7 +246,7 @@ public class ServicioDescuentosAplicados {
 
 	private DescuentoAplicadoVista vista(DescuentoAplicado a) {
 		return new DescuentoAplicadoVista(a.getId(), a.getDescuentoId(), a.getNombre(), a.getPorcentaje(),
-				a.getVigenciaDesde(), a.getVigenciaHasta(), a.getMotivo(), a.getEstado(),
+				a.getVigenciaDesde(), a.getVigenciaHasta(), a.isHastaFinEscolaridad(), a.getMotivo(), a.getEstado(),
 				consultas.nombreDeUsuario(a.getAplicadoPor()),
 				a.getAplicadoEn(), a.getMotivoRevocacion(), a.getRevocadoEn());
 	}

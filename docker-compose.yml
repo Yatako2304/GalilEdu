@@ -2,10 +2,12 @@
 # Uso:  docker compose --env-file deploy/.env up -d --build
 # Guía completa: docs/guias/despliegue.md
 #
-#   Internet :80 ──► frontend (nginx) ──/api──► backend (Spring Boot) ──► db (PostgreSQL 18)
+#   Internet :80/:443 ──► caddy ──► frontend (nginx) ──/api──► backend (Spring Boot) ──► db (PostgreSQL 18)
 #
-# Solo el puerto 80 queda expuesto; backend y base de datos no son accesibles desde fuera
-# (la base escucha en 127.0.0.1:5432 del servidor, para entrar por túnel SSH).
+# Solo caddy queda expuesto (80 y 443). Con DOMINIO en deploy/.env, caddy obtiene el certificado HTTPS de
+# Let's Encrypt y lo renueva solo; sin DOMINIO sirve por HTTP en el 80, como antes (ver deploy/Caddyfile).
+# Backend y base de datos no son accesibles desde fuera (la base escucha en 127.0.0.1:5432 del servidor,
+# para entrar por túnel SSH).
 
 services:
   db:
@@ -53,6 +55,9 @@ services:
       URL_FRONTEND: ${URL_PUBLICA:-http://localhost}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      # Inicio de sesión con Google (HU-2 y HU-3): sin estas llaves el botón de Google no aparece.
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:8080/api/actuator/health || exit 1"]
       interval: 10s
@@ -66,8 +71,26 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    # Sin puertos propios: le llega el tráfico desde caddy por la red interna de Docker.
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - frontend
+    environment:
+      # Vacío = HTTP en el puerto 80 (IP del servidor). Con dominio (p. ej. galiledu.duckdns.org) = HTTPS.
+      DOMINIO: ${DOMINIO:-:80}
     ports:
       - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Certificados y su configuración: sobreviven a los despliegues (Let's Encrypt limita cuántos se piden).
+      - datos_caddy:/data
+      - config_caddy:/config
 
 volumes:
   datos_postgres:
+  datos_caddy:
+  config_caddy:

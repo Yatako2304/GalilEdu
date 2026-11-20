@@ -1,4 +1,5 @@
 import { HttpResponse, http } from 'msw';
+import * as React from 'react';
 
 import { env } from '@/config/env';
 import { api } from '@/lib/api-client';
@@ -12,6 +13,7 @@ import {
 } from '@/testing/test-utils';
 import { EstudianteSinMatricula, PreparacionMatricula } from '@/types/api';
 
+import { usePreparacionMatricula } from '../../api/matriculas-periodo';
 import { DialogoNuevaMatricula } from '../dialogo-nueva-matricula';
 
 // HU-24 · A6 "Nueva matrícula": buscar al alumno, ver sus datos y su sección, subir documentos y guardar.
@@ -280,4 +282,37 @@ test('sin vacantes en el grado avisa y no deja guardar', async () => {
     ),
   ).toBeVisible();
   expect(screen.getByRole('button', { name: 'Guardar' })).toBeDisabled();
+});
+
+// Regresión: se creó la sección faltante en otra pantalla y, al volver a abrir "Nueva matrícula" dentro de
+// los 60 s del caché global, seguía diciendo que no había vacantes.
+test('al reabrir el modal vuelve a consultar y ya propone la sección recién creada', async () => {
+  let prep = preparacion({ seccion: null });
+  server.use(
+    http.get(`${API}/estudiantes`, () => HttpResponse.json([CAMILA])),
+    http.get(`${API}/estudiantes/e-camila/preparacion`, () =>
+      HttpResponse.json(prep),
+    ),
+  );
+  const Propuesta = () => {
+    const { data } = usePreparacionMatricula('periodo-2027', 'e-camila');
+    return data ? <p>{data.seccion?.etiqueta ?? 'sin sección'}</p> : null;
+  };
+  const Prueba = () => {
+    const [abierto, setAbierto] = React.useState(true);
+    return (
+      <>
+        <button onClick={() => setAbierto((a) => !a)}>alternar</button>
+        {abierto && <Propuesta />}
+      </>
+    );
+  };
+  await renderApp(<Prueba />);
+  expect(await screen.findByText('sin sección')).toBeVisible();
+
+  await userEvent.click(screen.getByRole('button', { name: 'alternar' }));
+  prep = preparacion();
+  await userEvent.click(screen.getByRole('button', { name: 'alternar' }));
+
+  expect(await screen.findByText('3.° A')).toBeVisible();
 });

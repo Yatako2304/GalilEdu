@@ -6,6 +6,7 @@ import java.time.Clock;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -25,11 +26,13 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.CambioSeccionRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DetalleMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DocumentoDeMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionAsignada;
+import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionesDelGrado;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.DocumentoGuardadoFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.MatriculaDetalleFila;
 import com.galiledu.matricula.infraestructura.EscriturasMatricula;
+import com.galiledu.pagos.aplicacion.ServicioCuotaMatricula;
 
 /**
  * HU-24: detalle de una matrícula (A5, B6, B7), cambio de sección (A5 modal) y documentos del Personal administrativo
@@ -41,24 +44,29 @@ public class ServicioMatriculaAdministrativa {
 	private final EscriturasMatricula escrituras;
 	private final ServicioPeriodoMatricula periodos;
 	private final ServicioSecciones secciones;
+	private final ServicioCuotaMatricula cuotaMatricula;
 	private final Clock reloj;
 
 	public ServicioMatriculaAdministrativa(ConsultasMatricula consultas, EscriturasMatricula escrituras,
-			ServicioPeriodoMatricula periodos, ServicioSecciones secciones, Clock reloj) {
+			ServicioPeriodoMatricula periodos, ServicioSecciones secciones, ServicioCuotaMatricula cuotaMatricula,
+			Clock reloj) {
 		this.consultas = consultas;
 		this.escrituras = escrituras;
 		this.periodos = periodos;
 		this.secciones = secciones;
+		this.cuotaMatricula = cuotaMatricula;
 		this.reloj = reloj;
 	}
 
 	@Transactional(readOnly = true)
 	public DetalleMatricula detalle(UUID matriculaId) {
 		MatriculaDetalleFila m = buscar(matriculaId);
-		SeccionAsignada seccion = delAnio(m).stream().filter(s -> s.id().equals(m.seccionId())).findFirst()
+		var guardada = delAnio(m).stream().filter(s -> s.id().equals(m.seccionId())).findFirst();
+		SeccionAsignada seccion = guardada
 				.map(s -> new SeccionAsignada(s.id(), etiqueta(s), s.tutor(), s.capacidadMaxima(),
 						s.alumnosOcupanVacante()))
 				.orElse(null);
+		String nombreSeccion = guardada.map(s -> s.nombre()).orElse(null);
 		var apoderado = consultas.responsableDe(m.estudianteId());
 		var emergencia = consultas.contactoDeEmergencia(m.estudianteId());
 		Map<UUID, DocumentoGuardadoFila> guardados = consultas.documentosGuardados(matriculaId).stream()
@@ -75,7 +83,19 @@ public class ServicioMatriculaAdministrativa {
 						+ (c.celular() == null ? "" : " · " + c.celular())).orElse(null),
 				PresentacionMatricula.resumenMedico(consultas.fichaMedica(m.estudianteId())),
 				puedeCambiarSeccion(m), puedeEditarDocumentos(m), puedeValidar(m, documentos), documentos,
-				m.extemporanea(), m.motivoExtemporanea());
+				m.extemporanea(), m.motivoExtemporanea(),
+				seccion == null
+						? null
+						: SeccionMatricula.asignada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()),
+				seccion == null
+						? null
+						: SeccionMatricula.seleccionada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()));
+	}
+
+	/** Id de la matrícula vigente del estudiante, o vacío si aún no tiene (la ficha del estudiante la usa). */
+	@Transactional(readOnly = true)
+	public Optional<UUID> matriculaVigenteDe(UUID estudianteId) {
+		return consultas.matriculaVigenteDe(estudianteId);
 	}
 
 	/** Secciones del grado de la matrícula; la actual va marcada como seleccionada. */
@@ -197,7 +217,11 @@ public class ServicioMatriculaAdministrativa {
 		escrituras.devolverAlApoderado(matriculaId);
 	}
 
-	/** "¿Aprobar documentación?": aprueba lo que está en revisión y la matrícula pasa a PENDIENTE_PAGO. */
+	/**
+	 * "¿Aprobar documentación?": aprueba lo que está en revisión y la matrícula pasa a PENDIENTE_PAGO.
+	 * La cuota de matrícula (HU-36) se genera en el mismo paso, para que el colegio no tenga que acordarse de hacerlo.
+	 * Si no se puede generar (por ejemplo, tarifario sin confirmar) la validación no se aplica y se explica el motivo.
+	 */
 	@Transactional
 	public void validar(UUID matriculaId, UUID usuarioId) {
 		MatriculaDetalleFila m = buscar(matriculaId);
@@ -208,6 +232,8 @@ public class ServicioMatriculaAdministrativa {
 		if (guardados.stream().anyMatch(d -> d.estado().equals("OBSERVADO"))) {
 			throw ExcepcionNegocio.conflicto("Hay documentos observados: el apoderado debe corregirlos primero.");
 		}
+		// Primero la cuota: si no se puede generar (tarifario sin confirmar) la matrícula queda como estaba.
+		cuotaMatricula.generar(matriculaId, usuarioId);
 		escrituras.aprobarDocumentacion(matriculaId, usuarioId);
 	}
 

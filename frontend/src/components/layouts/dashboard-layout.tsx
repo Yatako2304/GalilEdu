@@ -240,17 +240,29 @@ const SidebarBody = ({
           collapsed && 'flex-col',
         )}
       >
-        <Avatar name={fullName} />
-        {!collapsed && (
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-label-2 font-medium text-content-primary">
-              {fullName}
-            </p>
-            <p className="truncate text-body-4 text-content-quartiary">
-              {ROLE_CONFIG[activeRole].label}
-            </p>
-          </div>
-        )}
+        {/* «Mis datos»: al pulsar la tarjeta del usuario se va a la pantalla de datos personales, con el botón
+            «Cambiar contraseña» dentro (antes abría un desplegable que iba directo a «Cambiar contraseña»). */}
+        <Link
+          to={paths.app.misDatos.getHref(getRoleHomeHref(activeRole))}
+          onClick={onNavigate}
+          className={cn(
+            'flex min-w-0 items-center gap-3 rounded-xl text-left hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus',
+            !collapsed && 'flex-1',
+          )}
+        >
+          <Avatar name={fullName} />
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-label-2 font-medium text-content-primary">
+                {fullName}
+              </p>
+              <p className="truncate text-body-4 text-content-quartiary">
+                {ROLE_CONFIG[activeRole].label}
+              </p>
+            </div>
+          )}
+          <span className="sr-only">Ver mis datos</span>
+        </Link>
         <button
           type="button"
           onClick={() => logout.mutate({})}

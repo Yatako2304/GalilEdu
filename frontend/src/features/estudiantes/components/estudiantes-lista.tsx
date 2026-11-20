@@ -37,9 +37,9 @@ const TEXTOS: Record<
   (nombre: string) => { titulo: string; descripcion: string }
 > = {
   retirar: (nombre) => ({
-    titulo: `¿Inactivar a ${nombre}?`,
+    titulo: `¿Retirar a ${nombre}?`,
     descripcion:
-      'Quedará retirado y no se podrá inscribir de nuevo mientras siga inactivo. Puedes reactivarlo cuando quieras.',
+      'Quedará retirado y no se podrá inscribir de nuevo mientras siga retirado. Puedes reactivarlo cuando quieras.',
   }),
   reactivar: (nombre) => ({
     titulo: `¿Reactivar a ${nombre}?`,
@@ -234,7 +234,7 @@ export const EstudiantesLista = ({
   );
 };
 
-// Los tres puntos de cada fila (Figma): Ver, Editar, Inactivar o Reactivar, y Eliminar.
+// Los tres puntos de cada fila (Figma): Ver, Editar, Retirar o Reactivar, y Eliminar.
 const AccionesFila = ({
   estudiante,
   hrefFicha,
@@ -269,7 +269,7 @@ const AccionesFila = ({
           ) : (
             <UserX className="mr-2 size-4" aria-hidden="true" />
           )}
-          {retirado ? 'Reactivar' : 'Inactivar'}
+          {retirado ? 'Reactivar' : 'Retirar'}
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={() => onAccion('eliminar')}

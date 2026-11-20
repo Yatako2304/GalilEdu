@@ -32,6 +32,7 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.MatriculaCreada;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PeriodoMatriculas;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PreparacionMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionAsignada;
+import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionesDelGrado;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.EstudianteParaMatricula;
@@ -87,7 +88,10 @@ public class ServicioMatriculasPeriodo {
 				vacioANulo(gradoCodigo), vacioANulo(estado), orden, descendente, numero, tam);
 		return Pagina.de(new PageImpl<>(filas.filas(), PageRequest.of(numero - 1, tam), filas.total()),
 				f -> new FilaMatriculaPeriodo(f.id(), f.estudianteId(), f.nombre(), f.documento(), f.gradoCodigo(),
-						f.grado(), f.seccion(), f.estado(), f.codigo(), f.tipo()));
+						f.grado(), f.seccion(), f.estado(), f.codigo(), f.tipo(),
+						SeccionMatricula.asignada(f.estado(), f.seccionId(), f.seccionNombre(), f.seccion()),
+						SeccionMatricula.seleccionada(f.estado(), f.seccionId(), f.seccionNombre(), f.seccion()),
+						f.actualizadoEn()));
 	}
 
 	/** Buscador de "Nueva matrícula": inscritos para el año del periodo que todavía no tienen matrícula. */

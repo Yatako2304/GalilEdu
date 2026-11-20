@@ -1,0 +1,20 @@
+# Caddy: la puerta de entrada de GalilEdu en el servidor (puertos 80 y 443). Reenvía todo al nginx del frontend.
+# Guía: docs/guias/despliegue.md (sección "Dominio, HTTPS y correo").
+#
+# - Con DOMINIO vacío en deploy/.env: sirve por HTTP en el puerto 80, igual que antes (IP del servidor, localhost).
+# - Con DOMINIO=galiledu.duckdns.org (o un dominio propio que apunte a la IP del servidor): Caddy obtiene el
+#   certificado de Let's Encrypt, lo renueva solo, sirve por HTTPS (443) y redirige HTTP → HTTPS.
+#   Los certificados quedan en el volumen "datos_caddy": no se vuelven a pedir en cada despliegue.
+
+# docker-compose.yml pasa DOMINIO=":80" cuando deploy/.env lo deja vacío (Caddy no aplica su valor por defecto a
+# una variable vacía).
+{$DOMINIO} {
+	encode gzip
+	reverse_proxy frontend:80
+}
+
+# Para la verificación de deploy/actualizar.sh y la prueba de humo de GitHub (curl http://localhost/...),
+# también cuando hay dominio con HTTPS.
+http://localhost {
+	reverse_proxy frontend:80
+}

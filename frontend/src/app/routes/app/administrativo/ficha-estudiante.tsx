@@ -11,6 +11,7 @@ import {
   FichaEstudiante,
   encabezadoFicha,
 } from '@/features/estudiantes/components/ficha-estudiante';
+import { SeccionDelEstudiante } from '@/features/matricula/components/seccion-del-estudiante';
 
 // Figma > "Admin / Estudiantes | Ficha del estudiante"
 const FichaEstudianteRoute = () => {
@@ -44,6 +45,7 @@ const FichaEstudianteRoute = () => {
         id={estudianteId}
         aviso={aviso}
         onCerrarAviso={() => setAviso(null)}
+        seccion={<SeccionDelEstudiante estudianteId={estudianteId} />}
       />
     </ContentLayout>
   );

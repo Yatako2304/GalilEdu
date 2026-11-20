@@ -14,7 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.configuracion.aplicacion.ServicioPeriodoMatricula;
 import com.galiledu.configuracion.dominio.EstadoVisiblePeriodoMatricula;
+import com.galiledu.matricula.aplicacion.DtosMatricula.CambioSeccionRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.CuotaDeuda;
+import com.galiledu.matricula.aplicacion.DtosMatricula.DatosEstudianteApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DeudaFamiliar;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstadoMatriculaApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstudianteMatricula;
@@ -23,6 +25,7 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.Impedimento;
 import com.galiledu.matricula.aplicacion.DtosMatricula.MatriculaActual;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PagoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PeriodoMatricula;
+import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.HijoFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.MatriculaFila;
@@ -78,7 +81,9 @@ public class ServicioEstadoMatricula {
 		MatriculaActual matricula = periodoFila.flatMap(p -> consultas.matricula(estudianteId, p.anioEscolarId())
 				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), seccionVisible(m), m.codigo(),
 						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()),
-						m.confirmadoEn(), m.extemporanea())))
+						m.confirmadoEn(), m.extemporanea(),
+						SeccionMatricula.asignada(m.estado(), m.seccionId(), m.seccionNombre(), m.seccion()),
+						SeccionMatricula.seleccionada(m.estado(), m.seccionId(), m.seccionNombre(), m.seccion()))))
 				.orElse(null);
 		boolean extemporanea = matricula != null && matricula.extemporanea();
 		if (periodo == null) {
@@ -120,7 +125,42 @@ public class ServicioEstadoMatricula {
 						.map(c -> pagoMatricula(c, matricula, periodo, deuda, hijo))
 						.orElse(null);
 		return new EstadoMatriculaApoderado(new EstudianteMatricula(hijo.estudianteId(), hijo.nombre(), hijo.grado()),
-				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago);
+				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago, datos(hijo, matricula),
+				cambiosDeSeccion(matricula));
+	}
+
+	/**
+	 * Cambios de sección de la matrícula, como los ve el colegio. Solo con la matrícula confirmada: hasta entonces el
+	 * apoderado ve "Por definir" y no debe enterarse de la sección. No se muestra quién hizo el cambio.
+	 */
+	private List<CambioSeccionRegistrado> cambiosDeSeccion(MatriculaActual matricula) {
+		if (matricula == null || !"MATRICULADO".equals(matricula.estado())) {
+			return List.of();
+		}
+		return consultas.cambiosDeSeccion(matricula.id()).stream()
+				.map(c -> new CambioSeccionRegistrado(c.id(), c.origen(), c.destino(),
+						MotivoCambioSeccion.etiquetaDe(c.motivo()), MotivoCambioSeccion.observacionDe(c.motivo()), null,
+						c.realizadoEn()))
+				.toList();
+	}
+
+	/**
+	 * HU-32: la tarjeta "Datos del estudiante y apoderado"; la sección y su tutor, solo con la matrícula formalizada.
+	 */
+	private DatosEstudianteApoderado datos(HijoFila hijo, MatriculaActual matricula) {
+		SeccionMatricula seccion = matricula == null ? null : matricula.seccionAsignada();
+		var documentoYTutor = consultas.documentoYTutor(hijo.estudianteId(), seccion == null ? null : seccion.id());
+		var apoderado = consultas.responsableDe(hijo.estudianteId());
+		var emergencia = consultas.contactoDeEmergencia(hijo.estudianteId());
+		return new DatosEstudianteApoderado(
+				documentoYTutor.map(d -> d.documento()).orElse(null),
+				seccion == null ? null : seccion.etiqueta(),
+				seccion == null ? null : documentoYTutor.map(d -> d.tutor()).orElse(null),
+				apoderado.map(a -> a.nombre()).orElse(null),
+				apoderado.map(a -> PresentacionMatricula.unir(a.celular(), a.correo())).orElse(null),
+				emergencia.map(c -> c.nombre() + " (" + c.parentesco() + ")"
+						+ (c.celular() == null ? "" : " · " + c.celular())).orElse(null),
+				PresentacionMatricula.resumenMedico(consultas.fichaMedica(hijo.estudianteId())));
 	}
 
 	/**
@@ -144,8 +184,8 @@ public class ServicioEstadoMatricula {
 		} else if (deuda.cuotas().stream().anyMatch(q -> q.estudianteId().equals(hijo.estudianteId()))) {
 			motivo = "Primero paga las pensiones vencidas de " + hijo.nombre() + ".";
 		}
-		return new PagoMatricula(c.cuotaId(), c.concepto(), c.monto(), c.fechaVencimiento(), c.estado().name(),
-				c.responsable(), motivo == null, motivo);
+		return new PagoMatricula(c.cuotaId(), c.concepto(), c.monto(), c.montoDescuento(), c.fechaVencimiento(),
+				c.estado().name(), c.fechaPago(), c.responsable(), motivo == null, motivo);
 	}
 
 	/** Mismo criterio que "Nueva matrícula" del colegio: el año académico de la inscripción es el del periodo. */

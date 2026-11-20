@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tus credenciales de acceso a GalilEdu</title>
+</head>
+<!-- RF-17: correo con las credenciales de una cuenta nueva. Mismo diseño que codigo-recuperacion.html (HU-4).
+     Marcadores: {{nombre}}, {{usuario}}, {{contrasena}}, {{url}}, {{anio}}. -->
+<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:Inter,'Segoe UI',Arial,Helvetica,sans-serif;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f1f5f9;">
+  <tr>
+    <td align="center" style="padding:32px 16px;">
+      <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0"
+             style="width:100%;max-width:560px;background-color:#ffffff;border:1px solid #d0dcfa;border-radius:16px;overflow:hidden;">
+        <!-- Franja de colores del logo -->
+        <tr>
+          <td style="padding:0;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="40%" height="8" style="height:8px;background-color:#1f6feb;font-size:0;line-height:0;">&nbsp;</td>
+                <td width="25%" height="8" style="height:8px;background-color:#1f9497;font-size:0;line-height:0;">&nbsp;</td>
+                <td width="20%" height="8" style="height:8px;background-color:#379043;font-size:0;line-height:0;">&nbsp;</td>
+                <td width="15%" height="8" style="height:8px;background-color:#f7b94a;font-size:0;line-height:0;">&nbsp;</td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Logo en la esquina -->
+        <tr>
+          <td style="padding:24px 32px 0 32px;">
+            <img src="cid:logo-galiledu" width="140" height="34" alt="GalilEdu"
+                 style="display:block;width:140px;height:auto;border:0;outline:none;">
+          </td>
+        </tr>
+        <!-- Contenido -->
+        <tr>
+          <td style="padding:28px 32px 8px 32px;">
+            <h1 style="margin:0 0 12px 0;font-size:22px;line-height:30px;font-weight:700;color:#0b2545;">
+              ¡Bienvenido(a) a GalilEdu!
+            </h1>
+            <p style="margin:0 0 8px 0;font-size:15px;line-height:24px;color:#334155;">Hola {{nombre}}:</p>
+            <p style="margin:0;font-size:15px;line-height:24px;color:#334155;">
+              Se creó tu cuenta en GalilEdu. Estas son tus credenciales para
+              <strong style="color:#0b2545;">iniciar sesión</strong>:
+            </p>
+          </td>
+        </tr>
+        <!-- Credenciales grandes y centradas -->
+        <tr>
+          <td align="center" style="padding:24px 32px 8px 32px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0"
+                   style="background-color:#ecf1fd;border:2px dashed #1f6feb;border-radius:14px;">
+              <tr>
+                <td align="center" style="padding:18px 32px 6px 32px;">
+                  <span style="display:block;font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Usuario</span>
+                  <span style="display:block;font-family:'Courier New',Courier,monospace;font-size:28px;line-height:36px;font-weight:700;letter-spacing:3px;color:#0b2545;">{{usuario}}</span>
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding:6px 32px 18px 32px;">
+                  <span style="display:block;font-size:12px;line-height:16px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:#64748b;">Contraseña</span>
+                  <span style="display:block;font-family:'Courier New',Courier,monospace;font-size:28px;line-height:36px;font-weight:700;letter-spacing:3px;color:#0b2545;">{{contrasena}}</span>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Botón para ingresar -->
+        <tr>
+          <td align="center" style="padding:16px 32px 24px 32px;">
+            <table role="presentation" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td align="center" style="background-color:#0b2545;border-radius:10px;">
+                  <a href="{{url}}" target="_blank"
+                     style="display:inline-block;padding:12px 28px;font-size:15px;line-height:20px;font-weight:600;color:#ffffff;text-decoration:none;">
+                    Ingresar a GalilEdu
+                  </a>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Aviso -->
+        <tr>
+          <td style="padding:0 32px 28px 32px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                   style="background-color:#f8fafc;border-left:4px solid #1f9497;border-radius:8px;">
+              <tr>
+                <td style="padding:12px 16px;font-size:13px;line-height:20px;color:#475569;">
+                  Por seguridad, cambia esta contraseña al ingresar: pulsa tu nombre en el menú lateral y elige
+                  <strong style="color:#0b2545;">Cambiar contraseña</strong>. Nunca compartas tus credenciales con nadie.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <!-- Pie -->
+        <tr>
+          <td style="padding:16px 32px;background-color:#0b2545;">
+            <p style="margin:0;font-size:12px;line-height:18px;color:#d0dcfa;text-align:center;">
+              GalilEdu · Sistema de gestión escolar · {{anio}}<br>
+              Este es un correo automático, por favor no respondas a este mensaje.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>
