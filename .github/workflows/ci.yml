@@ -126,7 +126,7 @@ jobs:
             echo "### Pruebas que fallan"
             grep '^- ❌' docs/pruebas-resultados.md || echo "Ninguna."
             echo
-            echo "El detalle de todas las pruebas está en el archivo `pruebas-resultados` de esta ejecución (sección Artifacts)."
+            echo "El detalle de todas las pruebas está en el archivo «pruebas-resultados» de esta ejecución (sección Artifacts)."
           } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
