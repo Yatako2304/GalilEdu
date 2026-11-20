@@ -70,6 +70,11 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/auth/login` | público | `{username, password}` → `{jwt, user}`. 401 credenciales, 423 bloqueada |
 | GET | `/auth/me` | cualquiera | `{data: user}` |
 | POST | `/auth/logout` | público | 204 (el token se borra en el frontend) |
+| POST | `/auth/recuperar-contrasena` | público | HU-4 · `{email}` → envía al correo un código de 6 dígitos que vence en 10 min (también es «Reenviar código»). 404 «El correo no está asociado a ninguna cuenta.», 409 cuenta desactivada, 429 si no pasaron 60 s desde el anterior, 503 si el correo no se pudo enviar. Sin SMTP el código va al log |
+| POST | `/auth/recuperar-contrasena/verificar` | público | HU-4 · `{email, codigo}`. 400 «Código de verificación incorrecto.», venció o se agotaron los 5 intentos |
+| POST | `/auth/cambiar-contrasena/verificar` | cualquiera | HU-5 · `{contrasenaActual}`. 400 «Contraseña incorrecta.»; al quinto intento fallido 423 (bloqueo de 15 min, como el login) |
+| POST | `/auth/cambiar-contrasena` | cualquiera | HU-5 · `{contrasenaActual, contrasenaNueva}`: vuelve a comprobar la actual, aplica la regla (400) y exige que sea distinta. Cierra las sesiones en todos los dispositivos: los tokens emitidos antes, incluido el usado, responden 401 |
+| POST | `/auth/recuperar-contrasena/restablecer` | público | HU-4 · `{email, codigo, contrasena}`: vuelve a comprobar el código, aplica la regla de contraseña (400 si no cumple), guarda la nueva, quita el bloqueo, marca el código como usado y cierra las sesiones abiertas |
 | GET | `/usuarios?q=&rol=&estado=&page=&size=` | Administrador | Lista paginada `{data, meta}` |
 | GET | `/usuarios/resumen` | Administrador | Datos del Inicio del administrador |
 | GET | `/usuarios/roles` | Administrador | Roles asignables |
@@ -83,7 +88,7 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/estudiantes?q=&estado=&page=` | Admin, Personal adm. | Lista de estudiantes. `estado`: INSCRITO, MATRICULADO o RETIRADO (se calcula desde la matrícula) |
 | GET | `/estudiantes/{id}` | Admin, Personal adm. | Ficha (datos, ficha médica, familia, contactos, hermanos) |
 | GET | `/estudiantes/{id}/edicion` | Admin, Personal adm. | "Editar": la inscripción con la forma de `SolicitudInscripcion` (`datos`), más `matriculado`, `conCuenta` y `acreditacion` |
-| PUT | `/estudiantes/{id}` | Admin, Personal adm. | "Editar": mismas validaciones que la inscripción. Matriculado no cambia grado ni año; si cambia el responsable, el anterior queda inactivo (salvo que lo sea de otro estudiante); si cambia el correo de un familiar con cuenta, se le envía una contraseña nueva |
+| PUT | `/estudiantes/{id}` | Admin, Personal adm. | "Editar": mismas validaciones que la inscripción. Matriculado no cambia grado ni año; si cambia el responsable, el anterior queda inactivo (salvo que lo sea de otro estudiante); si cambia el correo de un familiar con cuenta, conserva su usuario y su contraseña (no se envían credenciales nuevas) |
 | GET | `/estudiantes/personas?documento=` | Admin, Personal adm. | Busca padre/madre/apoderado ya registrado (404 = persona nueva). `cuentaEliminada` indica si su usuario está eliminado |
 | GET | `/estudiantes/documentos?documento=` | Admin, Personal adm. | Paso 1: ¿se puede inscribir un estudiante con ese documento? `estado`: `LIBRE` y `REUTILIZABLE` (eliminado) sí; `ESTUDIANTE_ACTIVO`, `ESTUDIANTE_RETIRADO` y `OTRA_PERSONA` no (`permitido`, `mensaje`) |
 | GET | `/estudiantes/correos?correo=` | Admin, Personal adm. | Paso 3: `{"disponible": true|false}`, si ninguna persona tiene ese correo (sin importar mayúsculas); no dice de quién es |

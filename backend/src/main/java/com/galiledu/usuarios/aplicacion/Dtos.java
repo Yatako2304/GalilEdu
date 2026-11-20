@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -27,6 +28,38 @@ public final class Dtos {
 	public record SolicitudLogin(
 			@NotBlank(message = "Debe ingresar su usuario.") String username,
 			@NotBlank(message = "Debe ingresar su contraseña.") String password) {
+	}
+
+	// ---------- Recuperación de contraseña (HU-4) ----------
+
+	public record SolicitudRecuperacion(
+			@NotBlank(message = "Ingrese su correo") @Email(message = "Ingrese un correo válido") String email) {
+	}
+
+	public record SolicitudVerificarCodigo(
+			@NotBlank(message = "Ingrese su correo") String email,
+			@NotBlank(message = "Ingrese el código de verificación.") String codigo) {
+	}
+
+	public record SolicitudRestablecer(
+			@NotBlank(message = "Ingrese su correo") String email,
+			@NotBlank(message = "Ingrese el código de verificación.") String codigo,
+			@NotBlank(message = "Ingrese su nueva contraseña.") String contrasena) {
+	}
+
+	// ---------- Cambio de contraseña (HU-5) ----------
+
+	public record SolicitudVerificarContrasena(
+			@NotBlank(message = "Ingrese su contraseña actual.") String contrasenaActual) {
+	}
+
+	public record SolicitudCambioContrasena(
+			@NotBlank(message = "Ingrese su contraseña actual.") String contrasenaActual,
+			@NotBlank(message = "Ingrese su nueva contraseña.") String contrasenaNueva) {
+	}
+
+	/** Respuesta con un texto para la pantalla. */
+	public record Mensaje(String message) {
 	}
 
 	/** Usuario en sesión, con la forma que espera el frontend (types/api.ts → User). */

@@ -3,6 +3,7 @@ package com.galiledu.estudiantes;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
@@ -16,6 +17,8 @@ import java.util.function.Consumer;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.ResultActions;
@@ -198,15 +201,23 @@ class EdicionEstudianteIT extends PruebaIntegracion {
 	}
 
 	@Test
-	void alCambiarElCorreoDeUnFamiliarConCuentaSuCuentaUsaElNuevo() throws Exception {
+	void alCambiarElCorreoDeUnFamiliarConservaSuUsuarioYSuContrasena() throws Exception {
 		String id = inscribir();
+		// Las credenciales que recibió la madre al inscribir.
+		ArgumentCaptor<String> usuario = ArgumentCaptor.forClass(String.class);
+		ArgumentCaptor<String> contrasena = ArgumentCaptor.forClass(String.class);
+		verify(notificador).enviar(eq(CORREO_MADRE), any(), usuario.capture(), contrasena.capture());
+
 		editar(id, d -> d.set("$.madre.persona.correo", "carla.nueva@gmail.com")
 				.set("$.correoResponsable", "carla.nueva@gmail.com"))
 				.andExpect(status().isOk());
 
 		assertThat(estadoCuenta("carla.nueva@gmail.com")).isEqualTo("ACTIVO");
-		// Contraseña nueva enviada al correo nuevo, con el mismo código de usuario.
-		verify(notificador).enviar(eq("carla.nueva@gmail.com"), eq("Carla"), any(), any());
+		// No se generan ni se envían credenciales nuevas: sigue entrando con las mismas.
+		verify(notificador, never()).enviar(eq("carla.nueva@gmail.com"), any(), any(), any());
+		mvc.perform(post("/auth/login").contentType(MediaType.APPLICATION_JSON).content("""
+				{"username":"%s","password":"%s"}""".formatted(usuario.getValue(), contrasena.getValue())))
+				.andExpect(status().isOk());
 		mvc.perform(conToken(get("/estudiantes/correos").param("correo", CORREO_MADRE), personal))
 				.andExpect(jsonPath("$.disponible").value(true));
 	}

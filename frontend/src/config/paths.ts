@@ -46,6 +46,12 @@ export const paths = {
       getHref: () => '/app',
     },
 
+    // HU-5 · Figma > 🌟 Autenticación > Cambiar contraseña (pantalla completa, sin el menú lateral).
+    cambiarContrasena: {
+      path: '/app/cambiar-contrasena',
+      getHref: () => '/app/cambiar-contrasena',
+    },
+
     // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios)
     admin: {
       root: roleRoot(ADMIN),

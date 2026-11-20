@@ -13,12 +13,13 @@ Inicio de sesión de todos los roles y gestión de cuentas por el Administrador.
 | HU | Qué | Estado | Notas |
 | --- | --- | --- | --- |
 | HU-1 | Inicio de sesión con usuario y contraseña | ✅ | Bloqueo de 15 min tras 5 intentos (RF-2); redirección por rol (RF-3). |
-| HU-6 | Registro de usuario con rol | ✅ | Usuario `U{año}{0001}` y contraseña aleatoria (RF-15, RF-16) enviada por correo (RF-17; sin SMTP va al log). Validaciones según los criterios CAHU6-* de Notion: todo es obligatorio salvo apellido materno y teléfono de casa, que dicen "(opcional)" en su etiqueta (también en el padre, la madre y el apoderado de la inscripción); "exalumno" solo se pide a padres y apoderados: en el formulario de usuario aparece solo si el usuario tiene el rol Apoderado (aunque tenga otros); si no aparece, se conserva el valor que ya tenía; documento, nombres, apellidos, celular y teléfono no dejan escribir caracteres no permitidos (`utils/restringir-entrada.ts`); el correo debe tener la forma `usuario@dominio.extensión`. Si el documento ya está registrado, sale "Ya existe un usuario registrado con este documento" debajo del campo junto con los demás errores al pulsar Guardar (`api/verificar-documento.ts`), no como notificación. El documento de un usuario eliminado no da error al crear (`cuentaEliminada` en `GET /estudiantes/personas`). Se aplican al crear y al editar (HU-9) en el frontend (`personaUsuarioSchema`), igual que la inscripción (HU-7), y también en el backend (`ServicioUsuarios.exigirDatosUsuario` y `DatosPersona`). Apoderado, Tutor y Estudiante no se aceptan desde el formulario: al crear se rechazan y al editar se conservan los que ya tenga (`rolesDelFormulario`). |
+| HU-6 | Registro de usuario con rol | ✅ | Usuario `U{año}{0001}` y contraseña aleatoria (RF-15, RF-16) enviada por correo (RF-17; sin SMTP va al log). El correo es HTML con el mismo diseño que el de HU-4 (`resources/correo/credenciales.html`): logo, usuario y contraseña grandes y botón «Ingresar a GalilEdu». Validaciones según los criterios CAHU6-* de Notion: todo es obligatorio salvo apellido materno y teléfono de casa, que dicen "(opcional)" en su etiqueta (también en el padre, la madre y el apoderado de la inscripción); "exalumno" solo se pide a padres y apoderados: en el formulario de usuario aparece solo si el usuario tiene el rol Apoderado (aunque tenga otros); si no aparece, se conserva el valor que ya tenía; documento, nombres, apellidos, celular y teléfono no dejan escribir caracteres no permitidos (`utils/restringir-entrada.ts`); el correo debe tener la forma `usuario@dominio.extensión`. Si el documento ya está registrado, sale "Ya existe un usuario registrado con este documento" debajo del campo junto con los demás errores al pulsar Guardar (`api/verificar-documento.ts`), no como notificación. El documento de un usuario eliminado no da error al crear (`cuentaEliminada` en `GET /estudiantes/personas`). Se aplican al crear y al editar (HU-9) en el frontend (`personaUsuarioSchema`), igual que la inscripción (HU-7), y también en el backend (`ServicioUsuarios.exigirDatosUsuario` y `DatosPersona`). Apoderado, Tutor y Estudiante no se aceptan desde el formulario: al crear se rechazan y al editar se conservan los que ya tenga (`rolesDelFormulario`). |
 | HU-9 | Edición de datos personales | ✅ | Misma validación y control de duplicados (RF-22, RF-23). En "Ver/Editar usuario", si tiene el rol Apoderado se listan sus estudiantes a cargo con los datos del vínculo de la inscripción (parentesco, relación, vive con el estudiante, patria potestad, responsable de matrícula, documento que lo acredita); si tiene el rol Tutor, sus secciones del año actual. Ambas secciones son solo de vista (`features/usuarios/components/vinculos-usuario.tsx`). No están en Figma. Desde la validación de la iteración 1, **cada padre, madre o apoderado presente** de una inscripción tiene cuenta (no solo el responsable de matrícula; el fallecido no tiene). Quien deja de ser familiar presente de todos sus estudiantes pierde el rol Apoderado (`ServicioUsuarios.retirarRolApoderado`): si era su único rol, la cuenta queda inactiva (ver [decisión](../decisiones/2026-11-05-scuro-star-familiar-fallecido-y-cuentas.md)). |
 | HU-12 | Desactivación de usuario | ✅ | También reactivación y "Eliminar" (borrado lógico). |
 | HU-8 | Carga masiva desde Excel/CSV | ⏸️ | **Oculta en la interfaz** (es un "could have"): se quitaron el botón de Usuarios, el acceso rápido del Inicio y `?carga=1`. El modal (`dialogo-carga-masiva.tsx`), `api/carga-masiva.ts` y los endpoints `/usuarios/carga-masiva` siguen en el código; para reactivarla basta volver a montar el modal en `app/routes/app/admin/usuarios.tsx` y su acceso rápido en `inicio-administrador.tsx`. Cómo funciona: modal de 3 pasos de Figma: plantilla .xlsx, validación por fila sin crear nada, creación de las filas válidas y descarga del detalle de errores (CSV). Mismas reglas que HU-6; varios roles separados por coma; máx. 10 MB y 1000 filas. Diferencia con Figma: el resumen tiene un solo botón "Finalizar" (Figma muestra "Cancelar/Guardar", pero en ese punto los usuarios ya están creados). |
 | HU-10 | Cambio de rol | ✅ | Sin pantalla propia: se hace desde "Editar usuario" (HU-9). El cambio vale desde la siguiente petición: los permisos del backend se calculan con los roles actuales de la base de datos en cada petición (`VerificadorSesion.rolesVigentes`, usado por `SeguridadConfig`), no con los del token emitido al iniciar sesión; quitar un rol corta sus permisos y agregar uno los da sin cerrar sesión. Solo se cambian roles de cuentas **activas**: en una inactiva el backend responde 409 si los roles cambian (`ServicioUsuarios.actualizar`) y el formulario deshabilita los botones de rol; los datos personales sí se editan. |
-| HU-4, HU-5 | Recuperar / cambiar contraseña | ⏳ | Pantallas en Figma › Autenticación. |
+| HU-4 | Recuperación de contraseña | ✅ | «¿Olvidaste tu contraseña?» en el login → correo → **código de 6 dígitos** enviado al correo de la persona → contraseña nueva → modal «Contraseña restablecida correctamente» en el login. El código vence a los 10 minutos, admite 5 intentos, solo vale el último y se puede reenviar cada 60 s; se guarda su hash. La contraseña sigue la regla de Figma (mínimo 8, mayúscula, minúscula, número y carácter especial: `PoliticaContrasena` y `lib/contrasena.ts`). Restablecerla quita el bloqueo por intentos fallidos. El correo es HTML con el logo y el código grande (`resources/correo/codigo-recuperacion.html`). Sin SMTP, el código se escribe en el log del backend. Ver [decisión](../decisiones/2026-11-16-scuro-star-recuperacion-contrasena.md). |
+| HU-5 | Cambio de contraseña | ✅ | Se abre al pulsar la tarjeta del usuario (abajo en el menú lateral) → «Cambiar contraseña». Pide la contraseña actual (400 «Contraseña incorrecta.»; al quinto intento fallido se bloquea 15 min, como el login) y luego la nueva con la misma regla de HU-4 (distinta de la actual). Al guardarla se **cierran las sesiones en todos los dispositivos**: `seguridad.usuario.sesiones_desde` y `VerificadorSesionUsuarios` rechazan los tokens emitidos antes. Vuelve al login con «Contraseña actualizada correctamente». Ver [decisión](../decisiones/2026-11-16-scuro-star-cambio-contrasena.md). |
 | HU-3 | Inicio de sesión con Google | ⏳ | |
 
 ## Pantallas (Figma)
@@ -26,6 +27,10 @@ Inicio de sesión de todos los roles y gestión de cuentas por el Administrador.
 | Pantalla | Frame en Figma | Ruta |
 | --- | --- | --- |
 | Login | Autenticación › "Iniciar sesión" | `/auth/login` |
+| Recuperar contraseña (correo, código, nueva contraseña) | Autenticación › "Restablecer Contraseña" (fila HU-4) | `/auth/recuperar-contrasena` |
+| Contraseña restablecida | Autenticación › "Iniciar Sesión" con el modal | modal en `/auth/login` |
+| Cambiar contraseña (actual, nueva) y menú de la tarjeta del usuario | Autenticación › "Cambiar contraseña" (fila HU-5) | `/app/cambiar-contrasena` (sin menú lateral) |
+| Contraseña actualizada | Autenticación › "Iniciar Sesión" con el modal «Contraseña actualizada correctamente» | modal en `/auth/login` |
 | Inicio del administrador | Administrador › "00 · Home — Administrador" | `/app/admin` |
 | Lista de usuarios | Administrador › "Admin / Usuarios \| HU-6 \| HU-7 \| HU-8 - grilla" | `/app/admin/usuarios` |
 | Nuevo / editar usuario, confirmaciones, "Usuario registrado" | Administrador › modales "Nuevo Usuario", "Editar usuario"… | modales en `/app/admin/usuarios` |
@@ -33,15 +38,16 @@ Inicio de sesión de todos los roles y gestión de cuentas por el Administrador.
 
 ## Base de datos
 
-- **Esquemas:** `personas`, `seguridad` · **Migración:** `V1__personas_y_seguridad.sql`
+- **Esquemas:** `personas`, `seguridad` · **Migraciones:** `V1__personas_y_seguridad.sql`, `V19__recuperacion_contrasena.sql`, `V20__sesiones_desde_cambio_contrasena.sql`
 
 | Tabla | Para qué |
 | --- | --- |
 | `personas.persona` | Datos personales de cualquier persona (con o sin cuenta). DNI y correo únicos. |
-| `seguridad.usuario` | Cuenta: usuario, contraseña cifrada, estado, borrado lógico, intentos, bloqueo, último acceso. |
+| `seguridad.usuario` | Cuenta: usuario, contraseña cifrada, estado, borrado lógico, intentos, bloqueo, último acceso y `sesiones_desde` (HU-5: los tokens anteriores ya no valen). |
 | `seguridad.rol` | Catálogo de los 7 roles. |
 | `seguridad.usuario_rol` | Roles de cada usuario (varios por usuario). |
 | `seguridad.correlativo_usuario` | Último correlativo por año para generar `U2026XXXX` sin duplicados. |
+| `seguridad.codigo_recuperacion` | HU-4: códigos para restablecer la contraseña (hash, vencimiento, intentos, usado). Solo vale el más reciente de cada usuario. |
 
 ## API
 
@@ -51,14 +57,14 @@ Ver la tabla completa en [backend/README.md](../../backend/README.md#api-prefijo
 
 - Backend: `backend/src/main/java/com/galiledu/{personas,usuarios}/`, seguridad JWT en `compartido/seguridad/`
 - Frontend: `frontend/src/features/{auth,usuarios}/`, `frontend/src/components/personas/`
-- Pruebas: `AutenticacionIT`, `GestionUsuariosIT`, `UsuarioTests`, `GeneradorCredencialesTests`; `login-form.test.tsx`, `usuarios-lista.test.tsx`, `persona-schema.test.ts`
+- Pruebas: `AutenticacionIT`, `RecuperacionContrasenaIT`, `CambioContrasenaIT`, `GestionUsuariosIT`, `UsuarioTests`, `GeneradorCredencialesTests`, `PoliticaContrasenaTests`, `NotificadorCredencialesTests`; `login-form.test.tsx`, `recuperar-contrasena.test.tsx`, `cambiar-contrasena.test.tsx`, `aviso-contrasena.test.tsx`, `dashboard-layout-cuenta.test.tsx`, `codigo-verificacion.test.tsx`, `usuarios-lista.test.tsx`, `persona-schema.test.ts`
 
 ## Pendientes
 
 - [x] `GET /usuarios/{id}` devuelve `estudiantesACargo` (si es Apoderado; sin estudiantes eliminados, del año académico más reciente al más antiguo) y `tutorDe` (si es Tutor; secciones activas del año escolar en estado ACTIVO). Se leen con SQL de solo lectura en `usuarios/infraestructura/VinculosUsuarioSql.java`, porque `estudiantes` ya depende de `usuarios`.
 - [ ] Asignar el rol Tutor automáticamente al designar tutor o cotutor de una sección, y quitarlo al dejar de serlo (decidido; hoy el formulario no deja asignarlo y nadie lo asigna).
 - [ ] La carga masiva (oculta) aún no aplica las reglas de HU-6 del backend: usa `ServicioUsuarios.crearDesdeCarga`.
-- [ ] Configurar SMTP real para el envío de credenciales.
-- [ ] HU-4/HU-5 contraseña, HU-3 Google. El enlace "¿Olvidaste tu contraseña?" del login está oculto (`RECUPERAR_CONTRASENA_DISPONIBLE` en `login-form.tsx`) hasta implementar HU-4: actívalo junto con el endpoint.
+- [x] SMTP real: la cuenta `galiledu.notificaciones@gmail.com` con contraseña de aplicación (`MAIL_*` en `backend/.env` o en `deploy/.env` del servidor; nunca en el repositorio).
+- [ ] HU-3 Google.
 - [x] Cortar la sesión al desactivar o eliminar: cada petición verifica que la cuenta siga activa (`compartido/seguridad/VerificadorSesion`).
 - [ ] Si se cambian los roles de un usuario conectado, su menú se actualiza recién al volver a iniciar sesión.
