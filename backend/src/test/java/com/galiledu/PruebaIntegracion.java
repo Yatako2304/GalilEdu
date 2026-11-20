@@ -28,6 +28,8 @@ import com.jayway.jsonpath.JsonPath;
 @SpringBootTest(properties = {
 		"spring.datasource.url=${TEST_DB_URL:jdbc:postgresql://localhost:5433/galiledu_test}",
 		"spring.mail.host=",
+		// Sin db/demo: las pruebas cuentan sus propias notas sobre los datos de prueba compartidos.
+		"spring.flyway.locations=classpath:db/migration,classpath:db/datos-prueba",
 })
 @AutoConfigureMockMvc
 @Transactional
