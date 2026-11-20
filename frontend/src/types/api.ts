@@ -68,6 +68,43 @@ export type DatosPersona = {
   esExalumno?: boolean | null;
 };
 
+// ---------- Apoderado › «Datos de la Familia» · backend: usuarios/aplicacion/Dtos.java ----------
+
+/** Padre, madre o apoderado. Sin `persona` si «no registra» (trae `motivoNoRegistra`). */
+export type IntegranteFamiliar = {
+  persona: DatosPersona | null;
+  fallecido: boolean;
+  motivoNoRegistra: string | null;
+  relacion: string | null;
+  /** Quien consulta (sus datos se editan en «Mis datos»). */
+  esUsted: boolean;
+};
+
+export type EstudianteFamilia = {
+  id: string;
+  nombreCompleto: string;
+  grado: string;
+  anioAcademico: number;
+  estado: EstadoEstudiante;
+};
+
+export type ContactoFamilia = {
+  nombreCompleto: string;
+  parentesco: string;
+  celular: string | null;
+  telefonoFijo: string | null;
+};
+
+/** Hermanos con el mismo padre, madre y apoderado. `nombre`: apellidos («Paredes Rojas»). */
+export type FamiliaApoderado = {
+  nombre: string;
+  estudiantes: EstudianteFamilia[];
+  padre: IntegranteFamiliar | null;
+  madre: IntegranteFamiliar | null;
+  apoderado: IntegranteFamiliar | null;
+  contactosEmergencia: ContactoFamilia[];
+};
+
 // ---------- Usuarios (HU-6, HU-9, HU-12) · backend: usuarios/aplicacion/Dtos.java ----------
 
 export type EstadoUsuario = 'ACTIVO' | 'INACTIVO';

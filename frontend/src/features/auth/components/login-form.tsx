@@ -8,6 +8,8 @@ import { Link } from '@/components/ui/link';
 import { paths } from '@/config/paths';
 import { useLogin, loginInputSchema } from '@/lib/auth';
 
+import { IngresoGoogle } from './ingreso-google';
+
 type LoginFormProps = {
   onSuccess: () => void;
 };
@@ -25,7 +27,7 @@ const mensajeDeError = (error: unknown) => {
   return 'El usuario o contraseña son incorrectos.';
 };
 
-// Figma > 🌟 Autenticación > Iniciar sesión (HU-1)
+// Figma > 🌟 Autenticación > Iniciar sesión (HU-1; el botón de Google es HU-3)
 export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const login = useLogin({
     onSuccess,
@@ -33,78 +35,81 @@ export const LoginForm = ({ onSuccess }: LoginFormProps) => {
   const [showPassword, setShowPassword] = React.useState(false);
 
   return (
-    <Form
-      onSubmit={(values) => {
-        login.mutate(values);
-      }}
-      schema={loginInputSchema}
-      className="space-y-4"
-    >
-      {({ register, formState, watch }) => {
-        const [username, password] = watch(['username', 'password']);
-        const isEmpty = !username || !password;
+    <>
+      <Form
+        onSubmit={(values) => {
+          login.mutate(values);
+        }}
+        schema={loginInputSchema}
+        className="space-y-4"
+      >
+        {({ register, formState, watch }) => {
+          const [username, password] = watch(['username', 'password']);
+          const isEmpty = !username || !password;
 
-        return (
-          <>
-            <Input
-              label="Usuario"
-              autoComplete="username"
-              error={formState.errors['username']}
-              registration={register('username')}
-            />
-            <div className="space-y-2">
+          return (
+            <>
               <Input
-                type={showPassword ? 'text' : 'password'}
-                label="Contraseña"
-                autoComplete="current-password"
-                error={
-                  formState.errors['password'] ??
-                  (login.isError
-                    ? { type: 'server', message: mensajeDeError(login.error) }
-                    : undefined)
-                }
-                registration={register('password')}
-                endAdornment={
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((value) => !value)}
-                    className="text-content-tertiary hover:text-content-primary"
-                  >
-                    {showPassword ? (
-                      <EyeOff className="size-4" aria-hidden="true" />
-                    ) : (
-                      <Eye className="size-4" aria-hidden="true" />
-                    )}
-                    <span className="sr-only">
-                      {showPassword
-                        ? 'Ocultar contraseña'
-                        : 'Mostrar contraseña'}
-                    </span>
-                  </button>
-                }
+                label="Usuario"
+                autoComplete="username"
+                error={formState.errors['username']}
+                registration={register('username')}
               />
-              {/* HU-4 */}
-              <div className="flex justify-end">
-                <Link
-                  to={paths.auth.recuperarContrasena.getHref()}
-                  className="text-body-4 text-content-accent-secondary"
-                >
-                  ¿Olvidaste tu contraseña?
-                </Link>
+              <div className="space-y-2">
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  label="Contraseña"
+                  autoComplete="current-password"
+                  error={
+                    formState.errors['password'] ??
+                    (login.isError
+                      ? { type: 'server', message: mensajeDeError(login.error) }
+                      : undefined)
+                  }
+                  registration={register('password')}
+                  endAdornment={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      className="text-content-tertiary hover:text-content-primary"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="size-4" aria-hidden="true" />
+                      ) : (
+                        <Eye className="size-4" aria-hidden="true" />
+                      )}
+                      <span className="sr-only">
+                        {showPassword
+                          ? 'Ocultar contraseña'
+                          : 'Mostrar contraseña'}
+                      </span>
+                    </button>
+                  }
+                />
+                {/* HU-4 */}
+                <div className="flex justify-end">
+                  <Link
+                    to={paths.auth.recuperarContrasena.getHref()}
+                    className="text-body-4 text-content-accent-secondary"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </Link>
+                </div>
               </div>
-            </div>
-            <Button
-              isLoading={login.isPending}
-              disabled={isEmpty || login.isPending}
-              type="submit"
-              variant="secondary"
-              className="w-full"
-            >
-              Iniciar sesión
-            </Button>
-          </>
-        );
-      }}
-    </Form>
+              <Button
+                isLoading={login.isPending}
+                disabled={isEmpty || login.isPending}
+                type="submit"
+                variant="secondary"
+                className="w-full"
+              >
+                Iniciar sesión
+              </Button>
+            </>
+          );
+        }}
+      </Form>
+      <IngresoGoogle onSuccess={onSuccess} />
+    </>
   );
 };

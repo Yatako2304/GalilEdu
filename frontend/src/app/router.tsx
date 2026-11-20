@@ -41,6 +41,11 @@ const roleRoutes = (
   ),
   children: [
     { index: true, lazy: () => inicio().then(convert(queryClient)) },
+    // «Mis datos» es de cualquier rol: va bajo cada prefijo de rol para conservar su menú lateral.
+    {
+      path: paths.app.misDatos.path,
+      lazy: () => import('./routes/app/mis-datos').then(convert(queryClient)),
+    },
     ...children.map(([childPath, lazy]) => ({
       path: childPath,
       lazy: () => lazy().then(convert(queryClient)),
@@ -111,6 +116,10 @@ export const createAppRouter = (
             [
               paths.app.admin.usuarios.path,
               () => import('./routes/app/admin/usuarios'),
+            ],
+            [
+              paths.app.admin.configuracionAcceso.path,
+              () => import('./routes/app/admin/configuracion-acceso'),
             ],
           ],
         ),
@@ -271,6 +280,10 @@ export const createAppRouter = (
             [
               paths.app.apoderado.datosAlumno.path,
               () => import('./routes/app/apoderado/datos-alumno'),
+            ],
+            [
+              paths.app.apoderado.familia.path,
+              () => import('./routes/app/apoderado/familia'),
             ],
             [
               paths.app.apoderado.horarios.path,

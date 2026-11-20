@@ -78,6 +78,12 @@ En el servidor, edita `nano /opt/galiledu/deploy/.env`, completa `MAIL_HOST`, `M
 bash /opt/galiledu/deploy/actualizar.sh
 ```
 
+## 5. Inicio de sesión con Google (opcional)
+
+1. En [Google Cloud](https://console.cloud.google.com/apis/credentials) crea un **ID de cliente de OAuth** de tipo **Aplicación web** y agrega `URL_PUBLICA` (por ejemplo `https://galiledu.example`) en **Orígenes autorizados de JavaScript**. No hace falta URI de redireccionamiento.
+2. En `/opt/galiledu/deploy/.env` completa `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` y ejecuta `bash /opt/galiledu/deploy/actualizar.sh`.
+3. Entra como administrador a **Seguridad › Configuración de acceso** y activa **Inicio de sesión con Google**. Solo entra quien tenga registrado en GalilEdu el mismo correo de su cuenta de Google.
+
 ## Datos de prueba y seguridad
 
 Por defecto el servidor carga los **usuarios de prueba** (contraseña `Galiledu2026`) porque el profesor los necesita para revisar cada rol. Como el repositorio es público, **cualquiera puede entrar como administrador** mientras estén activos. Para uso real, en `deploy/.env`:

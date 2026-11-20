@@ -1,44 +1,61 @@
 package com.galiledu.usuarios.web;
 
+import java.util.List;
 import java.util.Map;
 
 import jakarta.validation.Valid;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.galiledu.compartido.seguridad.ServicioJwt;
+import com.galiledu.personas.aplicacion.DatosPersona;
+import com.galiledu.usuarios.aplicacion.Dtos.FamiliaApoderado;
 import com.galiledu.usuarios.aplicacion.Dtos.Mensaje;
+import com.galiledu.usuarios.aplicacion.Dtos.MetodosAcceso;
 import com.galiledu.usuarios.aplicacion.Dtos.RespuestaLogin;
 import com.galiledu.usuarios.aplicacion.Dtos.SolicitudCambioContrasena;
+import com.galiledu.usuarios.aplicacion.Dtos.SolicitudGoogle;
 import com.galiledu.usuarios.aplicacion.Dtos.SolicitudLogin;
 import com.galiledu.usuarios.aplicacion.Dtos.SolicitudRecuperacion;
 import com.galiledu.usuarios.aplicacion.Dtos.SolicitudRestablecer;
 import com.galiledu.usuarios.aplicacion.Dtos.SolicitudVerificarCodigo;
 import com.galiledu.usuarios.aplicacion.Dtos.SolicitudVerificarContrasena;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioSesion;
+import com.galiledu.usuarios.aplicacion.ServicioAccesoGoogle;
 import com.galiledu.usuarios.aplicacion.ServicioAutenticacion;
 import com.galiledu.usuarios.aplicacion.ServicioCambioContrasena;
+import com.galiledu.usuarios.aplicacion.ServicioMiFamilia;
 import com.galiledu.usuarios.aplicacion.ServicioRecuperacionContrasena;
+import com.galiledu.usuarios.aplicacion.ServicioUsuarios;
 
-/** HU-1, HU-4 y HU-5. Contrato usado por frontend/src/lib/auth.tsx. */
+/** HU-1, HU-3, HU-4 y HU-5. Contrato usado por frontend/src/lib/auth.tsx. */
 @RestController
 @RequestMapping("/auth")
 public class AutenticacionController {
 	private final ServicioAutenticacion autenticacion;
 	private final ServicioRecuperacionContrasena recuperacion;
 	private final ServicioCambioContrasena cambio;
+	private final ServicioAccesoGoogle google;
+	private final ServicioUsuarios usuarios;
+	private final ServicioMiFamilia familia;
 
 	public AutenticacionController(ServicioAutenticacion autenticacion,
-			ServicioRecuperacionContrasena recuperacion, ServicioCambioContrasena cambio) {
+			ServicioRecuperacionContrasena recuperacion, ServicioCambioContrasena cambio,
+			ServicioAccesoGoogle google, ServicioUsuarios usuarios, ServicioMiFamilia familia) {
 		this.autenticacion = autenticacion;
 		this.recuperacion = recuperacion;
 		this.cambio = cambio;
+		this.google = google;
+		this.usuarios = usuarios;
+		this.familia = familia;
 	}
 
 	/** POST /api/auth/login { username, password } → { jwt, user }. 401 si falla, 423 si está bloqueada. */
@@ -47,10 +64,54 @@ public class AutenticacionController {
 		return autenticacion.iniciarSesion(solicitud.username(), solicitud.password());
 	}
 
+	/** HU-2 · GET /api/auth/metodos (público) → { google, googleIdCliente }: si se muestra el botón de Google. */
+	@GetMapping("/metodos")
+	public MetodosAcceso metodos() {
+		return google.metodos();
+	}
+
+	/**
+	 * HU-3 · POST /api/auth/google { codigo } → { jwt, user }. 403 si Google no está habilitado, 401 si Google no
+	 * verifica la cuenta, 404 si ningún usuario tiene registrado ese correo, 423 si la cuenta está bloqueada.
+	 */
+	@PostMapping("/google")
+	public RespuestaLogin loginGoogle(@Valid @RequestBody SolicitudGoogle solicitud) {
+		return google.iniciarSesion(solicitud.codigo());
+	}
+
 	/** GET /api/auth/me → { data: user }. */
 	@GetMapping("/me")
 	public Map<String, UsuarioSesion> yo(Authentication autenticacion) {
 		return Map.of("data", this.autenticacion.usuarioActual(ServicioJwt.usuarioActual(autenticacion)));
+	}
+
+	/**
+	 * Cualquier usuario autenticado, sin importar el rol · GET /api/auth/mis-datos → sus propios datos
+	 * personales. Se abre desde la tarjeta de usuario del menú lateral (antes abría «Cambiar contraseña»
+	 * directamente); no está en Figma, que no tiene una pantalla «Mis datos».
+	 */
+	@GetMapping("/mis-datos")
+	public DatosPersona misDatos(Authentication autenticacion) {
+		return usuarios.misDatos(ServicioJwt.usuarioActual(autenticacion));
+	}
+
+	/**
+	 * PUT /api/auth/mis-datos { ...DatosPersona } → UsuarioSesion. Mismas validaciones y control de duplicados que
+	 * «Editar usuario» (HU-9), pero sobre la propia cuenta y sin tocar roles ni el estado de la cuenta.
+	 */
+	@PutMapping("/mis-datos")
+	public UsuarioSesion actualizarMisDatos(@Valid @RequestBody DatosPersona solicitud, Authentication autenticacion) {
+		return usuarios.actualizarMisDatos(ServicioJwt.usuarioActual(autenticacion), solicitud);
+	}
+
+	/**
+	 * Solo Apoderado · GET /api/auth/mi-familia → familias de sus estudiantes a cargo (padre, madre, apoderado y
+	 * contactos de emergencia), de solo vista. Figma › Apoderado › «Datos de la Familia».
+	 */
+	@GetMapping("/mi-familia")
+	@PreAuthorize("hasRole('APODERADO')")
+	public List<FamiliaApoderado> miFamilia(Authentication autenticacion) {
+		return familia.deUsuario(ServicioJwt.usuarioActual(autenticacion));
 	}
 
 	/** El token no se guarda en el servidor: cerrar sesión es borrarlo en el frontend. */
