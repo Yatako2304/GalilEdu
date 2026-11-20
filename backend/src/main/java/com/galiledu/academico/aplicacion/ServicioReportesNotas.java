@@ -18,6 +18,7 @@ import com.galiledu.academico.aplicacion.DtosCalificaciones.ReporteCalificacione
 import com.galiledu.academico.aplicacion.DtosReportesNotas.AnioReporte;
 import com.galiledu.academico.aplicacion.DtosReportesNotas.AreaInstitucional;
 import com.galiledu.academico.aplicacion.DtosReportesNotas.CeldaResumen;
+import com.galiledu.academico.aplicacion.DtosReportesNotas.CompetenciaSinCalcular;
 import com.galiledu.academico.aplicacion.DtosReportesNotas.CursoOpcion;
 import com.galiledu.academico.aplicacion.DtosReportesNotas.Distribucion;
 import com.galiledu.academico.aplicacion.DtosReportesNotas.FilaInstitucional;
@@ -143,7 +144,8 @@ public class ServicioReportesNotas {
 
 	/**
 	 * HU-64: distribución de niveles de logro de todo el colegio: por sección, por grado, por área y total. Cada nota
-	 * oficial de competencia de cada estudiante cuenta una vez.
+	 * oficial de competencia de cada estudiante cuenta una vez. Una competencia cuyos cursos no tienen pesos completos
+	 * no se puede calcular: no entra en las cifras y se informa en sinCalcular.
 	 */
 	@Transactional(readOnly = true)
 	public ReporteInstitucional reporteInstitucional(UUID anioEscolarId, UUID periodoId) {
@@ -153,12 +155,26 @@ public class ServicioReportesNotas {
 						LinkedHashMap::new));
 		List<FilaInstitucional> filas = new ArrayList<>();
 		Map<String, ResumenNotas.Distribucion> porArea = new LinkedHashMap<>();
+		List<CompetenciaSinCalcular> sinCalcular = new ArrayList<>();
 		ResumenNotas.Distribucion total = ResumenNotas.Distribucion.VACIA;
 		int estudiantes = 0;
+		boolean usaPesos = CalculoNotas.usaPesosDeCurso(contexto.anio().reglaNota());
 		for (Map.Entry<String, String> grado : grados.entrySet()) {
 			Map<UUID, List<PesoFila>> cursosPorCompetencia = notas.cursosPorCompetencia(anioEscolarId,
 					grado.getKey());
 			List<UUID> competencias = new ArrayList<>(cursosPorCompetencia.keySet());
+			// Las áreas aparecen aunque todavía no tengan calificaciones.
+			cursosPorCompetencia.values().forEach(cursos -> porArea.putIfAbsent(cursos.get(0).area(),
+					ResumenNotas.Distribucion.VACIA));
+			List<UUID> calculables = competencias.stream().filter(id -> {
+				List<PesoFila> cursos = cursosPorCompetencia.get(id);
+				boolean calculable = !usaPesos
+						|| CalculoNotas.pesosCompletos(cursos.stream().map(PesoFila::pesoCurso).toList());
+				if (!calculable) {
+					sinCalcular.add(new CompetenciaSinCalcular(grado.getValue(), cursos.get(0).competencia()));
+				}
+				return calculable;
+			}).toList();
 			ResumenNotas.Distribucion delGrado = ResumenNotas.Distribucion.VACIA;
 			int estudiantesGrado = 0;
 			List<FilaInstitucional> deSecciones = new ArrayList<>();
@@ -166,8 +182,12 @@ public class ServicioReportesNotas {
 				Map<UUID, Map<UUID, ResultadoCompetencia>> resultados = notas.resultadosSeccion(seccion.id(),
 						contexto.idsPeriodos(), cursosPorCompetencia, competencias, contexto.anio().reglaNota(),
 						contexto.anio().consolidacion());
+				if (resultados.isEmpty()) {
+					// Una sección sin estudiantes no aporta nada al reporte; un grado sin ninguno tampoco sale.
+					continue;
+				}
 				ResumenNotas.Distribucion deSeccion = ResumenNotas.Distribucion.VACIA;
-				for (UUID competenciaId : competencias) {
+				for (UUID competenciaId : calculables) {
 					ResumenNotas.Distribucion d = ResumenNotas.distribucion(resultados.values().stream()
 							.map(r -> nota(r.get(competenciaId), contexto, null)).toList(), contexto.rangos());
 					deSeccion = deSeccion.mas(d);
@@ -192,7 +212,7 @@ public class ServicioReportesNotas {
 				estudiantes, filas,
 				porArea.entrySet().stream().map(e -> new AreaInstitucional(e.getKey(), distribucion(e.getValue())))
 						.toList(),
-				distribucion(total));
+				distribucion(total), sinCalcular);
 	}
 
 	/**
@@ -277,7 +297,7 @@ public class ServicioReportesNotas {
 	}
 
 	private static Distribucion distribucion(ResumenNotas.Distribucion d) {
-		return new Distribucion(d.ad(), d.a(), d.b(), d.c(), d.pendientes(), d.sinNotas(), d.porcentajeLogro());
+		return new Distribucion(d.conNota(), d.ad(), d.a(), d.b(), d.c(), d.pendientes(), d.porcentajeLogro());
 	}
 
 	// ---------- PDF ----------
@@ -311,7 +331,10 @@ public class ServicioReportesNotas {
 						new ReporteCalificaciones(grupo, "Reporte por curso y grado", columnas, filas))));
 	}
 
-	/** HU-64 en PDF: secciones y grados, y luego las áreas. */
+	/**
+	 * HU-64 en PDF: por grado y sección, y luego por área (solo las que ya tienen calificaciones). Cada nivel con su
+	 * porcentaje y su cantidad; lo que no se cuenta (incompletas, sin calcular, áreas sin calificaciones) va al pie.
+	 */
 	@Transactional(readOnly = true)
 	public byte[] pdfInstitucional(UUID anioEscolarId, UUID periodoId) {
 		ReporteInstitucional reporte = reporteInstitucional(anioEscolarId, periodoId);
@@ -320,22 +343,43 @@ public class ServicioReportesNotas {
 						f.estudiantes(), f.distribucion()))
 				.toList());
 		filas.add(fila("Todo el colegio", reporte.estudiantes(), reporte.total()));
+		List<String> sinCalificaciones = reporte.areas().stream().filter(a -> sinCalificaciones(a.distribucion()))
+				.map(AreaInstitucional::area).toList();
 		String contexto = "Año escolar " + reporte.anio() + " · " + reporte.periodo() + " · " + reporte.estudiantes()
-				+ " estudiantes evaluados (grados con plan de evaluación)";
-		String parametros = "Cada nota oficial de competencia de cada estudiante cuenta una vez."
-				+ " AD: logro destacado · A: logro esperado · B: en proceso · C: en inicio · % = notas con A o AD.";
+				+ " estudiantes (grados con plan de evaluación)";
+		String parametros = "AD: logro destacado · A: logro esperado · B: en proceso · C: en inicio. Porcentaje de las"
+				+ " calificaciones de competencia completas (cantidad entre paréntesis).";
 		List<TablaPdf> tablas = List.of(
 				new TablaPdf("Reporte institucional de notas", contexto, parametros,
-						new ReporteCalificaciones("Notas por nivel de logro", "Por grado y sección",
+						new ReporteCalificaciones("Calificaciones por nivel de logro", "Por grado y sección",
 								columnasDistribucion(true), filas)),
 				new TablaPdf("Reporte institucional por área", contexto, parametros,
-						new ReporteCalificaciones("Notas por nivel de logro", "Por área", columnasDistribucion(false),
-								reporte.areas().stream().map(a -> fila(a.area(), null, a.distribucion())).toList())));
+						new ReporteCalificaciones("Calificaciones por nivel de logro", "Por área",
+								columnasDistribucion(false),
+								reporte.areas().stream().filter(a -> !sinCalificaciones(a.distribucion()))
+										.map(a -> fila(a.area(), null, a.distribucion())).toList()),
+						"Área"));
+		List<String> pie = new ArrayList<>(List.of("Notas calculadas al generar el reporte."));
+		if (reporte.total().porCompletar() > 0) {
+			pie.add("No se cuentan " + reporte.total().porCompletar()
+					+ " calificaciones incompletas (falta registrar algún ítem).");
+		}
+		if (!reporte.sinCalcular().isEmpty()) {
+			pie.add("Sin calcular por pesos de curso incompletos: " + reporte.sinCalcular().stream()
+					.map(c -> c.grado() + " · " + c.competencia()).collect(Collectors.joining("; ")) + ".");
+		}
+		if (!sinCalificaciones.isEmpty()) {
+			pie.add("Áreas aún sin calificaciones: " + String.join(", ", sinCalificaciones) + ".");
+		}
 		return ArchivoReporteCalificaciones.pdfResumen("Reporte institucional de notas", "Grado y sección",
-				"Notas calculadas al generar el reporte. Pendientes: falta registrar algún ítem. Sin notas: aún no hay"
-						+ " ítems que cuenten.",
-				// Son conteos, no notas: sin el sufijo «/20» de la escala vigesimal.
-				"No hay secciones con estudiantes.", "CONTEO", tablas);
+				String.join(" ", pie), "No hay secciones con estudiantes.",
+				// Son porcentajes y cantidades, no notas: sin el sufijo «/20» de la escala vigesimal.
+				"CONTEO", tablas);
+	}
+
+	/** Un área sin calificaciones completas ni incompletas: todavía no se evalúa en el periodo. */
+	private static boolean sinCalificaciones(Distribucion d) {
+		return d.calificaciones() == 0 && d.porCompletar() == 0;
 	}
 
 	private static void valorCelda(Map<String, String> valores, String clave, CeldaResumen celda) {
@@ -352,9 +396,11 @@ public class ServicioReportesNotas {
 		if (conEstudiantes) {
 			columnas.add(new ColumnaReporte("estudiantes", "Estudiantes", null, null, false));
 		}
-		for (String nivel : List.of("AD", "A", "B", "C", "Pendientes", "Sin notas", "% A o AD")) {
+		columnas.add(new ColumnaReporte("calificaciones", "Calificaciones", null, null, false));
+		for (String nivel : List.of("AD", "A", "B", "C")) {
 			columnas.add(new ColumnaReporte(nivel, nivel, null, null, false));
 		}
+		columnas.add(new ColumnaReporte("logro", "A o AD", null, null, false));
 		return columnas;
 	}
 
@@ -363,14 +409,20 @@ public class ServicioReportesNotas {
 		if (estudiantes != null) {
 			valores.put("estudiantes", String.valueOf(estudiantes));
 		}
-		valores.put("AD", String.valueOf(d.ad()));
-		valores.put("A", String.valueOf(d.a()));
-		valores.put("B", String.valueOf(d.b()));
-		valores.put("C", String.valueOf(d.c()));
-		valores.put("Pendientes", String.valueOf(d.pendientes()));
-		valores.put("Sin notas", String.valueOf(d.sinNotas()));
-		valores.put("% A o AD", d.porcentajeLogro() == null ? "—" : d.porcentajeLogro() + " %");
+		valores.put("calificaciones", String.valueOf(d.calificaciones()));
+		valores.put("AD", nivel(d.ad(), d.calificaciones()));
+		valores.put("A", nivel(d.a(), d.calificaciones()));
+		valores.put("B", nivel(d.b(), d.calificaciones()));
+		valores.put("C", nivel(d.c(), d.calificaciones()));
+		valores.put("logro", d.porcentajeLogro() == null ? "—" : d.porcentajeLogro() + " %");
 		return new FilaReporte(null, nombre, valores);
+	}
+
+	/** «38 % (8)»: el porcentaje de las calificaciones y la cantidad; «—» si no hay calificaciones. */
+	static String nivel(int cantidad, int calificaciones) {
+		return calificaciones == 0
+				? "—"
+				: Math.round(cantidad * 100.0 / calificaciones) + " % (" + cantidad + ")";
 	}
 
 	static String parametros(String escala, String reglaNota) {

@@ -26,10 +26,13 @@ import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudCompetencia;
 import com.galiledu.academico.aplicacion.DtosAcademico.SolicitudCurso;
 import com.galiledu.academico.aplicacion.ServicioPlanCurricular;
 
-/** Figma > Personal Administrativo > CI-14 · Plan curricular (HU-52, HU-53, HU-54). */
+/**
+ * Figma > Personal Administrativo > CI-14 · Plan curricular (HU-52, HU-53, HU-54). Lo tienen el Personal
+ * administrativo y el Coordinador, con los mismos permisos (como el plan de evaluación).
+ */
 @RestController
 @RequestMapping("/areas")
-@PreAuthorize("hasRole('PERSONAL_ADMINISTRATIVO')")
+@PreAuthorize("hasAnyRole('PERSONAL_ADMINISTRATIVO', 'COORDINADOR')")
 public class AreaController {
 	private final ServicioPlanCurricular servicio;
 

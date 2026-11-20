@@ -118,10 +118,6 @@ export const createAppRouter = (
               () => import('./routes/app/admin/usuarios'),
             ],
             [
-              paths.app.admin.calificaciones.path,
-              () => import('./routes/app/admin/calificaciones'),
-            ],
-            [
               paths.app.admin.configuracionAcceso.path,
               () => import('./routes/app/admin/configuracion-acceso'),
             ],
@@ -205,6 +201,10 @@ export const createAppRouter = (
               paths.app.administrativo.ambientes.path,
               () => import('./routes/app/administrativo/ambientes'),
             ],
+            [
+              paths.app.administrativo.calificaciones.path,
+              () => import('./routes/app/administrativo/calificaciones'),
+            ],
           ],
         ),
 
@@ -223,8 +223,16 @@ export const createAppRouter = (
               () => import('./routes/app/coordinador/calificaciones'),
             ],
             [
+              paths.app.coordinador.planCurricular.path,
+              () => import('./routes/app/coordinador/plan-curricular'),
+            ],
+            [
               paths.app.coordinador.planEvaluacion.path,
               () => import('./routes/app/coordinador/plan-evaluacion'),
+            ],
+            [
+              paths.app.coordinador.escalaCalificacion.path,
+              () => import('./routes/app/coordinador/escala-calificacion'),
             ],
             [
               paths.app.coordinador.ambientes.path,

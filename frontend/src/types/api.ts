@@ -1853,14 +1853,17 @@ export type NotasSeccion = {
   notas: NotasCompetencias;
 };
 
-/** pendientes: falta registrar algún ítem; sinNotas: todavía no hay ítems que cuenten. */
+/**
+ * Calificaciones de competencia por nivel de logro. calificaciones: las completas (AD + A + B + C), base de los
+ * porcentajes. porCompletar: a las que les falta registrar algún ítem; no se cuentan hasta completarse.
+ */
 export type DistribucionNiveles = {
+  calificaciones: number;
   ad: number;
   a: number;
   b: number;
   c: number;
-  pendientes: number;
-  sinNotas: number;
+  porCompletar: number;
   porcentajeLogro: number | null;
 };
 
@@ -1868,7 +1871,10 @@ export type ReporteInstitucional = {
   anio: number;
   periodo: string;
   escala: EscalaEvaluacion;
+  /** Estudiantes de las secciones de grados con plan de evaluación. */
   estudiantes: number;
+  /** Competencias que no se pueden calcular porque los pesos de sus cursos no suman 100 %. */
+  sinCalcular: { grado: string; competencia: string }[];
   /** Una fila por sección y, con seccion null, el total del grado. */
   filas: {
     gradoCodigo: string;
@@ -1877,6 +1883,7 @@ export type ReporteInstitucional = {
     estudiantes: number;
     distribucion: DistribucionNiveles;
   }[];
+  /** Todas las áreas del plan, también las que aún no tienen calificaciones. */
   areas: { area: string; distribucion: DistribucionNiveles }[];
   total: DistribucionNiveles;
 };

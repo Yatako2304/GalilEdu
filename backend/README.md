@@ -106,25 +106,25 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | DELETE | `/estudiantes/{id}` | Admin, Personal adm. | Borrado lógico: deja de salir en el listado y en la ficha, y conserva su historial. 204 |
 | POST | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Sube o reemplaza el documento del apoderado (multipart: `tipo`, `archivo`; PDF/JPG/PNG ≤ 5 MB) |
 | GET | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Descarga ese documento |
-| GET | `/areas/resumen` | Personal adm. | Áreas, competencias y cursos activos de los registrados, y el año escolar activo (CI-14) |
-| GET | `/areas` | Personal adm. | Áreas en orden, con cuántas competencias y cursos tiene cada una |
-| GET / PUT | `/areas/{id}` | Personal adm. | Detalle con competencias y cursos / edición `{nombre, descripcion}` (HU-52) |
-| POST | `/areas` | Personal adm. | Nueva área (HU-52). 409 si el nombre ya existe |
-| POST | `/areas/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado del área |
-| POST | `/areas/{id}/competencias` | Personal adm. | Nueva competencia `{nombre, descripcion}` (HU-53). 409 si el área está inactiva o el nombre ya está en el área |
-| PUT | `/competencias/{id}` | Personal adm. | Edita la competencia |
-| POST | `/competencias/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado de la competencia |
-| POST | `/areas/{id}/cursos` | Personal adm. | Nuevo curso `{nombre, grados: ["SEC-1", …]}` (HU-54). 409 si el área está inactiva o el nombre ya existe |
-| PUT | `/cursos/{id}` | Personal adm. | Edita el curso. 409 si quita un grado en el que ya está planificado |
-| POST | `/cursos/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado del curso |
+| GET | `/areas/resumen` | Personal adm. · Coordinador | Áreas, competencias y cursos activos de los registrados, y el año escolar activo (CI-14) |
+| GET | `/areas` | Personal adm. · Coordinador | Áreas en orden, con cuántas competencias y cursos tiene cada una |
+| GET / PUT | `/areas/{id}` | Personal adm. · Coordinador | Detalle con competencias y cursos / edición `{nombre, descripcion}` (HU-52) |
+| POST | `/areas` | Personal adm. · Coordinador | Nueva área (HU-52). 409 si el nombre ya existe |
+| POST | `/areas/{id}/desactivar` · `/reactivar` | Personal adm. · Coordinador | Cambia el estado del área |
+| POST | `/areas/{id}/competencias` | Personal adm. · Coordinador | Nueva competencia `{nombre, descripcion}` (HU-53). 409 si el área está inactiva o el nombre ya está en el área |
+| PUT | `/competencias/{id}` | Personal adm. · Coordinador | Edita la competencia |
+| POST | `/competencias/{id}/desactivar` · `/reactivar` | Personal adm. · Coordinador | Cambia el estado de la competencia |
+| POST | `/areas/{id}/cursos` | Personal adm. · Coordinador | Nuevo curso `{nombre, grados: ["SEC-1", …]}` (HU-54). 409 si el área está inactiva o el nombre ya existe |
+| PUT | `/cursos/{id}` | Personal adm. · Coordinador | Edita el curso. 409 si quita un grado en el que ya está planificado |
+| POST | `/cursos/{id}/desactivar` · `/reactivar` | Personal adm. · Coordinador | Cambia el estado del curso |
 | GET | `/ambientes/resumen` | Personal adm. | Tarjetas de CI-26: `{activos, total, aulasRegulares, espaciosEspeciales, aforoTotal}`. Cuentan solo los activos y no dependen de los filtros de la lista (HU-43) |
 | GET | `/ambientes?tipo=&estado=&q=` | Personal adm. | Ambientes por nombre, sin paginar; filtros opcionales (`tipo`: `AULA_REGULAR`/`ESPACIO_ESPECIAL`, `estado`: `ACTIVO`/`INACTIVO`, `q`: busca en el nombre). `[{id, codigo, nombre, tipo, aforoMaximo, recursos, estado}]`; el código es de solo lectura. 400 con un tipo o estado desconocido |
 | POST | `/ambientes` | Personal adm. | Nuevo ambiente `{tipo, nombre, aforoMaximo, recursos}` (201). El código lo genera el backend (`A-001` aula regular, `E-001` espacio especial). 400 con datos inválidos (aula regular de más de 45, aforo 0, recurso de más de 60 caracteres…); 409 si el nombre ya existe (sin importar mayúsculas ni espacios) |
 | PUT | `/ambientes/{id}` | Personal adm. | Edita `{nombre, aforoMaximo, recursos}`; el código y el tipo no cambian (si vienen, se ignoran). 404; 409 si el nombre ya existe o si el aforo queda por debajo de los matriculados de una sección que usa el ambiente (RF-111) |
 | POST | `/ambientes/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado; responde 200 aunque ya estuviera en ese estado. Desactivar se permite aunque esté en uso. 404 |
-| GET | `/tablas-conversion` | Personal adm. | Versiones de la tabla de conversión (HU-55), de la más nueva a la más antigua; `estado`: PROGRAMADA, VIGENTE o ANTERIOR (se calcula con la fecha de hoy) |
-| GET | `/tablas-conversion/vigente` | Personal adm. | La versión que rige hoy. 404 si no hay ninguna |
-| POST | `/tablas-conversion` | Personal adm. | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}`. 400 si la fecha es pasada o los rangos no cubren 0–20 sin vacíos ni cruces; 409 si ya hay una versión con esa fecha |
+| GET | `/tablas-conversion` | Personal adm. · Coordinador | Versiones de la tabla de conversión (HU-55), de la más nueva a la más antigua; `estado`: PROGRAMADA, VIGENTE o ANTERIOR (se calcula con la fecha de hoy) |
+| GET | `/tablas-conversion/vigente` | Personal adm. · Coordinador | La versión que rige hoy. 404 si no hay ninguna |
+| POST | `/tablas-conversion` | Personal adm. · Coordinador | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}`. 400 si la fecha es pasada o los rangos no cubren 0–20 sin vacíos ni cruces; 409 si ya hay una versión con esa fecha |
 | GET | `/planes-evaluacion?anioEscolarId=&grado=` | Personal adm. · Coordinador | Plan de evaluación del grado (HU-56): tarjetas de CI-17, secciones con tutor y cursos con horas, competencias, escala y docentes asignados; `reglaNota` del año y `pesosIncompletos` (competencias cuyos pesos no suman 100) |
 | GET | `/planes-evaluacion/anios` · `/planes-evaluacion/docentes` | Personal adm. · Coordinador | Años escolares (del más reciente) · usuarios activos con rol Docente |
 | GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Personal adm. · Coordinador | Cursos activos que se dictan en el grado y aún no están en su plan, con las competencias activas del área |
@@ -163,10 +163,10 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | GET | `/calificaciones/docente/reportes` · `/reportes/exportar` | Docente | Consolidado JSON o CSV: `tipo=COMPETENCIA`, `competenciaIds` e `itemIds` separados por coma e `incluirPromedio`; resultados por competencia y promedio general con la regla anual. Mantiene `objetivoId` individual y las variantes ITEM y PERIODO; [detalle del contrato](../docs/modulos/calificaciones.md#api) |
 | GET | `/calificaciones/docente/reportes/exportar-pdf` | Docente | Descarga `consolidado-notas.pdf` (`application/pdf`) con los mismos filtros y resultados; tabla agrupada, contexto académico con fecha y hora de generación, promedios, estados y paginación. Al final, la nota oficial de cada competencia solo en ese periodo. Es el formato ofrecido por la interfaz. |
 | GET | `/calificaciones/docente/cursos/{planCursoId}/secciones/{seccionId}/resumen-anual?competenciaIds=` · `/resumen-anual/pdf` | Docente | Resumen del año: por competencia, el aporte del curso en cada periodo y su aporte final (referencial), y la nota oficial por periodo y final. 400 si una competencia no es del curso; 404 si el curso no está asignado |
-| GET | `/calificaciones/reportes/anios` | Coordinador, Administrador | Filtros de los reportes: años ACTIVO o CERRADO con parámetros, periodos y grados con los cursos de su plan |
+| GET | `/calificaciones/reportes/anios` | Coordinador, Personal adm. | Filtros de los reportes: años ACTIVO o CERRADO con parámetros, periodos y grados con los cursos de su plan |
 | GET | `/calificaciones/reportes/grado?anioEscolarId=&grado=&planCursoId=&periodoId=` · `/grado/pdf` | Coordinador | HU-63 · Por competencia, una celda por sección y otra del grado: promedio (nivel más frecuente en la escala cualitativa), nivel y `porcentajeLogro` (estudiantes con A o AD). Sin `planCursoId`, la nota oficial de la competencia; con él, lo que aporta ese curso. Sin `periodoId`, la nota final. 400 si el curso no es del grado |
-| GET | `/calificaciones/reportes/secciones/{seccionId}/notas` · `/matriculas/{matriculaId}/libreta` | Coordinador | Detalle de una sección desde HU-63: la nota oficial de cada competencia del grado por estudiante (misma forma que `notas-competencia`), y la libreta en PDF de un estudiante. Solo lectura. 404 si no existen |
-| GET | `/calificaciones/reportes/institucional?anioEscolarId=&periodoId=` · `/institucional/pdf` | Coordinador, Administrador | HU-64 · Notas oficiales de competencia por nivel (AD, A, B, C, pendientes) por sección, grado, área y total del colegio |
+| GET | `/calificaciones/reportes/secciones/{seccionId}/notas` · `/matriculas/{matriculaId}/notas` · `/matriculas/{matriculaId}/libreta` | Coordinador | Detalle de una sección desde HU-63: la nota oficial de cada competencia del grado por estudiante (misma forma que `notas-competencia`); las notas de un estudiante con los ítems que calificó cada docente (misma forma que la consulta del apoderado, HU-69); y su libreta en PDF. Solo lectura. 404 si no existen |
+| GET | `/calificaciones/reportes/institucional?anioEscolarId=&periodoId=` · `/institucional/pdf` | Coordinador, Personal adm. | HU-64 · Calificaciones de competencia por nivel (AD, A, B, C) con `calificaciones` y `porCompletar`, por sección, grado, área y total del colegio; `sinCalcular`: competencias con pesos incompletos |
 | GET | `/calificaciones/apoderado/estudiantes` | Apoderado | HU-69 · Hijos matriculados con sus años, grado y sección |
 | GET | `/calificaciones/apoderado/estudiantes/{id}/notas?anio=` · `/libreta?anio=` | Apoderado | HU-69 · Notas del hijo ese año (sin `anio`, el más reciente): periodos con estado, cursos con su docente, resumen referencial y aporte a cada competencia con sus ítems, y la nota oficial de cada competencia por periodo y final. `libreta` la descarga en PDF. 404 si no es su hijo o no está matriculado ese año |
 | GET | `/pagos/estado-cuenta?anio=` | Personal adm. | P2 · Estado de cuenta (HU-37): compromisos del año (por defecto el ACTIVO) con sección, antigüedad y deuda vencida de cada alumno, y las tarjetas comprometido, cobrado (%), deuda vencida y cuotas vencidas (solo compromisos VIGENTES) |
