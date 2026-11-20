@@ -1,4 +1,4 @@
-import { Eye, MessageSquareWarning, Paperclip, RefreshCw } from 'lucide-react';
+import { Eye, MessageSquareWarning, Paperclip } from 'lucide-react';
 import * as React from 'react';
 import { Link } from 'react-router';
 
@@ -25,20 +25,15 @@ import {
 
 import {
   abrirDocumentoDeMatricula,
-  useCambiarSeccion,
   useObservarDocumento,
-  useSeccionesDeMatricula,
   useSubirDocumento,
   useValidarMatricula,
 } from '../api/matricula-detalle';
 import { descargarPlantillaDelPeriodo } from '../api/plantillas-matricula';
 import { problemaDelArchivo, tamanoLegible } from '../archivos-matricula';
 
+import { BotonCambiarSeccion } from './boton-cambiar-seccion';
 import { BotonPlantilla } from './boton-plantilla';
-import {
-  DialogoCambiarSeccion,
-  MotivoElegido,
-} from './dialogo-cambiar-seccion';
 import { DialogoObservarDocumento } from './dialogo-observar-documento';
 import { HistorialCambiosSeccion } from './historial-cambios-seccion';
 
@@ -399,7 +394,7 @@ const PagoPendienteValidacion = () => (
     </CardHeader>
     <CardContent>
       <p className="text-body-3 text-content-tertiary">
-        La cuota de matrícula se genera cuando la documentación está validada y
+        La cuota de matrícula se genera sola cuando apruebas la documentación y
         no existe deuda pendiente.
       </p>
     </CardContent>
@@ -416,11 +411,10 @@ export const DetalleMatricula = ({
   pagoMatricula?: React.ReactNode;
 }) => {
   const { addNotification } = useNotifications();
-  const [cambiando, setCambiando] = React.useState(false);
-  const secciones = useSeccionesDeMatricula(matricula.id, cambiando);
-  const cambiarSeccion = useCambiarSeccion(matricula.id);
   const validar = useValidarMatricula(matricula.id);
   const [validando, setValidando] = React.useState(false);
+  // Un doble clic en "Aprobar" mandaba dos validaciones: la segunda fallaba porque la matrícula ya no estaba en validación.
+  const validacionEnCurso = React.useRef(false);
   const config = configuracionEstado(matricula.estado, matricula.codigo);
   const enProceso =
     matricula.estado === 'SECCION_RESERVADA' ||
@@ -430,6 +424,8 @@ export const DetalleMatricula = ({
   );
 
   const confirmarValidacion = async () => {
+    if (validacionEnCurso.current) return;
+    validacionEnCurso.current = true;
     try {
       await validar.mutateAsync();
       addNotification({
@@ -439,24 +435,10 @@ export const DetalleMatricula = ({
       });
     } catch {
       // El cliente HTTP muestra el mensaje específico del backend.
+    } finally {
+      validacionEnCurso.current = false;
     }
     setValidando(false);
-  };
-
-  const confirmarCambio = async (seccionId: string, motivo?: MotivoElegido) => {
-    // El modal pide el motivo en este detalle; sin él no se envía nada (el backend también lo exige).
-    if (!motivo) return;
-    try {
-      const nuevo = await cambiarSeccion.mutateAsync({ seccionId, ...motivo });
-      addNotification({
-        type: 'success',
-        title: 'Sección cambiada',
-        message: `${matricula.nombre} pasó a ${nuevo.seccion?.etiqueta}.`,
-      });
-      setCambiando(false);
-    } catch {
-      // El cliente HTTP muestra el mensaje específico del backend.
-    }
   };
 
   return (
@@ -487,14 +469,7 @@ export const DetalleMatricula = ({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button
-          variant="secondary"
-          disabled={!matricula.puedeCambiarSeccion}
-          onClick={() => setCambiando(true)}
-          icon={<RefreshCw className="size-4" aria-hidden="true" />}
-        >
-          Cambiar sección
-        </Button>
+        <BotonCambiarSeccion matricula={matricula} />
         <div className="ml-auto flex gap-3">
           <Button asChild variant="tertiary">
             <Link to={volver}>{enProceso ? 'Cancelar' : 'Salir'}</Link>
@@ -520,17 +495,6 @@ export const DetalleMatricula = ({
         cargando={validar.isPending}
         onConfirmar={() => void confirmarValidacion()}
       />
-
-      {cambiando && (
-        <DialogoCambiarSeccion
-          secciones={secciones.data}
-          cargando={secciones.isLoading}
-          guardando={cambiarSeccion.isPending}
-          pedirMotivo
-          onCerrar={() => setCambiando(false)}
-          alConfirmar={confirmarCambio}
-        />
-      )}
     </div>
   );
 };

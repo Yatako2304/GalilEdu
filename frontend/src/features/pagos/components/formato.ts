@@ -8,6 +8,10 @@ const SOLES = new Intl.NumberFormat('es-PE', {
 /** 5820 -> "S/ 5,820.00" (Figma P8). */
 export const soles = (monto: number) => `S/ ${SOLES.format(monto)}`;
 
+/** "2027-02-28" -> "28/2/2027" (fecha sin hora, a mediodía para que la zona horaria no la corra de día). */
+export const fechaDia = (valor: string) =>
+  new Intl.DateTimeFormat('es-PE').format(new Date(`${valor}T12:00:00`));
+
 type ColorTag = 'success' | 'error' | 'neutral' | 'warning' | 'info';
 
 /** Etiqueta de la columna "Estado". "Vencida" se calcula en el backend (RF-91). */

@@ -722,6 +722,8 @@ export type EstadoMatriculaApoderado = {
   deuda: { total: number; cuotas: CuotaDeudaFamiliar[] };
   /** HU-31: cuota de matrícula y si se puede pagar ya. Null mientras no exista. */
   pagoMatricula?: PagoMatricula | null;
+  /** Cambios de sección de la matrícula confirmada (vacío antes), sin el nombre de quien los hizo. */
+  cambiosSeccion?: CambioSeccionRegistrado[];
 };
 
 /** HU-31 · Igual a DtosMatricula.PagoMatricula. `motivo` explica por qué no se puede pagar. */
@@ -729,8 +731,10 @@ export type PagoMatricula = {
   cuotaId: string;
   concepto: string;
   monto: number;
+  montoDescuento: number;
   fechaVencimiento: string;
   estado: EstadoCuota;
+  fechaPago: string | null;
   responsable: string;
   puedePagar: boolean;
   motivo: string | null;
@@ -1935,6 +1939,8 @@ export type FilaMatriculaPeriodo = {
   estado: EstadoMatricula;
   codigo: string | null;
   tipo: 'NUEVO' | 'CONTINUADOR';
+  /** Última vez que se tocó la matrícula (documentos, validación, sección, pago). */
+  actualizadoEn: string;
 };
 
 // ---------- Matrícula · Nueva matrícula del Personal administrativo (HU-24, A6) ----------

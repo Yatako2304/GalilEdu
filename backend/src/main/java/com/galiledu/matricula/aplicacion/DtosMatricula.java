@@ -25,7 +25,8 @@ public final class DtosMatricula {
 			List<Impedimento> impedimentos,
 			DeudaFamiliar deuda,
 			PagoMatricula pagoMatricula,
-			DatosEstudianteApoderado datos) {
+			DatosEstudianteApoderado datos,
+			List<CambioSeccionRegistrado> cambiosSeccion) {
 	}
 
 	/**
@@ -39,10 +40,12 @@ public final class DtosMatricula {
 
 	/**
 	 * HU-31 · Figma "HU-31 Derivación a pagos" > "Pago de matrícula": la cuota de matrícula y si el apoderado puede
-	 * pagarla ahora. {@code motivo} explica por qué no, cuando {@code puedePagar} es false. Null si aún no hay cuota.
+	 * pagarla ahora, con el mismo detalle que ve el colegio (descuento y fecha de pago incluidos). {@code motivo}
+	 * explica por qué no, cuando {@code puedePagar} es false. Null si aún no hay cuota.
 	 */
-	public record PagoMatricula(UUID cuotaId, String concepto, BigDecimal monto, LocalDate fechaVencimiento,
-			String estado, String responsable, boolean puedePagar, String motivo) {
+	public record PagoMatricula(UUID cuotaId, String concepto, BigDecimal monto, BigDecimal montoDescuento,
+			LocalDate fechaVencimiento, String estado, LocalDate fechaPago, String responsable, boolean puedePagar,
+			String motivo) {
 	}
 
 	public record EstudianteMatricula(UUID id, String nombre, String grado) {
@@ -120,11 +123,12 @@ public final class DtosMatricula {
 
 	/**
 	 * Fila de la tabla de A3. {@code seccion} es la etiqueta de la sección guardada (asignada o seleccionada);
-	 * {@code seccionAsignada} y {@code seccionSeleccionada} las separan (ver {@link SeccionMatricula}).
+	 * {@code seccionAsignada} y {@code seccionSeleccionada} las separan (ver {@link SeccionMatricula});
+	 * {@code actualizadoEn}: su última actividad.
 	 */
 	public record FilaMatriculaPeriodo(UUID id, UUID estudianteId, String nombre, String documento,
 			String gradoCodigo, String grado, String seccion, String estado, String codigo, String tipo,
-			SeccionMatricula seccionAsignada, SeccionMatricula seccionSeleccionada) {
+			SeccionMatricula seccionAsignada, SeccionMatricula seccionSeleccionada, OffsetDateTime actualizadoEn) {
 	}
 
 	/** Resultado del buscador de "Nueva matrícula": estudiantes inscritos para el año del periodo y sin matrícula. */

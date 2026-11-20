@@ -38,6 +38,8 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 	 */
 	@Autowired
 	private EntityManager em;
+	@Autowired
+	private com.galiledu.matricula.infraestructura.EscriturasMatricula escrituras;
 
 	private UUID periodoDe(int anio) {
 		return jdbc.sql("""
@@ -114,6 +116,49 @@ class MatriculasPeriodoIT extends PruebaIntegracion {
 				.param("orden", "nombre; DROP TABLE x"), token))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.data[*].id", everyItem(notNullValue())));
+	}
+
+	@Test
+	void ordenaPorActividadRecienteYMuestraLaFechaDeLaUltimaActividad() throws Exception {
+		UUID periodo = periodoDe(2026);
+		jdbc.sql("""
+				UPDATE matricula.matricula SET actualizado_en = timestamptz '2026-01-01 10:00-05'
+				WHERE anio_escolar_id = (SELECT anio_escolar_id FROM matricula.periodo_matricula WHERE id = ?)""")
+				.param(periodo).update();
+		// Se toca una matrícula cualquiera: debe salir primera con orden reciente y descendente, y última en ascendente.
+		UUID tocada = jdbc.sql("""
+				SELECT m.id FROM matricula.matricula m
+				WHERE m.anio_escolar_id = (SELECT anio_escolar_id FROM matricula.periodo_matricula WHERE id = ?)
+				ORDER BY m.id DESC LIMIT 1""").param(periodo).query(UUID.class).single();
+		jdbc.sql("UPDATE matricula.matricula SET actualizado_en = now() WHERE id = ?").param(tocada).update();
+		em.clear();
+		String token = token(PERSONAL_ADMINISTRATIVO);
+
+		mvc.perform(conToken(get("/matricula/periodos/{id}/matriculas", periodo).param("orden", "reciente")
+				.param("direccion", "desc").param("size", "100"), token))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data[0].id").value(tocada.toString()))
+				.andExpect(jsonPath("$.data[0].actualizadoEn").value(notNullValue()));
+		mvc.perform(conToken(get("/matricula/periodos/{id}/matriculas", periodo).param("orden", "reciente")
+				.param("direccion", "asc").param("size", "100"), token))
+				.andExpect(jsonPath("$.data[-1:].id").value(tocada.toString()));
+	}
+
+	@Test
+	void subirUnDocumentoCuentaComoActividadDeLaMatricula() throws Exception {
+		UUID matricula = jdbc.sql("SELECT id FROM matricula.matricula LIMIT 1").query(UUID.class).single();
+		jdbc.sql("UPDATE matricula.matricula SET actualizado_en = timestamptz '2026-01-01 10:00-05' WHERE id = ?")
+				.param(matricula).update();
+		UUID documento = jdbc.sql("SELECT id FROM matricula.documento_requerido LIMIT 1").query(UUID.class).single();
+		escrituras.guardarDocumento(matricula, documento,
+				new com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoMatricula("f.pdf", "application/pdf",
+						new byte[]{1}),
+				null);
+
+		boolean tocada = jdbc
+				.sql("SELECT actualizado_en > timestamptz '2026-06-01 00:00-05' FROM matricula.matricula WHERE id = ?")
+				.param(matricula).query(Boolean.class).single();
+		org.junit.jupiter.api.Assertions.assertTrue(tocada);
 	}
 
 	@Test

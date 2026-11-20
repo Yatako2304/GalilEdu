@@ -13,8 +13,10 @@ const pago: PagoMatricula = {
   cuotaId: 'cuota-matricula',
   concepto: 'Matrícula 2027',
   monto: 850,
+  montoDescuento: 0,
   fechaVencimiento: '2027-01-31',
   estado: 'PENDIENTE',
+  fechaPago: null,
   responsable: 'Luis Paredes',
   puedePagar: true,
   motivo: null,
@@ -94,4 +96,40 @@ test('con la matrícula pagada no muestra el botón', async () => {
   expect(
     screen.queryByRole('button', { name: 'Pagar matrícula' }),
   ).not.toBeInTheDocument();
+});
+
+// Antes la tarjeta no aparecía hasta que el colegio validaba la documentación (cuando recién existe la cuota).
+test('sin cuota generada muestra la tarjeta explicando cuándo se podrá pagar', async () => {
+  await renderApp(<PagoMatriculaApoderado pago={null} />);
+
+  expect(screen.getByText('Pago de matrícula')).toBeInTheDocument();
+  expect(
+    screen.getByText(/se genera cuando el colegio valida la documentación/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Pagar matrícula' }),
+  ).not.toBeInTheDocument();
+});
+
+// Mismo detalle que la tarjeta del colegio: descuento, vencimiento, fecha de pago y código de matrícula.
+test('muestra el mismo detalle que ve el colegio', async () => {
+  await renderApp(
+    <PagoMatriculaApoderado
+      pago={{
+        ...pago,
+        monto: 800,
+        montoDescuento: 50,
+        estado: 'PAGADA',
+        fechaPago: '2026-11-20',
+        puedePagar: false,
+      }}
+      codigoMatricula="MAT-2027-0008"
+    />,
+  );
+
+  expect(screen.getByText('− S/ 50.00')).toBeInTheDocument();
+  expect(screen.getByText('Vencimiento')).toBeInTheDocument();
+  expect(screen.getByText('31/1/2027')).toBeInTheDocument();
+  expect(screen.getByText(/Pagada · 20\/11\/2026/)).toBeInTheDocument();
+  expect(screen.getByText('MAT-2027-0008')).toBeInTheDocument();
 });

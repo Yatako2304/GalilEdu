@@ -90,7 +90,8 @@ public class ServicioMatriculasPeriodo {
 				f -> new FilaMatriculaPeriodo(f.id(), f.estudianteId(), f.nombre(), f.documento(), f.gradoCodigo(),
 						f.grado(), f.seccion(), f.estado(), f.codigo(), f.tipo(),
 						SeccionMatricula.asignada(f.estado(), f.seccionId(), f.seccionNombre(), f.seccion()),
-						SeccionMatricula.seleccionada(f.estado(), f.seccionId(), f.seccionNombre(), f.seccion())));
+						SeccionMatricula.seleccionada(f.estado(), f.seccionId(), f.seccionNombre(), f.seccion()),
+						f.actualizadoEn()));
 	}
 
 	/** Buscador de "Nueva matrícula": inscritos para el año del periodo que todavía no tienen matrícula. */
