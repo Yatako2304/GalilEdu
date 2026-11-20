@@ -35,7 +35,10 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.PreparacionMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionesDelGrado;
 import com.galiledu.matricula.aplicacion.ServicioMatriculasPeriodo;
 
-/** Figma > Personal administrativo > A3 "Matrículas del periodo" y A6 "Nueva matrícula" (HU-24, HU-71, HU-72). */
+/**
+ * Figma > Personal administrativo > A3 "Matrículas del periodo", A6 "Nueva matrícula" y, con el periodo cerrado,
+ * "Matrícula extemporánea" (HU-24, HU-25, HU-71, HU-72).
+ */
 @RestController
 @RequestMapping("/matricula/periodos")
 @PreAuthorize("hasRole('PERSONAL_ADMINISTRATIVO')")
@@ -92,6 +95,26 @@ public class MatriculaAdministrativoController {
 			@RequestParam(required = false) UUID seccionId,
 			@RequestParam(required = false) MultiValueMap<String, MultipartFile> archivos,
 			Authentication autenticacion) {
+		return servicio.crear(periodoId, estudianteId, seccionId, archivosDe(archivos),
+				ServicioJwt.usuarioActual(autenticacion));
+	}
+
+	/**
+	 * POST /api/matricula/periodos/{periodoId}/matriculas-extemporaneas (multipart) · HU-25, botón "Matrícula
+	 * extemporánea" de A3. Campos {@code estudianteId}, {@code seccionId} y {@code motivo} (obligatorios) y los
+	 * archivos ya subidos, igual que Nueva matrícula. Solo con el periodo cerrado y si el periodo la permite.
+	 */
+	@PostMapping(path = "/{periodoId}/matriculas-extemporaneas", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+	public MatriculaCreada crearExtemporanea(@PathVariable UUID periodoId, @RequestParam UUID estudianteId,
+			@RequestParam(required = false) UUID seccionId, @RequestParam(required = false) String motivo,
+			@RequestParam(required = false) MultiValueMap<String, MultipartFile> archivos,
+			Authentication autenticacion) {
+		return servicio.crearExtemporanea(periodoId, estudianteId, seccionId, motivo, archivosDe(archivos),
+				ServicioJwt.usuarioActual(autenticacion));
+	}
+
+	/** Los archivos del formulario: el nombre de cada campo es el id del documento requerido. */
+	private static Map<UUID, ArchivoMatricula> archivosDe(MultiValueMap<String, MultipartFile> archivos) {
 		Map<UUID, ArchivoMatricula> leidos = new LinkedHashMap<>();
 		if (archivos != null) {
 			archivos.forEach((campo, lista) -> {
@@ -100,7 +123,7 @@ public class MatriculaAdministrativoController {
 				}
 			});
 		}
-		return servicio.crear(periodoId, estudianteId, seccionId, leidos, ServicioJwt.usuarioActual(autenticacion));
+		return leidos;
 	}
 
 	/** GET /api/matricula/periodos/{periodoId}/estudiantes/{id}/secciones · secciones del grado para elegir. */

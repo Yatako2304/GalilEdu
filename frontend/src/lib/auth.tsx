@@ -58,11 +58,44 @@ export type RecuperarContrasenaInput = z.infer<
   typeof recuperarContrasenaInputSchema
 >;
 
+// HU-4. Son endpoints públicos: un token viejo guardado haría que Spring los rechace, así que se borra antes.
+// Los errores se muestran debajo de cada campo (Figma), no como notificación.
+const enLinea = { silenciarNotificacion: true };
 export const solicitarRecuperacion = (
   data: RecuperarContrasenaInput,
 ): Promise<{ message: string }> => {
-  return api.post('/auth/recuperar-contrasena', data);
+  tokenStorage.clear();
+  return api.post('/auth/recuperar-contrasena', data, enLinea);
 };
+
+export const verificarCodigoRecuperacion = (data: {
+  email: string;
+  codigo: string;
+}): Promise<{ message: string }> => {
+  tokenStorage.clear();
+  return api.post('/auth/recuperar-contrasena/verificar', data, enLinea);
+};
+
+export const restablecerContrasena = (data: {
+  email: string;
+  codigo: string;
+  contrasena: string;
+}): Promise<{ message: string }> => {
+  tokenStorage.clear();
+  return api.post('/auth/recuperar-contrasena/restablecer', data, enLinea);
+};
+
+// HU-5 (con sesión). Los errores se muestran debajo del campo, como en Figma.
+export const verificarContrasenaActual = (data: {
+  contrasenaActual: string;
+}): Promise<{ message: string }> =>
+  api.post('/auth/cambiar-contrasena/verificar', data, enLinea);
+
+export const cambiarContrasena = (data: {
+  contrasenaActual: string;
+  contrasenaNueva: string;
+}): Promise<{ message: string }> =>
+  api.post('/auth/cambiar-contrasena', data, enLinea);
 
 const authConfig = {
   userFn: getUser,

@@ -25,6 +25,7 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.CambioSeccionRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DetalleMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DocumentoDeMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionAsignada;
+import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionesDelGrado;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.DocumentoGuardadoFila;
@@ -32,7 +33,8 @@ import com.galiledu.matricula.infraestructura.ConsultasMatricula.MatriculaDetall
 import com.galiledu.matricula.infraestructura.EscriturasMatricula;
 
 /**
- * HU-24: detalle de una matrícula (A5, B6, B7), cambio de sección (A5 modal) y documentos del Personal administrativo.
+ * HU-24: detalle de una matrícula (A5, B6, B7), cambio de sección (A5 modal) y documentos del Personal administrativo
+ * (HU-72: subir, reemplazar, eliminar, observar y aprobar).
  */
 @Service
 public class ServicioMatriculaAdministrativa {
@@ -54,10 +56,12 @@ public class ServicioMatriculaAdministrativa {
 	@Transactional(readOnly = true)
 	public DetalleMatricula detalle(UUID matriculaId) {
 		MatriculaDetalleFila m = buscar(matriculaId);
-		SeccionAsignada seccion = delAnio(m).stream().filter(s -> s.id().equals(m.seccionId())).findFirst()
+		var guardada = delAnio(m).stream().filter(s -> s.id().equals(m.seccionId())).findFirst();
+		SeccionAsignada seccion = guardada
 				.map(s -> new SeccionAsignada(s.id(), etiqueta(s), s.tutor(), s.capacidadMaxima(),
 						s.alumnosOcupanVacante()))
 				.orElse(null);
+		String nombreSeccion = guardada.map(s -> s.nombre()).orElse(null);
 		var apoderado = consultas.responsableDe(m.estudianteId());
 		var emergencia = consultas.contactoDeEmergencia(m.estudianteId());
 		Map<UUID, DocumentoGuardadoFila> guardados = consultas.documentosGuardados(matriculaId).stream()
@@ -73,7 +77,14 @@ public class ServicioMatriculaAdministrativa {
 				emergencia.map(c -> c.nombre() + " (" + c.parentesco() + ")"
 						+ (c.celular() == null ? "" : " · " + c.celular())).orElse(null),
 				PresentacionMatricula.resumenMedico(consultas.fichaMedica(m.estudianteId())),
-				puedeCambiarSeccion(m), puedeEditarDocumentos(m), puedeValidar(m, documentos), documentos);
+				puedeCambiarSeccion(m), puedeEditarDocumentos(m), puedeValidar(m, documentos), documentos,
+				m.extemporanea(), m.motivoExtemporanea(),
+				seccion == null
+						? null
+						: SeccionMatricula.asignada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()),
+				seccion == null
+						? null
+						: SeccionMatricula.seleccionada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()));
 	}
 
 	/** Secciones del grado de la matrícula; la actual va marcada como seleccionada. */
@@ -150,6 +161,28 @@ public class ServicioMatriculaAdministrativa {
 	}
 
 	/**
+	 * HU-72: quita el archivo de un documento para mantener el expediente al día. Solo mientras la matrícula espera
+	 * documentos o está en validación; un documento aprobado no se elimina. Si estaba en validación, vuelve a
+	 * SECCION_RESERVADA porque el expediente queda incompleto.
+	 */
+	@Transactional
+	public void eliminarDocumento(UUID matriculaId, UUID documentoId) {
+		MatriculaDetalleFila m = buscar(matriculaId);
+		if (!m.estado().equals("SECCION_RESERVADA") && !m.estado().equals("EN_VALIDACION")) {
+			throw ExcepcionNegocio.conflicto(
+					"Solo se eliminan documentos mientras la matrícula espera documentos o está en validación.");
+		}
+		DocumentoGuardadoFila doc = consultas.documentosGuardados(matriculaId).stream()
+				.filter(d -> d.documentoRequeridoId().equals(documentoId)).findFirst()
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("Ese documento todavía no se subió."));
+		if (doc.estado().equals("APROBADO")) {
+			throw ExcepcionNegocio.conflicto("Ese documento ya fue aprobado y no se puede eliminar.");
+		}
+		escrituras.eliminarDocumento(matriculaId, documentoId);
+		escrituras.devolverAlApoderado(matriculaId);
+	}
+
+	/**
 	 * Observa un documento que está en revisión: queda OBSERVADO con el motivo y la matrícula vuelve a
 	 * SECCION_RESERVADA para que el apoderado lo reemplace (los aprobados no se tocan).
 	 */
@@ -215,9 +248,9 @@ public class ServicioMatriculaAdministrativa {
 		return !m.estado().equals("RETIRADO") && !m.estado().equals("ANULADA");
 	}
 
-	/** Con el periodo cerrado solo se mueve a quienes ya están matriculados. */
+	/** Con el periodo cerrado solo se mueve a los matriculados y a las matrículas extemporáneas (HU-25). */
 	private boolean puedeCambiarSeccion(MatriculaDetalleFila m) {
-		return vigente(m) && (periodoAbierto(m) || m.estado().equals("MATRICULADO"));
+		return vigente(m) && (periodoAbierto(m) || m.estado().equals("MATRICULADO") || m.extemporanea());
 	}
 
 	private boolean puedeEditarDocumentos(MatriculaDetalleFila m) {

@@ -656,15 +656,11 @@ public class ServicioEstudiantes {
 	}
 
 	/**
-	 * Corrige los datos de un familiar ya registrado. Su cuenta (si tiene) usa el correo de la persona: si el correo
-	 * cambia, se le genera una contraseña nueva y se envía al correo nuevo.
+	 * Corrige los datos de un familiar ya registrado. Si tiene cuenta, conserva su usuario y su contraseña aunque
+	 * cambie el correo: no se generan ni se envían credenciales nuevas (decisión del 2026-11-19).
 	 */
 	private void actualizarFamiliar(Persona persona, DatosPersona datos) {
-		String correoAnterior = persona.getCorreo();
 		personas.actualizar(persona, datos);
-		if (!Objects.equals(correoAnterior, persona.getCorreo()) && persona.getCorreo() != null) {
-			usuarios.reenviarCredenciales(persona);
-		}
 	}
 
 	private static void exigirMotivo(DatosFamiliar d, String mensaje, String quien) {

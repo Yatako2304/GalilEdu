@@ -24,7 +24,17 @@ public final class DtosMatricula {
 			boolean puedeContinuar,
 			List<Impedimento> impedimentos,
 			DeudaFamiliar deuda,
-			PagoMatricula pagoMatricula) {
+			PagoMatricula pagoMatricula,
+			DatosEstudianteApoderado datos) {
+	}
+
+	/**
+	 * HU-32 · Figma "HU-32 Confirmación de matrícula" › "Datos del estudiante y apoderado": DNI, sección con su tutor
+	 * (solo con la matrícula MATRICULADO; antes, null), apoderado responsable, su contacto, el contacto de emergencia y
+	 * el resumen médico. Son los mismos datos del detalle que ve el personal.
+	 */
+	public record DatosEstudianteApoderado(String documento, String seccion, String tutor, String apoderado,
+			String contacto, String contactoEmergencia, String informacionMedica) {
 	}
 
 	/**
@@ -47,12 +57,34 @@ public final class DtosMatricula {
 	}
 
 	/**
-	 * {@code seccion} es null hasta que la matrícula esté MATRICULADO: el apoderado ve "Por definir".
-	 * {@code confirmadoEn}
-	 * es la fecha y hora exacta de la confirmación (solo MATRICULADO).
+	 * {@code seccion} es null hasta que la matrícula esté MATRICULADO: el apoderado ve "Por asignar".
+	 * {@code confirmadoEn} es la fecha y hora exacta de la confirmación (solo MATRICULADO). {@code extemporanea}: la
+	 * registró el colegio con el periodo cerrado (HU-25); se completa y paga igual. {@code seccionAsignada} y
+	 * {@code seccionSeleccionada}: ver {@link SeccionMatricula}.
 	 */
 	public record MatriculaActual(UUID id, String estado, String grado, String seccion, String codigo,
-			int documentosRequeridos, int documentosEntregados, OffsetDateTime confirmadoEn) {
+			int documentosRequeridos, int documentosEntregados, OffsetDateTime confirmadoEn, boolean extemporanea,
+			SeccionMatricula seccionAsignada, SeccionMatricula seccionSeleccionada) {
+	}
+
+	/**
+	 * Corrección del PO: la sección es resultado de la matrícula formalizada. {@code seccionAsignada} solo existe con
+	 * la matrícula MATRICULADO; mientras está en proceso la sección elegida va en {@code seccionSeleccionada} (reserva
+	 * el cupo, no es oficial). Retirada o anulada: ambas null. {@code nombre} es la letra ("A") y {@code etiqueta}
+	 * incluye el grado ("1.° A").
+	 */
+	public record SeccionMatricula(UUID id, String nombre, String etiqueta) {
+		public static SeccionMatricula asignada(String estado, UUID id, String nombre, String etiqueta) {
+			return id != null && "MATRICULADO".equals(estado) ? new SeccionMatricula(id, nombre, etiqueta) : null;
+		}
+
+		public static SeccionMatricula seleccionada(String estado, UUID id, String nombre, String etiqueta) {
+			boolean enProceso = switch (estado) {
+				case "SECCION_RESERVADA", "EN_VALIDACION", "PENDIENTE_PAGO" -> true;
+				default -> false;
+			};
+			return id != null && enProceso ? new SeccionMatricula(id, nombre, etiqueta) : null;
+		}
 	}
 
 	/** RF-60: motivo por el que no puede continuar. tipo: PERIODO, INSCRIPCION, DOCUMENTOS o DEUDA. */
@@ -86,9 +118,13 @@ public final class DtosMatricula {
 	public record IndicadoresPeriodo(int estudiantes, int matriculados, int enProceso, int requierenAccion) {
 	}
 
-	/** Fila de la tabla de A3. {@code seccion} es null si aún no se asigna. */
+	/**
+	 * Fila de la tabla de A3. {@code seccion} es la etiqueta de la sección guardada (asignada o seleccionada);
+	 * {@code seccionAsignada} y {@code seccionSeleccionada} las separan (ver {@link SeccionMatricula}).
+	 */
 	public record FilaMatriculaPeriodo(UUID id, UUID estudianteId, String nombre, String documento,
-			String gradoCodigo, String grado, String seccion, String estado, String codigo, String tipo) {
+			String gradoCodigo, String grado, String seccion, String estado, String codigo, String tipo,
+			SeccionMatricula seccionAsignada, SeccionMatricula seccionSeleccionada) {
 	}
 
 	/** Resultado del buscador de "Nueva matrícula": estudiantes inscritos para el año del periodo y sin matrícula. */
@@ -151,13 +187,17 @@ public final class DtosMatricula {
 
 	/**
 	 * Figma Personal administrativo › A5, B6 y B7 "Detalle de matrícula". {@code pasoActual} es el del indicador de
-	 * pasos (2 con la sección reservada o en validación, 3 pendiente de pago, 4 matriculado).
+	 * pasos (2 con la sección reservada o en validación, 3 pendiente de pago, 4 matriculado). {@code extemporanea} y
+	 * {@code motivoExtemporanea}: constancia del registro fuera de fecha (HU-25). {@code seccion} es la sección
+	 * guardada (con tutor y ocupación); {@code seccionAsignada} y {@code seccionSeleccionada} separan si ya es oficial
+	 * (ver {@link SeccionMatricula}).
 	 */
 	public record DetalleMatricula(UUID id, UUID periodoId, int anio, UUID estudianteId, String nombre,
 			String documento, String tipo, String gradoCodigo, String grado, SeccionAsignada seccion, String estado,
 			String codigo, int pasoActual, String apoderado, String contacto, String contactoEmergencia,
 			String informacionMedica, boolean puedeCambiarSeccion, boolean puedeEditarDocumentos, boolean puedeValidar,
-			List<DocumentoDeMatricula> documentos) {
+			List<DocumentoDeMatricula> documentos, boolean extemporanea, String motivoExtemporanea,
+			SeccionMatricula seccionAsignada, SeccionMatricula seccionSeleccionada) {
 	}
 
 	/** Un documento de la matrícula visto por el apoderado: con su plantilla para descargar y lo que ya subió. */

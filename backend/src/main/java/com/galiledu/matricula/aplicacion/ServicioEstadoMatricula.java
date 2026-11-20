@@ -15,6 +15,7 @@ import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.configuracion.aplicacion.ServicioPeriodoMatricula;
 import com.galiledu.configuracion.dominio.EstadoVisiblePeriodoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.CuotaDeuda;
+import com.galiledu.matricula.aplicacion.DtosMatricula.DatosEstudianteApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DeudaFamiliar;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstadoMatriculaApoderado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.EstudianteMatricula;
@@ -23,6 +24,7 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.Impedimento;
 import com.galiledu.matricula.aplicacion.DtosMatricula.MatriculaActual;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PagoMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PeriodoMatricula;
+import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.HijoFila;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.MatriculaFila;
@@ -75,18 +77,21 @@ public class ServicioEstadoMatricula {
 		List<Impedimento> impedimentos = new ArrayList<>();
 		Optional<PeriodoFila> periodoFila = consultas.periodoVigente();
 		PeriodoMatricula periodo = periodoFila.map(this::aPeriodo).orElse(null);
-		if (periodo == null) {
-			impedimentos.add(new Impedimento("PERIODO", "Aún no hay un periodo de matrícula configurado."));
-		} else if (!periodo.abierto()) {
-			impedimentos
-					.add(new Impedimento("PERIODO", "El periodo de matrícula " + periodo.anio() + " no está abierto."));
-		}
-
 		MatriculaActual matricula = periodoFila.flatMap(p -> consultas.matricula(estudianteId, p.anioEscolarId())
 				.map(m -> new MatriculaActual(m.id(), m.estado(), m.grado(), seccionVisible(m), m.codigo(),
 						consultas.documentosRequeridos(p.id()), consultas.documentosEntregados(m.id()),
-						m.confirmadoEn())))
+						m.confirmadoEn(), m.extemporanea(),
+						SeccionMatricula.asignada(m.estado(), m.seccionId(), m.seccionNombre(), m.seccion()),
+						SeccionMatricula.seleccionada(m.estado(), m.seccionId(), m.seccionNombre(), m.seccion()))))
 				.orElse(null);
+		boolean extemporanea = matricula != null && matricula.extemporanea();
+		if (periodo == null) {
+			impedimentos.add(new Impedimento("PERIODO", "Aún no hay un periodo de matrícula configurado."));
+		} else if (!periodo.abierto() && !extemporanea) {
+			// HU-25: una matrícula extemporánea la registró el colegio con el periodo cerrado y se completa igual.
+			impedimentos
+					.add(new Impedimento("PERIODO", "El periodo de matrícula " + periodo.anio() + " no está abierto."));
+		}
 		// Sin matrícula, el apoderado la inicia él mismo si su hijo está inscrito para el año del periodo: la matrícula
 		// se crea al enviar los documentos a validación (ServicioMatriculaApoderado#iniciar).
 		boolean puedeIniciar = periodo != null && matricula == null && inscritoParaElPeriodo(estudianteId, periodo);
@@ -119,11 +124,31 @@ public class ServicioEstadoMatricula {
 						.map(c -> pagoMatricula(c, matricula, periodo, deuda, hijo))
 						.orElse(null);
 		return new EstadoMatriculaApoderado(new EstudianteMatricula(hijo.estudianteId(), hijo.nombre(), hijo.grado()),
-				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago);
+				periodo, matricula, paso, puedeContinuar, impedimentos, deuda, pago, datos(hijo, matricula));
 	}
 
 	/**
-	 * HU-31: la cuota de matrícula se paga en línea con la matrícula PENDIENTE_PAGO y el periodo abierto. Solo bloquea
+	 * HU-32: la tarjeta "Datos del estudiante y apoderado"; la sección y su tutor, solo con la matrícula formalizada.
+	 */
+	private DatosEstudianteApoderado datos(HijoFila hijo, MatriculaActual matricula) {
+		SeccionMatricula seccion = matricula == null ? null : matricula.seccionAsignada();
+		var documentoYTutor = consultas.documentoYTutor(hijo.estudianteId(), seccion == null ? null : seccion.id());
+		var apoderado = consultas.responsableDe(hijo.estudianteId());
+		var emergencia = consultas.contactoDeEmergencia(hijo.estudianteId());
+		return new DatosEstudianteApoderado(
+				documentoYTutor.map(d -> d.documento()).orElse(null),
+				seccion == null ? null : seccion.etiqueta(),
+				seccion == null ? null : documentoYTutor.map(d -> d.tutor()).orElse(null),
+				apoderado.map(a -> a.nombre()).orElse(null),
+				apoderado.map(a -> PresentacionMatricula.unir(a.celular(), a.correo())).orElse(null),
+				emergencia.map(c -> c.nombre() + " (" + c.parentesco() + ")"
+						+ (c.celular() == null ? "" : " · " + c.celular())).orElse(null),
+				PresentacionMatricula.resumenMedico(consultas.fichaMedica(hijo.estudianteId())));
+	}
+
+	/**
+	 * HU-31: la cuota de matrícula se paga en línea con la matrícula PENDIENTE_PAGO y el periodo abierto (o, si es
+	 * extemporánea, también con el periodo cerrado: HU-25). Solo bloquea
 	 * la deuda vencida del propio hijo, no la de sus hermanos (acta del PO, 30/10; CAHU31-2).
 	 */
 	private static PagoMatricula pagoMatricula(CuotaMatriculaDetalle c, MatriculaActual m, PeriodoMatricula periodo,
@@ -137,7 +162,7 @@ public class ServicioEstadoMatricula {
 			motivo = "Tu pago está en proceso. Espera la confirmación de la pasarela.";
 		} else if (c.estado() == EstadoCuota.PAGADA) {
 			motivo = "La cuota ya está pagada; estamos confirmando la matrícula.";
-		} else if (periodo == null || !periodo.abierto()) {
+		} else if ((periodo == null || !periodo.abierto()) && !m.extemporanea()) {
 			motivo = "El periodo de matrícula no está abierto.";
 		} else if (deuda.cuotas().stream().anyMatch(q -> q.estudianteId().equals(hijo.estudianteId()))) {
 			motivo = "Primero paga las pensiones vencidas de " + hijo.nombre() + ".";

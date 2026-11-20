@@ -13,6 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -93,6 +94,13 @@ public class MatriculaDetalleController {
 	public DetalleMatricula observar(@PathVariable UUID id, @PathVariable UUID documentoId,
 			@RequestBody @jakarta.validation.Valid Observacion cuerpo, Authentication autenticacion) {
 		servicio.observarDocumento(id, documentoId, cuerpo.observacion(), ServicioJwt.usuarioActual(autenticacion));
+		return servicio.detalle(id);
+	}
+
+	/** DELETE /api/matricula/matriculas/{id}/documentos/{documentoId} · HU-72: quita el archivo del expediente. */
+	@DeleteMapping("/{id}/documentos/{documentoId}")
+	public DetalleMatricula eliminarDocumento(@PathVariable UUID id, @PathVariable UUID documentoId) {
+		servicio.eliminarDocumento(id, documentoId);
 		return servicio.detalle(id);
 	}
 

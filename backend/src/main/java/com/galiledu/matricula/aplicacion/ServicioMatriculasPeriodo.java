@@ -32,6 +32,7 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.MatriculaCreada;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PeriodoMatriculas;
 import com.galiledu.matricula.aplicacion.DtosMatricula.PreparacionMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionAsignada;
+import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionesDelGrado;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.EstudianteParaMatricula;
@@ -40,7 +41,8 @@ import com.galiledu.matricula.infraestructura.ConsultasMatricula.PeriodoPorId;
 import com.galiledu.matricula.infraestructura.EscriturasMatricula;
 
 /**
- * HU-24: pantalla "Matrículas del periodo" del Personal administrativo y su "Nueva matrícula". El estado del periodo
+ * HU-24: pantalla "Matrículas del periodo" del Personal administrativo, su "Nueva matrícula" y, con el periodo
+ * cerrado, la "Matrícula extemporánea" (HU-25). El estado del periodo
  * (PROGRAMADO, ABIERTO o CERRADO) lo calcula Configuración y las secciones con sus vacantes también
  * ({@link ServicioSecciones}); aquí solo se leen y se crean matrículas.
  */
@@ -86,7 +88,9 @@ public class ServicioMatriculasPeriodo {
 				vacioANulo(gradoCodigo), vacioANulo(estado), orden, descendente, numero, tam);
 		return Pagina.de(new PageImpl<>(filas.filas(), PageRequest.of(numero - 1, tam), filas.total()),
 				f -> new FilaMatriculaPeriodo(f.id(), f.estudianteId(), f.nombre(), f.documento(), f.gradoCodigo(),
-						f.grado(), f.seccion(), f.estado(), f.codigo(), f.tipo()));
+						f.grado(), f.seccion(), f.estado(), f.codigo(), f.tipo(),
+						SeccionMatricula.asignada(f.estado(), f.seccionId(), f.seccionNombre(), f.seccion()),
+						SeccionMatricula.seleccionada(f.estado(), f.seccionId(), f.seccionNombre(), f.seccion())));
 	}
 
 	/** Buscador de "Nueva matrícula": inscritos para el año del periodo que todavía no tienen matrícula. */
@@ -167,6 +171,52 @@ public class ServicioMatriculasPeriodo {
 				&& escrituras.marcarEnValidacion(matriculaId);
 		return new MatriculaCreada(matriculaId, completa ? "EN_VALIDACION" : "SECCION_RESERVADA", etiqueta(seccion),
 				archivos.size(), reasignada);
+	}
+
+	/**
+	 * HU-25 (RF-54, RF-55): con el periodo CERRADO y si el periodo la permite, el colegio registra la matrícula fuera
+	 * de fecha eligiendo la sección (con cupo) y dejando el motivo como constancia del caso excepcional. Sigue el mismo
+	 * camino que la regular: sección reservada, documentos, validación, pago y matriculado.
+	 */
+	@Transactional
+	public MatriculaCreada crearExtemporanea(UUID periodoId, UUID estudianteId, UUID seccionId, String motivo,
+			Map<UUID, ArchivoMatricula> archivos, UUID usuarioId) {
+		PeriodoPorId periodo = buscar(periodoId);
+		if (periodos.estadoEn(periodoId, reloj.instant()) != EstadoVisiblePeriodoMatricula.CERRADO) {
+			throw ExcepcionNegocio.conflicto("La matrícula extemporánea se habilita cuando el periodo cierre.");
+		}
+		if (!periodo.permiteExtemporanea()) {
+			throw ExcepcionNegocio
+					.conflicto("El periodo de matrícula " + periodo.anio() + " no permite matrículas extemporáneas.");
+		}
+		String razon = motivo == null ? "" : motivo.strip();
+		if (razon.isEmpty()) {
+			throw ExcepcionNegocio.invalido("Indica el motivo de la matrícula extemporánea.");
+		}
+		if (razon.length() > 500) {
+			throw ExcepcionNegocio.invalido("El motivo admite hasta 500 caracteres.");
+		}
+		if (seccionId == null) {
+			throw ExcepcionNegocio.invalido("Elige la sección del estudiante.");
+		}
+		EstudianteParaMatricula e = estudiante(periodo, estudianteId);
+		validarArchivos(periodoId, archivos);
+		escrituras.bloquearSeccionesDelGrado(periodo.anioEscolarId(), e.gradoCodigo());
+		SeccionConVacantes seccion = delGrado(periodo.anioEscolarId(), e.gradoCodigo()).stream()
+				.filter(s -> s.id().equals(seccionId)).findFirst()
+				.orElseThrow(() -> ExcepcionNegocio.invalido("La sección elegida no es de " + e.grado() + "."));
+		if (!hayCupo(seccion)) {
+			throw ExcepcionNegocio.conflicto("La sección " + etiqueta(seccion) + " no tiene vacantes.");
+		}
+		UUID matriculaId = escrituras.insertarMatriculaExtemporanea(e.id(), periodo.anioEscolarId(), e.gradoCodigo(),
+				seccion.id(), tipo(e.id(), periodo.anio()), razon, usuarioId);
+		archivos.forEach(
+				(documentoId, archivo) -> escrituras.insertarDocumento(matriculaId, documentoId, archivo, usuarioId));
+		int requeridos = consultas.documentosRequeridos(periodoId);
+		boolean completa = requeridos > 0 && consultas.documentosEntregados(matriculaId) >= requeridos
+				&& escrituras.marcarEnValidacion(matriculaId);
+		return new MatriculaCreada(matriculaId, completa ? "EN_VALIDACION" : "SECCION_RESERVADA", etiqueta(seccion),
+				archivos.size(), false);
 	}
 
 	private EstudianteParaMatricula estudiante(PeriodoPorId periodo, UUID estudianteId) {
