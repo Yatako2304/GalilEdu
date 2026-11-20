@@ -214,8 +214,16 @@ export const createAppRouter = (
               () => import('./routes/app/coordinador/calificaciones'),
             ],
             [
+              paths.app.coordinador.planCurricular.path,
+              () => import('./routes/app/coordinador/plan-curricular'),
+            ],
+            [
               paths.app.coordinador.planEvaluacion.path,
               () => import('./routes/app/coordinador/plan-evaluacion'),
+            ],
+            [
+              paths.app.coordinador.escalaCalificacion.path,
+              () => import('./routes/app/coordinador/escala-calificacion'),
             ],
             [
               paths.app.coordinador.ambientes.path,

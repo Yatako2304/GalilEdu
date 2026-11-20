@@ -99,25 +99,25 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | DELETE | `/estudiantes/{id}` | Admin, Personal adm. | Borrado lógico: deja de salir en el listado y en la ficha, y conserva su historial. 204 |
 | POST | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Sube o reemplaza el documento del apoderado (multipart: `tipo`, `archivo`; PDF/JPG/PNG ≤ 5 MB) |
 | GET | `/estudiantes/{id}/apoderado/documento` | Admin, Personal adm. | Descarga ese documento |
-| GET | `/areas/resumen` | Personal adm. | Áreas, competencias y cursos activos de los registrados, y el año escolar activo (CI-14) |
-| GET | `/areas` | Personal adm. | Áreas en orden, con cuántas competencias y cursos tiene cada una |
-| GET / PUT | `/areas/{id}` | Personal adm. | Detalle con competencias y cursos / edición `{nombre, descripcion}` (HU-52) |
-| POST | `/areas` | Personal adm. | Nueva área (HU-52). 409 si el nombre ya existe |
-| POST | `/areas/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado del área |
-| POST | `/areas/{id}/competencias` | Personal adm. | Nueva competencia `{nombre, descripcion}` (HU-53). 409 si el área está inactiva o el nombre ya está en el área |
-| PUT | `/competencias/{id}` | Personal adm. | Edita la competencia |
-| POST | `/competencias/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado de la competencia |
-| POST | `/areas/{id}/cursos` | Personal adm. | Nuevo curso `{nombre, grados: ["SEC-1", …]}` (HU-54). 409 si el área está inactiva o el nombre ya existe |
-| PUT | `/cursos/{id}` | Personal adm. | Edita el curso. 409 si quita un grado en el que ya está planificado |
-| POST | `/cursos/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado del curso |
+| GET | `/areas/resumen` | Personal adm. · Coordinador | Áreas, competencias y cursos activos de los registrados, y el año escolar activo (CI-14) |
+| GET | `/areas` | Personal adm. · Coordinador | Áreas en orden, con cuántas competencias y cursos tiene cada una |
+| GET / PUT | `/areas/{id}` | Personal adm. · Coordinador | Detalle con competencias y cursos / edición `{nombre, descripcion}` (HU-52) |
+| POST | `/areas` | Personal adm. · Coordinador | Nueva área (HU-52). 409 si el nombre ya existe |
+| POST | `/areas/{id}/desactivar` · `/reactivar` | Personal adm. · Coordinador | Cambia el estado del área |
+| POST | `/areas/{id}/competencias` | Personal adm. · Coordinador | Nueva competencia `{nombre, descripcion}` (HU-53). 409 si el área está inactiva o el nombre ya está en el área |
+| PUT | `/competencias/{id}` | Personal adm. · Coordinador | Edita la competencia |
+| POST | `/competencias/{id}/desactivar` · `/reactivar` | Personal adm. · Coordinador | Cambia el estado de la competencia |
+| POST | `/areas/{id}/cursos` | Personal adm. · Coordinador | Nuevo curso `{nombre, grados: ["SEC-1", …]}` (HU-54). 409 si el área está inactiva o el nombre ya existe |
+| PUT | `/cursos/{id}` | Personal adm. · Coordinador | Edita el curso. 409 si quita un grado en el que ya está planificado |
+| POST | `/cursos/{id}/desactivar` · `/reactivar` | Personal adm. · Coordinador | Cambia el estado del curso |
 | GET | `/ambientes/resumen` | Personal adm. | Tarjetas de CI-26: `{activos, total, aulasRegulares, espaciosEspeciales, aforoTotal}`. Cuentan solo los activos y no dependen de los filtros de la lista (HU-43) |
 | GET | `/ambientes?tipo=&estado=&q=` | Personal adm. | Ambientes por nombre, sin paginar; filtros opcionales (`tipo`: `AULA_REGULAR`/`ESPACIO_ESPECIAL`, `estado`: `ACTIVO`/`INACTIVO`, `q`: busca en el nombre). `[{id, codigo, nombre, tipo, aforoMaximo, recursos, estado}]`; el código es de solo lectura. 400 con un tipo o estado desconocido |
 | POST | `/ambientes` | Personal adm. | Nuevo ambiente `{tipo, nombre, aforoMaximo, recursos}` (201). El código lo genera el backend (`A-001` aula regular, `E-001` espacio especial). 400 con datos inválidos (aula regular de más de 45, aforo 0, recurso de más de 60 caracteres…); 409 si el nombre ya existe (sin importar mayúsculas ni espacios) |
 | PUT | `/ambientes/{id}` | Personal adm. | Edita `{nombre, aforoMaximo, recursos}`; el código y el tipo no cambian (si vienen, se ignoran). 404; 409 si el nombre ya existe o si el aforo queda por debajo de los matriculados de una sección que usa el ambiente (RF-111) |
 | POST | `/ambientes/{id}/desactivar` · `/reactivar` | Personal adm. | Cambia el estado; responde 200 aunque ya estuviera en ese estado. Desactivar se permite aunque esté en uso. 404 |
-| GET | `/tablas-conversion` | Personal adm. | Versiones de la tabla de conversión (HU-55), de la más nueva a la más antigua; `estado`: PROGRAMADA, VIGENTE o ANTERIOR (se calcula con la fecha de hoy) |
-| GET | `/tablas-conversion/vigente` | Personal adm. | La versión que rige hoy. 404 si no hay ninguna |
-| POST | `/tablas-conversion` | Personal adm. | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}`. 400 si la fecha es pasada o los rangos no cubren 0–20 sin vacíos ni cruces; 409 si ya hay una versión con esa fecha |
+| GET | `/tablas-conversion` | Personal adm. · Coordinador | Versiones de la tabla de conversión (HU-55), de la más nueva a la más antigua; `estado`: PROGRAMADA, VIGENTE o ANTERIOR (se calcula con la fecha de hoy) |
+| GET | `/tablas-conversion/vigente` | Personal adm. · Coordinador | La versión que rige hoy. 404 si no hay ninguna |
+| POST | `/tablas-conversion` | Personal adm. · Coordinador | Nueva versión `{vigenteDesde, niveles: [{nivel, notaDesde, notaHasta}]}`. 400 si la fecha es pasada o los rangos no cubren 0–20 sin vacíos ni cruces; 409 si ya hay una versión con esa fecha |
 | GET | `/planes-evaluacion?anioEscolarId=&grado=` | Personal adm. · Coordinador | Plan de evaluación del grado (HU-56): tarjetas de CI-17, secciones con tutor y cursos con horas, competencias, escala y docentes asignados; `reglaNota` del año y `pesosIncompletos` (competencias cuyos pesos no suman 100) |
 | GET | `/planes-evaluacion/anios` · `/planes-evaluacion/docentes` | Personal adm. · Coordinador | Años escolares (del más reciente) · usuarios activos con rol Docente |
 | GET | `/planes-evaluacion/cursos-disponibles?anioEscolarId=&grado=` | Personal adm. · Coordinador | Cursos activos que se dictan en el grado y aún no están en su plan, con las competencias activas del área |

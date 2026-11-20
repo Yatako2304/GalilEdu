@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   BookOpenCheck,
   Building2,
   CalendarCheck,
@@ -7,6 +8,7 @@ import {
   GraduationCap,
   Contact,
   Home,
+  Layers,
   type LucideIcon,
   Star,
   Users,
@@ -128,9 +130,21 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           icon: Star,
         },
         {
+          // HU-52 a HU-54: no está en el menú del Coordinador en Figma; lo comparte con el Personal administrativo.
+          label: 'Plan curricular',
+          href: paths.app.coordinador.planCurricular.getHref(),
+          icon: Layers,
+        },
+        {
           label: 'Plan de evaluación',
           href: paths.app.coordinador.planEvaluacion.getHref(),
           icon: BookOpenCheck,
+        },
+        {
+          // HU-55: tabla de conversión de vigesimal a AD/A/B/C (tampoco está en el menú del Coordinador en Figma).
+          label: 'Escala de calificación',
+          href: paths.app.coordinador.escalaCalificacion.getHref(),
+          icon: ArrowLeftRight,
         },
         {
           label: 'Reserva de espacios especiales',

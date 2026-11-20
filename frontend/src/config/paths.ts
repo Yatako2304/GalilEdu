@@ -129,6 +129,9 @@ export const paths = {
       horarios: route(COORDINADOR, 'horarios'),
       calificaciones: route(COORDINADOR, 'calificaciones'),
       planEvaluacion: route(COORDINADOR, 'plan-evaluacion'),
+      // HU-52 a HU-55: las mismas pantallas que el Personal administrativo ve como pestañas de "Competencias".
+      planCurricular: route(COORDINADOR, 'plan-curricular'),
+      escalaCalificacion: route(COORDINADOR, 'escala-calificacion'),
       ambientes: route(COORDINADOR, 'ambientes'),
     },
 
