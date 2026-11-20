@@ -30,7 +30,7 @@ public class ConsultasMatricula {
 
 	/** {@code extemporanea}: registrada por el colegio con el periodo cerrado (HU-25). */
 	public record MatriculaFila(UUID id, String estado, String grado, String seccion, String codigo,
-			OffsetDateTime confirmadoEn, boolean extemporanea) {
+			OffsetDateTime confirmadoEn, boolean extemporanea, UUID seccionId, String seccionNombre) {
 	}
 
 	public Optional<UUID> personaDeUsuario(UUID usuarioId) {
@@ -74,14 +74,15 @@ public class ConsultasMatricula {
 	public Optional<MatriculaFila> matricula(UUID estudianteId, UUID anioEscolarId) {
 		return jdbc.sql("""
 				SELECT m.id, m.estado, g.nombre, g.numero || '.° ' || s.nombre, m.codigo, m.confirmado_en,
-				       m.extemporanea
+				       m.extemporanea, s.id, s.nombre
 				FROM matricula.matricula m
 				JOIN configuracion.grado g ON g.codigo = m.grado_codigo
 				LEFT JOIN configuracion.seccion s ON s.id = m.seccion_id
 				WHERE m.estudiante_id = ? AND m.anio_escolar_id = ?""")
 				.params(estudianteId, anioEscolarId)
 				.query((rs, i) -> new MatriculaFila(rs.getObject(1, UUID.class), rs.getString(2), rs.getString(3),
-						rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class), rs.getBoolean(7)))
+						rs.getString(4), rs.getString(5), rs.getObject(6, OffsetDateTime.class), rs.getBoolean(7),
+						rs.getObject(8, UUID.class), rs.getString(9)))
 				.optional();
 	}
 
@@ -180,7 +181,8 @@ public class ConsultasMatricula {
 	}
 
 	public record FilaListado(UUID id, UUID estudianteId, String nombre, String documento, String gradoCodigo,
-			String grado, String seccion, String estado, String codigo, String tipo, OffsetDateTime actualizadoEn) {
+			String grado, String seccion, String estado, String codigo, String tipo, UUID seccionId,
+			String seccionNombre, OffsetDateTime actualizadoEn) {
 	}
 
 	/**
@@ -214,7 +216,7 @@ public class ConsultasMatricula {
 		List<FilaListado> filas = jdbc.sql("""
 				SELECT m.id, e.id, concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno),
 				       p.numero_documento, g.codigo, g.nombre, CASE WHEN s.id IS NULL THEN NULL
-				       ELSE g.numero || '.° ' || s.nombre END, m.estado, m.codigo, m.tipo_estudiante,
+				       ELSE g.numero || '.° ' || s.nombre END, m.estado, m.codigo, m.tipo_estudiante, s.id, s.nombre,
 				       m.actualizado_en
 				""" + filtros
 				+ " ORDER BY " + columna + sentido + ", p.apellido_paterno, p.nombres, m.id LIMIT :tam OFFSET :desde")
@@ -222,7 +224,8 @@ public class ConsultasMatricula {
 				.param("patron", patron).param("tam", tamano).param("desde", (long) (pagina - 1) * tamano)
 				.query((rs, i) -> new FilaListado(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
 						rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getString(7),
-						rs.getString(8), rs.getString(9), rs.getString(10), rs.getObject(11, OffsetDateTime.class)))
+						rs.getString(8), rs.getString(9), rs.getString(10), rs.getObject(11, UUID.class),
+						rs.getString(12), rs.getObject(13, OffsetDateTime.class)))
 				.list();
 		return new PaginaFilas<>(filas, total);
 	}
@@ -300,6 +303,26 @@ public class ConsultasMatricula {
 	}
 
 	public record ApoderadoFila(String nombre, String celular, String correo) {
+	}
+
+	/** HU-32: documento del estudiante y tutor de la sección ({@code tutor} null sin sección o sin tutor). */
+	public record DocumentoYTutorFila(String documento, String tutor) {
+	}
+
+	public Optional<DocumentoYTutorFila> documentoYTutor(UUID estudianteId, UUID seccionId) {
+		return jdbc.sql("""
+				SELECT p.numero_documento,
+				       (SELECT concat_ws(' ', tp.nombres, tp.apellido_paterno, tp.apellido_materno)
+				        FROM configuracion.seccion s
+				        JOIN seguridad.usuario u ON u.id = s.tutor_id
+				        JOIN personas.persona tp ON tp.id = u.persona_id
+				        WHERE s.id = :seccion)
+				FROM estudiantes.estudiante e JOIN personas.persona p ON p.id = e.persona_id
+				WHERE e.id = :estudiante""")
+				.param("seccion", seccionId)
+				.param("estudiante", estudianteId)
+				.query((rs, i) -> new DocumentoYTutorFila(rs.getString(1), rs.getString(2)))
+				.optional();
 	}
 
 	/** El responsable de la matrícula (el apoderado de Figma): quien paga y firma. */

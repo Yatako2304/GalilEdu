@@ -26,6 +26,7 @@ import com.galiledu.matricula.aplicacion.DtosMatricula.CambioSeccionRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DetalleMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DocumentoDeMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionAsignada;
+import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionMatricula;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionesDelGrado;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula.DocumentoGuardadoFila;
@@ -60,10 +61,12 @@ public class ServicioMatriculaAdministrativa {
 	@Transactional(readOnly = true)
 	public DetalleMatricula detalle(UUID matriculaId) {
 		MatriculaDetalleFila m = buscar(matriculaId);
-		SeccionAsignada seccion = delAnio(m).stream().filter(s -> s.id().equals(m.seccionId())).findFirst()
+		var guardada = delAnio(m).stream().filter(s -> s.id().equals(m.seccionId())).findFirst();
+		SeccionAsignada seccion = guardada
 				.map(s -> new SeccionAsignada(s.id(), etiqueta(s), s.tutor(), s.capacidadMaxima(),
 						s.alumnosOcupanVacante()))
 				.orElse(null);
+		String nombreSeccion = guardada.map(s -> s.nombre()).orElse(null);
 		var apoderado = consultas.responsableDe(m.estudianteId());
 		var emergencia = consultas.contactoDeEmergencia(m.estudianteId());
 		Map<UUID, DocumentoGuardadoFila> guardados = consultas.documentosGuardados(matriculaId).stream()
@@ -80,7 +83,13 @@ public class ServicioMatriculaAdministrativa {
 						+ (c.celular() == null ? "" : " · " + c.celular())).orElse(null),
 				PresentacionMatricula.resumenMedico(consultas.fichaMedica(m.estudianteId())),
 				puedeCambiarSeccion(m), puedeEditarDocumentos(m), puedeValidar(m, documentos), documentos,
-				m.extemporanea(), m.motivoExtemporanea());
+				m.extemporanea(), m.motivoExtemporanea(),
+				seccion == null
+						? null
+						: SeccionMatricula.asignada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()),
+				seccion == null
+						? null
+						: SeccionMatricula.seleccionada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()));
 	}
 
 	/** Id de la matrícula vigente del estudiante, o vacío si aún no tiene (la ficha del estudiante la usa). */
