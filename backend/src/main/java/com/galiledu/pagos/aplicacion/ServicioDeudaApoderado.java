@@ -1,9 +1,12 @@
 package com.galiledu.pagos.aplicacion;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,11 +14,15 @@ import org.springframework.transaction.annotation.Transactional;
 import com.galiledu.compartido.web.ExcepcionNegocio;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoAnio;
 import com.galiledu.pagos.aplicacion.DtosPagos.CompromisoDetalle;
+import com.galiledu.pagos.aplicacion.DtosPagos.ConstanciaPago;
+import com.galiledu.pagos.aplicacion.DtosPagos.CuotaConstancia;
 import com.galiledu.pagos.aplicacion.DtosPagos.HijoConDeuda;
 import com.galiledu.pagos.aplicacion.DtosPagos.PagoRealizado;
 import com.galiledu.pagos.dominio.CompromisoPago;
+import com.galiledu.pagos.infraestructura.ArchivoConstanciaPago;
 import com.galiledu.pagos.infraestructura.CompromisoPagoRepositorio;
 import com.galiledu.pagos.infraestructura.ConsultasPagos;
+import com.galiledu.pagos.infraestructura.ConsultasPagos.FilaConstancia;
 
 /**
  * HU-40 · Figma Apoderado › "Pensiones": estado de deuda de los hijos (RF-95), cronograma con recargo (RF-96) e
@@ -70,6 +77,42 @@ public class ServicioDeudaApoderado {
 	public List<PagoRealizado> pagos(UUID usuarioId, UUID compromisoId) {
 		verificar(usuarioId, compromisoId);
 		return servicio.pagos(compromisoId);
+	}
+
+	/**
+	 * HU-42 · RF-107: datos de la constancia de un pago de uno de sus hijos. Un pago inexistente o de otra familia
+	 * responde 404, igual que un compromiso ajeno.
+	 */
+	@Transactional(readOnly = true)
+	public ConstanciaPago constancia(UUID usuarioId, UUID pagoId) {
+		FilaConstancia fila = consultas.constancia(pagoId)
+				.filter(f -> consultas.esHijoDelUsuario(usuarioId, f.estudianteId()))
+				.orElseThrow(() -> ExcepcionNegocio.noEncontrado("No existe el pago."));
+		List<CuotaConstancia> cuotas = consultas.detalleConstancia(pagoId).stream()
+				.map(d -> new CuotaConstancia(d.concepto(), d.cuota(), d.vencimiento(), d.capital(), d.recargo()))
+				.toList();
+		String documento = ("DNI".equals(fila.tipoDocumento()) ? "DNI" : "Carné de extranjería") + " "
+				+ fila.numeroDocumento();
+		return new ConstanciaPago(fila.pagoId(), fila.numeroConstancia(), fila.fechaPago(), fila.referencia(),
+				fila.montoTotal(), sumar(cuotas, CuotaConstancia::capital), sumar(cuotas, CuotaConstancia::recargo),
+				fila.estado(), fila.observacion(), fila.nombres() + " " + fila.apellidos(), documento, fila.anio(),
+				fila.grado(), fila.seccion(), cuotas);
+	}
+
+	/** Archivo listo para descargar: {@code constancia-C-2026-00007.pdf}. */
+	public record ArchivoConstancia(String nombre, byte[] contenido) {
+	}
+
+	/** HU-42 · RF-108: la constancia en PDF, para descargarla desde el historial de pagos. */
+	@Transactional(readOnly = true)
+	public ArchivoConstancia constanciaPdf(UUID usuarioId, UUID pagoId) {
+		ConstanciaPago constancia = constancia(usuarioId, pagoId);
+		return new ArchivoConstancia("constancia-" + constancia.numeroConstancia() + ".pdf",
+				ArchivoConstanciaPago.pdf(constancia, OffsetDateTime.now(LIMA)));
+	}
+
+	private static BigDecimal sumar(List<CuotaConstancia> cuotas, Function<CuotaConstancia, BigDecimal> campo) {
+		return cuotas.stream().map(campo).reduce(BigDecimal.ZERO, BigDecimal::add);
 	}
 
 	private void verificar(UUID usuarioId, UUID compromisoId) {

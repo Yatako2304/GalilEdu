@@ -348,6 +348,63 @@ public class ConsultasPagos {
 				.list();
 	}
 
+	public record FilaConstancia(UUID pagoId, UUID estudianteId, String numeroConstancia, OffsetDateTime fechaPago,
+			String referencia, BigDecimal montoTotal, String estado, String observacion, String nombres,
+			String apellidos, String tipoDocumento, String numeroDocumento, Integer anio, String grado,
+			String seccion) {
+	}
+
+	public record FilaDetalleConstancia(String concepto, String cuota, LocalDate vencimiento, BigDecimal capital,
+			BigDecimal recargo) {
+	}
+
+	/**
+	 * HU-42 · RF-107: datos de la constancia de un pago. El año, el grado y la sección salen del compromiso de las
+	 * cuotas pagadas (todas son del mismo estudiante y año).
+	 */
+	public Optional<FilaConstancia> constancia(UUID pagoId) {
+		return jdbc.sql("""
+				SELECT pg.id, pg.estudiante_id, pg.numero_constancia, pg.fecha_pago, pg.referencia, pg.monto_total,
+				       pg.estado, pg.observacion, p.nombres, concat_ws(' ', p.apellido_paterno, p.apellido_materno),
+				       p.tipo_documento, p.numero_documento, ctx.anio, ctx.grado, ctx.seccion
+				FROM pagos.pago pg
+				JOIN estudiantes.estudiante e ON e.id = pg.estudiante_id
+				JOIN personas.persona p ON p.id = e.persona_id
+				LEFT JOIN LATERAL (
+				     SELECT a.anio, g.nombre AS grado, s.nombre AS seccion
+				     FROM pagos.pago_detalle d
+				     JOIN pagos.cuota q ON q.id = d.cuota_id
+				     JOIN pagos.compromiso_pago c ON c.id = q.compromiso_id
+				     JOIN configuracion.anio_escolar a ON a.id = c.anio_escolar_id
+				     LEFT JOIN matricula.matricula m ON m.id = c.matricula_id
+				     LEFT JOIN configuracion.grado g ON g.codigo = m.grado_codigo
+				     LEFT JOIN configuracion.seccion s ON s.id = m.seccion_id
+				     WHERE d.pago_id = pg.id
+				     LIMIT 1) ctx ON TRUE
+				WHERE pg.id = ?""")
+				.param(pagoId)
+				.query((rs, i) -> new FilaConstancia(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
+						rs.getString(3), rs.getObject(4, OffsetDateTime.class), rs.getString(5), rs.getBigDecimal(6),
+						rs.getString(7), rs.getString(8), rs.getString(9), rs.getString(10), rs.getString(11),
+						rs.getString(12), rs.getObject(13, Integer.class), rs.getString(14), rs.getString(15)))
+				.optional();
+	}
+
+	/** RF-107: cuotas canceladas por el pago, con su concepto, capital y recargo, en orden de vencimiento. */
+	public List<FilaDetalleConstancia> detalleConstancia(UUID pagoId) {
+		return jdbc.sql("""
+				SELECT co.nombre, q.nombre, q.fecha_vencimiento, d.capital, d.recargo
+				FROM pagos.pago_detalle d
+				JOIN pagos.cuota q ON q.id = d.cuota_id
+				JOIN pagos.concepto co ON co.codigo = q.concepto_codigo
+				WHERE d.pago_id = ?
+				ORDER BY q.fecha_vencimiento, q.nombre""")
+				.param(pagoId)
+				.query((rs, i) -> new FilaDetalleConstancia(rs.getString(1), rs.getString(2),
+						rs.getObject(3, LocalDate.class), rs.getBigDecimal(4), rs.getBigDecimal(5)))
+				.list();
+	}
+
 	/** P10 "Aplicado por": nombre y primer apellido del usuario (null si no hay usuario). */
 	public String nombreDeUsuario(UUID usuarioId) {
 		if (usuarioId == null) {

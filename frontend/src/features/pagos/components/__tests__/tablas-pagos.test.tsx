@@ -1,4 +1,4 @@
-import { renderApp, screen } from '@/testing/test-utils';
+import { renderApp, screen, userEvent } from '@/testing/test-utils';
 import { CompromisoDetalle } from '@/types/api';
 
 import { TablaCuotas } from '../cronograma-cuotas';
@@ -87,4 +87,55 @@ test('el historial distingue el monto de cuotas, el recargo y el total pagado', 
     screen.getByRole('columnheader', { name: 'Total pagado' }),
   ).toBeInTheDocument();
   expect(screen.queryByText('Capital')).not.toBeInTheDocument();
+});
+
+// HU-42: la descarga de la constancia solo aparece donde se pide (vista del apoderado), no en P9.
+const pagoConfirmado = {
+  id: 'pago-1',
+  numeroConstancia: 'C-2026-00001',
+  fechaPago: '2026-10-05T10:00:00-05:00',
+  capital: 600,
+  recargo: 0,
+  monto: 600,
+  estado: 'CONFIRMADO' as const,
+  cuotas: ['Pensión de septiembre'],
+};
+
+test('sin onDescargar (P9) no ofrece descargar la constancia', async () => {
+  await renderApp(<TablaPagos isLoading={false} pagos={[pagoConfirmado]} />);
+
+  expect(
+    screen.queryByRole('button', { name: /Descargar constancia/ }),
+  ).not.toBeInTheDocument();
+});
+
+test('con onDescargar cada pago tiene su botón de descarga', async () => {
+  const onDescargar = vi.fn();
+  await renderApp(
+    <TablaPagos
+      isLoading={false}
+      pagos={[pagoConfirmado]}
+      onDescargar={onDescargar}
+    />,
+  );
+
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Descargar constancia C-2026-00001' }),
+  );
+  expect(onDescargar).toHaveBeenCalledWith(pagoConfirmado);
+});
+
+test('mientras se descarga, el botón de ese pago queda deshabilitado', async () => {
+  await renderApp(
+    <TablaPagos
+      isLoading={false}
+      pagos={[pagoConfirmado]}
+      onDescargar={vi.fn()}
+      descargandoId="pago-1"
+    />,
+  );
+
+  expect(
+    screen.getByRole('button', { name: 'Descargar constancia C-2026-00001' }),
+  ).toBeDisabled();
 });
