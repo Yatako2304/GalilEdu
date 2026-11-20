@@ -21,6 +21,7 @@ import com.galiledu.usuarios.infraestructura.UsuarioRepositorio;
 @Service
 public class ServicioAutenticacion {
 	static final String CREDENCIALES_INVALIDAS = "El usuario o contraseña son incorrectos.";
+	static final String CUENTA_DESACTIVADA = "Tu cuenta está desactivada. Comunícate con el administrador del colegio.";
 
 	private final UsuarioRepositorio usuarios;
 	private final PasswordEncoder contrasenas;
@@ -56,9 +57,27 @@ public class ServicioAutenticacion {
 			throw new ExcepcionNegocio(HttpStatus.UNAUTHORIZED, CREDENCIALES_INVALIDAS);
 		}
 		if (!usuario.puedeIniciarSesion()) {
-			throw new ExcepcionNegocio(HttpStatus.UNAUTHORIZED,
-					"Tu cuenta está desactivada. Comunícate con el administrador del colegio.");
+			throw new ExcepcionNegocio(HttpStatus.UNAUTHORIZED, CUENTA_DESACTIVADA);
 		}
+		return entrar(usuario, ahora);
+	}
+
+	/**
+	 * HU-3: inicio de sesión de una cuenta ya identificada por otro medio (Google). Respeta el bloqueo por intentos
+	 * fallidos y la cuenta desactivada, igual que el inicio con contraseña. Debe llamarse dentro de una transacción.
+	 */
+	RespuestaLogin iniciarSesionVerificada(Usuario usuario) {
+		Instant ahora = reloj.instant();
+		if (usuario.bloqueadoEn(ahora)) {
+			throw bloqueada(Duration.between(ahora, usuario.getBloqueadoHasta()));
+		}
+		if (!usuario.puedeIniciarSesion()) {
+			throw new ExcepcionNegocio(HttpStatus.UNAUTHORIZED, CUENTA_DESACTIVADA);
+		}
+		return entrar(usuario, ahora);
+	}
+
+	private RespuestaLogin entrar(Usuario usuario, Instant ahora) {
 		usuario.registrarAcceso(ahora);
 		var roles = usuario.getRoles().stream().map(Enum::name).toList();
 		String token = jwt.emitir(usuario.getId(), usuario.getNombreUsuario(), roles);

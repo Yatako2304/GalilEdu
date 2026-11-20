@@ -7,6 +7,7 @@ import {
   GraduationCap,
   Contact,
   Home,
+  KeyRound,
   type LucideIcon,
   Star,
   Users,
@@ -53,6 +54,12 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
           label: 'Usuarios',
           href: paths.app.admin.usuarios.getHref(),
           icon: Users,
+        },
+        // HU-2: no está en Figma (ver docs/decisiones/2026-11-19-scuro-star-inicio-sesion-google.md).
+        {
+          label: 'Configuración de acceso',
+          href: paths.app.admin.configuracionAcceso.getHref(),
+          icon: KeyRound,
         },
       ],
     },
@@ -191,10 +198,11 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
       title: 'General',
       items: [
         inicioItem(paths.app.apoderado.root.getHref()),
+        // Figma > Apoderado > sidebar «Familia» → «Datos de la Familia» (antes este ítem era «Datos del Alumno»).
         {
-          label: 'Datos del Alumno',
-          href: paths.app.apoderado.datosAlumno.getHref(),
-          icon: Contact,
+          label: 'Familia',
+          href: paths.app.apoderado.familia.getHref(),
+          icon: Users,
         },
       ],
     },

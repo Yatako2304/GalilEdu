@@ -59,6 +59,22 @@ public final class Dtos {
 	}
 
 	/** Respuesta con un texto para la pantalla. */
+	/** HU-3: código de autorización que entrega la ventana de Google. */
+	public record SolicitudGoogle(@NotBlank(message = "Falta el código de Google.") String codigo) {
+	}
+
+	/** Métodos de acceso disponibles en la pantalla de inicio de sesión (público). */
+	public record MetodosAcceso(boolean google, String googleIdCliente) {
+	}
+
+	/** HU-2: estado del interruptor de Google para el administrador. */
+	public record ConfiguracionAccesoDto(boolean googleHabilitado, boolean googleConfigurado) {
+	}
+
+	public record SolicitudConfiguracionAcceso(
+			@NotNull(message = "Indica si el inicio de sesión con Google queda activado.") Boolean googleHabilitado) {
+	}
+
 	public record Mensaje(String message) {
 	}
 
@@ -75,6 +91,32 @@ public final class Dtos {
 	}
 
 	public record RespuestaLogin(String jwt, UsuarioSesion user) {
+	}
+
+	// ---------- Apoderado › «Datos de la Familia» (de solo vista) ----------
+
+	/**
+	 * Familia de uno o más estudiantes a cargo del apoderado: los hermanos con el mismo padre, madre y apoderado forman
+	 * una sola familia. {@code nombre}: apellidos del estudiante ("Paredes Rojas"). {@code apoderado} es null si no se
+	 * registró (el estudiante tiene padre o madre presentes).
+	 */
+	public record FamiliaApoderado(String nombre, List<EstudianteFamilia> estudiantes, IntegranteFamiliar padre,
+			IntegranteFamiliar madre, IntegranteFamiliar apoderado, List<ContactoFamilia> contactosEmergencia) {
+	}
+
+	/** {@code estado}: INSCRITO, MATRICULADO o RETIRADO. */
+	public record EstudianteFamilia(UUID id, String nombreCompleto, String grado, int anioAcademico, String estado) {
+	}
+
+	/**
+	 * Padre, madre o apoderado. {@code persona} es null si «no registra» (con {@code motivoNoRegistra});
+	 * {@code esUsted} marca a quien consulta.
+	 */
+	public record IntegranteFamiliar(DatosPersona persona, boolean fallecido, String motivoNoRegistra,
+			String relacion, boolean esUsted) {
+	}
+
+	public record ContactoFamilia(String nombreCompleto, String parentesco, String celular, String telefonoFijo) {
 	}
 
 	// ---------- Gestión de usuarios (HU-6, HU-9, HU-12) ----------

@@ -37,6 +37,7 @@ import com.galiledu.usuarios.aplicacion.Dtos.SolicitudUsuario;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioCreado;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioDetalle;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuarioResumen;
+import com.galiledu.usuarios.aplicacion.Dtos.UsuarioSesion;
 import com.galiledu.usuarios.aplicacion.Dtos.UsuariosPorRol;
 import com.galiledu.usuarios.dominio.EstadoUsuario;
 import com.galiledu.usuarios.dominio.GeneradorCredenciales;
@@ -220,6 +221,24 @@ public class ServicioUsuarios {
 		personas.actualizar(usuario.getPersona(), solicitud.persona());
 		usuario.reemplazarRoles(roles);
 		return detalleDe(usuario);
+	}
+
+	/**
+	 * Cualquier usuario edita sus propios datos personales desde «Mis datos» (ampliación de HU-9: no está en el
+	 * backlog de Notion, que solo cubre la edición por el administrador). Mismas reglas de formato y duplicados;
+	 * no toca roles ni el estado de la cuenta.
+	 */
+	@Transactional(readOnly = true)
+	public DatosPersona misDatos(UUID id) {
+		return DatosPersona.de(obtener(id).getPersona());
+	}
+
+	@Transactional
+	public UsuarioSesion actualizarMisDatos(UUID id, DatosPersona datos) {
+		datos.exigirCompletos();
+		Usuario usuario = obtener(id);
+		personas.actualizar(usuario.getPersona(), datos);
+		return UsuarioSesion.de(usuario);
 	}
 
 	/** HU-12: el usuario ya no puede iniciar sesión, pero se conserva su información. */

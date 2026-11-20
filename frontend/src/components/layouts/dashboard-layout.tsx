@@ -1,4 +1,4 @@
-import { ChevronDown, LogOut, PanelLeft, RefreshCw } from 'lucide-react';
+import { ChevronDown, LogOut, PanelLeft } from 'lucide-react';
 import * as React from 'react';
 import { NavLink, useNavigate, useNavigation } from 'react-router';
 
@@ -192,7 +192,6 @@ const SidebarBody = ({
 }) => {
   const user = useUser();
   const activeRole = useActiveRole();
-  const navigate = useNavigate();
   // Al salir se recarga la página en el login (sin "volver a"): así se descarta todo lo que quedó en
   // memoria (caché de consultas, notificaciones) y quien entre después no ve datos del usuario anterior.
   const logout = useLogout({
@@ -241,43 +240,29 @@ const SidebarBody = ({
           collapsed && 'flex-col',
         )}
       >
-        {/* HU-5 · Figma: al pulsar la tarjeta del usuario se abre «Cambiar contraseña». */}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={cn(
-              'flex min-w-0 items-center gap-3 rounded-xl text-left hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus',
-              !collapsed && 'flex-1',
-            )}
-          >
-            <Avatar name={fullName} />
-            {!collapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-label-2 font-medium text-content-primary">
-                  {fullName}
-                </p>
-                <p className="truncate text-body-4 text-content-quartiary">
-                  {ROLE_CONFIG[activeRole].label}
-                </p>
-              </div>
-            )}
-            <span className="sr-only">Opciones de tu cuenta</span>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="start" className="w-56">
-            <DropdownMenuItem
-              className="justify-between gap-3 px-3 py-2.5 text-body-3 text-content-primary"
-              onClick={() => {
-                onNavigate?.();
-                navigate(paths.app.cambiarContrasena.getHref());
-              }}
-            >
-              Cambiar contraseña
-              <RefreshCw
-                className="size-4 text-content-accent-secondary"
-                aria-hidden="true"
-              />
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        {/* «Mis datos»: al pulsar la tarjeta del usuario se va a la pantalla de datos personales, con el botón
+            «Cambiar contraseña» dentro (antes abría un desplegable que iba directo a «Cambiar contraseña»). */}
+        <Link
+          to={paths.app.misDatos.getHref(getRoleHomeHref(activeRole))}
+          onClick={onNavigate}
+          className={cn(
+            'flex min-w-0 items-center gap-3 rounded-xl text-left hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus',
+            !collapsed && 'flex-1',
+          )}
+        >
+          <Avatar name={fullName} />
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-label-2 font-medium text-content-primary">
+                {fullName}
+              </p>
+              <p className="truncate text-body-4 text-content-quartiary">
+                {ROLE_CONFIG[activeRole].label}
+              </p>
+            </div>
+          )}
+          <span className="sr-only">Ver mis datos</span>
+        </Link>
         <button
           type="button"
           onClick={() => logout.mutate({})}

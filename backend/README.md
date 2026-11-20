@@ -14,6 +14,7 @@ Variables de entorno o `backend/.env` (ignorado por Git; plantilla en [`.env.exa
 | `CORS_ORIGINS` | Origen del frontend | `http://localhost:3000` |
 | `FLYWAY_LOCATIONS` | Qué migraciones se aplican | `classpath:db/migration,classpath:db/datos-prueba` — en producción usa solo `classpath:db/migration` |
 | `MAIL_HOST`, `MAIL_PORT`, `MAIL_USER`, `MAIL_PASSWORD`, `MAIL_FROM` | SMTP para enviar credenciales (RF-17) | sin SMTP, las credenciales se escriben en el log |
+| `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Inicio de sesión con Google (HU-2 y HU-3): ID de cliente OAuth «Aplicación web» de Google Cloud y su clave secreta | sin ellos no aparece el botón de Google y el administrador no puede activarlo |
 
 ## Estructura
 
@@ -21,7 +22,7 @@ Variables de entorno o `backend/.env` (ignorado por Git; plantilla en [`.env.exa
 src/main/java/com/galiledu/
 ├── compartido/     seguridad (JWT, CORS), errores y paginación comunes
 ├── personas/       persona (datos personales, validaciones RF-12/14/23)
-├── usuarios/       login (HU-1), gestión de cuentas (HU-6, HU-9, HU-12) y carga masiva (HU-8)
+├── usuarios/       login (HU-1, HU-3 con Google), gestión de cuentas (HU-6, HU-9, HU-12) y carga masiva (HU-8)
 ├── estudiantes/    inscripción del estudiante (HU-7)
 ├── configuracion/  año escolar y periodos, secciones y tutores, estructuras horarias, periodo de matrícula y tarifario (HU-74, HU-75, HU-44, HU-23, HU-34)
 ├── academico/      catálogo académico (plan curricular, escala de calificación y plan de evaluación: HU-52 a HU-56) y calificaciones del docente (HU-57, HU-59, HU-60, HU-62), reportes de notas (HU-63, HU-64) y consulta del apoderado (HU-69)
@@ -71,12 +72,18 @@ Todas requieren `Authorization: Bearer <jwt>` salvo el login.
 | POST | `/auth/login` | público | `{username, password}` → `{jwt, user}`. 401 credenciales, 423 bloqueada |
 | GET | `/auth/me` | cualquiera | `{data: user}` |
 | POST | `/auth/logout` | público | 204 (el token se borra en el frontend) |
+| GET | `/auth/metodos` | público | HU-2 · `{google, googleIdCliente}`: si el login muestra el botón de Google (activado por el administrador y con `GOOGLE_CLIENT_ID` y `GOOGLE_CLIENT_SECRET` configurados) |
+| POST | `/auth/google` | público | HU-3 · `{codigo}` (código de la ventana de Google) → `{jwt, user}`. 403 si Google no está habilitado, 401 si Google no verifica la cuenta o el correo, 404 si ningún usuario tiene registrado ese correo, 401 cuenta desactivada, 423 bloqueada |
 | POST | `/auth/recuperar-contrasena` | público | HU-4 · `{email}` → envía al correo un código de 6 dígitos que vence en 10 min (también es «Reenviar código»). 404 «El correo no está asociado a ninguna cuenta.», 409 cuenta desactivada, 429 si no pasaron 60 s desde el anterior, 503 si el correo no se pudo enviar. Sin SMTP el código va al log |
 | POST | `/auth/recuperar-contrasena/verificar` | público | HU-4 · `{email, codigo}`. 400 «Código de verificación incorrecto.», venció o se agotaron los 5 intentos |
 | POST | `/auth/cambiar-contrasena/verificar` | cualquiera | HU-5 · `{contrasenaActual}`. 400 «Contraseña incorrecta.»; al quinto intento fallido 423 (bloqueo de 15 min, como el login) |
 | POST | `/auth/cambiar-contrasena` | cualquiera | HU-5 · `{contrasenaActual, contrasenaNueva}`: vuelve a comprobar la actual, aplica la regla (400) y exige que sea distinta. Cierra las sesiones en todos los dispositivos: los tokens emitidos antes, incluido el usado, responden 401 |
 | POST | `/auth/recuperar-contrasena/restablecer` | público | HU-4 · `{email, codigo, contrasena}`: vuelve a comprobar el código, aplica la regla de contraseña (400 si no cumple), guarda la nueva, quita el bloqueo, marca el código como usado y cierra las sesiones abiertas |
+| GET / PUT | `/auth/mis-datos` | cualquiera | Ampliación de HU-9 («Mis datos», no está en el backlog de Notion): la propia persona ve sus datos y, con «Editar datos», los edita (mismas reglas y duplicados que `/usuarios/{id}`, sin roles ni estado de cuenta). El PUT devuelve el `user` actualizado |
+| GET | `/auth/mi-familia` | Apoderado | «Datos de la Familia», de solo vista (Figma › Apoderado): lista de familias de sus estudiantes a cargo; los hermanos con el mismo padre, madre y apoderado son una familia. Cada una trae `nombre` (apellidos), `estudiantes`, `padre`, `madre`, `apoderado` (null si no se registró; `persona` null si «no registra», con `motivoNoRegistra`; `esUsted` marca a quien consulta) y `contactosEmergencia` sin repetir |
 | GET | `/usuarios?q=&rol=&estado=&page=&size=` | Administrador | Lista paginada `{data, meta}` |
+| GET | `/seguridad/configuracion-acceso` | Administrador | HU-2 · `{googleHabilitado, googleConfigurado}` |
+| PUT | `/seguridad/configuracion-acceso` | Administrador | HU-2 · `{googleHabilitado}`. 409 si se activa sin las llaves de Google en el servidor |
 | GET | `/usuarios/resumen` | Administrador | Datos del Inicio del administrador |
 | GET | `/usuarios/roles` | Administrador | Roles asignables |
 | GET / PUT | `/usuarios/{id}` | Administrador | Detalle / edición (persona + roles). El detalle trae `estudiantesACargo` (Apoderado) y `tutorDe` (Tutor, año escolar en curso). Mismas reglas que el alta; conserva Apoderado, Tutor y Estudiante si ya los tiene |

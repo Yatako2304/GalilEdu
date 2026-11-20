@@ -52,11 +52,22 @@ export const paths = {
       getHref: () => '/app/cambiar-contrasena',
     },
 
+    // «Mis datos»: cualquier usuario edita sus propios datos personales (no está en Figma). Se abre desde
+    // la tarjeta de usuario (antes abría «Cambiar contraseña» directamente). Cuelga del rol activo
+    // (/app/docente/mis-datos…) para que el menú lateral siga mostrando ese rol: roleRoutes la agrega a
+    // cada rol.
+    misDatos: {
+      path: 'mis-datos',
+      getHref: (inicioDelRol: string) => `${inicioDelRol}/mis-datos`,
+    },
+
     // Figma: 🌟 Administrador (sidebar: Inicio · Usuarios). Calificaciones: reporte institucional (HU-64), sin frame.
+    // «Configuración de acceso» (HU-2) no está en Figma.
     admin: {
       root: roleRoot(ADMIN),
       usuarios: route(ADMIN, 'usuarios'),
       calificaciones: route(ADMIN, 'calificaciones'),
+      configuracionAcceso: route(ADMIN, 'configuracion-acceso'),
     },
 
     // Figma: 🌟 Personal Administrativo
@@ -152,6 +163,8 @@ export const paths = {
     apoderado: {
       root: roleRoot(APODERADO),
       datosAlumno: route(APODERADO, 'datos-alumno'),
+      // «Datos de la Familia» (solo vista). Es el ítem «Familia» del menú lateral.
+      familia: route(APODERADO, 'familia'),
       horarios: route(APODERADO, 'horarios'),
       calificaciones: route(APODERADO, 'calificaciones'),
       matricula: route(APODERADO, 'matricula'),
