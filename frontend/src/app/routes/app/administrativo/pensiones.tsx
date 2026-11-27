@@ -1,13 +1,17 @@
 import { Plus, Settings } from 'lucide-react';
+import * as React from 'react';
 import { Link } from 'react-router';
 
 import { ContentLayout } from '@/components/layouts';
 import { Button } from '@/components/ui/button';
 import { paths } from '@/config/paths';
+import { DialogoRetiroAlumno } from '@/features/matricula/components/dialogo-retiro-alumno';
 import { EstadoCuenta } from '@/features/pagos/components/estado-cuenta';
+import { AlumnoEstadoCuenta } from '@/types/api';
 
 // Figma > Personal Administrativo > "P2 · Estado de cuenta — Todos los alumnos" (HU-37)
 const AdministrativoPensionesRoute = () => {
+  const [retiro, setRetiro] = React.useState<AlumnoEstadoCuenta | null>(null);
   return (
     <ContentLayout
       title="Estado de cuenta"
@@ -27,7 +31,15 @@ const AdministrativoPensionesRoute = () => {
         </>
       }
     >
-      <EstadoCuenta />
+      <EstadoCuenta onRegistrarRetiro={setRetiro} />
+      {retiro && (
+        <DialogoRetiroAlumno
+          abierto
+          onOpenChange={(abierto) => !abierto && setRetiro(null)}
+          estudianteId={retiro.estudianteId}
+          estudiante={retiro.nombre}
+        />
+      )}
     </ContentLayout>
   );
 };

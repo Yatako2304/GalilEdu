@@ -377,6 +377,18 @@ public class ServicioEstudiantes {
 		e.retirar();
 	}
 
+	/**
+	 * Retiro del colegio (lo llama Matrícula al retirar la matrícula): deja al estudiante RETIRADO. Si ya lo estaba, no
+	 * hace nada. No toca las cuentas de la familia.
+	 */
+	@Transactional
+	public void marcarRetirado(UUID id) {
+		Estudiante e = visible(id);
+		if (e.getEstado() != EstadoEstudiante.RETIRADO) {
+			e.retirar();
+		}
+	}
+
 	@Transactional
 	public void reactivar(UUID id) {
 		Estudiante e = visible(id);

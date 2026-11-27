@@ -28,9 +28,11 @@ import com.galiledu.compartido.seguridad.ServicioJwt;
 import com.galiledu.matricula.aplicacion.DtosMatricula.ArchivoParaVer;
 import com.galiledu.matricula.aplicacion.DtosMatricula.CambioSeccionRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.DetalleMatricula;
+import com.galiledu.matricula.aplicacion.DtosMatricula.RetiroRegistrado;
 import com.galiledu.matricula.aplicacion.DtosMatricula.SeccionesDelGrado;
 import com.galiledu.matricula.aplicacion.MotivoCambioSeccion;
 import com.galiledu.matricula.aplicacion.ServicioMatriculaAdministrativa;
+import com.galiledu.matricula.aplicacion.ServicioRetiroAlumno;
 
 /** Figma > Personal administrativo > A5, B6, B7 "Detalle de matrícula" y su modal "Cambiar sección" (HU-24). */
 @RestController
@@ -38,14 +40,32 @@ import com.galiledu.matricula.aplicacion.ServicioMatriculaAdministrativa;
 @PreAuthorize("hasRole('PERSONAL_ADMINISTRATIVO')")
 public class MatriculaDetalleController {
 	private final ServicioMatriculaAdministrativa servicio;
+	private final ServicioRetiroAlumno retiro;
 
-	public MatriculaDetalleController(ServicioMatriculaAdministrativa servicio) {
+	public MatriculaDetalleController(ServicioMatriculaAdministrativa servicio, ServicioRetiroAlumno retiro) {
 		this.servicio = servicio;
+		this.retiro = retiro;
 	}
 
 	/** {@code motivo} es obligatorio (RF-56); {@code observacion} es opcional. */
 	public record CambioSeccion(@NotNull UUID seccionId, @NotNull MotivoCambioSeccion motivo,
 			@Size(max = 300) String observacion) {
+	}
+
+	/** Retiro del colegio: fecha (hoy o anterior) y motivo, obligatorios. */
+	public record SolicitudRetiro(@NotNull(message = "Ingresa la fecha de retiro.") java.time.LocalDate fechaRetiro,
+			@NotBlank(message = "Ingresa el motivo del retiro.") @Size(max = 500, message = "El motivo tiene como máximo 500 caracteres.") String motivo) {
+	}
+
+	/**
+	 * POST /api/matricula/matriculas/de-estudiante/{estudianteId}/retiro · fila 36 del plan: retira al alumno del
+	 * colegio (matrícula RETIRADO, pensiones futuras anuladas y estudiante inactivo). Lo usan Estudiantes, el detalle
+	 * de la matrícula y Pensiones.
+	 */
+	@PostMapping("/de-estudiante/{estudianteId}/retiro")
+	public RetiroRegistrado retirar(@PathVariable UUID estudianteId,
+			@RequestBody @jakarta.validation.Valid SolicitudRetiro cuerpo) {
+		return retiro.retirar(estudianteId, cuerpo.fechaRetiro(), cuerpo.motivo());
 	}
 
 	/** {@code matriculaId} es null cuando el estudiante aún no tiene matrícula. */

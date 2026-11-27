@@ -8,16 +8,16 @@ Cada funcionalidad tiene pruebas en el **backend** (Java: de integración contra
 
 | Funcionalidad | Backend | Frontend | Total |
 |---|---:|---:|---:|
-| [Estudiantes (inscripción, edición, estado)](#estudiantes-inscripción-edición-estado) | 47 | 77 | 124 |
+| [Estudiantes (inscripción, edición, estado)](#estudiantes-inscripción-edición-estado) | 47 | 78 | 125 |
 | [Usuarios y acceso (login, Google, contraseñas, carga masiva)](#usuarios-y-acceso-login-google-contraseñas-carga-masiva) | 110 | 49 | 159 |
-| [Matrícula](#matrícula) | 107 | 58 | 165 |
-| [Pagos y descuentos](#pagos-y-descuentos) | 93 | 47 | 140 |
+| [Matrícula](#matrícula) | 113 | 60 | 173 |
+| [Pagos y descuentos](#pagos-y-descuentos) | 93 | 48 | 141 |
 | [Horarios y reservas de ambientes](#horarios-y-reservas-de-ambientes) | 307 | 164 | 471 |
 | [Configuración (año escolar, periodos, secciones, tarifario)](#configuración-año-escolar-periodos-secciones-tarifario) | 649 | 504 | 1153 |
 | [Asistencia (registro, justificaciones, reportes)](#asistencia-registro-justificaciones-reportes) | 55 | 15 | 70 |
-| [Académico (calificaciones, catálogo, ambientes)](#académico-calificaciones-catálogo-ambientes) | 329 | 134 | 463 |
+| [Académico (calificaciones, catálogo, ambientes)](#académico-calificaciones-catálogo-ambientes) | 329 | 135 | 464 |
 | [Base común (rutas, componentes, utilidades)](#base-común-rutas-componentes-utilidades) | 9 | 190 | 199 |
-| **Total** | **1706** | **1238** | **2944** |
+| **Total** | **1712** | **1243** | **2955** |
 
 Cómo correrlas:
 
@@ -30,7 +30,7 @@ cd frontend && npm test
 
 ## Estudiantes (inscripción, edición, estado)
 
-47 pruebas de backend y 77 de frontend.
+47 pruebas de backend y 78 de frontend.
 
 ### Backend
 
@@ -98,7 +98,7 @@ cd frontend && npm test
 
 ### Frontend
 
-#### Estudiantes lista (7)
+#### Estudiantes lista (8)
 
 `frontend/src/features/estudiantes/components/__tests__/estudiantes-lista.test.tsx`
 
@@ -109,6 +109,7 @@ cd frontend && npm test
 - Eliminar pide confirmación y llama a DELETE
 - cancelar la confirmación no cambia nada
 - el filtro de estado incluye Retirado y se envía al backend
+- Retirar a un matriculado abre el retiro completo en vez de la confirmación simple
 
 #### Familia apoderado (5)
 
@@ -517,7 +518,7 @@ cd frontend && npm test
 
 ## Matrícula
 
-107 pruebas de backend y 58 de frontend.
+113 pruebas de backend y 60 de frontend.
 
 ### Backend
 
@@ -669,6 +670,17 @@ cd frontend && npm test
 - Rechaza archivos que no son pdf ni imagen o que no son del período
 - Solo el personal administrativo lo ve
 
+#### Retiro alumno · integración (6)
+
+`backend/src/test/java/com/galiledu/matricula/RetiroAlumnoIT.java`
+
+- El retiro deja la matrícula y al estudiante retirados y anula las pensiones futuras
+- Las notas del retirado se siguen viendo en la libreta
+- Sin compromiso el retiro se registra igual, sin pensiones que anular
+- Pide motivo y una fecha que no sea futura ni anterior a la matrícula
+- Un estudiante sin matrícula vigente no se puede retirar
+- Solo el Personal administrativo registra retiros
+
 #### Sección asignada matrícula · integración (5)
 
 `backend/src/test/java/com/galiledu/matricula/SeccionAsignadaMatriculaIT.java`
@@ -706,7 +718,7 @@ cd frontend && npm test
 - sin matrícula y sin impedimentos el apoderado la empieza en el paso 1
 - muestra los cambios de sección de la matrícula confirmada
 
-#### Detalle matrícula (18)
+#### Detalle matrícula (19)
 
 `frontend/src/features/matricula/components/__tests__/detalle-matricula.test.tsx`
 
@@ -728,6 +740,7 @@ cd frontend && npm test
 - Validar queda deshabilitado mientras haya un documento observado
 - un documento aprobado ya no se reemplaza ni muestra su plantilla
 - matriculado: el último paso del indicador figura completado
+- una matrícula vigente ofrece registrar el retiro y una retirada muestra su fecha y motivo
 
 #### Diálogo nueva matrícula (9)
 
@@ -742,6 +755,12 @@ cd frontend && npm test
 - sin vacantes en el grado avisa y no deja guardar
 - al reabrir el modal vuelve a consultar y ya propone la sección recién creada
 - HU-25: registra una matrícula extemporánea con sección elegida y motivo
+
+#### Diálogo retiro alumno (1)
+
+`frontend/src/features/matricula/components/__tests__/dialogo-retiro-alumno.test.tsx`
+
+- pide el motivo y registra el retiro con la fecha y el motivo
 
 #### Documentos apoderado (6)
 
@@ -785,7 +804,7 @@ cd frontend && npm test
 
 ## Pagos y descuentos
 
-93 pruebas de backend y 47 de frontend.
+93 pruebas de backend y 48 de frontend.
 
 ### Backend
 
@@ -983,12 +1002,13 @@ cd frontend && npm test
 - pide una cuota y el número de operación cuando no es en efectivo
 - una cuota con un pago en línea en proceso no se puede marcar
 
-#### Estado cuenta (2)
+#### Estado cuenta (3)
 
 `frontend/src/features/pagos/components/__tests__/estado-cuenta.test.tsx`
 
 - lista a los alumnos con compromiso de distintos años y a los que aún no tienen compromiso
 - muestra 10 alumnos por página
+- ofrece registrar el retiro solo a un alumno con compromiso vigente que no está retirado
 
 #### Formato (4)
 
@@ -3605,7 +3625,7 @@ cd frontend && npm test
 
 ## Académico (calificaciones, catálogo, ambientes)
 
-329 pruebas de backend y 134 de frontend.
+329 pruebas de backend y 135 de frontend.
 
 ### Backend
 
@@ -4128,7 +4148,7 @@ cd frontend && npm test
 - avisa cuando los pesos de los cursos no suman 100 %
 - «Todo el año» genera el resumen con el aporte final del curso y la nota de la competencia
 
-#### Reportes notas (6)
+#### Reportes notas (7)
 
 `frontend/src/features/calificaciones/components/__tests__/reportes-notas.test.tsx`
 
@@ -4138,6 +4158,7 @@ cd frontend && npm test
 - el coordinador abre una sección y ve la nota de cada estudiante, con su libreta
 - «Todo el año» muestra el nivel de cada periodo y la nota final de cada estudiante
 - el coordinador ve los ítems que calificó el docente, sin poder cambiarlos
+- al abrir los estudiantes de una sección, la pantalla baja hasta su lista
 
 #### Ambientes (api) (10)
 

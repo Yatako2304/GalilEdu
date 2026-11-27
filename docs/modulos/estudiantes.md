@@ -129,7 +129,7 @@ Se abre desde "Editar" en los tres puntos del listado o desde "Editar datos" en 
 - **Libre:** se inscribe normal. **Activo:** no se puede inscribir de nuevo. **Retirado (inactivo):** tampoco; primero hay que reactivarlo. **Eliminado:** sí se puede; al registrar la inscripción el mismo registro (mismo id, con su historial de matrículas y pagos) vuelve a quedar activo y sus datos, ficha médica, familia, contactos y autorizados se reemplazan por los nuevos (`ServicioEstudiantes.estudianteParaInscribir`). Si el documento es de otra persona que no es estudiante (padre, apoderado, usuario) también se rechaza, sin trato especial.
 - **Estados:** "inactivo" es `RETIRADO` (`estudiantes.estudiante.estado`, V7); "eliminado" es el borrado lógico `eliminado`. El listado no muestra eliminados.
 - **Listado:** cada fila tiene los tres puntos, como en Usuarios: **Ver** (ficha), **Inactivar** o **Reactivar**, y **Eliminar**, los dos con confirmación. El filtro de estado incluye **Retirado**.
-- Retirar o eliminar al estudiante no cambia por ahora sus matrículas ni sus pagos.
+- **Retirar a un MATRICULADO** abre el retiro completo de Matrícula (fecha y motivo; ver [matricula.md](matricula.md#retiro-del-alumno-del-colegio-fila-36-del-plan)): también retira la matrícula y anula las pensiones futuras. Retirar a alguien que no está matriculado sigue siendo la confirmación simple (queda pendiente decidir qué hacer en ese caso). Eliminar no cambia sus matrículas ni sus pagos.
 
 ## Pendientes
 

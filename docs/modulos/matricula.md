@@ -50,6 +50,19 @@ Si el colegio completa todos los documentos (al crear la matrícula o al subir e
 - Con el periodo ABIERTO el frontend ofrece «Nueva matrícula»; con el periodo CERRADO solo habilita «Matrícula extemporánea» cuando `permiteExtemporanea` es verdadero. En PROGRAMADO no permite crear ninguna.
 - `pagoMatricula` (HU-31): la cuota de matrícula con `puedePagar` y, si no se puede, el `motivo`. Es null mientras la cuota no exista.
 
+## Retiro del alumno del colegio (fila 36 del plan)
+
+Una sola acción, **«Registrar retiro»**, con el mismo modal (`DialogoRetiroAlumno`) en tres lugares: el detalle de la matrícula (si está MATRICULADO), el listado de Estudiantes (⋮ › Retirar a un matriculado) y Pensiones (⋮ › Registrar retiro). Pide **fecha** (hoy o anterior, no antes de la confirmación de la matrícula) y **motivo**. `ServicioRetiroAlumno`:
+
+1. Pasa la matrícula MATRICULADO más reciente del estudiante a **RETIRADO** con `fecha_retiro` y `motivo_retiro` (columnas de V5; no se cambió la BD). Así libera la vacante y sale de asistencia y del registro de notas, que solo cuentan las MATRICULADO.
+2. Anula las pensiones PENDIENTES que vencen después de la fecha (RF-85, `ServicioCronograma`); las vencidas se siguen debiendo y el alumno sigue en el estado de cuenta.
+3. Deja al estudiante **RETIRADO** (inactivo).
+
+- **Notas:** las del retirado no se pueden modificar (el docente ya no lo ve y el backend rechaza registrar notas de una matrícula que no esté MATRICULADO), pero se siguen viendo y exportando en la libreta: la del apoderado y la del Coordinador (`/calificaciones/reportes/matriculas/{id}/notas` y `/libreta`).
+- **Cuentas:** no se tocan (el estudiante no tiene cuenta).
+- **Reactivar** al estudiante no devuelve la matrícula: sigue RETIRADA.
+- **Pendiente de decidir:** qué hacer al retirar a un estudiante que no está matriculado (hoy, la confirmación simple de Estudiantes) y con una matrícula en proceso de un año siguiente.
+
 ## HU-31 · Derivación a pagos
 
 El apoderado paga la cuota de matrícula con el pago en línea de HU-41 (misma orden, misma pasarela). Cuando Pagos registra el pago (en línea o en caja) publica `PagoRegistrado` con `matriculasPagadas`; `EscuchaPagoMatricula` lo recibe **después de guardar el pago** y, para cada matrícula, `ServicioConfirmacionPago`:

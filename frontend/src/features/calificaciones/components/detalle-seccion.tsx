@@ -57,7 +57,13 @@ export const DetalleSeccion = ({
   const [vista, setVista] = React.useState<Vista>('reporte');
   const [estudiante, setEstudiante] = React.useState<string | null>(null);
 
+  const inicio = React.useRef<HTMLDivElement>(null);
+
   React.useEffect(() => setEstudiante(null), [seccionId]);
+  // Se abre debajo del reporte: sin desplazarse, parecía que «Ver estudiantes» no hacía nada.
+  React.useEffect(() => {
+    inicio.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, [seccionId]);
 
   const descargar = async (matriculaId: string) => {
     setDescargando(matriculaId);
@@ -108,7 +114,7 @@ export const DetalleSeccion = ({
   );
 
   return (
-    <div className="space-y-6">
+    <div ref={inicio} className="scroll-mt-4 space-y-6">
       <Card>
         <CardHeader
           action={

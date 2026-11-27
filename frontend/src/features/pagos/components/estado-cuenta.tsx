@@ -18,7 +18,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown';
-import { useNotifications } from '@/components/ui/notifications';
 import { Spinner } from '@/components/ui/spinner';
 import { StatCard } from '@/components/ui/stat-card';
 import { PaginationBar, Table } from '@/components/ui/table';
@@ -27,9 +26,8 @@ import { Tag } from '@/components/ui/tag';
 import { paths } from '@/config/paths';
 import { AlumnoEstadoCuenta } from '@/types/api';
 
-import { useEstadoCuenta, useRegistrarRetiro } from '../api/estado-cuenta';
+import { useEstadoCuenta } from '../api/estado-cuenta';
 
-import { DialogoRetiro } from './dialogo-retiro';
 import { anios, filtrarAlumnos, soles } from './formato';
 
 type Fila = AlumnoEstadoCuenta & { id: string };
@@ -43,7 +41,8 @@ const AccionesFila = ({
 }: {
   alumno: Fila;
   onVer: () => void;
-  onRetiro: () => void;
+  /** Sin él no se ofrece el retiro. */
+  onRetiro?: () => void;
 }) => (
   <DropdownMenu>
     <DropdownMenuTrigger className="inline-flex size-8 items-center justify-center rounded-xl text-content-tertiary hover:bg-surface-tertiary focus:outline-none focus-visible:ring-2 focus-visible:ring-stroke-focus">
@@ -54,30 +53,32 @@ const AccionesFila = ({
       <DropdownMenuItem onClick={onVer}>
         <Eye className="mr-2 size-4" aria-hidden="true" /> Ver cronograma
       </DropdownMenuItem>
-      {alumno.estadoCompromiso === 'VIGENTE' && (
-        <DropdownMenuItem onClick={onRetiro}>
-          <LogOut className="mr-2 size-4" aria-hidden="true" /> Registrar retiro
-        </DropdownMenuItem>
-      )}
+      {onRetiro &&
+        alumno.estadoCompromiso === 'VIGENTE' &&
+        !alumno.retirado && (
+          <DropdownMenuItem onClick={onRetiro}>
+            <LogOut className="mr-2 size-4" aria-hidden="true" /> Registrar
+            retiro
+          </DropdownMenuItem>
+        )}
     </DropdownMenuContent>
   </DropdownMenu>
 );
 
 // Figma > Personal Administrativo > "P2 · Estado de cuenta — Todos los alumnos" (HU-37)
-export const EstadoCuenta = () => {
+export const EstadoCuenta = ({
+  onRegistrarRetiro,
+}: {
+  /**
+   * «Registrar retiro» del alumno (fila 36 del plan): el modal es de Matrícula y lo pone la ruta (un feature no
+   * importa de otro).
+   */
+  onRegistrarRetiro?: (alumno: AlumnoEstadoCuenta) => void;
+}) => {
   const navigate = useNavigate();
-  const { addNotification } = useNotifications();
   const estado = useEstadoCuenta();
   const [texto, setTexto] = React.useState('');
   const [pagina, setPagina] = React.useState(1);
-  const [retiro, setRetiro] = React.useState<Fila | null>(null);
-  const registrarRetiro = useRegistrarRetiro((r) => {
-    setRetiro(null);
-    addNotification({
-      type: 'success',
-      title: `Retiro registrado: ${r.cuotasAnuladas} cuota(s) anulada(s)`,
-    });
-  });
 
   if (estado.isLoading) {
     return (
@@ -246,7 +247,11 @@ export const EstadoCuenta = () => {
                 <AccionesFila
                   alumno={entry}
                   onVer={() => verCronograma(entry)}
-                  onRetiro={() => setRetiro(entry)}
+                  onRetiro={
+                    onRegistrarRetiro
+                      ? () => onRegistrarRetiro(entry)
+                      : undefined
+                  }
                 />
               ),
             },
@@ -262,21 +267,6 @@ export const EstadoCuenta = () => {
           />
         )}
       </Card>
-
-      {retiro && (
-        <DialogoRetiro
-          open
-          onOpenChange={(open) => !open && setRetiro(null)}
-          alumno={retiro.nombre}
-          cargando={registrarRetiro.isPending}
-          onConfirmar={() =>
-            registrarRetiro.mutate({
-              compromisoId: retiro.compromisoId as string,
-              fechaRetiro: new Date().toLocaleDateString('en-CA'),
-            })
-          }
-        />
-      )}
     </div>
   );
 };

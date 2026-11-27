@@ -217,3 +217,7 @@ Es idempotente: no cambia notas, ítems ni usuarios que ya existan. Para no carg
 - [ ] Confirmar con el PO los criterios de aceptación de las HU-60, 63, 64 y 69 (están en Notion; se implementaron según Figma y las decisiones registradas).
 - [ ] Los datos de prueba no tienen un apoderado con un hijo calificado: `ReportesYNotasApoderadoIT` vincula a Luis Paredes con Ana Lucía solo dentro de la prueba. Para ver HU-69 con notas en la app, hace falta ese vínculo en `R__datos_prueba.sql`.
 - [ ] La situación final del año (promovido, recuperación, permanece) sigue fuera de alcance: requiere un cierre de año que aún no existe.
+
+## Alumno retirado
+
+Cuando se registra el retiro del alumno (fila 36 del plan, ver [matricula.md](matricula.md#retiro-del-alumno-del-colegio-fila-36-del-plan)), su matrícula pasa a RETIRADO: deja de aparecer en el registro de notas del docente y no se le pueden registrar ni corregir notas. Sus notas hasta el retiro se siguen viendo y exportando en la libreta del apoderado y en la del Coordinador (`RepositorioReportesNotas` acepta matrículas MATRICULADO o RETIRADO).

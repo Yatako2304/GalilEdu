@@ -75,7 +75,8 @@ public class RepositorioReportesNotas {
 	}
 
 	/**
-	 * Una matrícula MATRICULADO de un hijo del usuario: padre, madre o apoderado vinculado y no fallecido, y estudiante
+	 * Una matrícula MATRICULADO o RETIRADO (sus notas se siguen viendo) de un hijo del usuario: padre, madre o
+	 * apoderado vinculado y no fallecido, y estudiante
 	 * no eliminado (mismo criterio que el horario del apoderado, HU-51).
 	 */
 	public record MatriculaHijoFila(UUID estudianteId, String estudiante, UUID matriculaId, UUID anioEscolarId,
@@ -95,7 +96,7 @@ public class RepositorioReportesNotas {
 				JOIN estudiantes.vinculo_familiar v ON v.persona_id = pa.id
 				JOIN estudiantes.estudiante e ON e.id = v.estudiante_id AND NOT e.eliminado
 				JOIN personas.persona pe ON pe.id = e.persona_id
-				JOIN matricula.matricula m ON m.estudiante_id = e.id AND m.estado = 'MATRICULADO'
+				JOIN matricula.matricula m ON m.estudiante_id = e.id AND m.estado IN ('MATRICULADO', 'RETIRADO')
 				JOIN configuracion.seccion s ON s.id = m.seccion_id
 				JOIN configuracion.grado g ON g.codigo = s.grado_codigo
 				JOIN configuracion.anio_escolar a ON a.id = s.anio_escolar_id
@@ -149,7 +150,10 @@ public class RepositorioReportesNotas {
 				.query(SeccionContextoFila.class).optional();
 	}
 
-	/** Una matrícula MATRICULADO cualquiera (para el Coordinador), con los mismos datos que la del apoderado. */
+	/**
+	 * Una matrícula MATRICULADO o RETIRADO cualquiera (para el Coordinador), con los mismos datos que la del apoderado.
+	 * Las notas de un retirado se siguen viendo y exportando en la libreta; solo no se pueden modificar.
+	 */
 	public Optional<MatriculaHijoFila> matricula(UUID matriculaId) {
 		return jdbc.sql("""
 				SELECT e.id AS estudiante_id,
@@ -163,7 +167,7 @@ public class RepositorioReportesNotas {
 				JOIN configuracion.seccion s ON s.id = m.seccion_id
 				JOIN configuracion.grado g ON g.codigo = s.grado_codigo
 				JOIN configuracion.anio_escolar a ON a.id = s.anio_escolar_id
-				WHERE m.id = ? AND m.estado = 'MATRICULADO'""").param(matriculaId)
+				WHERE m.id = ? AND m.estado IN ('MATRICULADO', 'RETIRADO')""").param(matriculaId)
 				.query(MatriculaHijoFila.class).optional();
 	}
 

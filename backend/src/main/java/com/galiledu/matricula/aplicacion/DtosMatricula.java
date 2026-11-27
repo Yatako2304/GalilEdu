@@ -70,6 +70,10 @@ public final class DtosMatricula {
 			SeccionMatricula seccionAsignada, SeccionMatricula seccionSeleccionada) {
 	}
 
+	/** POST /matricula/matriculas/de-estudiante/{estudianteId}/retiro: el retiro registrado. */
+	public record RetiroRegistrado(UUID matriculaId, String codigo, LocalDate fechaRetiro, int cuotasAnuladas) {
+	}
+
 	/**
 	 * Corrección del PO: la sección es resultado de la matrícula formalizada. {@code seccionAsignada} solo existe con
 	 * la matrícula MATRICULADO; mientras está en proceso la sección elegida va en {@code seccionSeleccionada} (reserva
@@ -201,7 +205,8 @@ public final class DtosMatricula {
 			String codigo, int pasoActual, String apoderado, String contacto, String contactoEmergencia,
 			String informacionMedica, boolean puedeCambiarSeccion, boolean puedeEditarDocumentos, boolean puedeValidar,
 			List<DocumentoDeMatricula> documentos, boolean extemporanea, String motivoExtemporanea,
-			SeccionMatricula seccionAsignada, SeccionMatricula seccionSeleccionada) {
+			SeccionMatricula seccionAsignada, SeccionMatricula seccionSeleccionada, boolean puedeRetirar,
+			LocalDate fechaRetiro, String motivoRetiro) {
 	}
 
 	/** Un documento de la matrícula visto por el apoderado: con su plantilla para descargar y lo que ya subió. */

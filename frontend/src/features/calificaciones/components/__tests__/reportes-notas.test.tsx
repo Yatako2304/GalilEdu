@@ -487,3 +487,21 @@ test('el coordinador ve los ítems que calificó el docente, sin poder cambiarlo
   ).not.toBeInTheDocument();
   expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
 });
+
+test('al abrir los estudiantes de una sección, la pantalla baja hasta su lista', async () => {
+  preparar();
+  const desplazar = vi.fn();
+  Element.prototype.scrollIntoView = desplazar;
+  await renderReportes(['grado']);
+  await screen.findByRole('table');
+
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Ver estudiantes de la sección A' }),
+  );
+
+  await waitFor(() =>
+    expect(desplazar).toHaveBeenCalledWith(
+      expect.objectContaining({ block: 'start' }),
+    ),
+  );
+});

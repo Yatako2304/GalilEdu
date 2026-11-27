@@ -181,3 +181,38 @@ test('el filtro de estado incluye Retirado y se envía al backend', async () => 
     expect(ultimaConsulta?.get('estado')).toBe('RETIRADO'),
   );
 });
+
+test('Retirar a un matriculado abre el retiro completo en vez de la confirmación simple', async () => {
+  const matriculado: EstudianteResumen = {
+    ...estudiantes[0],
+    id: 'c3',
+    nombreCompleto: 'Valeria Sánchez Ferrara',
+    estado: 'MATRICULADO',
+  };
+  server.use(
+    http.get(`${env.API_URL}/estudiantes`, () =>
+      HttpResponse.json({
+        data: [matriculado],
+        meta: { page: 1, size: 8, total: 1, totalPages: 1 },
+      }),
+    ),
+  );
+  const onRetirarMatriculado = vi.fn();
+  await renderApp(
+    <EstudiantesLista
+      hrefFicha={(id) => `/ficha/${id}`}
+      hrefEditar={(id) => `/editar/${id}`}
+      onRetirarMatriculado={onRetirarMatriculado}
+    />,
+    {
+      user: await createUser({ roles: [ROLES.PERSONAL_ADMINISTRATIVO] }),
+    },
+  );
+
+  await abrirMenu('Valeria Sánchez Ferrara');
+  await userEvent.click(screen.getByRole('menuitem', { name: /Retirar/ }));
+
+  expect(onRetirarMatriculado).toHaveBeenCalledWith(matriculado);
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  expect(llamadas).toEqual([]);
+});

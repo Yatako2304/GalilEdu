@@ -120,3 +120,45 @@ test('muestra 10 alumnos por página', async () => {
   expect(await screen.findByText('Alumno 12')).toBeInTheDocument();
   expect(screen.queryByText('Alumno 01')).not.toBeInTheDocument();
 });
+
+test('ofrece registrar el retiro solo a un alumno con compromiso vigente que no está retirado', async () => {
+  server.use(
+    http.get(`${env.API_URL}/pagos/estado-cuenta`, () =>
+      HttpResponse.json({
+        anio: null,
+        comprometido: 0,
+        cobrado: 0,
+        porcentajeCobrado: 0,
+        deudaVencida: 0,
+        cuotasVencidas: 0,
+        alumnosConDeuda: 0,
+        alumnos: [
+          alumno({}),
+          alumno({
+            estudianteId: 'bruno',
+            nombre: 'Bruno Linares Paz',
+            retirado: true,
+          }),
+        ],
+      }),
+    ),
+  );
+  const onRegistrarRetiro = vi.fn();
+  await renderApp(<EstadoCuenta onRegistrarRetiro={onRegistrarRetiro} />);
+
+  await userEvent.click(
+    await screen.findByText('Acciones de Bruno Linares Paz'),
+  );
+  expect(
+    screen.queryByRole('menuitem', { name: /Registrar retiro/ }),
+  ).not.toBeInTheDocument();
+  await userEvent.keyboard('{Escape}');
+
+  await userEvent.click(screen.getByText('Acciones de Sofía Paredes Rojas'));
+  await userEvent.click(
+    screen.getByRole('menuitem', { name: /Registrar retiro/ }),
+  );
+  expect(onRegistrarRetiro).toHaveBeenCalledWith(
+    expect.objectContaining({ estudianteId: 'sofia' }),
+  );
+});
