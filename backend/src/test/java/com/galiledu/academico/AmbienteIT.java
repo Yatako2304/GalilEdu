@@ -80,7 +80,7 @@ class AmbienteIT extends PruebaIntegracion {
 	@Test
 	void otrosRolesReciben403() throws Exception {
 		UUID id = idDe("A-101");
-		for (String usuario : new String[]{ADMIN, DOCENTE, COORDINADOR}) {
+		for (String usuario : new String[]{DOCENTE, COORDINADOR}) {
 			String token = token(usuario);
 			mvc.perform(conToken(get("/ambientes/resumen"), token)).andExpect(status().isForbidden());
 			mvc.perform(conToken(get("/ambientes"), token)).andExpect(status().isForbidden());
@@ -89,6 +89,25 @@ class AmbienteIT extends PruebaIntegracion {
 			mvc.perform(conToken(post("/ambientes/" + id + "/desactivar"), token)).andExpect(status().isForbidden());
 			mvc.perform(conToken(post("/ambientes/" + id + "/reactivar"), token)).andExpect(status().isForbidden());
 		}
+	}
+
+	@DisplayName("El Administrador lista edita desactiva y reactiva como el Personal administrativo")
+	@Test
+	void elAdministradorListaEditaDesactivaYReactivaComoElPersonalAdministrativo() throws Exception {
+		String admin = token(ADMIN);
+		UUID id = idDe("A-101");
+
+		mvc.perform(conToken(get("/ambientes/resumen"), admin)).andExpect(status().isOk());
+		mvc.perform(conToken(get("/ambientes"), admin)).andExpect(status().isOk())
+				.andExpect(jsonPath("$[*].codigo", hasItem("A-101")));
+		mvc.perform(conToken(put("/ambientes/" + id), admin, edicion("Aula 101 del admin", 35, "[\"Pizarra\"]")))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.nombre").value("Aula 101 del admin"))
+				.andExpect(jsonPath("$.aforoMaximo").value(35));
+		mvc.perform(conToken(post("/ambientes/" + id + "/desactivar"), admin)).andExpect(status().isOk())
+				.andExpect(jsonPath("$.estado").value("INACTIVO"));
+		mvc.perform(conToken(post("/ambientes/" + id + "/reactivar"), admin)).andExpect(status().isOk())
+				.andExpect(jsonPath("$.estado").value("ACTIVO"));
 	}
 
 	// ---------- Resumen (tarjetas) ----------

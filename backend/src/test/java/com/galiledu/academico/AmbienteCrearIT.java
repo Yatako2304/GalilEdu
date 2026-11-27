@@ -92,6 +92,16 @@ class AmbienteCrearIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.estado").value("ACTIVO"));
 	}
 
+	@DisplayName("El Administrador también crea ambientes")
+	@Test
+	void elAdministradorTambienCreaAmbientes() throws Exception {
+		mvc.perform(conToken(post("/ambientes"), token(ADMIN),
+				solicitud("ESPACIO_ESPECIAL", PREFIJO + "Del admin", 60, "[]")))
+				.andExpect(status().isCreated())
+				.andExpect(jsonPath("$.codigo").value("E-001"))
+				.andExpect(jsonPath("$.estado").value("ACTIVO"));
+	}
+
 	@DisplayName("El alta queda confirmada y aparec en el listado y en las tarjetas")
 	@Test
 	void elAltaQuedaConfirmadaYAparecEnElListadoYEnLasTarjetas() throws Exception {
@@ -240,7 +250,7 @@ class AmbienteCrearIT extends PruebaIntegracion {
 	void otrosRolesReciben403YNoCreanNada() throws Exception {
 		int antes = contarAmbientes();
 
-		for (String usuario : new String[]{ADMIN, DOCENTE, COORDINADOR}) {
+		for (String usuario : new String[]{DOCENTE, COORDINADOR}) {
 			mvc.perform(conToken(post("/ambientes"), token(usuario),
 					solicitud("AULA_REGULAR", PREFIJO + "Sin permiso", 30, "[]"))).andExpect(status().isForbidden());
 		}
