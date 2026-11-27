@@ -2177,6 +2177,23 @@ export type DetalleMatricula = {
   documentos: DocumentoDeMatricula[];
   extemporanea: boolean;
   motivoExtemporanea: string | null;
+  /** Solo una matrícula MATRICULADO se puede retirar (fila 36 del plan). */
+  puedeRetirar: boolean;
+  fechaRetiro: string | null;
+  motivoRetiro: string | null;
+};
+
+/** Retiro del alumno del colegio (fila 36 del plan de pruebas). */
+export type SolicitudRetiroAlumno = {
+  fechaRetiro: string;
+  motivo: string;
+};
+
+export type RetiroAlumnoRegistrado = {
+  matriculaId: string;
+  codigo: string;
+  fechaRetiro: string;
+  cuotasAnuladas: number;
 };
 
 // ---------- Documentos de matrícula del apoderado (HU-28, HU-29) ----------

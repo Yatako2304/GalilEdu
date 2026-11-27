@@ -102,6 +102,17 @@ public class EscriturasMatricula {
 				WHERE id = ? AND estado = 'SECCION_RESERVADA'""").param(matriculaId).update() > 0;
 	}
 
+	/**
+	 * Retiro del colegio: la matrícula MATRICULADO pasa a RETIRADO con su fecha y motivo (columnas de V5). Deja de
+	 * ocupar vacante y sale de asistencia y del registro de notas, que solo cuentan las MATRICULADO.
+	 */
+	public boolean retirar(UUID matriculaId, java.time.LocalDate fechaRetiro, String motivo) {
+		return jdbc.sql("""
+				UPDATE matricula.matricula
+				SET estado = 'RETIRADO', fecha_retiro = ?, motivo_retiro = ?, actualizado_en = now()
+				WHERE id = ? AND estado = 'MATRICULADO'""").params(fechaRetiro, motivo, matriculaId).update() > 0;
+	}
+
 	/** Mueve la matrícula a otra sección y deja el rastro en el historial de cambios (HU-26). */
 	public void cambiarSeccion(UUID matriculaId, UUID origenId, UUID destinoId, String motivo, UUID realizadoPor) {
 		jdbc.sql("UPDATE matricula.matricula SET seccion_id = ?, actualizado_en = now() WHERE id = ?")

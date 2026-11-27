@@ -62,6 +62,9 @@ const detalle = (extras: Partial<DetalleDto> = {}): DetalleDto => ({
   puedeValidar: false,
   extemporanea: false,
   motivoExtemporanea: null,
+  puedeRetirar: false,
+  fechaRetiro: null,
+  motivoRetiro: null,
   documentos: [
     {
       id: 'd-1',
@@ -546,4 +549,41 @@ test('matriculado: el último paso del indicador figura completado', async () =>
     />,
   );
   expect(document.querySelector('[aria-current="step"]')).toBeNull();
+});
+
+test('una matrícula vigente ofrece registrar el retiro y una retirada muestra su fecha y motivo', async () => {
+  const { unmount } = await renderApp(
+    <DetalleMatricula
+      matricula={detalle({
+        estado: 'MATRICULADO',
+        codigo: 'MAT-2027-0001',
+        pasoActual: 4,
+        puedeRetirar: true,
+      })}
+    />,
+  );
+  await userEvent.click(
+    screen.getByRole('button', { name: 'Registrar retiro' }),
+  );
+  expect(
+    await screen.findByRole('heading', { name: 'Registrar retiro del alumno' }),
+  ).toBeInTheDocument();
+  unmount();
+
+  await renderApp(
+    <DetalleMatricula
+      matricula={detalle({
+        estado: 'RETIRADO',
+        codigo: 'MAT-2027-0001',
+        pasoActual: 4,
+        fechaRetiro: '2027-06-15',
+        motivoRetiro: 'Traslado a otra ciudad',
+      })}
+    />,
+  );
+  expect(screen.getByText('15/06/2027')).toBeInTheDocument();
+  expect(screen.getByText('Traslado a otra ciudad')).toBeInTheDocument();
+  expect(
+    screen.queryByRole('button', { name: 'Registrar retiro' }),
+  ).not.toBeInTheDocument();
 });

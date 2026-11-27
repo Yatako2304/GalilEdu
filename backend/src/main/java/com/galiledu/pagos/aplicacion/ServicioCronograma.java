@@ -98,6 +98,17 @@ public class ServicioCronograma {
 		return new CronogramaGenerado(guardado.getId(), m.anio(), pendientes.size());
 	}
 
+	/**
+	 * Retiro del alumno (fila 36 del plan): anula las pensiones futuras del compromiso de la matrícula. 0 si la
+	 * matrícula no tiene compromiso.
+	 */
+	@Transactional
+	public int anularPorRetiroDeMatricula(UUID matriculaId, LocalDate fechaRetiro) {
+		return compromisos.findByMatriculaId(matriculaId)
+				.map(c -> anularPorRetiro(c.getId(), fechaRetiro).cuotasAnuladas())
+				.orElse(0);
+	}
+
 	/** RF-85: anula las pensiones pendientes que vencen después del retiro; las vencidas y parciales se mantienen. */
 	@Transactional
 	public RetiroRegistrado anularPorRetiro(UUID compromisoId, LocalDate fechaRetiro) {

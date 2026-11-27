@@ -280,26 +280,25 @@ const ReportePorGrado = ({
                     <TableHead className="w-[32%]">Competencia</TableHead>
                     {reporte.secciones.map((s) => (
                       <TableHead key={s.id}>
-                        Sección {s.nombre}
-                        <span className="block text-caption-2 font-normal text-content-quartiary">
-                          {s.estudiantes} estudiantes
-                        </span>
-                        {s.estudiantes > 0 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            icon={<Users className="size-4" />}
-                            aria-label={`Ver estudiantes de la sección ${s.nombre}`}
-                            aria-pressed={seccionId === s.id}
-                            onClick={() =>
-                              setSeccionId(
-                                seccionId === s.id ? undefined : s.id,
-                              )
-                            }
-                          >
-                            Ver estudiantes
-                          </Button>
-                        )}
+                        <div className="flex items-center justify-center gap-1">
+                          <span>Sección {s.nombre}</span>
+                          {s.estudiantes > 0 && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="size-7"
+                              title="Ver estudiantes"
+                              icon={<Users className="size-4" />}
+                              aria-label={`Ver estudiantes de la sección ${s.nombre}`}
+                              aria-pressed={seccionId === s.id}
+                              onClick={() =>
+                                setSeccionId(
+                                  seccionId === s.id ? undefined : s.id,
+                                )
+                              }
+                            />
+                          )}
+                        </div>
                       </TableHead>
                     ))}
                     <TableHead className="bg-surface-accent-light">
@@ -319,8 +318,15 @@ const ReportePorGrado = ({
                         </p>
                       </TableCell>
                       {fila.secciones.map((celda, indice) => (
-                        <TableCell key={reporte.secciones[indice].id}>
-                          <Celda celda={celda} escala={reporte.escala} />
+                        <TableCell
+                          key={reporte.secciones[indice].id}
+                          className="text-center"
+                        >
+                          <Celda
+                            celda={celda}
+                            escala={reporte.escala}
+                            centrada
+                          />
                         </TableCell>
                       ))}
                       <TableCell className="bg-surface-accent-light/40">
@@ -360,9 +366,12 @@ const ReportePorGrado = ({
 const Celda = ({
   celda,
   escala,
+  centrada = false,
 }: {
   celda: CeldaResumen;
   escala: EscalaEvaluacion;
+  /** Columnas de sección: centradas bajo «Sección A». */
+  centrada?: boolean;
 }) => {
   const porRegistrar = celda.pendientes > 0 && (
     <p className="text-caption-2 text-content-warning">
@@ -379,7 +388,9 @@ const Celda = ({
   }
   return (
     <div className="space-y-1">
-      <div className="flex items-center gap-2">
+      <div
+        className={cn('flex items-center gap-2', centrada && 'justify-center')}
+      >
         {escala === 'VIGESIMAL' && (
           <span className="text-label-1 font-semibold text-content-primary">
             {celda.promedio.replace('.', ',')}/20

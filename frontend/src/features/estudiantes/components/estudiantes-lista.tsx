@@ -81,9 +81,16 @@ export const EstadoEstudianteTag = ({
 export const EstudiantesLista = ({
   hrefFicha,
   hrefEditar,
+  onRetirarMatriculado,
 }: {
   hrefFicha: (id: string) => string;
   hrefEditar: (id: string) => string;
+  /**
+   * Retiro de un MATRICULADO (fila 36 del plan): abre el modal de Matrícula con fecha y motivo, que también retira la
+   * matrícula y anula las pensiones futuras. Lo pone la ruta (un feature no importa de otro). Los que no están
+   * matriculados se siguen retirando con la confirmación simple.
+   */
+  onRetirarMatriculado?: (estudiante: EstudianteResumen) => void;
 }) => {
   const [texto, setTexto] = React.useState('');
   const [q, setQ] = React.useState('');
@@ -197,7 +204,11 @@ export const EstudiantesLista = ({
                       hrefFicha={hrefFicha}
                       hrefEditar={hrefEditar}
                       onAccion={(tipo) =>
-                        setAccion({ estudiante: entry, tipo })
+                        tipo === 'retirar' &&
+                        entry.estado === 'MATRICULADO' &&
+                        onRetirarMatriculado
+                          ? onRetirarMatriculado(entry)
+                          : setAccion({ estudiante: entry, tipo })
                       }
                     />
                   ),

@@ -1,4 +1,10 @@
-import { Eye, MessageSquareWarning, Paperclip, Trash2 } from 'lucide-react';
+import {
+  Eye,
+  LogOut,
+  MessageSquareWarning,
+  Paperclip,
+  Trash2,
+} from 'lucide-react';
 import * as React from 'react';
 import { Link } from 'react-router';
 
@@ -22,6 +28,7 @@ import {
   DetalleMatricula as DetalleMatriculaDto,
   EstadoMatricula,
 } from '@/types/api';
+import { formatDay } from '@/utils/format';
 
 import {
   abrirDocumentoDeMatricula,
@@ -36,6 +43,7 @@ import { problemaDelArchivo, tamanoLegible } from '../archivos-matricula';
 import { BotonCambiarSeccion } from './boton-cambiar-seccion';
 import { BotonPlantilla } from './boton-plantilla';
 import { DialogoObservarDocumento } from './dialogo-observar-documento';
+import { DialogoRetiroAlumno } from './dialogo-retiro-alumno';
 import { HistorialCambiosSeccion } from './historial-cambios-seccion';
 
 const PASOS = [
@@ -88,7 +96,8 @@ const configuracionEstado = (
         etiqueta: 'Retirado',
         color: 'error',
         titulo: 'El estudiante fue retirado.',
-        detalle: 'Esta matrícula ya no admite cambios.',
+        detalle:
+          'Esta matrícula ya no admite cambios. Sus notas hasta el retiro se pueden ver en la libreta, pero no modificar.',
       };
     case 'ANULADA':
       return {
@@ -137,6 +146,12 @@ const DatosMatricula = ({ matricula }: { matricula: DetalleMatriculaDto }) => {
     ['Contacto', matricula.contacto || '—'],
     ['Contacto de emergencia', matricula.contactoEmergencia ?? '—'],
     ['Información médica', matricula.informacionMedica],
+    ...(matricula.fechaRetiro
+      ? [
+          ['Fecha de retiro', formatDay(matricula.fechaRetiro)],
+          ['Motivo del retiro', matricula.motivoRetiro ?? '—'],
+        ]
+      : []),
     ...(matricula.extemporanea
       ? [
           ['Tipo de matrícula', 'Extemporánea'],
@@ -487,6 +502,7 @@ export const DetalleMatricula = ({
   const { addNotification } = useNotifications();
   const validar = useValidarMatricula(matricula.id);
   const [validando, setValidando] = React.useState(false);
+  const [retirando, setRetirando] = React.useState(false);
   // Un doble clic en "Aprobar" mandaba dos validaciones: la segunda fallaba porque la matrícula ya no estaba en validación.
   const validacionEnCurso = React.useRef(false);
   const config = configuracionEstado(matricula.estado, matricula.codigo);
@@ -545,6 +561,15 @@ export const DetalleMatricula = ({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <BotonCambiarSeccion matricula={matricula} />
         <div className="ml-auto flex gap-3">
+          {matricula.puedeRetirar && (
+            <Button
+              variant="primary-light"
+              icon={<LogOut className="size-4" aria-hidden="true" />}
+              onClick={() => setRetirando(true)}
+            >
+              Registrar retiro
+            </Button>
+          )}
           <Button asChild variant="tertiary">
             <Link to={volver}>{enProceso ? 'Cancelar' : 'Salir'}</Link>
           </Button>
@@ -568,6 +593,12 @@ export const DetalleMatricula = ({
         textoConfirmar="Aprobar"
         cargando={validar.isPending}
         onConfirmar={() => void confirmarValidacion()}
+      />
+      <DialogoRetiroAlumno
+        abierto={retirando}
+        onOpenChange={setRetirando}
+        estudianteId={matricula.estudianteId}
+        estudiante={matricula.nombre}
       />
     </div>
   );

@@ -1,5 +1,6 @@
 package com.galiledu.matricula.infraestructura;
 
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -406,7 +407,8 @@ public class ConsultasMatricula {
 
 	public record MatriculaDetalleFila(UUID id, String estado, String codigo, String tipo, UUID estudianteId,
 			String nombre, String documento, String gradoCodigo, String grado, UUID seccionId, UUID anioEscolarId,
-			int anio, UUID periodoId, boolean extemporanea, String motivoExtemporanea) {
+			int anio, UUID periodoId, boolean extemporanea, String motivoExtemporanea, LocalDate fechaRetiro,
+			String motivoRetiro, LocalDate fechaConfirmacion) {
 	}
 
 	/** La matrícula con su estudiante, grado, año y el periodo de matrícula de ese año. */
@@ -414,7 +416,8 @@ public class ConsultasMatricula {
 		return jdbc.sql("""
 				SELECT m.id, m.estado, m.codigo, m.tipo_estudiante, e.id,
 				       concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno), p.numero_documento,
-				       g.codigo, g.nombre, m.seccion_id, a.id, a.anio, pm.id, m.extemporanea, m.motivo_extemporanea
+				       g.codigo, g.nombre, m.seccion_id, a.id, a.anio, pm.id, m.extemporanea, m.motivo_extemporanea,
+				       m.fecha_retiro, m.motivo_retiro, (m.confirmado_en AT TIME ZONE 'America/Lima')::date
 				FROM matricula.matricula m
 				JOIN estudiantes.estudiante e ON e.id = m.estudiante_id
 				JOIN personas.persona p ON p.id = e.persona_id
@@ -427,7 +430,22 @@ public class ConsultasMatricula {
 						rs.getString(3), rs.getString(4), rs.getObject(5, UUID.class), rs.getString(6),
 						rs.getString(7), rs.getString(8), rs.getString(9), rs.getObject(10, UUID.class),
 						rs.getObject(11, UUID.class), rs.getInt(12), rs.getObject(13, UUID.class), rs.getBoolean(14),
-						rs.getString(15)))
+						rs.getString(15), rs.getObject(16, LocalDate.class), rs.getString(17),
+						rs.getObject(18, LocalDate.class)))
+				.optional();
+	}
+
+	/** Retiro: la matrícula MATRICULADO más reciente del estudiante (la del año que cursa), si tiene. */
+	public Optional<UUID> matriculaParaRetiro(UUID estudianteId) {
+		return jdbc.sql("""
+				SELECT m.id
+				FROM matricula.matricula m
+				JOIN configuracion.anio_escolar a ON a.id = m.anio_escolar_id
+				WHERE m.estudiante_id = ? AND m.estado = 'MATRICULADO'
+				ORDER BY a.anio DESC
+				LIMIT 1""")
+				.param(estudianteId)
+				.query((rs, i) -> rs.getObject(1, UUID.class))
 				.optional();
 	}
 

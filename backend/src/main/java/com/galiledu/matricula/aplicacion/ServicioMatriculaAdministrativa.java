@@ -89,7 +89,8 @@ public class ServicioMatriculaAdministrativa {
 						: SeccionMatricula.asignada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()),
 				seccion == null
 						? null
-						: SeccionMatricula.seleccionada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()));
+						: SeccionMatricula.seleccionada(m.estado(), seccion.id(), nombreSeccion, seccion.etiqueta()),
+				"MATRICULADO".equals(m.estado()), m.fechaRetiro(), m.motivoRetiro());
 	}
 
 	/** Id de la matrícula vigente del estudiante, o vacío si aún no tiene (la ficha del estudiante la usa). */
