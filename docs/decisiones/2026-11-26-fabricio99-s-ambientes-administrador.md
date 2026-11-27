@@ -7,7 +7,7 @@
 
 ## Qué hice
 
-El Administrador puede listar, crear, editar, desactivar y reactivar ambientes físicos, igual que el Personal administrativo. Tiene la misma pantalla en su menú, en **Configuraciones › Ambientes físicos** (`/app/admin/ambientes`).
+El Administrador puede listar, crear, editar, desactivar y reactivar ambientes físicos, igual que el Personal administrativo. Tiene la misma pantalla en su menú, en **Infraestructura › Ambientes físicos** (`/app/admin/ambientes`).
 
 ## Archivos principales
 

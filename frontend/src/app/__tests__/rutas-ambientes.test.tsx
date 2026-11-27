@@ -88,6 +88,10 @@ test('el Administrador abre los ambientes físicos desde su menú y puede crear 
     ),
   ).toBeInTheDocument();
   expect(await screen.findByText('Aula 101')).toBeInTheDocument();
+  // La miga de pan nombra la sección del menú del Administrador, no la del Personal administrativo.
+  expect(screen.getByRole('navigation', { name: 'Ruta' })).toHaveTextContent(
+    'Infraestructura',
+  );
   expect(
     screen.getByRole('button', { name: 'Nuevo ambiente' }),
   ).toBeInTheDocument();

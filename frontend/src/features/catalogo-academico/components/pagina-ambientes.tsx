@@ -10,7 +10,12 @@ import { DialogoAmbiente } from './dialogos-ambientes';
 
 // Figma > Personal Administrativo > "CI-26 · Ambientes físicos (HU-43)" (nodo 857:10215)
 // y modal "Nuevo ambiente físico" (nodo 857:11500). La usan el Personal administrativo y el Administrador.
-export const PaginaAmbientes = () => {
+// `seccion` es la sección del menú donde está la pantalla en cada rol (va en la miga de pan).
+export const PaginaAmbientes = ({
+  seccion = 'Configuración',
+}: {
+  seccion?: string;
+}) => {
   // null = modal cerrado; { ambiente: null } = ambiente nuevo.
   const [modal, setModal] = React.useState<{
     ambiente: AmbienteResumen | null;
@@ -19,7 +24,7 @@ export const PaginaAmbientes = () => {
   return (
     <ContentLayout
       title="Ambientes físicos"
-      breadcrumbs={['Configuración', 'Ambientes físicos']}
+      breadcrumbs={[seccion, 'Ambientes físicos']}
       subtitle="Registra las aulas y espacios especiales del colegio con su aforo y recursos. Se usan al asignar aulas a las secciones y al generar horarios."
       actions={
         <Button
