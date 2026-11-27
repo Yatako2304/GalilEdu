@@ -15,7 +15,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import com.galiledu.compartido.web.ExcepcionNegocio;
-import com.galiledu.pagos.aplicacion.PagoEnLineaAprobado;
+import com.galiledu.pagos.aplicacion.PagoRegistrado;
 
 /** HU-31: qué hace Matrícula cuando Pagos avisa que se pagó una cuota de matrícula. */
 class EscuchaPagoMatriculaTests {
@@ -23,8 +23,8 @@ class EscuchaPagoMatriculaTests {
 	private final EscuchaPagoMatricula escucha = new EscuchaPagoMatricula(confirmacion);
 	private final UUID usuario = UUID.randomUUID();
 
-	private PagoEnLineaAprobado pago(UUID... matriculas) {
-		return new PagoEnLineaAprobado(UUID.randomUUID(), "OP-2026-000001", usuario, List.of(), List.of(matriculas));
+	private PagoRegistrado pago(UUID... matriculas) {
+		return new PagoRegistrado("OP-2026-000001", usuario, List.of(), List.of(matriculas));
 	}
 
 	@DisplayName("Matrícula y genera las pensiones")

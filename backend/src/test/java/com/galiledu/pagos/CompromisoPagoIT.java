@@ -1,9 +1,13 @@
 package com.galiledu.pagos;
 
+import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,11 +15,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.simple.JdbcClient;
 
 import com.galiledu.PruebaIntegracion;
 
 /** HU-37: compromiso de pago y cronograma de cuotas. Datos de prueba: compromiso 2026 de Sofía Paredes. */
 class CompromisoPagoIT extends PruebaIntegracion {
+	@Autowired
+	private JdbcClient jdbc;
 	private static final String SOFIA = "20000000-0000-0000-0000-000000000002";
 	private static final String COMPROMISO_SOFIA = "51000000-0000-0000-0000-000000000001";
 	private static final String APODERADO = "U20260003";
@@ -125,6 +133,48 @@ class CompromisoPagoIT extends PruebaIntegracion {
 				.andExpect(jsonPath("$.alumnos[?(@.nombre == 'Sofía Paredes Rojas')].capitalPagado").value(4020.0))
 				.andExpect(jsonPath("$.deudaVencida").value(greaterThanOrEqualTo(600.0)))
 				.andExpect(jsonPath("$.alumnosConDeuda").value(greaterThanOrEqualTo(1)));
+	}
+
+	@DisplayName("Sin año el estado de cuenta lista a todos los alumnos con su compromiso más reciente")
+	@Test
+	void sinAnioElEstadoDeCuentaListaATodosLosAlumnosConSuCompromisoMasReciente() throws Exception {
+		int activos = jdbc.sql("SELECT count(*) FROM estudiantes.estudiante WHERE NOT eliminado")
+				.query(Integer.class).single();
+		mvc.perform(conToken(get("/pagos/estado-cuenta"), token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.anio").doesNotExist())
+				.andExpect(jsonPath("$.alumnos", hasSize(activos)))
+				.andExpect(jsonPath("$.alumnos[?(@.nombre == 'Sofía Paredes Rojas')].compromisoId")
+						.value(COMPROMISO_SOFIA))
+				.andExpect(jsonPath("$.alumnos[?(@.nombre == 'Sofía Paredes Rojas')].anioCompromiso").value(2026))
+				// Valeria está matriculada pero sin compromiso: también sale, con montos en cero.
+				.andExpect(jsonPath("$.alumnos[?(@.estudianteId == '%s')].compromisoId".formatted(VALERIA))
+						.value(contains(nullValue())))
+				.andExpect(jsonPath("$.alumnos[?(@.compromisoId == null)].totalAnual").value(everyItem(is(0))));
+	}
+
+	@DisplayName("El estado de cuenta muestra a los retirados por si dejaron deuda")
+	@Test
+	void elEstadoDeCuentaMuestraALosRetiradosPorSiDejaronDeuda() throws Exception {
+		jdbc.sql("UPDATE estudiantes.estudiante SET estado = 'RETIRADO' WHERE id = ?::uuid").param(SOFIA).update();
+		mvc.perform(conToken(get("/pagos/estado-cuenta"), token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.alumnos[?(@.nombre == 'Sofía Paredes Rojas')].retirado").value(contains(true)));
+	}
+
+	@DisplayName("El estado de cuenta ordena por año del compromiso y nombre, y deja al final a los que no tienen")
+	@Test
+	void elEstadoDeCuentaOrdenaPorAnioYNombreYDejaAlFinalALosQueNoTienen() throws Exception {
+		String json = mvc.perform(conToken(get("/pagos/estado-cuenta"), token(PERSONAL_ADMINISTRATIVO)))
+				.andExpect(status().isOk())
+				.andReturn().getResponse().getContentAsString();
+		java.util.List<java.util.Map<String, Object>> alumnos = com.jayway.jsonpath.JsonPath.read(json, "$.alumnos");
+		java.util.Comparator<java.util.Map<String, Object>> orden = java.util.Comparator
+				.comparing((java.util.Map<String, Object> a) -> (Integer) a.get("anioCompromiso"),
+						java.util.Comparator.nullsLast(java.util.Comparator.naturalOrder()));
+		org.assertj.core.api.Assertions.assertThat(alumnos)
+				.isSortedAccordingTo(orden)
+				.extracting(a -> a.get("anioCompromiso")).contains(2026);
 	}
 
 	@DisplayName("La morosidad muestra la pensión vencida con su recargo separado")

@@ -11,13 +11,13 @@ Cada funcionalidad tiene pruebas en el **backend** (Java: de integración contra
 | [Estudiantes (inscripción, edición, estado)](#estudiantes-inscripción-edición-estado) | 47 | 77 | 124 |
 | [Usuarios y acceso (login, Google, contraseñas, carga masiva)](#usuarios-y-acceso-login-google-contraseñas-carga-masiva) | 110 | 49 | 159 |
 | [Matrícula](#matrícula) | 107 | 58 | 165 |
-| [Pagos y descuentos](#pagos-y-descuentos) | 81 | 42 | 123 |
+| [Pagos y descuentos](#pagos-y-descuentos) | 93 | 47 | 140 |
 | [Horarios y reservas de ambientes](#horarios-y-reservas-de-ambientes) | 307 | 164 | 471 |
 | [Configuración (año escolar, periodos, secciones, tarifario)](#configuración-año-escolar-periodos-secciones-tarifario) | 649 | 504 | 1153 |
 | [Asistencia (registro, justificaciones, reportes)](#asistencia-registro-justificaciones-reportes) | 55 | 15 | 70 |
 | [Académico (calificaciones, catálogo, ambientes)](#académico-calificaciones-catálogo-ambientes) | 329 | 134 | 463 |
 | [Base común (rutas, componentes, utilidades)](#base-común-rutas-componentes-utilidades) | 9 | 190 | 199 |
-| **Total** | **1694** | **1233** | **2927** |
+| **Total** | **1706** | **1238** | **2944** |
 
 Cómo correrlas:
 
@@ -785,7 +785,7 @@ cd frontend && npm test
 
 ## Pagos y descuentos
 
-81 pruebas de backend y 42 de frontend.
+93 pruebas de backend y 47 de frontend.
 
 ### Backend
 
@@ -803,7 +803,7 @@ cd frontend && npm test
 - El limite de la institución se puede cambiar
 - Otro rol no puede ver el catálogo
 
-#### Compromiso pago · integración (11)
+#### Compromiso pago · integración (14)
 
 `backend/src/test/java/com/galiledu/pagos/CompromisoPagoIT.java`
 
@@ -816,6 +816,9 @@ cd frontend && npm test
 - El retiro anula solo las pensiones que vencen después
 - Otro rol no puede generar el cronograma
 - Estado de cuenta del año lista los compromisos con su deuda
+- Sin año el estado de cuenta lista a todos los alumnos con su compromiso más reciente
+- El estado de cuenta muestra a los retirados por si dejaron deuda
+- El estado de cuenta ordena por año del compromiso y nombre, y deja al final a los que no tienen
 - La morosidad muestra la pensión vencida con su recargo separado
 - Morosidad de un compromiso inexistente devuelve404
 
@@ -884,6 +887,20 @@ cd frontend && npm test
 - Un pago inexistente devuelve404
 - El personal no descarga constancias desde la vista del apoderado
 - El personal usa su propia vista
+
+#### Pago en caja · integración (9)
+
+`backend/src/test/java/com/galiledu/pagos/PagoEnCajaIT.java`
+
+- Lista las cuotas del compromiso con el recargo a la fecha elegida
+- Registra un pago por transferencia con su constancia y deja la cuota pagada
+- Con una fecha anterior cobra el recargo de esa fecha
+- Exige pagar las pensiones en orden
+- Rechaza una fecha futura y pide el número de operación salvo en efectivo
+- No registra dos veces la misma operación ni una cuota ya pagada
+- Una cuota con un pago en línea en proceso no se registra en caja
+- Un compromiso que no existe responde 404
+- Solo el Personal administrativo registra pagos en caja
 
 #### Pago en linea · integración (14)
 
@@ -957,6 +974,21 @@ cd frontend && npm test
 - avisa el reemplazo del descuento vigente y exige el motivo
 - permite mantener el descuento hasta que el estudiante termine el colegio
 - explica que el descuento por hermanos corresponde al hermano menor
+
+#### Diálogo registrar pago (3)
+
+`frontend/src/features/pagos/components/__tests__/dialogo-registrar-pago.test.tsx`
+
+- al marcar una pensión marca las anteriores y registra el pago en efectivo con su recargo
+- pide una cuota y el número de operación cuando no es en efectivo
+- una cuota con un pago en línea en proceso no se puede marcar
+
+#### Estado cuenta (2)
+
+`frontend/src/features/pagos/components/__tests__/estado-cuenta.test.tsx`
+
+- lista a los alumnos con compromiso de distintos años y a los que aún no tienen compromiso
+- muestra 10 alumnos por página
 
 #### Formato (4)
 

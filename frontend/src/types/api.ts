@@ -858,23 +858,29 @@ export type CompromisoDetalle = {
 
 // ---------- Pagos · Estado de cuenta (HU-37, P2) ----------
 
+/** Fila de P2: cada estudiante activo. Sin compromiso, `compromisoId` y `estadoCompromiso` llegan null. */
 export type AlumnoEstadoCuenta = {
   estudianteId: string;
-  compromisoId: string;
+  compromisoId: string | null;
   nombre: string;
   numeroDocumento: string;
   apoderado: string | null;
   seccion: string | null;
   antiguedad: number;
-  estadoCompromiso: EstadoCompromiso;
+  estadoCompromiso: EstadoCompromiso | null;
   totalAnual: number;
   capitalPagado: number;
   deudaVencida: number;
   cuotasVencidas: number;
+  /** Año del compromiso que se muestra; null si el alumno no tiene. */
+  anioCompromiso: number | null;
+  /** Retirado (inactivo): sale igual por si dejó deuda antes de retirarse. */
+  retirado: boolean;
 };
 
+/** `anio` es null cuando cada alumno trae su compromiso más reciente (la vista por defecto). */
 export type EstadoCuentaGeneral = {
-  anio: number;
+  anio: number | null;
   comprometido: number;
   cobrado: number;
   porcentajeCobrado: number;
@@ -939,6 +945,28 @@ export type PagoRealizado = {
   recargo: number;
   estado: string;
   cuotas: string[];
+  /** "En línea" o, si se pagó en caja, el medio con su número de operación ("Transferencia · 00123456"). */
+  medio: string;
+};
+
+/** Pago en caja (fila 29 del plan de pruebas): medio con el que el apoderado pagó en el colegio. */
+export type MedioPagoCaja =
+  'EFECTIVO' | 'TRANSFERENCIA' | 'DEPOSITO' | 'YAPE_PLIN' | 'TARJETA_POS';
+
+export type SolicitudPagoCaja = {
+  cuotaIds: string[];
+  fechaPago: string;
+  medioPago: MedioPagoCaja;
+  numeroOperacion: string | null;
+  observacion: string | null;
+};
+
+export type PagoCajaRegistrado = {
+  pagoId: string;
+  numeroConstancia: string;
+  capital: number;
+  recargo: number;
+  total: number;
 };
 
 export type HijoConDeuda = {

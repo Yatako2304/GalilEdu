@@ -9,4 +9,7 @@ import com.galiledu.pagos.dominio.Pago;
 
 public interface PagoRepositorio extends JpaRepository<Pago, UUID> {
 	List<Pago> findByOrdenPagoId(UUID ordenPagoId);
+
+	/** Pago en caja con el mismo medio y número de operación (para no registrarlo dos veces). */
+	boolean existsByOrdenPagoIdIsNullAndRegistradoPorIsNotNullAndReferencia(String referencia);
 }

@@ -2,7 +2,7 @@
 
 - **HU:** HU-36, 37 (iteración 1) · HU-35, 38–41 (2) · HU-42 (3)
 - **Estado:** 🚧 en desarrollo: HU-35 a HU-42 implementadas en backend y frontend; falta integrar la tarjeta de HU-36 al detalle de HU-24
-- **Última actualización:** 2026-11-19
+- **Última actualización:** 2026-11-27
 
 ## Alcance
 
@@ -15,6 +15,7 @@ El tarifario y la política de morosidad están en [configuracion.md](configurac
 ```
 Matrícula validada ─► compromiso + cuota de matrícula (HU-36) ─► pago ─► matriculado ─► pensiones del tarifario (HU-37)
 Apoderado elige cuotas ─► orden de pago (cuotas EN_PROCESO) ─► pasarela ─► APROBADA: pago + constancia C-2026-…
+Personal adm. «Registrar pago» (P8) ─► cuotas + fecha + medio ─────────────────► pago en caja + constancia C-2026-…
                                                                         └► RECHAZADA: las cuotas vuelven a PENDIENTE
 ```
 
@@ -55,7 +56,7 @@ Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Códig
 - **Pasarela:** `PASARELA_PAGOS=simulada` (por defecto, no cobra; la "página de pago" es `/app/apoderado/pensiones/pasarela-simulada`) o `stripe` (Stripe Checkout en modo de prueba, con `STRIPE_SECRET_KEY` y `STRIPE_WEBHOOK_SECRET`).
 - **Recargo por mora** (sección 3.10): `Cuota.recargo`, la misma regla de HU-39 (Figma P11): capital pendiente × tasa × períodos **completos** de 30 días desde el vencimiento, solo pasada la gracia y sin pasar del tope. Solo pensiones. Así la orden cobra lo mismo que muestra la pestaña Morosidad.
 - **Una orden puede pagar cuotas de varios hijos;** al aprobarse se registra **un pago con su constancia por estudiante** (V13 quitó el UNIQUE de `pago.orden_pago_id`).
-- **Evento `PagoEnLineaAprobado`:** se publica al aprobarse una orden, con las cuotas que quedaron pagadas. Incluye `matriculasPagadas` (las matrículas cuya cuota quedó pagada); Matrícula lo escucha para HU-31. La cuota de matrícula no se puede pagar si el mismo estudiante tiene pensiones vencidas fuera de la orden (CAHU31-2).
+- **Evento `PagoRegistrado`** (antes `PagoEnLineaAprobado`): se publica al aprobarse una orden o al registrarse un pago en caja, con las cuotas que quedaron pagadas. Incluye `matriculasPagadas` (las matrículas cuya cuota quedó pagada); Matrícula lo escucha para HU-31. La cuota de matrícula no se puede pagar si el mismo estudiante tiene pensiones vencidas fuera de la orden (CAHU31-2).
 
 **Cómo se acopla con HU-40 (cronograma del apoderado):** en Figma ("HU-41 Pago en línea de cuotas pendientes y HU-40") la tabla del cronograma tiene una columna de casillas y encima la barra de selección. La tabla de HU-40 usa `useSeleccionCuotas(useCuotasPorPagar().data)` para sus casillas (`estaSeleccionada`, `alternar`) y pone `<BarraPagoCuotas>` encima; al pagar llama a `useCrearOrdenPago().mutate(ids)`. Ya está hecho en `pensiones-apoderado.tsx`: solo se pueden marcar las cuotas que el backend devuelve como pagables.
 
@@ -76,6 +77,20 @@ Ver la [decisión](../decisiones/2026-11-04-yatako-pasarela-de-pagos.md). Códig
 | CAHU41-13 | Nadie puede pagar ni ver cuotas u órdenes de una familia que no es la suya. |
 
 Pruebas: `PagoEnLineaIT` (un caso por criterio), `CuotaTests` (recargo), `FirmaStripeTests`; `seleccion-cuotas.test.ts` y `pensiones-apoderado.test.tsx`.
+
+## Estado de cuenta (P2)
+
+Lista a **todos los estudiantes no eliminados**, también los RETIRADOS (con la etiqueta «Retirado»), porque pueden haber dejado deuda antes de retirarse. **Orden:** por año del compromiso (2026, 2027…) y, dentro de cada año, alfabético; al final los que no tienen compromiso. La lista se pagina de 10 en 10 en el navegador. Cada uno aparece con su compromiso más reciente, el VIGENTE primero, aunque sea de otro año: antes solo salían los compromisos del año ACTIVO y, con la matrícula del año siguiente abierta, la lista quedaba casi vacía. La columna «Compromiso» (no está en Figma) muestra el año de ese compromiso, para distinguir quién paga 2026, 2027, etc.; quien no tiene sale con «Sin compromiso» y montos en cero. Las tarjetas suman los compromisos VIGENTES de la lista; con `?anio=` se filtra un año (y las tarjetas dicen el año).
+
+## Pago en caja (fila 29 del plan de pruebas)
+
+El apoderado paga en el colegio y el Personal administrativo lo registra con el botón **«Registrar pago»**, a la derecha de las pestañas del cronograma (P8). No hay frame en Figma: el modal sigue el de «Añadir descuento». Ver la [decisión](../decisiones/2026-11-27-fabricio99-s-pago-en-caja.md).
+
+- **Reglas (las mismas de HU-41, en `CobroCuotas`):** cuotas completas; las pensiones en orden de antigüedad (al marcar una se marcan las anteriores); la matrícula no se paga con pensiones vencidas fuera del pago; una cuota EN_PROCESO (pago en línea abierto) no se puede registrar.
+- **Fecha de pago:** hoy o anterior, nunca futura. El recargo por mora se calcula a esa fecha.
+- **Medio de pago:** Efectivo, Transferencia, Depósito, Yape/Plin o Tarjeta (POS). Todos menos el efectivo piden número de operación, y la misma operación no se registra dos veces.
+- **Sin migración:** el pago usa `pagos.pago` tal como está. Se reconoce porque no tiene orden y sí `registrado_por`; el medio y la operación van como texto en `referencia` ("Transferencia · 00123456") y la observación del personal en `observacion` (el pago queda CONFIRMADO).
+- Emite la misma constancia correlativa y publica `PagoRegistrado`, así que pagar la matrícula en caja también matricula (HU-31). La pestaña «Pagos» muestra el medio ("En línea" o el de caja).
 
 ## HU-42 · Constancia de pago
 
@@ -147,3 +162,5 @@ Pruebas: `ArchivoConstanciaPagoTests` (contenido, pago observado y paginación),
 - [ ] Crear la cuenta de Stripe en modo de prueba y configurar el webhook en el servidor (necesita HTTPS para el modo real).
 - [x] HU-42: PDF de la constancia y su descarga desde el historial del apoderado (RF-107 y RF-108).
 - [ ] Generar el PDF del estado de cuenta (RF-98).
+- [x] Pago en caja (fila 29 del plan de pruebas): «Registrar pago» en P8, sin migración.
+- [ ] Pago en caja: anular un pago mal registrado y pagos parciales (no se hicieron).

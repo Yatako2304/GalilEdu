@@ -24,7 +24,7 @@ import org.springframework.test.context.event.RecordApplicationEvents;
 
 import com.galiledu.configuracion.PruebaIntegracionConfiguracion;
 import com.galiledu.configuracion.RelojPrueba;
-import com.galiledu.pagos.aplicacion.PagoEnLineaAprobado;
+import com.galiledu.pagos.aplicacion.PagoRegistrado;
 import com.galiledu.pagos.aplicacion.ServicioPagoEnLinea;
 import com.galiledu.pagos.infraestructura.PasarelaSimulada;
 import com.jayway.jsonpath.JsonPath;
@@ -165,7 +165,7 @@ class PagoEnLineaIT extends PruebaIntegracionConfiguracion {
 				.param(SEPTIEMBRE).query(BigDecimal.class).single();
 		assertThat(recargo).isEqualByComparingTo("12.00");
 		// HU-31 escucha este evento para matricular cuando la cuota pagada es la de matrícula.
-		assertThat(eventos.stream(PagoEnLineaAprobado.class))
+		assertThat(eventos.stream(PagoRegistrado.class))
 				.singleElement()
 				.satisfies(e -> assertThat(e.cuotaIds()).hasSize(2));
 	}
