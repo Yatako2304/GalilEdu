@@ -65,6 +65,17 @@ export const NAVIGATION: Record<ROLES, NavSection[]> = {
         },
       ],
     },
+    {
+      // HU-43: no está en el menú del Administrador en Figma; el plan de pruebas lo pide para este rol.
+      title: 'Infraestructura',
+      items: [
+        {
+          label: 'Ambientes físicos',
+          href: paths.app.admin.ambientes.getHref(),
+          icon: Building2,
+        },
+      ],
+    },
   ],
   [ROLES.PERSONAL_ADMINISTRATIVO]: [
     inicio(paths.app.administrativo.root.getHref(), [

@@ -27,11 +27,12 @@ import com.galiledu.academico.dominio.TipoAmbiente;
 
 /**
  * Figma > Personal Administrativo > "CI-26 · Ambientes físicos (HU-43)" (nodo 857:10215) y modal "Nuevo ambiente
- * físico" (nodo 857:11500).
+ * físico" (nodo 857:11500). El Administrador tiene los mismos permisos que el Personal administrativo (decisión del
+ * 26/11: el plan de pruebas pone los espacios en el rol Administrador).
  */
 @RestController
 @RequestMapping("/ambientes")
-@PreAuthorize("hasRole('PERSONAL_ADMINISTRATIVO')")
+@PreAuthorize("hasAnyRole('ADMINISTRADOR', 'PERSONAL_ADMINISTRATIVO')")
 public class AmbienteController {
 	private final ServicioAmbientes servicio;
 

@@ -15,9 +15,9 @@ Cada funcionalidad tiene pruebas en el **backend** (Java: de integración contra
 | [Horarios y reservas de ambientes](#horarios-y-reservas-de-ambientes) | 307 | 164 | 471 |
 | [Configuración (año escolar, periodos, secciones, tarifario)](#configuración-año-escolar-periodos-secciones-tarifario) | 649 | 504 | 1153 |
 | [Asistencia (registro, justificaciones, reportes)](#asistencia-registro-justificaciones-reportes) | 55 | 15 | 70 |
-| [Académico (calificaciones, catálogo, ambientes)](#académico-calificaciones-catálogo-ambientes) | 327 | 134 | 461 |
-| [Base común (rutas, componentes, utilidades)](#base-común-rutas-componentes-utilidades) | 9 | 188 | 197 |
-| **Total** | **1692** | **1231** | **2923** |
+| [Académico (calificaciones, catálogo, ambientes)](#académico-calificaciones-catálogo-ambientes) | 329 | 134 | 463 |
+| [Base común (rutas, componentes, utilidades)](#base-común-rutas-componentes-utilidades) | 9 | 190 | 199 |
+| **Total** | **1694** | **1233** | **2927** |
 
 Cómo correrlas:
 
@@ -3573,7 +3573,7 @@ cd frontend && npm test
 
 ## Académico (calificaciones, catálogo, ambientes)
 
-327 pruebas de backend y 134 de frontend.
+329 pruebas de backend y 134 de frontend.
 
 ### Backend
 
@@ -3590,11 +3590,12 @@ cd frontend && npm test
 - Dos renombres al mismo nombre al mismo tiempo dan una200 y una409
 - Una alta y un renombre al mismo nombre al mismo tiempo dan un ganador y un perdedor
 
-#### Ambiente crear · integración (10)
+#### Ambiente crear · integración (11)
 
 `backend/src/test/java/com/galiledu/academico/AmbienteCrearIT.java`
 
 - Crea un aula con el código generado y los datos normalizados
+- El Administrador también crea ambientes
 - El alta queda confirmada y aparec en el listado y en las tarjetas
 - El código que envie el cliente se ignora porque lo genera el sistema
 - Cada tipo lleva su propio prefijo y correlativo
@@ -3605,12 +3606,13 @@ cd frontend && npm test
 - Sin sesión da401 y no crea nada
 - Otros roles reciben403 y no crean nada
 
-#### Ambiente (académico) · integración (22)
+#### Ambiente (académico) · integración (23)
 
 `backend/src/test/java/com/galiledu/academico/AmbienteIT.java`
 
 - Sin sesión da401
 - Otros roles reciben403
+- El Administrador lista edita desactiva y reactiva como el Personal administrativo
 - El resumen trae4 tarjetas con solo los activos y el total de registrados
 - El resumen no cambia con los filtros de la lista
 - Sin filtros lista todos con su código generado de solo lectura
@@ -4259,7 +4261,7 @@ cd frontend && npm test
 
 ## Base común (rutas, componentes, utilidades)
 
-9 pruebas de backend y 188 de frontend.
+9 pruebas de backend y 190 de frontend.
 
 ### Backend
 
@@ -4288,6 +4290,13 @@ cd frontend && npm test
 - El chequeo de salud responde up sin autenticación
 
 ### Frontend
+
+#### Rutas ambientes (2)
+
+`frontend/src/app/__tests__/rutas-ambientes.test.tsx`
+
+- el Administrador abre los ambientes físicos desde su menú y puede crear uno
+- un Docente que abre la ruta del Administrador es llevado a su inicio
 
 #### Rutas calificaciones (3)
 

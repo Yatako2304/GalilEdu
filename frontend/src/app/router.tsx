@@ -121,6 +121,10 @@ export const createAppRouter = (
               paths.app.admin.configuracionAcceso.path,
               () => import('./routes/app/admin/configuracion-acceso'),
             ],
+            [
+              paths.app.admin.ambientes.path,
+              () => import('./routes/app/admin/ambientes'),
+            ],
           ],
         ),
 

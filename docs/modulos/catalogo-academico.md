@@ -18,7 +18,8 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan. Un ár
 
 **Figma frente a los RF de Notion:**
 - RF-130 a RF-132 dicen que el plan lo configura el Coordinador; en Figma está en el menú del Personal administrativo. **Excepción a "manda Figma" (2026-10-20, a pedido del equipo):** lo tienen los dos roles, con los mismos permisos. El Coordinador lo ve en su menú como "Plan de evaluación" (`/app/coordinador/plan-evaluacion`).
-- Las HU-52 a HU-55 dicen «Personal Administrativo» y en Figma solo están en su menú. **Excepción a "manda Figma" (2026-11-20):** el Coordinador también las tiene, con los mismos permisos, como **Plan curricular** (`/app/coordinador/plan-curricular`) y **Escala de calificación** (`/app/coordinador/escala-calificacion`). Los ambientes físicos siguen siendo solo del Personal administrativo. Ver la [decisión](../decisiones/2026-11-20-alex-sanchezz-catalogo-academico-coordinador.md).
+- Las HU-52 a HU-55 dicen «Personal Administrativo» y en Figma solo están en su menú. **Excepción a "manda Figma" (2026-11-20):** el Coordinador también las tiene, con los mismos permisos, como **Plan curricular** (`/app/coordinador/plan-curricular`) y **Escala de calificación** (`/app/coordinador/escala-calificacion`). Los ambientes físicos no son del Coordinador. Ver la [decisión](../decisiones/2026-11-20-alex-sanchezz-catalogo-academico-coordinador.md).
+- La HU-43 dice «Personal Administrativo» y en Figma está solo en su menú. **Excepción a "manda Figma" (2026-11-26):** el **Administrador** también tiene los ambientes físicos, con los mismos permisos (listar, crear, editar, desactivar y reactivar), en su menú **Infraestructura › Ambientes físicos** (`/app/admin/ambientes`), porque el plan de pruebas del curso los pone en su rol. Ver la [decisión](../decisiones/2026-11-26-fabricio99-s-ambientes-administrador.md).
 - RF-126 pide una descripción obligatoria para el área; en Figma es opcional. Aquí manda Figma.
 - El modal de Figma muestra escala, agregación de ítems y consolidación por competencia. Esta parte fue reemplazada por la [decisión de parámetros de evaluación por año](../decisiones/2026-11-04-josezavaleta-parametros-evaluacion-por-anio.md): el modal solo permite indicar horas semanales y marcar competencias.
 
@@ -41,7 +42,7 @@ Las áreas, competencias, cursos y ambientes no se borran: se desactivan. Un ár
 | Plan curricular | Personal Administrativo › "CI-14 · Plan curricular: áreas, competencias y cursos (HU-52, 53, 54)" y modales "Nueva área", "Nueva competencia", "Nuevo curso", "¿Desactivar …?" | `/app/administrativo/competencias` · `/app/coordinador/plan-curricular` |
 | Plan de evaluación | "CI-17 · Plan de evaluación — 1.° de secundaria 2026 (HU-56)", modal "Aritmética · 1.° de secundaria", "CI-20 · … sin cursos" | pestaña · `/app/coordinador/plan-evaluacion` (no está en Figma) |
 | Escala de calificación | "CI-23 · Escala de calificación — tabla de conversión vigente (HU-55)", modal "Nueva versión de la tabla de conversión" | pestaña · `/app/coordinador/escala-calificacion` |
-| Ambientes físicos | "CI-26 · Ambientes físicos (HU-43)" (nodo `857:10215`) y modal "Nuevo ambiente físico" (nodo `857:11500`). El modal "¿Desactivar …?" no está en Figma | `/app/administrativo/ambientes` |
+| Ambientes físicos | "CI-26 · Ambientes físicos (HU-43)" (nodo `857:10215`) y modal "Nuevo ambiente físico" (nodo `857:11500`). El modal "¿Desactivar …?" no está en Figma | `/app/administrativo/ambientes` y `/app/admin/ambientes` (Administrador) |
 
 ## Base de datos
 
@@ -156,7 +157,7 @@ Rol: Personal administrativo; las rutas de `/planes-evaluacion` también las usa
     - `components/dialogos-ambientes.tsx`: modal de crear y editar, con `esquemas-ambientes.ts` (zod). El 409 de nombre repetido se muestra en el campo Nombre y el de aforo bajo la matrícula, en Aforo máximo.
     - `components/dialogo-cambiar-estado-ambiente.tsx`: confirmación de desactivar y reactivar (Figma no tiene un modal propio), con sus avisos.
     - Los tipos `AmbienteResumen`, `ResumenAmbientes`, `SolicitudAmbiente` y `SolicitudEdicionAmbiente` están en `src/types/api.ts`.
-    - La ruta `src/app/routes/app/administrativo/ambientes.tsx` ya muestra la página (título, migas «Configuración › Ambientes físicos», descripción y el botón «Nuevo ambiente») y abre el modal.
+    - `components/pagina-ambientes.tsx`: la página completa (título, migas «Configuración › Ambientes físicos», descripción y el botón «Nuevo ambiente») con el modal. La usan las rutas `src/app/routes/app/administrativo/ambientes.tsx` y `src/app/routes/app/admin/ambientes.tsx`.
 - Pruebas: `backend/src/test/java/com/galiledu/academico/` (`PlanCurricularIT`, `EscalaCalificacionIT`, `PlanEvaluacionIT`, `dominio/TablaConversionTests`) y `frontend/src/features/catalogo-academico/components/__tests__/`.
   - **Ambientes (frontend):** `api/__tests__/ambientes.test.tsx`, `components/__tests__/{ambientes.test.tsx, ambientes-orden.test.ts, dialogos-ambientes.test.tsx, esquemas-ambientes.test.ts}` y `src/app/routes/app/administrativo/__tests__/ambientes.test.tsx`.
   - **Ambientes (backend):** `dominio/{AmbienteTests, CodigoAmbienteTests}`; `AmbienteMapeoIT` (mapeo del arreglo `recursos`), `AmbienteRepositorioIT`, `ConsultasAmbientesIT` (RF-111), `ServicioAmbientesIT`, `ServicioAmbientesCrearIT` (reintento del código con un choque simulado), `AmbienteIT` (API con rollback), `AmbienteCrearIT` (`POST /ambientes`) y `AmbienteConcurrenciaIT` (dos peticiones reales a la vez).

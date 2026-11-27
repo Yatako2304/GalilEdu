@@ -67,6 +67,8 @@ export const paths = {
       root: roleRoot(ADMIN),
       usuarios: route(ADMIN, 'usuarios'),
       configuracionAcceso: route(ADMIN, 'configuracion-acceso'),
+      // HU-43: la misma pantalla de ambientes físicos del Personal administrativo.
+      ambientes: route(ADMIN, 'ambientes'),
     },
 
     // Figma: 🌟 Personal Administrativo
