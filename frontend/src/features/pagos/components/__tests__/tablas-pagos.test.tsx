@@ -75,6 +75,7 @@ test('el historial distingue el monto de cuotas, el recargo y el total pagado', 
           monto: 612,
           estado: 'CONFIRMADO',
           cuotas: ['Pensión de septiembre'],
+          medio: 'Transferencia · 00123456',
         },
       ]}
     />,
@@ -87,6 +88,8 @@ test('el historial distingue el monto de cuotas, el recargo y el total pagado', 
     screen.getByRole('columnheader', { name: 'Total pagado' }),
   ).toBeInTheDocument();
   expect(screen.queryByText('Capital')).not.toBeInTheDocument();
+  // Pago en caja: el medio con su número de operación.
+  expect(screen.getByText('Transferencia · 00123456')).toBeInTheDocument();
 });
 
 // HU-42: la descarga de la constancia solo aparece donde se pide (vista del apoderado), no en P9.
@@ -99,6 +102,7 @@ const pagoConfirmado = {
   monto: 600,
   estado: 'CONFIRMADO' as const,
   cuotas: ['Pensión de septiembre'],
+  medio: 'En línea',
 };
 
 test('sin onDescargar (P9) no ofrece descargar la constancia', async () => {

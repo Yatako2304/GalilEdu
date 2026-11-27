@@ -20,7 +20,10 @@ import jakarta.persistence.Table;
 
 /**
  * Pago confirmado de un estudiante con su constancia (pagos.pago y pago_detalle, V5). HU-41 lo registra al aprobarse
- * una orden; queda OBSERVADO si el monto confirmado por la pasarela no coincide con el de la orden (RF-105).
+ * una orden; queda OBSERVADO si el monto confirmado por la pasarela no coincide con el de la orden (RF-105). El pago en
+ * caja lo registra el Personal administrativo: no tiene orden, guarda quién lo registró y en {@code referencia} el
+ * medio
+ * de pago con su número de operación ("Transferencia · 00123456").
  */
 @Entity
 @Table(schema = "pagos", name = "pago")
@@ -46,6 +49,8 @@ public class Pago {
 	@Column(nullable = false)
 	private String estado;
 	private String observacion;
+	@Column(name = "registrado_por")
+	private UUID registradoPor;
 
 	@ElementCollection(fetch = FetchType.EAGER)
 	@CollectionTable(schema = "pagos", name = "pago_detalle", joinColumns = @JoinColumn(name = "pago_id"))
@@ -98,6 +103,15 @@ public class Pago {
 		return p;
 	}
 
+	/** Pago en caja: sin orden; {@code nota} es la observación opcional del personal (el pago queda CONFIRMADO). */
+	public static Pago enCaja(UUID estudianteId, String numeroConstancia, OffsetDateTime fecha, String referencia,
+			String nota, UUID registradoPor) {
+		Pago p = enLinea(null, estudianteId, numeroConstancia, fecha, referencia);
+		p.observacion = nota;
+		p.registradoPor = registradoPor;
+		return p;
+	}
+
 	public void agregar(UUID cuotaId, BigDecimal capital, BigDecimal recargo) {
 		detalle.add(new Detalle(cuotaId, capital, recargo));
 		montoTotal = montoTotal.add(capital).add(recargo);
@@ -134,6 +148,14 @@ public class Pago {
 
 	public String getObservacion() {
 		return observacion;
+	}
+
+	public String getReferencia() {
+		return referencia;
+	}
+
+	public UUID getRegistradoPor() {
+		return registradoPor;
 	}
 
 	public List<Detalle> getDetalle() {

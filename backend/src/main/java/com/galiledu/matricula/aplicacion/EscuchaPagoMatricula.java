@@ -8,11 +8,12 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import com.galiledu.pagos.aplicacion.PagoEnLineaAprobado;
+import com.galiledu.pagos.aplicacion.PagoRegistrado;
 
 /**
- * HU-31: Matrícula escucha cuando Pagos confirma un pago en línea (HU-41). Se ejecuta después de que el pago quedó
- * guardado, así un problema al matricular nunca deshace un pago ya cobrado por la pasarela.
+ * HU-31: Matrícula escucha cuando Pagos registra un pago (en línea, HU-41, o en caja). Se ejecuta después de que el
+ * pago quedó
+ * guardado, así un problema al matricular nunca deshace un pago ya cobrado.
  */
 @Component
 public class EscuchaPagoMatricula {
@@ -25,15 +26,15 @@ public class EscuchaPagoMatricula {
 	}
 
 	@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-	public void alAprobarsePago(PagoEnLineaAprobado evento) {
+	public void alAprobarsePago(PagoRegistrado evento) {
 		for (UUID matriculaId : evento.matriculasPagadas()) {
 			try {
 				if (confirmacion.matricular(matriculaId).isPresent()) {
 					confirmacion.generarPensiones(matriculaId, evento.usuarioId());
 				}
 			} catch (RuntimeException e) {
-				LOG.error("No se completó la matrícula {} tras el pago de la orden {}", matriculaId,
-						evento.codigoOrden(), e);
+				LOG.error("No se completó la matrícula {} tras el pago {}", matriculaId,
+						evento.referencia(), e);
 			}
 		}
 	}

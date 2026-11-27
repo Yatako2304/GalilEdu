@@ -24,7 +24,7 @@ import org.springframework.test.context.event.RecordApplicationEvents;
 import com.galiledu.configuracion.PruebaIntegracionConfiguracion;
 import com.galiledu.configuracion.RelojPrueba;
 import com.galiledu.matricula.infraestructura.ConsultasMatricula;
-import com.galiledu.pagos.aplicacion.PagoEnLineaAprobado;
+import com.galiledu.pagos.aplicacion.PagoRegistrado;
 import com.galiledu.pagos.aplicacion.ServicioCronograma;
 import com.galiledu.pagos.aplicacion.ServicioCuotaMatricula;
 import com.jayway.jsonpath.JsonPath;
@@ -138,7 +138,7 @@ class DerivacionPagosIT extends PruebaIntegracionConfiguracion {
 
 		mvc.perform(conToken(post("/pagos/pago-en-linea/simulador/{codigo}", codigo), token, "{\"aprobar\":true}"))
 				.andExpect(jsonPath("$.estado").value("APROBADA"));
-		assertThat(eventos.stream(PagoEnLineaAprobado.class))
+		assertThat(eventos.stream(PagoRegistrado.class))
 				.singleElement()
 				.satisfies(e -> assertThat(e.matriculasPagadas()).containsExactly(MATRICULA_MATEO));
 	}

@@ -73,64 +73,66 @@ public class ConsultasPagos {
 
 	public record FilaEstadoCuenta(UUID compromisoId, UUID estudianteId, String estado, String nombre,
 			String numeroDocumento, String apoderado, String seccion, int antiguedad, BigDecimal total,
-			BigDecimal pagado, BigDecimal deudaVencida, int cuotasVencidas) {
-	}
-
-	/** Año escolar ACTIVO; si no hay, el más reciente con compromisos. */
-	public Optional<Integer> anioActivo() {
-		return jdbc.sql("""
-				SELECT a.anio FROM configuracion.anio_escolar a
-				ORDER BY (a.estado = 'ACTIVO') DESC,
-				         EXISTS (SELECT 1 FROM pagos.compromiso_pago c WHERE c.anio_escolar_id = a.id) DESC,
-				         a.anio DESC
-				LIMIT 1""")
-				.query(Integer.class)
-				.optional();
+			BigDecimal pagado, BigDecimal deudaVencida, int cuotasVencidas, Integer anio, boolean retirado) {
 	}
 
 	/**
-	 * Una fila por compromiso del año (P2): datos del alumno, total, pagado y deuda vencida. "Vencida" es la regla de
+	 * P2 · Estado de cuenta: una fila por estudiante no eliminado, también los RETIRADOS (pueden haber dejado deuda
+	 * antes de retirarse), con su compromiso de {@code anio} o, si {@code anio} es null, el más reciente (el VIGENTE
+	 * primero). Un estudiante sin compromiso sale con montos en cero y {@code compromisoId} null. Orden: por año del
+	 * compromiso y, dentro de cada año, alfabético; al final los que no tienen compromiso. "Vencida" es la regla de
 	 * RF-91 (pensión impaga después del vencimiento más los días de gracia).
 	 */
-	public List<FilaEstadoCuenta> estadoCuenta(int anio, LocalDate hoy) {
+	public List<FilaEstadoCuenta> estadoCuenta(Integer anio, LocalDate hoy) {
 		return jdbc
 				.sql("""
-						SELECT c.id, c.estudiante_id, c.estado,
+						SELECT c.id, e.id, c.estado,
 						       concat_ws(' ', p.nombres, p.apellido_paterno, p.apellido_materno) AS nombre,
 						       p.numero_documento,
 						       (SELECT min(concat_ws(' ', pa.nombres, pa.apellido_paterno, pa.apellido_materno))
 						        FROM estudiantes.vinculo_familiar v JOIN personas.persona pa ON pa.id = v.persona_id
-						        WHERE v.estudiante_id = c.estudiante_id AND v.es_responsable_matricula),
+						        WHERE v.estudiante_id = e.id AND v.es_responsable_matricula),
 						       (SELECT g.numero || '.° ' || s.nombre
 						        FROM matricula.matricula m
+						        JOIN configuracion.anio_escolar am ON am.id = m.anio_escolar_id
 						        JOIN configuracion.seccion s ON s.id = m.seccion_id
 						        JOIN configuracion.grado g ON g.codigo = s.grado_codigo
-						        WHERE m.id = c.matricula_id),
+						        WHERE m.id = c.matricula_id
+						           OR (c.matricula_id IS NULL AND m.estudiante_id = e.id AND m.estado = 'MATRICULADO')
+						        ORDER BY (m.id = c.matricula_id) DESC NULLS LAST, am.anio DESC
+						        LIMIT 1),
 						       (SELECT count(*) FROM matricula.matricula m2
 						        JOIN configuracion.anio_escolar a2 ON a2.id = m2.anio_escolar_id
-						        WHERE m2.estudiante_id = c.estudiante_id AND m2.estado IN ('MATRICULADO', 'RETIRADO')
-						          AND a2.anio <= a.anio),
+						        WHERE m2.estudiante_id = e.id AND m2.estado IN ('MATRICULADO', 'RETIRADO')
+						          AND (c.anio IS NULL OR a2.anio <= c.anio)),
 						       coalesce(sum(q.monto_final) FILTER (WHERE q.estado <> 'ANULADA'), 0),
 						       coalesce(sum(q.monto_pagado) FILTER (WHERE q.estado <> 'ANULADA'), 0),
 						       coalesce(sum(q.monto_final - q.monto_pagado) FILTER (WHERE q.concepto_codigo = 'PENSION'
-						           AND q.estado NOT IN ('PAGADA', 'ANULADA', 'EN_PROCESO') AND q.fecha_vencimiento + t.dias_gracia < :hoy), 0),
+						           AND q.estado NOT IN ('PAGADA', 'ANULADA', 'EN_PROCESO') AND q.fecha_vencimiento + c.dias_gracia < :hoy), 0),
 						       count(q.id) FILTER (WHERE q.concepto_codigo = 'PENSION'
-						           AND q.estado NOT IN ('PAGADA', 'ANULADA', 'EN_PROCESO') AND q.fecha_vencimiento + t.dias_gracia < :hoy)
-						FROM pagos.compromiso_pago c
-						JOIN configuracion.anio_escolar a ON a.id = c.anio_escolar_id
-						JOIN pagos.tarifario t ON t.id = c.tarifario_id
-						JOIN estudiantes.estudiante e ON e.id = c.estudiante_id
+						           AND q.estado NOT IN ('PAGADA', 'ANULADA', 'EN_PROCESO') AND q.fecha_vencimiento + c.dias_gracia < :hoy),
+						       c.anio, e.estado = 'RETIRADO'
+						FROM estudiantes.estudiante e
 						JOIN personas.persona p ON p.id = e.persona_id
+						LEFT JOIN LATERAL (
+						    SELECT cp.id, cp.estado, cp.matricula_id, a.anio, t.dias_gracia
+						    FROM pagos.compromiso_pago cp
+						    JOIN configuracion.anio_escolar a ON a.id = cp.anio_escolar_id
+						    JOIN pagos.tarifario t ON t.id = cp.tarifario_id
+						    WHERE cp.estudiante_id = e.id AND (CAST(:anio AS INTEGER) IS NULL OR a.anio = :anio)
+						    ORDER BY (cp.estado = 'VIGENTE') DESC, a.anio DESC
+						    LIMIT 1) c ON TRUE
 						LEFT JOIN pagos.cuota q ON q.compromiso_id = c.id
-						WHERE a.anio = :anio
-						GROUP BY c.id, c.estudiante_id, c.estado, c.matricula_id, a.anio, t.dias_gracia,
+						WHERE NOT e.eliminado
+						GROUP BY c.id, e.id, e.estado, c.estado, c.matricula_id, c.anio, c.dias_gracia,
 						         p.nombres, p.apellido_paterno, p.apellido_materno, p.numero_documento
-						ORDER BY nombre""")
-				.param("anio", anio)
+						ORDER BY c.anio NULLS LAST, nombre""")
+				.param("anio", anio, java.sql.Types.INTEGER)
 				.param("hoy", hoy)
 				.query((rs, i) -> new FilaEstadoCuenta(rs.getObject(1, UUID.class), rs.getObject(2, UUID.class),
 						rs.getString(3), rs.getString(4), rs.getString(5), rs.getString(6), rs.getString(7),
-						rs.getInt(8), rs.getBigDecimal(9), rs.getBigDecimal(10), rs.getBigDecimal(11), rs.getInt(12)))
+						rs.getInt(8), rs.getBigDecimal(9), rs.getBigDecimal(10), rs.getBigDecimal(11), rs.getInt(12),
+						rs.getObject(13, Integer.class), rs.getBoolean(14)))
 				.list();
 	}
 
@@ -325,7 +327,7 @@ public class ConsultasPagos {
 	}
 
 	public record FilaPago(UUID id, String numeroConstancia, OffsetDateTime fechaPago, BigDecimal montoTotal,
-			BigDecimal capital, BigDecimal recargo, String estado, List<String> cuotas) {
+			BigDecimal capital, BigDecimal recargo, String estado, List<String> cuotas, String medio) {
 	}
 
 	/**
@@ -334,7 +336,9 @@ public class ConsultasPagos {
 	public List<FilaPago> pagosDelCompromiso(UUID compromisoId) {
 		return jdbc.sql("""
 				SELECT pg.id, pg.numero_constancia, pg.fecha_pago, pg.monto_total, sum(d.capital), sum(d.recargo),
-				       pg.estado, array_agg(q.nombre ORDER BY q.fecha_vencimiento)
+				       pg.estado, array_agg(q.nombre ORDER BY q.fecha_vencimiento),
+				       CASE WHEN pg.orden_pago_id IS NULL AND pg.registrado_por IS NOT NULL THEN pg.referencia
+				            ELSE 'En línea' END
 				FROM pagos.pago pg
 				JOIN pagos.pago_detalle d ON d.pago_id = pg.id
 				JOIN pagos.cuota q ON q.id = d.cuota_id
@@ -344,7 +348,8 @@ public class ConsultasPagos {
 				.param(compromisoId)
 				.query((rs, i) -> new FilaPago(rs.getObject(1, UUID.class), rs.getString(2),
 						rs.getObject(3, OffsetDateTime.class), rs.getBigDecimal(4), rs.getBigDecimal(5),
-						rs.getBigDecimal(6), rs.getString(7), List.of((String[]) rs.getArray(8).getArray())))
+						rs.getBigDecimal(6), rs.getString(7), List.of((String[]) rs.getArray(8).getArray()),
+						rs.getString(9)))
 				.list();
 	}
 

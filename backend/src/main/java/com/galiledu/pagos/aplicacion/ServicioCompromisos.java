@@ -48,11 +48,11 @@ public class ServicioCompromisos {
 	 */
 	@Transactional(readOnly = true)
 	public EstadoCuentaGeneral estadoCuenta(Integer anio) {
-		int anioConsulta = anio != null ? anio : consultas.anioActivo().orElse(LocalDate.now(LIMA).getYear());
-		List<AlumnoEstadoCuenta> alumnos = consultas.estadoCuenta(anioConsulta, LocalDate.now(LIMA)).stream()
+		List<AlumnoEstadoCuenta> alumnos = consultas.estadoCuenta(anio, LocalDate.now(LIMA)).stream()
 				.map(f -> new AlumnoEstadoCuenta(f.estudianteId(), f.compromisoId(), f.nombre(), f.numeroDocumento(),
-						f.apoderado(), f.seccion(), f.antiguedad(), EstadoCompromiso.valueOf(f.estado()), f.total(),
-						f.pagado(), f.deudaVencida(), f.cuotasVencidas()))
+						f.apoderado(), f.seccion(), f.antiguedad(),
+						f.estado() == null ? null : EstadoCompromiso.valueOf(f.estado()), f.total(), f.pagado(),
+						f.deudaVencida(), f.cuotasVencidas(), f.anio(), f.retirado()))
 				.toList();
 		List<AlumnoEstadoCuenta> vigentes = alumnos.stream()
 				.filter(a -> a.estadoCompromiso() == EstadoCompromiso.VIGENTE).toList();
@@ -67,7 +67,7 @@ public class ServicioCompromisos {
 				: cobrado.multiply(BigDecimal.valueOf(100)).divide(comprometido, 0, RoundingMode.HALF_UP).intValue();
 		int cuotasVencidas = vigentes.stream().mapToInt(AlumnoEstadoCuenta::cuotasVencidas).sum();
 		int alumnosConDeuda = (int) vigentes.stream().filter(a -> a.cuotasVencidas() > 0).count();
-		return new EstadoCuentaGeneral(anioConsulta, comprometido, cobrado, porcentaje, deuda, cuotasVencidas,
+		return new EstadoCuentaGeneral(anio, comprometido, cobrado, porcentaje, deuda, cuotasVencidas,
 				alumnosConDeuda, alumnos);
 	}
 
@@ -153,7 +153,7 @@ public class ServicioCompromisos {
 		}
 		return consultas.pagosDelCompromiso(compromisoId).stream()
 				.map(f -> new PagoRealizado(f.id(), f.numeroConstancia(), f.fechaPago(), f.montoTotal(), f.capital(),
-						f.recargo(), f.estado(), f.cuotas()))
+						f.recargo(), f.estado(), f.cuotas(), f.medio()))
 				.toList();
 	}
 

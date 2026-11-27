@@ -78,8 +78,12 @@ public final class DtosPagos {
 	}
 
 	/** HU-37 · Figma "P2 · Estado de cuenta — Todos los alumnos": tarjetas y tabla de compromisos del año. */
+	/**
+	 * P2 · Estado de cuenta. {@code anio}: el año pedido, o null si cada alumno trae su compromiso más reciente. Los
+	 * totales suman solo los compromisos VIGENTES de la lista.
+	 */
 	public record EstadoCuentaGeneral(
-			int anio,
+			Integer anio,
 			BigDecimal comprometido,
 			BigDecimal cobrado,
 			int porcentajeCobrado,
@@ -89,7 +93,11 @@ public final class DtosPagos {
 			List<AlumnoEstadoCuenta> alumnos) {
 	}
 
-	/** Una fila de P2. {@code antiguedad}: años con matrícula en el colegio hasta ese año. */
+	/**
+	 * Una fila de P2: cada estudiante no eliminado, también los retirados. {@code antiguedad}: años con matrícula en el
+	 * colegio hasta el año del
+	 * compromiso. Sin compromiso, {@code compromisoId} y {@code estadoCompromiso} son null y los montos, cero.
+	 */
 	public record AlumnoEstadoCuenta(
 			UUID estudianteId,
 			UUID compromisoId,
@@ -102,7 +110,11 @@ public final class DtosPagos {
 			BigDecimal totalAnual,
 			BigDecimal capitalPagado,
 			BigDecimal deudaVencida,
-			int cuotasVencidas) {
+			int cuotasVencidas,
+			/** Año del compromiso que se muestra (columna «Compromiso»); null si no tiene. */
+			Integer anioCompromiso,
+			/** El estudiante está retirado (inactivo); sale igual por si dejó deuda. */
+			boolean retirado) {
 	}
 
 	/** IEstadoCuenta: pensión vencida e impaga de un estudiante (la usa Matrícula en HU-30). */
@@ -186,7 +198,9 @@ public final class DtosPagos {
 			BigDecimal capital,
 			BigDecimal recargo,
 			String estado,
-			List<String> cuotas) {
+			List<String> cuotas,
+			/** "En línea" o, si se pagó en caja, el medio con su número de operación ("Transferencia · 00123456"). */
+			String medio) {
 	}
 
 	/**

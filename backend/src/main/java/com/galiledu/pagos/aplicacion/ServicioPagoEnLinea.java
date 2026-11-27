@@ -1,7 +1,6 @@
 package com.galiledu.pagos.aplicacion;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
@@ -37,7 +36,6 @@ import com.galiledu.pagos.aplicacion.PasarelaPagos.Cobro;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Concepto;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Resultado;
 import com.galiledu.pagos.aplicacion.PasarelaPagos.Sesion;
-import com.galiledu.pagos.dominio.CompromisoPago;
 import com.galiledu.pagos.dominio.Cuota;
 import com.galiledu.pagos.dominio.EstadoCompromiso;
 import com.galiledu.pagos.dominio.EstadoCuota;
@@ -69,20 +67,22 @@ public class ServicioPagoEnLinea {
 	private final PagoRepositorio pagos;
 	private final ConsultasPagos consultas;
 	private final PasarelaPagos pasarela;
+	private final CobroCuotas cobro;
 	private final ApplicationEventPublisher eventos;
 	private final Clock reloj;
 	private final int minutosExpiracion;
 	private final String urlFrontend;
 
 	public ServicioPagoEnLinea(CuotaRepositorio cuotas, OrdenPagoRepositorio ordenes, PagoRepositorio pagos,
-			ConsultasPagos consultas, PasarelaPagos pasarela, ApplicationEventPublisher eventos, Clock reloj,
-			@Value("${galiledu.pagos.minutos-expiracion:30}") int minutosExpiracion,
+			ConsultasPagos consultas, PasarelaPagos pasarela, CobroCuotas cobro, ApplicationEventPublisher eventos,
+			Clock reloj, @Value("${galiledu.pagos.minutos-expiracion:30}") int minutosExpiracion,
 			@Value("${galiledu.pagos.url-frontend}") String urlFrontend) {
 		this.cuotas = cuotas;
 		this.ordenes = ordenes;
 		this.pagos = pagos;
 		this.consultas = consultas;
 		this.pasarela = pasarela;
+		this.cobro = cobro;
 		this.eventos = eventos;
 		this.reloj = reloj;
 		this.minutosExpiracion = minutosExpiracion;
@@ -106,7 +106,7 @@ public class ServicioPagoEnLinea {
 			List<Cuota> suyas = porEstudiante.getOrDefault(hijo.id(), List.of()).stream()
 					.sorted(Comparator.comparing(Cuota::getFechaVencimiento))
 					.toList();
-			List<CuotaPorPagar> filas = suyas.stream().map(q -> fila(q, suyas, hoy)).toList();
+			List<CuotaPorPagar> filas = suyas.stream().map(q -> CobroCuotas.fila(q, suyas, hoy)).toList();
 			resultado.add(new EstudianteConCuotas(hijo.id(), hijo.nombre(), filas));
 		}
 		OrdenEnProceso abierta = ordenes
@@ -115,35 +115,6 @@ public class ServicioPagoEnLinea {
 				.map(o -> new OrdenEnProceso(o.getCodigo(), o.getMontoTotal(), o.getExpiraEn(), o.getUrlPago()))
 				.orElse(null);
 		return new CuotasPorPagar(resultado, abierta);
-	}
-
-	private CuotaPorPagar fila(Cuota q, List<Cuota> delEstudiante, LocalDate hoy) {
-		BigDecimal recargo = recargo(q, hoy);
-		List<UUID> requiere = pensionesAnterioresPagables(q, delEstudiante).stream().map(Cuota::getId).toList();
-		return new CuotaPorPagar(q.getId(), q.getConceptoCodigo(), q.getNumero(), q.getNombre(),
-				q.getCompromiso().getAnio(), q.getFechaVencimiento(), q.saldo(), recargo, q.saldo().add(recargo),
-				q.estaVencida(hoy, q.getCompromiso().getDiasGracia()), q.getEstado(), q.esPagable(), requiere);
-	}
-
-	/**
-	 * Recargo por mora con la misma regla de HU-39 (Cuota.recargo, Figma P11), para que la orden cobre lo que se
-	 * muestra.
-	 */
-	private static BigDecimal recargo(Cuota q, LocalDate hoy) {
-		CompromisoPago c = q.getCompromiso();
-		return q.recargo(hoy, c.getDiasGracia(), c.getRecargoPorcentaje(), c.getTopeRecargoPorcentaje()).setScale(2,
-				RoundingMode.HALF_UP);
-	}
-
-	/** CAHU41-3: pensiones impagas del mismo hijo que vencen antes; se pagan antes o junto con esta. */
-	private static List<Cuota> pensionesAnterioresPagables(Cuota q, List<Cuota> delEstudiante) {
-		if (!q.esPension()) {
-			return List.of();
-		}
-		return delEstudiante.stream()
-				.filter(o -> o.esPension() && o.esPagable() && !o.getId().equals(q.getId())
-						&& o.getFechaVencimiento().isBefore(q.getFechaVencimiento()))
-				.toList();
 	}
 
 	/** CAHU41-5: crea la orden, pone sus cuotas EN_PROCESO y abre la sesión en la pasarela. */
@@ -159,22 +130,16 @@ public class ServicioPagoEnLinea {
 				q.getCompromiso().getEstudianteId()) || q.getCompromiso().getEstado() != EstadoCompromiso.VIGENTE)) {
 			throw ExcepcionNegocio.noEncontrado("Alguna de las cuotas no existe o no es de un estudiante a tu cargo.");
 		}
-		for (Cuota q : elegidas) {
-			if (!q.esPagable()) {
-				throw ExcepcionNegocio.conflicto(q.getEstado() == EstadoCuota.EN_PROCESO
-						? "La cuota «" + q.getNombre() + "» ya tiene un pago en proceso."
-						: "La cuota «" + q.getNombre() + "» ya no tiene saldo por pagar.");
-			}
-		}
-		exigirOrdenDeAntiguedad(elegidas, ids);
-
+		CobroCuotas.exigirPagables(elegidas);
 		OffsetDateTime ahora = OffsetDateTime.now(reloj);
 		LocalDate hoy = ahora.toLocalDate();
+		cobro.exigirOrdenDeAntiguedad(elegidas, ids, hoy);
+
 		OrdenPago orden = OrdenPago.nueva(consultas.siguienteCodigoOrden(hoy.getYear()), usuarioId, ahora,
 				ahora.plusMinutes(minutosExpiracion));
 		List<Concepto> conceptos = new ArrayList<>();
 		for (Cuota q : elegidas.stream().sorted(Comparator.comparing(Cuota::getFechaVencimiento)).toList()) {
-			BigDecimal recargo = recargo(q, hoy);
+			BigDecimal recargo = CobroCuotas.recargo(q, hoy);
 			conceptos.add(new Concepto(descripcion(q, recargo), q.saldo().add(recargo)));
 			orden.agregar(q, recargo);
 		}
@@ -192,33 +157,6 @@ public class ServicioPagoEnLinea {
 		}
 		orden.asignarSesion(sesion.referencia(), sesion.url());
 		return new OrdenCreada(orden.getCodigo(), orden.getMontoTotal(), orden.getExpiraEn(), sesion.url());
-	}
-
-	private void exigirOrdenDeAntiguedad(List<Cuota> elegidas, Set<UUID> ids) {
-		Set<UUID> estudiantes = elegidas.stream().map(q -> q.getCompromiso().getEstudianteId())
-				.collect(Collectors.toSet());
-		Map<UUID, List<Cuota>> todas = cuotas.deEstudiantes(estudiantes).stream()
-				.collect(Collectors.groupingBy(q -> q.getCompromiso().getEstudianteId()));
-		for (Cuota q : elegidas) {
-			pensionesAnterioresPagables(q, todas.get(q.getCompromiso().getEstudianteId())).stream()
-					.filter(anterior -> !ids.contains(anterior.getId()))
-					.min(Comparator.comparing(Cuota::getFechaVencimiento))
-					.ifPresent(anterior -> {
-						throw ExcepcionNegocio.invalido("Primero paga la «" + anterior.getNombre() + "» de "
-								+ q.getCompromiso().getEstudianteNombre() + ": las pensiones se pagan en orden.");
-					});
-			// CAHU31-2: la matrícula de un hijo se paga cuando ese hijo no tiene pensiones vencidas (o se pagan junto).
-			if (q.esMatricula()) {
-				LocalDate hoy = LocalDate.now(reloj);
-				boolean debe = todas.get(q.getCompromiso().getEstudianteId()).stream()
-						.anyMatch(o -> o.esPagable() && !ids.contains(o.getId())
-								&& o.estaVencida(hoy, o.getCompromiso().getDiasGracia()));
-				if (debe) {
-					throw ExcepcionNegocio.invalido("Primero paga las pensiones vencidas de "
-							+ q.getCompromiso().getEstudianteNombre() + " para pagar la matrícula.");
-				}
-			}
-		}
 	}
 
 	private static String descripcion(Cuota q, BigDecimal recargo) {
@@ -324,21 +262,13 @@ public class ServicioPagoEnLinea {
 				.findAllById(orden.getLineas().stream().map(OrdenPago.Linea::getCuotaId).toList())
 				.stream().collect(Collectors.toMap(Cuota::getId, Function.identity()));
 		Map<UUID, Pago> porEstudiante = new LinkedHashMap<>();
-		List<UUID> pagadas = new ArrayList<>();
-		List<UUID> matriculas = new ArrayList<>();
+		CobroCuotas.Liquidacion liquidacion = new CobroCuotas.Liquidacion();
 		for (OrdenPago.Linea linea : orden.getLineas()) {
 			Cuota q = porId.get(linea.getCuotaId());
 			Pago pago = porEstudiante.computeIfAbsent(q.getCompromiso().getEstudianteId(),
 					est -> Pago.enLinea(orden.getId(), est, consultas.siguienteConstancia(ahora.getYear()), ahora,
 							orden.getReferenciaPasarela()));
-			pago.agregar(q.getId(), linea.getCapital(), linea.getRecargo());
-			q.registrarPago(linea.getCapital(), ahora.toLocalDate());
-			if (q.getEstado() == EstadoCuota.PAGADA) {
-				pagadas.add(q.getId());
-				if (q.esMatricula() && q.getCompromiso().getMatriculaId() != null) {
-					matriculas.add(q.getCompromiso().getMatriculaId());
-				}
-			}
+			liquidacion.cobrar(pago, q, linea.getCapital(), linea.getRecargo(), ahora.toLocalDate());
 		}
 		if (montoConfirmado != null && montoConfirmado.compareTo(orden.getMontoTotal()) != 0) {
 			String motivo = "La pasarela confirmó S/ %s y la orden %s era por S/ %s."
@@ -348,8 +278,7 @@ public class ServicioPagoEnLinea {
 		}
 		pagos.saveAll(porEstudiante.values());
 		orden.aprobar(montoConfirmado, ahora);
-		eventos.publishEvent(
-				new PagoEnLineaAprobado(orden.getId(), orden.getCodigo(), orden.getUsuarioId(), pagadas, matriculas));
+		eventos.publishEvent(liquidacion.evento(orden.getCodigo(), orden.getUsuarioId()));
 	}
 
 	private void cerrarSinPago(OrdenPago orden, EstadoOrdenPago estado, String motivo) {

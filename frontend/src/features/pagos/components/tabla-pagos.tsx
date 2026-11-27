@@ -54,6 +54,7 @@ export const TablaPagos = ({
           <TableHead>Fecha</TableHead>
           <TableHead>Constancia</TableHead>
           <TableHead>Cuotas</TableHead>
+          <TableHead>Medio</TableHead>
           <TableHead className="text-right">Monto de cuotas</TableHead>
           <TableHead className="text-right">Recargo</TableHead>
           <TableHead className="text-right">Total pagado</TableHead>
@@ -73,6 +74,7 @@ export const TablaPagos = ({
             <TableCell className="max-w-64 whitespace-normal">
               {pago.cuotas.join(', ')}
             </TableCell>
+            <TableCell>{pago.medio}</TableCell>
             <TableCell className="text-right">{soles(pago.capital)}</TableCell>
             <TableCell className="text-right">{soles(pago.recargo)}</TableCell>
             <TableCell className="text-right font-semibold text-content-primary">

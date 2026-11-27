@@ -52,7 +52,7 @@ Si el colegio completa todos los documentos (al crear la matrícula o al subir e
 
 ## HU-31 · Derivación a pagos
 
-El apoderado paga la cuota de matrícula con el pago en línea de HU-41 (misma orden, misma pasarela). Cuando Pagos confirma el pago publica `PagoEnLineaAprobado` con `matriculasPagadas`; `EscuchaPagoMatricula` lo recibe **después de guardar el pago** y, para cada matrícula, `ServicioConfirmacionPago`:
+El apoderado paga la cuota de matrícula con el pago en línea de HU-41 (misma orden, misma pasarela). Cuando Pagos registra el pago (en línea o en caja) publica `PagoRegistrado` con `matriculasPagadas`; `EscuchaPagoMatricula` lo recibe **después de guardar el pago** y, para cada matrícula, `ServicioConfirmacionPago`:
 
 1. `matricular`: si sigue en PENDIENTE_PAGO, la pasa a MATRICULADO con el código `MAT-AAAA-NNNN` (correlativo por año, con bloqueo de fila) y `confirmado_en`. Si ya estaba matriculada no hace nada.
 2. `generarPensiones`: crea el cronograma de HU-37.

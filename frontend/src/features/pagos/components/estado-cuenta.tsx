@@ -21,7 +21,7 @@ import {
 import { useNotifications } from '@/components/ui/notifications';
 import { Spinner } from '@/components/ui/spinner';
 import { StatCard } from '@/components/ui/stat-card';
-import { Table } from '@/components/ui/table';
+import { PaginationBar, Table } from '@/components/ui/table';
 import { Tabs } from '@/components/ui/tabs';
 import { Tag } from '@/components/ui/tag';
 import { paths } from '@/config/paths';
@@ -33,6 +33,8 @@ import { DialogoRetiro } from './dialogo-retiro';
 import { anios, filtrarAlumnos, soles } from './formato';
 
 type Fila = AlumnoEstadoCuenta & { id: string };
+
+const POR_PAGINA = 10;
 
 const AccionesFila = ({
   alumno,
@@ -67,6 +69,7 @@ export const EstadoCuenta = () => {
   const { addNotification } = useNotifications();
   const estado = useEstadoCuenta();
   const [texto, setTexto] = React.useState('');
+  const [pagina, setPagina] = React.useState(1);
   const [retiro, setRetiro] = React.useState<Fila | null>(null);
   const registrarRetiro = useRegistrarRetiro((r) => {
     setRetiro(null);
@@ -88,8 +91,10 @@ export const EstadoCuenta = () => {
 
   const filas: Fila[] = filtrarAlumnos(e.alumnos, texto).map((a) => ({
     ...a,
-    id: a.compromisoId,
+    id: a.estudianteId,
   }));
+  const totalPaginas = Math.max(1, Math.ceil(filas.length / POR_PAGINA));
+  const paginaActual = Math.min(pagina, totalPaginas);
   const verCronograma = (a: Fila) =>
     navigate(paths.app.administrativo.compromisoPago.getHref(a.estudianteId));
 
@@ -116,12 +121,12 @@ export const EstadoCuenta = () => {
         <StatCard
           icon={<Landmark aria-hidden="true" />}
           value={soles(e.comprometido)}
-          label={`Comprometido ${e.anio}`}
+          label={e.anio ? `Comprometido ${e.anio}` : 'Comprometido'}
         />
         <StatCard
           icon={<CircleCheck aria-hidden="true" />}
           value={soles(e.cobrado)}
-          label={`Cobrado ${e.anio} · ${e.porcentajeCobrado} %`}
+          label={`Cobrado${e.anio ? ` ${e.anio}` : ''} · ${e.porcentajeCobrado} %`}
         />
         <StatCard
           icon={<TriangleAlert aria-hidden="true" />}
@@ -154,7 +159,10 @@ export const EstadoCuenta = () => {
           <input
             type="search"
             value={texto}
-            onChange={(ev) => setTexto(ev.target.value)}
+            onChange={(ev) => {
+              setTexto(ev.target.value);
+              setPagina(1);
+            }}
             placeholder="Buscar alumno por nombre o DNI"
             aria-label="Buscar alumno por nombre o DNI"
             className="h-10 w-full rounded-xl border border-stroke-primary bg-white pl-9 pr-3 text-body-3 placeholder:text-content-placeholder focus-visible:border-stroke-focus focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-deep-blue-100"
@@ -162,8 +170,11 @@ export const EstadoCuenta = () => {
         </div>
 
         <Table<Fila>
-          data={filas}
-          emptyMessage="No hay compromisos de pago para este año"
+          data={filas.slice(
+            (paginaActual - 1) * POR_PAGINA,
+            paginaActual * POR_PAGINA,
+          )}
+          emptyMessage="No hay alumnos activos"
           columns={[
             {
               title: 'Alumno',
@@ -174,8 +185,15 @@ export const EstadoCuenta = () => {
                   onClick={() => verCronograma(entry)}
                   className="text-left"
                 >
-                  <span className="block text-content-primary hover:underline">
-                    {entry.nombre}
+                  <span className="flex items-center gap-2">
+                    <span className="text-content-primary hover:underline">
+                      {entry.nombre}
+                    </span>
+                    {entry.retirado && (
+                      <Tag size="sm" color="warning">
+                        Retirado
+                      </Tag>
+                    )}
                   </span>
                   <span className="block text-body-4 text-content-tertiary">
                     DNI {entry.numeroDocumento} · Apoderado:{' '}
@@ -193,6 +211,19 @@ export const EstadoCuenta = () => {
               title: 'Antigüedad',
               field: 'antiguedad',
               Cell: ({ entry }) => <span>{anios(entry.antiguedad)}</span>,
+            },
+            {
+              // No está en Figma: con la matrícula del año siguiente abierta conviven compromisos de dos años.
+              title: 'Compromiso',
+              field: 'anioCompromiso',
+              Cell: ({ entry }) =>
+                entry.anioCompromiso ? (
+                  <span>{entry.anioCompromiso}</span>
+                ) : (
+                  <Tag size="sm" color="neutral">
+                    Sin compromiso
+                  </Tag>
+                ),
             },
             {
               title: 'Deuda total',
@@ -221,6 +252,15 @@ export const EstadoCuenta = () => {
             },
           ]}
         />
+        {filas.length > POR_PAGINA && (
+          <PaginationBar
+            page={paginaActual}
+            size={POR_PAGINA}
+            total={filas.length}
+            totalPages={totalPaginas}
+            onPageChange={setPagina}
+          />
+        )}
       </Card>
 
       {retiro && (
@@ -231,7 +271,7 @@ export const EstadoCuenta = () => {
           cargando={registrarRetiro.isPending}
           onConfirmar={() =>
             registrarRetiro.mutate({
-              compromisoId: retiro.compromisoId,
+              compromisoId: retiro.compromisoId as string,
               fechaRetiro: new Date().toLocaleDateString('en-CA'),
             })
           }

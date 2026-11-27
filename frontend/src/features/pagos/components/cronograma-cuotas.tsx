@@ -193,9 +193,12 @@ export const TablaCuotas = ({
 export const CronogramaCuotas = ({
   compromiso,
   isLoading,
+  accion,
 }: {
   compromiso?: CompromisoDetalle;
   isLoading: boolean;
+  /** Botón a la derecha de las pestañas (P8: «Registrar pago»). */
+  accion?: React.ReactNode;
 }) => {
   const [pestana, setPestana] = React.useState<PestanaCompromiso>('cronograma');
 
@@ -219,23 +222,25 @@ export const CronogramaCuotas = ({
       <ResumenCompromiso compromiso={compromiso} />
 
       <Card className="flex flex-col gap-4 p-6">
-        <Tabs
-          variant="pill"
-          size="md"
-          aria-label="Detalle del compromiso"
-          className="border-b border-stroke-tertiary pb-4"
-          items={[
-            { value: 'cronograma', label: 'Cronograma de cuotas' },
-            { value: 'pagos', label: 'Pagos' },
-            { value: 'descuento', label: 'Descuento' },
-            {
-              value: 'morosidad',
-              label: `Morosidad (${compromiso.resumen.cuotasVencidas})`,
-            },
-          ]}
-          value={pestana}
-          onValueChange={setPestana}
-        />
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stroke-tertiary pb-4">
+          <Tabs
+            variant="pill"
+            size="md"
+            aria-label="Detalle del compromiso"
+            items={[
+              { value: 'cronograma', label: 'Cronograma de cuotas' },
+              { value: 'pagos', label: 'Pagos' },
+              { value: 'descuento', label: 'Descuento' },
+              {
+                value: 'morosidad',
+                label: `Morosidad (${compromiso.resumen.cuotasVencidas})`,
+              },
+            ]}
+            value={pestana}
+            onValueChange={setPestana}
+          />
+          {accion && <div className="ml-auto">{accion}</div>}
+        </div>
         {pestana === 'cronograma' ? (
           <TablaCuotas compromiso={compromiso} />
         ) : pestana === 'pagos' ? (

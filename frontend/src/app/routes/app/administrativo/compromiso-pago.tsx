@@ -1,4 +1,4 @@
-import { CirclePlus, Percent } from 'lucide-react';
+import { Banknote, CirclePlus, Percent } from 'lucide-react';
 import * as React from 'react';
 import { useParams } from 'react-router';
 
@@ -11,6 +11,7 @@ import {
 } from '@/features/pagos/api/compromisos';
 import { CronogramaCuotas } from '@/features/pagos/components/cronograma-cuotas';
 import { DialogoAplicarDescuento } from '@/features/pagos/components/dialogo-aplicar-descuento';
+import { DialogoRegistrarPago } from '@/features/pagos/components/dialogo-registrar-pago';
 
 // Figma > Personal Administrativo > "P8 · Compromiso 2026 — Cronograma de cuotas" (HU-37)
 const CompromisoPagoRoute = () => {
@@ -18,6 +19,7 @@ const CompromisoPagoRoute = () => {
   const compromisos = useCompromisosEstudiante(estudianteId);
   const [elegido, setElegido] = React.useState<string>();
   const [dialogoDescuento, setDialogoDescuento] = React.useState(false);
+  const [dialogoPago, setDialogoPago] = React.useState(false);
   const compromisoId = elegido ?? compromisos.data?.[0]?.id;
   const compromiso = useCompromiso(compromisoId);
   const e = compromiso.data?.estudiante;
@@ -64,12 +66,34 @@ const CompromisoPagoRoute = () => {
       <CronogramaCuotas
         compromiso={compromiso.data}
         isLoading={compromisos.isLoading || compromiso.isLoading}
+        accion={
+          // Pago en caja (fila 29 del plan de pruebas): lo que el apoderado pagó en el colegio.
+          <Button
+            variant="primary"
+            disabled={
+              compromiso.data?.estado !== 'VIGENTE' ||
+              compromiso.data.resumen.saldoPendiente <= 0
+            }
+            icon={<Banknote className="size-4" />}
+            onClick={() => setDialogoPago(true)}
+          >
+            Registrar pago
+          </Button>
+        }
       />
       {compromisoId && (
         <DialogoAplicarDescuento
           abierto={dialogoDescuento}
           onOpenChange={setDialogoDescuento}
           compromisoId={compromisoId}
+        />
+      )}
+      {compromisoId && (
+        <DialogoRegistrarPago
+          abierto={dialogoPago}
+          onOpenChange={setDialogoPago}
+          compromisoId={compromisoId}
+          estudiante={e?.nombre}
         />
       )}
     </ContentLayout>

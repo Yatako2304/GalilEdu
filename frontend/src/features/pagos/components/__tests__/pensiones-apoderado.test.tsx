@@ -366,6 +366,7 @@ test('descarga la constancia del pago en PDF desde la pestaña Pagos', async () 
           monto: 600,
           estado: 'CONFIRMADO',
           cuotas: ['Pensión de agosto'],
+          medio: 'En línea',
         },
       ]),
     ),
